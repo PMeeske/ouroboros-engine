@@ -1,0 +1,31 @@
+/bin
+/obj
+**/bin/
+**/obj/
+/.vscode
+/.vs
+**/.vs/
+*.suo
+*.user
+
+# Test results
+**/TestResults/
+*.trx
+*.coverage
+*.coveragexml
+*.zip
+
+# Code Coverage Reports
+TestCoverageReport/
+coverage/
+**/coverage.cobertura.xml
+StrykerOutput/
+**/StrykerOutput/
+.stryker-temp/
+
+# Reqnroll auto-generated files
+*.feature.cs
+
+# Logs
+logs/
+*.log
