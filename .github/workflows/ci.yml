@@ -1,0 +1,58 @@
+# CI pipeline for ouroboros-engine
+# Triggers on push to main and pull requests
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-build.yml@main
+    with:
+      projects: >-
+        src/Ouroboros.Agent/Ouroboros.Agent.csproj
+        src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
+        src/Ouroboros.Providers/Ouroboros.Providers.csproj
+        src/Ouroboros.Network/Ouroboros.Network.csproj
+
+  test:
+    name: Test
+    needs: build
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-test.yml@main
+    with:
+      test-projects: >-
+        tests/Ouroboros.Agent.Tests/Ouroboros.Agent.Tests.csproj
+        tests/Ouroboros.Pipeline.Tests/Ouroboros.Pipeline.Tests.csproj
+        tests/Ouroboros.Providers.Tests/Ouroboros.Providers.Tests.csproj
+        tests/Ouroboros.Network.Tests/Ouroboros.Network.Tests.csproj
+        tests/Ouroboros.Learning.Tests/Ouroboros.Learning.Tests.csproj
+        tests/Ouroboros.Safety.Tests/Ouroboros.Safety.Tests.csproj
+        tests/Ouroboros.Meta.Tests/Ouroboros.Meta.Tests.csproj
+        tests/Ouroboros.Memory.Tests/Ouroboros.Memory.Tests.csproj
+      build-projects: >-
+        src/Ouroboros.Agent/Ouroboros.Agent.csproj
+        src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
+        src/Ouroboros.Providers/Ouroboros.Providers.csproj
+        src/Ouroboros.Network/Ouroboros.Network.csproj
+      coverage-threshold: 60
+
+  bdd:
+    name: BDD Tests
+    needs: build
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-test.yml@main
+    with:
+      test-projects: tests/Ouroboros.Engine.BDD/Ouroboros.Engine.BDD.csproj
+      build-projects: >-
+        src/Ouroboros.Agent/Ouroboros.Agent.csproj
+        src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
+        src/Ouroboros.Providers/Ouroboros.Providers.csproj
+      coverage-threshold: 0
