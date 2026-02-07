@@ -13,6 +13,8 @@
     <ProjectReference Include="..\..\src\Ouroboros.Agent\Ouroboros.Agent.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Core\Ouroboros.Core.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Domain\Ouroboros.Domain.csproj" />
+    <!-- App layer (cross-layer test dependency) -->
+    <ProjectReference Include="$(OuroborosApp)\Ouroboros.Application\Ouroboros.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

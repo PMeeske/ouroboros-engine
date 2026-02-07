@@ -6,5 +6,6 @@
   <PropertyGroup>
     <OuroborosLayer>Engine</OuroborosLayer>
     <OuroborosFoundation>$(MSBuildThisFileDirectory)..\foundation\src</OuroborosFoundation>
+    <OuroborosApp>$(MSBuildThisFileDirectory)..\app\src</OuroborosApp>
   </PropertyGroup>
 </Project>
