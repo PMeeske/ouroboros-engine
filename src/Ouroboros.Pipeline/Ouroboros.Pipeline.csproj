@@ -8,9 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Ouroboros.Core\Ouroboros.Core.csproj" />
-    <ProjectReference Include="..\Ouroboros.Domain\Ouroboros.Domain.csproj" />
-    <ProjectReference Include="..\Ouroboros.Tools\Ouroboros.Tools.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Core\Ouroboros.Core.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Domain\Ouroboros.Domain.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Tools\Ouroboros.Tools.csproj" />
     <ProjectReference Include="..\Ouroboros.Providers\Ouroboros.Providers.csproj" />
   </ItemGroup>
 
