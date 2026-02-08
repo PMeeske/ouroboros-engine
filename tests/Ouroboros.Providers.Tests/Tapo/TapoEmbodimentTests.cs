@@ -454,7 +454,7 @@ public class TapoVisionModelConfigTests
 
         // Assert
         config.VisionModel.Should().Be(TapoVisionModelConfig.DefaultVisionModel);
-        config.VisionModel.Should().Be("llava:13b");
+        config.VisionModel.Should().Be("qwen3-vl:235b-cloud");
     }
 
     [Fact]
@@ -476,7 +476,7 @@ public class TapoVisionModelConfigTests
 
         // Assert
         config.VisionModel.Should().Be(TapoVisionModelConfig.HighQualityVisionModel);
-        config.VisionModel.Should().Be("llava:34b");
+        config.VisionModel.Should().Be("qwen3-vl:235b-cloud");
     }
 
     [Fact]

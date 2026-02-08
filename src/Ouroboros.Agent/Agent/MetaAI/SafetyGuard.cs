@@ -46,6 +46,7 @@ public sealed class SafetyGuard : ISafetyGuard
         // Check for dangerous patterns
         if (ContainsDangerousPatterns(operation, parameters))
         {
+            violations.Add("Operation contains potentially dangerous patterns");
             warnings.Add("Operation contains potentially dangerous patterns");
         }
 
@@ -145,6 +146,9 @@ public sealed class SafetyGuard : ISafetyGuard
 
         if (actionLower.Contains("read") || actionLower.Contains("get") || actionLower.Contains("list"))
             return PermissionLevel.ReadOnly;
+
+        if (actionLower.Contains("http") || actionLower.Contains("network"))
+            return PermissionLevel.Isolated;
 
         if (actionLower.Contains("delete") || actionLower.Contains("drop") || actionLower.Contains("remove"))
             return PermissionLevel.UserDataWithConfirmation;

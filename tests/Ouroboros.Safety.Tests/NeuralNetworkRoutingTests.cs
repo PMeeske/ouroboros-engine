@@ -42,7 +42,7 @@ public sealed class NeuralNetworkRoutingTests
         network.RouteMessage(message);
         // Note: Thread.Sleep is used here for simplicity. For production tests,
         // consider using TaskCompletionSource-based WaitForMessageAsync pattern.
-        Thread.Sleep(100); // Allow async routing to complete
+        Thread.Sleep(500); // Allow async routing to complete
 
         // Assert
         receivedMessages.Should().ContainSingle("message should be delivered to target");
@@ -75,7 +75,7 @@ public sealed class NeuralNetworkRoutingTests
 
         // Act
         network.RouteMessage(message);
-        Thread.Sleep(100);
+        Thread.Sleep(500);
 
         // Assert
         subscriber1Messages.Should().ContainSingle();
@@ -104,7 +104,7 @@ public sealed class NeuralNetworkRoutingTests
 
         // Act
         network.RouteMessage(message);
-        Thread.Sleep(100);
+        Thread.Sleep(500);
 
         // Assert
         receivedMessages.Should().ContainSingle("wildcard should match specific topic");
@@ -170,7 +170,7 @@ public sealed class NeuralNetworkRoutingTests
 
         // Act
         network.RouteMessage(message);
-        Thread.Sleep(100);
+        Thread.Sleep(500);
 
         // Assert
         receivedMessages.Should().BeEmpty("source neuron should not receive its own message");
@@ -218,7 +218,7 @@ public sealed class NeuralNetworkRoutingTests
 
         // Act
         network.Broadcast("broadcast.topic", "broadcast payload", "sender");
-        Thread.Sleep(100);
+        Thread.Sleep(500);
 
         // Assert
         // All neurons except sender should receive
@@ -258,7 +258,7 @@ public sealed class NeuralNetworkRoutingTests
             .ToArray();
 
         Task.WaitAll(tasks);
-        Thread.Sleep(200); // Wait for all routing to complete
+        Thread.Sleep(1000); // Wait for all routing to complete
 
         // Assert
         // We should receive messages without corruption

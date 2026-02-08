@@ -14,6 +14,7 @@ public sealed class MerkleDag
     private readonly Dictionary<Guid, TransitionEdge> edges;
     private readonly Dictionary<Guid, List<Guid>> nodeToIncomingEdges;
     private readonly Dictionary<Guid, List<Guid>> nodeToOutgoingEdges;
+    private readonly object _syncLock = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MerkleDag"/> class.
@@ -63,25 +64,28 @@ public sealed class MerkleDag
             return Result<MonadNode>.Failure("Node hash verification failed");
         }
 
-        if (this.nodes.ContainsKey(node.Id))
+        lock (this._syncLock)
         {
-            return Result<MonadNode>.Failure($"Node with ID {node.Id} already exists");
-        }
-
-        // Verify parent nodes exist
-        foreach (var parentId in node.ParentIds)
-        {
-            if (!this.nodes.ContainsKey(parentId))
+            if (this.nodes.ContainsKey(node.Id))
             {
-                return Result<MonadNode>.Failure($"Parent node {parentId} does not exist");
+                return Result<MonadNode>.Failure($"Node with ID {node.Id} already exists");
             }
+
+            // Verify parent nodes exist
+            foreach (var parentId in node.ParentIds)
+            {
+                if (!this.nodes.ContainsKey(parentId))
+                {
+                    return Result<MonadNode>.Failure($"Parent node {parentId} does not exist");
+                }
+            }
+
+            this.nodes[node.Id] = node;
+            this.nodeToIncomingEdges[node.Id] = new List<Guid>();
+            this.nodeToOutgoingEdges[node.Id] = new List<Guid>();
+
+            return Result<MonadNode>.Success(node);
         }
-
-        this.nodes[node.Id] = node;
-        this.nodeToIncomingEdges[node.Id] = new List<Guid>();
-        this.nodeToOutgoingEdges[node.Id] = new List<Guid>();
-
-        return Result<MonadNode>.Success(node);
     }
 
     /// <summary>
@@ -101,36 +105,39 @@ public sealed class MerkleDag
             return Result<TransitionEdge>.Failure("Edge hash verification failed");
         }
 
-        if (this.edges.ContainsKey(edge.Id))
+        lock (this._syncLock)
         {
-            return Result<TransitionEdge>.Failure($"Edge with ID {edge.Id} already exists");
-        }
-
-        // Verify all input and output nodes exist
-        foreach (var inputId in edge.InputIds)
-        {
-            if (!this.nodes.ContainsKey(inputId))
+            if (this.edges.ContainsKey(edge.Id))
             {
-                return Result<TransitionEdge>.Failure($"Input node {inputId} does not exist");
+                return Result<TransitionEdge>.Failure($"Edge with ID {edge.Id} already exists");
             }
+
+            // Verify all input and output nodes exist
+            foreach (var inputId in edge.InputIds)
+            {
+                if (!this.nodes.ContainsKey(inputId))
+                {
+                    return Result<TransitionEdge>.Failure($"Input node {inputId} does not exist");
+                }
+            }
+
+            if (!this.nodes.ContainsKey(edge.OutputId))
+            {
+                return Result<TransitionEdge>.Failure($"Output node {edge.OutputId} does not exist");
+            }
+
+            this.edges[edge.Id] = edge;
+
+            // Update adjacency information
+            foreach (var inputId in edge.InputIds)
+            {
+                this.nodeToOutgoingEdges[inputId].Add(edge.Id);
+            }
+
+            this.nodeToIncomingEdges[edge.OutputId].Add(edge.Id);
+
+            return Result<TransitionEdge>.Success(edge);
         }
-
-        if (!this.nodes.ContainsKey(edge.OutputId))
-        {
-            return Result<TransitionEdge>.Failure($"Output node {edge.OutputId} does not exist");
-        }
-
-        this.edges[edge.Id] = edge;
-
-        // Update adjacency information
-        foreach (var inputId in edge.InputIds)
-        {
-            this.nodeToOutgoingEdges[inputId].Add(edge.Id);
-        }
-
-        this.nodeToIncomingEdges[edge.OutputId].Add(edge.Id);
-
-        return Result<TransitionEdge>.Success(edge);
     }
 
     /// <summary>

@@ -37,7 +37,7 @@ public sealed class FileWalPersistence : IGraphPersistence
 
         // Open file in append mode
         this.writer = new StreamWriter(
-            new FileStream(walFilePath, FileMode.Append, FileAccess.Write, FileShare.Read),
+            new FileStream(walFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite),
             System.Text.Encoding.UTF8)
         {
             AutoFlush = false, // Batch writes for performance

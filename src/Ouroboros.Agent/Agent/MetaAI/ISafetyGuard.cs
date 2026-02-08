@@ -30,14 +30,14 @@ public enum PermissionLevel
     Isolated,
 
     /// <summary>
-    /// Can modify user data with confirmation.
-    /// </summary>
-    UserDataWithConfirmation,
-
-    /// <summary>
     /// Can modify user data without confirmation.
     /// </summary>
     UserData,
+
+    /// <summary>
+    /// Can modify user data with explicit confirmation (stricter than UserData).
+    /// </summary>
+    UserDataWithConfirmation,
 
     /// <summary>
     /// Can modify system state.

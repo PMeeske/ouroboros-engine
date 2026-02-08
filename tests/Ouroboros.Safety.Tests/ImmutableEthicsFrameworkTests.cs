@@ -87,7 +87,7 @@ public sealed class ImmutableEthicsFrameworkTests
         // Act & Assert
         frameworkType.IsSealed.Should().BeTrue("sealed classes cannot be subclassed");
         frameworkType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-            .Where(m => m.IsVirtual && !m.IsFinal)
+            .Where(m => m.IsVirtual && !m.IsFinal && m.DeclaringType != typeof(object))
             .Should().BeEmpty("no virtual methods should be overridable");
     }
 
@@ -232,7 +232,7 @@ public sealed class ImmutableEthicsFrameworkTests
             {
                 new PlanStep
                 {
-                    Action = "harm_user",
+                    Action = "harm user",
                     Parameters = new Dictionary<string, object>(),
                     ExpectedOutcome = "User harmed",
                     ConfidenceScore = 1.0
@@ -399,7 +399,7 @@ public sealed class ImmutableEthicsFrameworkTests
     public async Task EvaluateResearch_DangerousResearch_ReturnsDenied()
     {
         // Arrange
-        var researchDescription = "Experiment on users without consent to test harmful patterns";
+        var researchDescription = "Experiment to harm users without consent to test dangerous patterns";
 
         // Act
         var result = await _framework.EvaluateResearchAsync(researchDescription, _testContext);

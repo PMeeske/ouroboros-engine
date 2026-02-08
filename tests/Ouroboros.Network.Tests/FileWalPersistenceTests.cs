@@ -160,24 +160,29 @@ public class FileWalPersistenceTests : IDisposable
     [Fact]
     public async Task ReplayAsync_CorruptedEntry_SkipsAndContinues()
     {
-        // Arrange
+        // Arrange - write first valid entry and dispose to release file
         var node = MonadNode.FromReasoningState(new Draft("Valid entry"));
-        await using var persistence = new FileWalPersistence(this.testWalPath);
+        await using (var persistence = new FileWalPersistence(this.testWalPath))
+        {
+            await persistence.AppendNodeAsync(node);
+            await persistence.FlushAsync();
+        }
 
-        await persistence.AppendNodeAsync(node);
-        await persistence.FlushAsync();
-
-        // Manually append corrupted entry
+        // Manually append corrupted entry (file is released)
         await File.AppendAllTextAsync(this.testWalPath, "{ corrupted json }\n");
 
-        // Append another valid entry
+        // Append another valid entry via a new persistence instance
         var node2 = MonadNode.FromReasoningState(new Draft("Second valid entry"));
-        await persistence.AppendNodeAsync(node2);
-        await persistence.FlushAsync();
+        await using (var persistence2 = new FileWalPersistence(this.testWalPath))
+        {
+            await persistence2.AppendNodeAsync(node2);
+            await persistence2.FlushAsync();
+        }
 
-        // Act
+        // Act - replay from a fresh persistence instance
+        await using var persistence3 = new FileWalPersistence(this.testWalPath);
         var entries = new List<WalEntry>();
-        await foreach (var entry in persistence.ReplayAsync())
+        await foreach (var entry in persistence3.ReplayAsync())
         {
             entries.Add(entry);
         }

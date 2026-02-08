@@ -1,5 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Diagnostics;
+using System.Globalization;
 
 namespace Ouroboros.Providers;
 
@@ -346,10 +347,10 @@ public sealed class LlmCostTracker
               Model: {metrics.Model}
               Pricing: ${pricing.InputCostPer1M}/1M in, ${pricing.OutputCostPer1M}/1M out
               Requests: {metrics.TotalRequests}
-              Tokens: {metrics.TotalInputTokens:N0} in / {metrics.TotalOutputTokens:N0} out ({metrics.TotalTokens:N0} total)
-              Cost: ${metrics.TotalCost:F4}
-              Total Time: {metrics.TotalLatency.TotalSeconds:F1}s
-              Avg Latency: {metrics.AverageLatency.TotalSeconds:F2}s/request
+              Tokens: {metrics.TotalInputTokens.ToString("N0", CultureInfo.InvariantCulture)} in / {metrics.TotalOutputTokens.ToString("N0", CultureInfo.InvariantCulture)} out ({metrics.TotalTokens.ToString("N0", CultureInfo.InvariantCulture)} total)
+              Cost: ${metrics.TotalCost.ToString("F4", CultureInfo.InvariantCulture)}
+              Total Time: {metrics.TotalLatency.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture)}s
+              Avg Latency: {metrics.AverageLatency.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture)}s/request
             """;
     }
 
@@ -388,8 +389,8 @@ public sealed class LlmCostTracker
     {
         var metrics = GetSessionMetrics();
         if (metrics.TotalCost == 0)
-            return $"{metrics.TotalTokens:N0} tokens";
-        return $"{metrics.TotalTokens:N0} tokens (${metrics.TotalCost:F4})";
+            return $"{metrics.TotalTokens.ToString("N0", CultureInfo.InvariantCulture)} tokens";
+        return $"{metrics.TotalTokens.ToString("N0", CultureInfo.InvariantCulture)} tokens (${metrics.TotalCost.ToString("F4", CultureInfo.InvariantCulture)})";
     }
 }
 
@@ -410,8 +411,8 @@ public sealed record RequestMetrics(
     public override string ToString()
     {
         if (Cost == 0)
-            return $"{InputTokens}→{OutputTokens} tokens, {Latency.TotalSeconds:F2}s ({TokensPerSecond:F0} tok/s)";
-        return $"{InputTokens}→{OutputTokens} tokens, ${Cost:F4}, {Latency.TotalSeconds:F2}s ({TokensPerSecond:F0} tok/s)";
+            return $"{InputTokens}→{OutputTokens} tokens, {Latency.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture)}s ({TokensPerSecond.ToString("F0", CultureInfo.InvariantCulture)} tok/s)";
+        return $"{InputTokens}→{OutputTokens} tokens, ${Cost.ToString("F4", CultureInfo.InvariantCulture)}, {Latency.TotalSeconds.ToString("F2", CultureInfo.InvariantCulture)}s ({TokensPerSecond.ToString("F0", CultureInfo.InvariantCulture)} tok/s)";
     }
 }
 
@@ -433,7 +434,7 @@ public sealed record SessionMetrics(
     public string ToCostString()
     {
         if (TotalCost == 0)
-            return $"{TotalTokens:N0} tokens";
-        return $"{TotalTokens:N0} tokens (${TotalCost:F4})";
+            return $"{TotalTokens.ToString("N0", CultureInfo.InvariantCulture)} tokens";
+        return $"{TotalTokens.ToString("N0", CultureInfo.InvariantCulture)} tokens (${TotalCost.ToString("F4", CultureInfo.InvariantCulture)})";
     }
 }
