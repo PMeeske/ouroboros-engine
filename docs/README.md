@@ -6,31 +6,12 @@ This directory contains comprehensive technical documentation for Ouroboros.
 
 ### 🚀 Getting Started
 - [Main README](../README.md) - Project overview, features, and quick start
-- [Deployment Quick Reference](../DEPLOYMENT-QUICK-REFERENCE.md) - Common deployment commands
-- [Troubleshooting](../TROUBLESHOOTING.md) - Common issues and solutions
+- [Architecture Documentation](ARCHITECTURE.md) - Detailed system architecture
+- [Contributing Guide](CONTRIBUTING.md) - Guidelines for contributing to the project
 
-### 📦 Deployment & Infrastructure
+### 📦 Infrastructure & Configuration
 
-#### Deployment Guides
-- [**Deployment Guide**](../DEPLOYMENT.md) - Comprehensive deployment guide for all environments
-- [**IONOS Deployment Guide**](IONOS_DEPLOYMENT_GUIDE.md) - Detailed IONOS Cloud deployment
-- [**IONOS IaC Quick Start**](IONOS_IAC_QUICKSTART.md) - Quick start for Infrastructure as Code
-- [**IONOS IaC Guide**](IONOS_IAC_GUIDE.md) - Complete Infrastructure as Code guide
-- [**IONOS IaC Example**](IONOS_IAC_EXAMPLE.md) - Example IaC configurations
-
-#### Infrastructure Documentation
-- [**Infrastructure Dependencies**](INFRASTRUCTURE_DEPENDENCIES.md) - Complete dependency mapping across C#, K8s, and Terraform
-- [**Terraform-Kubernetes Integration**](TERRAFORM_K8S_INTEGRATION.md) - Integration patterns and workflows
-- [**Environment Infrastructure Mapping**](ENVIRONMENT_INFRASTRUCTURE_MAPPING.md) - Environment-specific configurations
-- [**Deployment Topology**](DEPLOYMENT_TOPOLOGY.md) - Visual topological representations
-- [**Infrastructure Migration Guide**](INFRASTRUCTURE_MIGRATION_GUIDE.md) - Safe migration procedures
-- [**Infrastructure Runbook**](INFRASTRUCTURE_RUNBOOK.md) - Incident response procedures
-
-#### Configuration
-- [**Configuration and Security**](../CONFIGURATION_AND_SECURITY.md) - Security best practices and configuration
-- [**Environment Detection**](ENVIRONMENT_DETECTION.md) - Runtime environment detection
-- [**External Access Validation**](EXTERNAL_ACCESS_VALIDATION.md) - External access configuration
-- [**Kubernetes Version Compatibility**](K8S_VERSION_COMPATIBILITY.md) - K8s version compatibility matrix
+_Note: This repository focuses on the engine layer. For deployment guides and infrastructure documentation, see the main [Ouroboros-v2](https://github.com/PMeeske/Ouroboros-v2) repository._
 
 ### 🧠 Architecture & Features
 
@@ -50,8 +31,8 @@ This directory contains comprehensive technical documentation for Ouroboros.
 
 ### 🧪 Testing & Quality
 
-- [**Test Coverage Report**](../TEST_COVERAGE_REPORT.md) - Detailed test coverage analysis
-- [**Test Coverage Quick Reference**](../TEST_COVERAGE_QUICKREF.md) - Testing commands and metrics
+- [CI Pipeline](../.github/workflows/ci.yml) - GitHub Actions CI workflow
+- [Mutation Testing](../.github/workflows/mutation.yml) - Stryker.NET mutation testing
 
 ### 📊 Status & Baselines
 
@@ -74,22 +55,17 @@ The [archive/](archive/) directory contains historical implementation summaries,
 ## Documentation Organization
 
 ### Root Directory (`/`)
-Contains user-facing documentation:
-- `README.md` - Main project documentation
-- `DEPLOYMENT.md` - Deployment guide
-- `DEPLOYMENT-QUICK-REFERENCE.md` - Quick command reference
-- `TROUBLESHOOTING.md` - Troubleshooting guide
-- `CONFIGURATION_AND_SECURITY.md` - Configuration guide
-- `TEST_COVERAGE_REPORT.md` - Test coverage report
-- `TEST_COVERAGE_QUICKREF.md` - Testing quick reference
+Contains the main project README:
+- `README.md` - Main project documentation with overview, build instructions, and navigation
+- `LICENSE` - MIT License
 
 ### Docs Directory (`/docs`)
 Contains detailed technical documentation:
-- **Infrastructure**: Deployment topology, dependencies, migrations
-- **Architecture**: Agent features, processing strategies
-- **Guides**: Platform-specific deployment guides (IONOS, etc.)
+- **Architecture**: Agent features, processing strategies, cognitive patterns
+- **Guides**: Development workflows, feature engineering
 - **Implementation**: Phase summaries and feature documentation
 - **Status**: Baseline assessments and progress tracking
+- **API**: API reference documentation
 
 ### Archive Directory (`/docs/archive`)
 Contains historical documentation:
@@ -102,12 +78,11 @@ Contains historical documentation:
 
 When adding new documentation:
 
-1. **User-facing guides** → Root directory
-2. **Technical deep-dives** → `/docs` directory
-3. **Historical records** → `/docs/archive` directory
-4. **Update this index** when adding new docs
-5. **Cross-reference** related documents
-6. **Follow markdown best practices**
+1. **Technical documentation** → `/docs` directory
+2. **Historical records** → `/docs/archive` directory
+3. **Update this index** when adding new docs
+4. **Cross-reference** related documents
+5. **Follow markdown best practices**
 
 ## Documentation Standards
 
@@ -120,4 +95,4 @@ When adding new documentation:
 
 ---
 
-**Need help?** Start with the [Main README](../README.md) or check [Troubleshooting](../TROUBLESHOOTING.md).
+**Need help?** Start with the [Main README](../README.md) or check the [Architecture Documentation](ARCHITECTURE.md).
