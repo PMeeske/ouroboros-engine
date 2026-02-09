@@ -2,3 +2,7 @@
 	path = libs/foundation
 	url = https://github.com/PMeeske/ouroboros-foundation.git
 	branch = main
+[submodule "libs/.build"]
+	path = libs/.build
+	url = https://github.com/PMeeske/ouroboros-build.git
+	branch = main
