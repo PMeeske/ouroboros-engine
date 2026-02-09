@@ -22,4 +22,10 @@
     <PackageReference Include="System.Reactive" Version="6.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="MeTTa\Schemas\**\*.metta" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="contentFiles\any\any\MeTTa\Schemas">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
