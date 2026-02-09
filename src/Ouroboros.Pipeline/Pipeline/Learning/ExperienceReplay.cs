@@ -514,37 +514,3 @@ public static class ExperienceReplayArrows
         }
     }
 }
-
-/// <summary>
-/// Unit type representing void in functional programming.
-/// Used to signal successful completion without meaningful return value.
-/// </summary>
-public readonly struct Unit : IEquatable<Unit>
-{
-    /// <summary>
-    /// The singleton instance of Unit.
-    /// </summary>
-    public static readonly Unit Value = default;
-
-    /// <summary>
-    /// Determines equality with another Unit instance.
-    /// </summary>
-    /// <param name="other">The other Unit instance.</param>
-    /// <returns>Always true.</returns>
-    public bool Equals(Unit other) => true;
-
-    /// <inheritdoc/>
-    public override bool Equals(object? obj) => obj is Unit;
-
-    /// <inheritdoc/>
-    public override int GetHashCode() => 0;
-
-    /// <inheritdoc/>
-    public override string ToString() => "()";
-
-    /// <summary>Equality operator.</summary>
-    public static bool operator ==(Unit left, Unit right) => true;
-
-    /// <summary>Inequality operator.</summary>
-    public static bool operator !=(Unit left, Unit right) => false;
-}
