@@ -47,8 +47,8 @@ Ouroboros-v2 (Main System)
 
 ## Prerequisites
 
-- **.NET 8.0 SDK** or later
-- **C# 12** language features
+- **.NET 10.0 SDK** or later
+- **C# 14** language features
 - Access to `ouroboros-foundation` repository (dependency)
 
 ## Building
