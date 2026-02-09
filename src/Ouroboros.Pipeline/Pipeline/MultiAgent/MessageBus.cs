@@ -765,39 +765,3 @@ public static class MessageBusExtensions
         await bus.PublishAsync(notification, ct).ConfigureAwait(false);
     }
 }
-
-/// <summary>
-/// Represents a unit type for Result monad operations that don't return a value.
-/// </summary>
-public readonly struct Unit : IEquatable<Unit>
-{
-    /// <summary>
-    /// Gets the singleton unit value.
-    /// </summary>
-    public static Unit Value => default;
-
-    /// <inheritdoc/>
-    public override bool Equals(object? obj) => obj is Unit;
-
-    /// <inheritdoc/>
-    public bool Equals(Unit other) => true;
-
-    /// <inheritdoc/>
-    public override int GetHashCode() => 0;
-
-    /// <summary>
-    /// Determines whether two Unit values are equal.
-    /// </summary>
-    /// <param name="left">The left operand.</param>
-    /// <param name="right">The right operand.</param>
-    /// <returns>Always true.</returns>
-    public static bool operator ==(Unit left, Unit right) => true;
-
-    /// <summary>
-    /// Determines whether two Unit values are not equal.
-    /// </summary>
-    /// <param name="left">The left operand.</param>
-    /// <param name="right">The right operand.</param>
-    /// <returns>Always false.</returns>
-    public static bool operator !=(Unit left, Unit right) => false;
-}
