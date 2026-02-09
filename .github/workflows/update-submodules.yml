@@ -11,6 +11,8 @@ jobs:
   update-build-submodule:
     name: Update Build Submodule
     if: github.event.client_payload.source_repo == 'ouroboros-build'
+    permissions:
+      contents: read
     uses: PMeeske/ouroboros-build/.github/workflows/_reusable-update-submodule.yml@main
     with:
       submodule-path: .build
@@ -21,6 +23,8 @@ jobs:
   update-foundation-submodule:
     name: Update Foundation Submodule
     if: github.event.client_payload.source_repo == 'ouroboros-foundation'
+    permissions:
+      contents: read
     uses: PMeeske/ouroboros-build/.github/workflows/_reusable-update-submodule.yml@main
     with:
       submodule-path: libs/foundation
