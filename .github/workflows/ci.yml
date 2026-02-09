@@ -12,6 +12,9 @@ on:
     types: [dependency-updated]
 
 concurrency:
+  # Use dispatch source for grouping when triggered by repository_dispatch,
+  # otherwise use git ref. This allows multiple dispatch events from different
+  # sources to run concurrently while still preventing duplicate runs per source.
   group: ci-${{ github.event_name == 'repository_dispatch' && format('dispatch-{0}', github.event.client_payload.source_repo) || github.ref }}
   cancel-in-progress: true
 

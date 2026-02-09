@@ -23,6 +23,6 @@ jobs:
           event-type: dependency-updated
           client-payload: |
             {
-              "source_repo": "ouroboros-engine",
+              "source_repo": "${{ github.event.repository.name }}",
               "source_sha": "${{ github.event.workflow_run.head_sha }}"
             }
