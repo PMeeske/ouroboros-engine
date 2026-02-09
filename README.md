@@ -114,10 +114,6 @@ ouroboros-engine/
 │   ├── Ouroboros.Pipeline.Tests/
 │   ├── Ouroboros.Providers.Tests/
 │   ├── Ouroboros.Network.Tests/
-│   ├── Ouroboros.Learning.Tests/
-│   ├── Ouroboros.Safety.Tests/
-│   ├── Ouroboros.Meta.Tests/
-│   ├── Ouroboros.Memory.Tests/
 │   └── Ouroboros.Engine.BDD/   # Behavior-driven tests
 └── docs/                       # Technical documentation
 ```
