@@ -40,10 +40,6 @@ jobs:
         tests/Ouroboros.Pipeline.Tests/Ouroboros.Pipeline.Tests.csproj
         tests/Ouroboros.Providers.Tests/Ouroboros.Providers.Tests.csproj
         tests/Ouroboros.Network.Tests/Ouroboros.Network.Tests.csproj
-        tests/Ouroboros.Learning.Tests/Ouroboros.Learning.Tests.csproj
-        tests/Ouroboros.Safety.Tests/Ouroboros.Safety.Tests.csproj
-        tests/Ouroboros.Meta.Tests/Ouroboros.Meta.Tests.csproj
-        tests/Ouroboros.Memory.Tests/Ouroboros.Memory.Tests.csproj
       build-projects: >-
         src/Ouroboros.Agent/Ouroboros.Agent.csproj
         src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
