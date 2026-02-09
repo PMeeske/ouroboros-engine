@@ -1,0 +1,24 @@
+<Project>
+  <!-- Import repo-level props (Engine → ouroboros-build base) -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)..'))" />
+
+  <!-- Global usings for Engine layer projects -->
+  <ItemGroup>
+    <!-- Foundation layer -->
+    <Using Include="Ouroboros.Core.Kleisli" />
+    <Using Include="Ouroboros.Core.Memory" />
+    <Using Include="Ouroboros.Core.Monads" />
+    <Using Include="Ouroboros.Core.Steps" />
+    <Using Include="Ouroboros.Domain" />
+    <Using Include="Ouroboros.Domain.Events" />
+    <Using Include="Ouroboros.Domain.States" />
+    <Using Include="Ouroboros.Domain.Vectors" />
+    <Using Include="Ouroboros.Tools" />
+    <Using Include="Ouroboros.Tools.MeTTa" />
+  </ItemGroup>
+
+  <!-- Alias for naming conflicts -->
+  <ItemGroup>
+    <Using Include="Ouroboros.Core.Synthesis.Program" Alias="SynthesisProgram" />
+  </ItemGroup>
+</Project>
