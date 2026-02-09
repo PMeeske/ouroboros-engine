@@ -1,0 +1,4 @@
+[submodule "libs/foundation"]
+	path = libs/foundation
+	url = https://github.com/PMeeske/ouroboros-foundation.git
+	branch = main
