@@ -15,7 +15,7 @@ jobs:
       contents: read
     uses: PMeeske/ouroboros-build/.github/workflows/_reusable-update-submodule.yml@main
     with:
-      submodule-path: .build
+      submodule-path: libs/.build
       create-pr: true
     secrets:
       token: ${{ secrets.OUROBOROS_DISPATCH_PAT }}
