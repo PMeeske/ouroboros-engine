@@ -34,6 +34,10 @@ jobs:
     name: Test
     needs: build
     uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-test.yml@main
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
     with:
       job-identifier: "test"
       test-projects: >-
@@ -52,6 +56,10 @@ jobs:
     name: BDD Tests
     needs: build
     uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-test.yml@main
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
     with:
       job-identifier: "bdd"
       test-projects: tests/Ouroboros.Engine.BDD/Ouroboros.Engine.BDD.csproj
