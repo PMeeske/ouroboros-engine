@@ -20,19 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-foundation:
-    name: Build Foundation
-    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-build.yml@main
-    with:
-      projects: >-
-        libs/foundation/src/Ouroboros.Abstractions/Ouroboros.Abstractions.csproj
-        libs/foundation/src/Ouroboros.Core/Ouroboros.Core.csproj
-        libs/foundation/src/Ouroboros.Domain/Ouroboros.Domain.csproj
-        libs/foundation/src/Ouroboros.Tools/Ouroboros.Tools.csproj
-
   build:
     name: Build
-    needs: build-foundation
     uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-build.yml@main
     with:
       projects: >-
