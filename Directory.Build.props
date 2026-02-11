@@ -36,6 +36,8 @@
     <OuroborosFoundation Condition="'$(OuroborosFoundation)' == '' AND Exists('$(MSBuildThisFileDirectory)..\foundation\src')">$(MSBuildThisFileDirectory)..\foundation\src</OuroborosFoundation>
     <!-- Cross-layer paths: libs/ submodule layout (for standalone engine builds) -->
     <OuroborosFoundation Condition="'$(OuroborosFoundation)' == '' AND Exists('$(MSBuildThisFileDirectory)libs\foundation\src')">$(MSBuildThisFileDirectory)libs\foundation\src</OuroborosFoundation>
+    <OuroborosEngine Condition="'$(OuroborosEngine)' == '' AND Exists('$(MSBuildThisFileDirectory)libs\engine\src')">$(MSBuildThisFileDirectory)libs\engine\src</OuroborosEngine>
+    
     <OuroborosApp Condition="Exists('$(MSBuildThisFileDirectory)..\app\src')">$(MSBuildThisFileDirectory)..\app\src</OuroborosApp>
     <!-- Cross-layer paths: standalone layout -->
     <OuroborosFoundation Condition="'$(OuroborosFoundation)' == '' AND Exists('$(MSBuildThisFileDirectory)..\ouroboros-foundation\src')">$(MSBuildThisFileDirectory)..\ouroboros-foundation\src</OuroborosFoundation>
