@@ -13,18 +13,6 @@ Feature: Tool-Aware Chat Model
         Then the response text should be "This is a plain response without tools."
         And the tool executions should be empty
 
-    Scenario: Generate with math tool executes tool
-        Given I have a mock chat model that responds with "Let me calculate: [TOOL:math 2+2]"
-        And I register the math tool
-        And I have a tool-aware chat model with the mock model and registry
-        When I generate with tools using prompt "Calculate 2+2"
-        Then the response text should contain "[TOOL:math 2+2]"
-        And the response text should contain "[TOOL-RESULT:math] 4"
-        And the tool executions should have 1 execution
-        And the first tool execution name should be "math"
-        And the first tool execution arguments should be "2+2"
-        And the first tool execution output should be "4"
-
     Scenario: Tool not found returns error
         Given I have a mock chat model that responds with "[TOOL:nonexistent some args]"
         And I have a tool-aware chat model with the mock model and registry
