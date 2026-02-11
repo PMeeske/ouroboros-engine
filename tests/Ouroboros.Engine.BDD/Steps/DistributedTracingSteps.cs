@@ -99,6 +99,7 @@ public class DistributedTracingSteps
     }
 
     [When(@"I trace tool execution for ""(.*)"" with input ""(.*)""")]
+    [Given(@"I trace tool execution for ""(.*)"" with input ""(.*)""")]
     public void WhenITraceToolExecutionForWithInput(string toolName, string input)
     {
         _currentActivity = TracingExtensions.TraceToolExecution(toolName, input);
@@ -221,14 +222,14 @@ public class DistributedTracingSteps
         _currentActivity!.Status.Should().Be(expectedStatusCode);
     }
 
-    [Then(@"the activity should have tag ""(.*)""")]
+    [Then(@"the activity should have tag ""([^""]+)""")]
     public void ThenTheActivityShouldHaveTag(string tagKey)
     {
         _currentActivity.Should().NotBeNull();
         _currentActivity!.Tags.Should().Contain(t => t.Key == tagKey);
     }
 
-    [Then(@"the activity should have tag ""(.*)"" with value ""(.*)""")]
+    [Then(@"the activity should have tag ""([^""]+)"" with value ""([^""]+)""")]
     public void ThenTheActivityShouldHaveTagWithValue(string tagKey, string tagValue)
     {
         _currentActivity.Should().NotBeNull();
