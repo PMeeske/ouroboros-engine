@@ -17,6 +17,10 @@ global using System.Threading;
 global using System.Threading.Tasks;
 global using Ouroboros.Core.Monads;
 global using Ouroboros.Core.Steps;
+// Abstractions
+global using Ouroboros.Abstractions;
+// Domain models
+global using Ouroboros.Core;
 // Domain models
 global using Ouroboros.Domain;
 // Providers
