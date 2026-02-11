@@ -5,8 +5,8 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Microsoft.Extensions.Logging;
-using Ouroboros.Abstractions;
 using Ouroboros.Core.EmbodiedInteraction;
+using Unit = Ouroboros.Abstractions.Unit;
 
 namespace Ouroboros.Providers.Tapo;
 

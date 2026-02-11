@@ -4,6 +4,7 @@
 
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
+using Match = Qdrant.Client.Grpc.Match;
 
 namespace Ouroboros.Network;
 
