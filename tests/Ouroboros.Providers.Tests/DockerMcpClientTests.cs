@@ -2,11 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Net;
-using System.Text;
-using FluentAssertions;
 using Ouroboros.Providers.Docker;
-using Xunit;
 
 namespace Ouroboros.Tests.Tests.Docker;
 

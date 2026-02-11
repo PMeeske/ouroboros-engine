@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Abstractions;
+
 namespace Ouroboros.Pipeline.Verification;
 
 using Ouroboros.Tools.MeTTa;
@@ -126,10 +128,10 @@ public sealed class MeTTaVerificationStep
                 continue; // Skip empty lines and comments
             }
 
-            Result<Unit, string> result = await this._engine.AddFactAsync(rule, ct);
+            var result = await this._engine.AddFactAsync(rule, ct);
             if (result.IsFailure)
             {
-                return result;
+                return Result<Unit, string>.Failure(result.Error);
             }
         }
 

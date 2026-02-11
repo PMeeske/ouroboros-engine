@@ -3,8 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
-using Ouroboros.Core;
-using Ouroboros.Core.Learning;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Providers.Tapo;
 

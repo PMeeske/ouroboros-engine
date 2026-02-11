@@ -4,7 +4,6 @@
 
 namespace Ouroboros.Tests.Providers;
 
-using System.Reactive.Linq;
 using FluentAssertions;
 using Ouroboros.Providers;
 using Ouroboros.Tools;

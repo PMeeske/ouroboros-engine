@@ -2927,7 +2927,7 @@ public static class MindDsl
 
 /// <summary>
 /// Void result type for operations with no meaningful return value.
-/// Named VoidResult to avoid conflict with MeTTa.Unit.
+/// Named VoidResult to avoid conflict with Unit.
 /// </summary>
 public readonly struct VoidResult
 {

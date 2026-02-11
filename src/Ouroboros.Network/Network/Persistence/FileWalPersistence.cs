@@ -2,7 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using System.IO;
 using System.Runtime.CompilerServices;
 
 namespace Ouroboros.Network.Persistence;

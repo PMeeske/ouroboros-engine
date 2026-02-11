@@ -2,11 +2,12 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Abstractions;
+
 namespace Ouroboros.Agent.WorldModel;
 
 using Ouroboros.Core.Monads;
 using Ouroboros.Domain.Embodied;
-using Ouroboros.Domain.Reinforcement;
 
 /// <summary>
 /// Interface for predictive world models enabling model-based planning.

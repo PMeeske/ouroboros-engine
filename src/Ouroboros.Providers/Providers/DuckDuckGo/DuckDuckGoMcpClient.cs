@@ -2,12 +2,9 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Net;
-using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
-using Ouroboros.Core.Monads;
 
 namespace Ouroboros.Providers.DuckDuckGo;
 

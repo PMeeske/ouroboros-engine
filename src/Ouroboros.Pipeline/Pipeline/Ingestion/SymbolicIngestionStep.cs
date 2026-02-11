@@ -5,7 +5,6 @@
 namespace Ouroboros.Pipeline.Ingestion;
 
 using LangChain.Databases;
-using LangChain.DocumentLoaders;
 using Ouroboros.Pipeline.Extraction;
 using Ouroboros.Tools.MeTTa;
 
@@ -83,7 +82,7 @@ public sealed class SymbolicIngestionStep
             foreach (SemanticTriple triple in triples)
             {
                 string fact = triple.ToMeTTaFact();
-                Result<Unit, string> addResult = await this._engine.AddFactAsync(fact, ct);
+                var addResult = await this._engine.AddFactAsync(fact, ct);
                 
                 if (addResult.IsFailure)
                 {

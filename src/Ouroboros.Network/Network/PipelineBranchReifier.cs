@@ -2,8 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using Ouroboros.Pipeline.Branches;
-
 namespace Ouroboros.Network;
 
 /// <summary>

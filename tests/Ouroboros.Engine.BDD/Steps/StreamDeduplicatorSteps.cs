@@ -1,5 +1,3 @@
-using Ouroboros.Infrastructure.FeatureEngineering;
-
 namespace Ouroboros.Specs.Steps;
 
 [Binding]

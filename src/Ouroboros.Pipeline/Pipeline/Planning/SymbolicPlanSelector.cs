@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Abstractions;
+
 namespace Ouroboros.Pipeline.Planning;
 
 using Ouroboros.Tools.MeTTa;
@@ -213,10 +215,10 @@ public sealed class SymbolicPlanSelector
                 continue;
             }
 
-            Result<Unit, string> result = await this._engine.AddFactAsync(rule, ct);
+            var result = await this._engine.AddFactAsync(rule, ct);
             if (result.IsFailure)
             {
-                return result;
+                return Result<Unit, string>.Failure(result.Error);
             }
         }
 

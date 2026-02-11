@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Abstractions;
+
 namespace Ouroboros.Pipeline.Branches;
 
 using System.Text;
@@ -176,7 +178,7 @@ public static class DagMeTTaExtensions
                 continue;
             }
 
-            Result<Unit, string> result = await engine.AddFactAsync(rule, ct);
+            var result = await engine.AddFactAsync(rule, ct);
             if (result.IsFailure)
             {
                 return Result<Unit, string>.Failure($"Failed to add DAG rule: {result.Error}");
@@ -192,7 +194,7 @@ public static class DagMeTTaExtensions
                 continue;
             }
 
-            Result<Unit, string> result = await engine.AddFactAsync(fact, ct);
+            var result = await engine.AddFactAsync(fact, ct);
             if (result.IsFailure)
             {
                 return Result<Unit, string>.Failure($"Failed to add branch fact: {result.Error}");

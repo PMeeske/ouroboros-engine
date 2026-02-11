@@ -4,9 +4,7 @@
 
 namespace Ouroboros.Tests.EmbodiedInteraction;
 
-using System.Reactive.Linq;
 using Ouroboros.Core.EmbodiedInteraction;
-using Ouroboros.Core.Monads;
 using Xunit;
 
 /// <summary>

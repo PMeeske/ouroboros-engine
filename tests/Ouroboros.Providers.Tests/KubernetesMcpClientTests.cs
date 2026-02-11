@@ -2,12 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Net;
-using System.Text;
-using System.Text.Json;
-using FluentAssertions;
 using Ouroboros.Providers.Kubernetes;
-using Xunit;
 
 namespace Ouroboros.Tests.Tests.Kubernetes;
 

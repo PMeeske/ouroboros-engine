@@ -10,7 +10,6 @@ using Ouroboros.Agent.NeuralSymbolic;
 using Ouroboros.Agent.Resilience;
 using Ouroboros.Core.Monads;
 using Ouroboros.Core.Resilience;
-using Ouroboros.Providers;
 using Xunit;
 using NsReasoningMode = Ouroboros.Agent.NeuralSymbolic.ReasoningMode;
 using CoreReasoningMode = Ouroboros.Core.Resilience.ReasoningMode;

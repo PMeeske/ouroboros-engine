@@ -1,4 +1,5 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+using Ouroboros.Abstractions;
 using Ouroboros.Agent.MetaAI;
 using MetaAIMemoryStatistics = Ouroboros.Agent.MetaAI.MemoryStatistics;
 
@@ -47,7 +48,8 @@ public sealed class MeTTaMemoryBridge
 
             // For now, sync memory statistics as facts
             string statsFact = $"(memory-stats (total {stats.TotalExperiences}) (avg-quality {stats.AverageQualityScore}))";
-            Result<Unit, string> result = await _engine.AddFactAsync(statsFact, ct);
+            var addResult = await _engine.AddFactAsync(statsFact, ct);
+            Result<Unit, string> result = addResult.Map(_ => Unit.Value);
 
             if (result.IsFailure)
             {
@@ -84,11 +86,11 @@ public sealed class MeTTaMemoryBridge
             string qualityFact = $"(experience-quality \"{experience.Id}\" {experience.Verification.QualityScore})";
             string successFact = $"(experience-success \"{experience.Id}\" {experience.Execution.Success.ToString().ToLower()})";
 
-            Result<Unit, string>[] results = new[]
+            var results = new[]
             {
-                await _engine.AddFactAsync(goalFact, ct),
-                await _engine.AddFactAsync(qualityFact, ct),
-                await _engine.AddFactAsync(successFact, ct)
+                (await _engine.AddFactAsync(goalFact, ct)).Map(_ => Unit.Value),
+                (await _engine.AddFactAsync(qualityFact, ct)).Map(_ => Unit.Value),
+                (await _engine.AddFactAsync(successFact, ct)).Map(_ => Unit.Value)
             };
 
             List<Result<Unit, string>> failures = results.Where(r => r.IsFailure).ToList();

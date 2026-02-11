@@ -4,7 +4,6 @@
 
 namespace Ouroboros.Pipeline.WorldModel;
 
-using System.Collections.Immutable;
 using Ouroboros.Core.Monads;
 using Ouroboros.Core.Steps;
 using Ouroboros.Pipeline.Planning;

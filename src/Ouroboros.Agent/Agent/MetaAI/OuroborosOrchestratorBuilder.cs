@@ -8,8 +8,6 @@
 // Fluent builder for creating OuroborosOrchestrator instances
 // ==========================================================
 
-using Ouroboros.Agent;
-
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>

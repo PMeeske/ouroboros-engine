@@ -2,10 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
-using Ouroboros.Core.Synthesis;
-using Xunit;
-using Unit = Ouroboros.Core.Synthesis.Unit;
+using Unit = Ouroboros.Abstractions.Unit;
 
 namespace Ouroboros.Tests.Synthesis;
 

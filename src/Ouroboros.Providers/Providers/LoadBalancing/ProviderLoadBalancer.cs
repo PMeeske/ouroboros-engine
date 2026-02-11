@@ -4,7 +4,6 @@
 // </copyright>
 
 using System.Collections.Concurrent;
-using System.Diagnostics;
 
 namespace Ouroboros.Providers.LoadBalancing;
 

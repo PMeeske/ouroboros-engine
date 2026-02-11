@@ -2,11 +2,9 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using Ouroboros.Core.Monads;
 
 namespace Ouroboros.Providers.Docker;
 

@@ -2,7 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using Ouroboros.Pipeline.Branches;
 using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Network;

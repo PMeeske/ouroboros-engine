@@ -9,7 +9,6 @@ namespace Ouroboros.Agent.NeuralSymbolic;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using Ouroboros.Agent.MetaAI;
-using Ouroboros.Tools.MeTTa;
 
 /// <summary>
 /// Implementation of neural-symbolic bridge for hybrid reasoning.

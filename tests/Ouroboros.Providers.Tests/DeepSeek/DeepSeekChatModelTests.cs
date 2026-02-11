@@ -3,10 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
-using FluentAssertions;
-using LangChain.Providers.Ollama;
 using Ouroboros.Providers.DeepSeek;
-using Xunit;
 
 namespace Ouroboros.Tests.Providers.DeepSeek;
 

@@ -2,10 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Abstractions;
+
 namespace Ouroboros.Pipeline.Memory;
 
 using System.Collections.Immutable;
-using Ouroboros.Domain.Reinforcement;
 using Ouroboros.Pipeline.Verification;
 
 /// <summary>

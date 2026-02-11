@@ -2,8 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using System.IO;
-using Ouroboros.Core.Learning;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Network.Persistence;
 

@@ -6,7 +6,6 @@
 
 using System.Text.Json;
 using Ouroboros.Agent.MetaAI;
-using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Tools;
 

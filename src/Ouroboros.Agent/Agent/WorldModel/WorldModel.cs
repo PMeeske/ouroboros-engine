@@ -2,12 +2,13 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Abstractions;
+
 namespace Ouroboros.Agent.WorldModel;
 
 using Microsoft.Extensions.Logging;
 using Ouroboros.Core.Monads;
 using Ouroboros.Domain.Embodied;
-using Ouroboros.Domain.Reinforcement;
 
 /// <summary>
 /// Memory-based world model using k-nearest neighbor prediction.

@@ -2,13 +2,14 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Abstractions;
+
 namespace Ouroboros.Pipeline.Metacognition;
 
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using Ouroboros.Core.Monads;
-using Ouroboros.Core.Steps;
 
 /// <summary>
 /// Represents the dimensions of performance that can be assessed.

@@ -2,10 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
 using Ouroboros.Core.Hyperon;
-using Ouroboros.Core.Synthesis;
-using Xunit;
 
 namespace Ouroboros.Tests.Synthesis;
 

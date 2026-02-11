@@ -2,8 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using Ouroboros.Core.Monads;
-
 namespace Ouroboros.Agent.TemporalReasoning;
 
 /// <summary>

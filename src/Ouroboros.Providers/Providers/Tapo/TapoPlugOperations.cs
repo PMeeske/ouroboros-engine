@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using Ouroboros.Core;
-using Ouroboros.Core.Learning;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Providers.Tapo;
 

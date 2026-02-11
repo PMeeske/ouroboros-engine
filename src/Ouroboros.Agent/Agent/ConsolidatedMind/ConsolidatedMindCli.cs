@@ -4,7 +4,6 @@
 // </copyright>
 
 using LangChain.Providers.Ollama;
-using Ouroboros.Providers;
 
 namespace Ouroboros.Agent.ConsolidatedMind;
 

@@ -2,9 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using Ouroboros.Pipeline.Council;
-using Ouroboros.Pipeline.Council.Agents;
-
 namespace Ouroboros.Tests.Council;
 
 /// <summary>

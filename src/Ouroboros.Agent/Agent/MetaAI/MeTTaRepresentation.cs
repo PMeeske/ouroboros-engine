@@ -8,8 +8,7 @@
 using System.Text;
 using Ouroboros.Core.Hyperon;
 using Ouroboros.Core.LawsOfForm;
-using Ouroboros.Tools.MeTTa;
-using Unit = Ouroboros.Tools.MeTTa.Unit;
+using Unit = Ouroboros.Abstractions.Unit;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -141,8 +140,8 @@ public sealed class MeTTaRepresentation
             _stateAtoms[plan.Goal] = planId;
 
             // Add all facts to MeTTa
-            Result<Unit, string> factResult = await _engine.AddFactAsync(sb.ToString(), ct);
-            return factResult.MapError(_ => "Failed to add plan facts to MeTTa");
+            var factResult = await _engine.AddFactAsync(sb.ToString(), ct);
+            return factResult.Map(_ => Unit.Value).MapError(_ => "Failed to add plan facts to MeTTa");
         }
         catch (Exception ex)
         {
@@ -186,8 +185,8 @@ public sealed class MeTTaRepresentation
                 }
             }
 
-            Result<Unit, string> result = await _engine.AddFactAsync(sb.ToString(), ct);
-            return result.MapError(_ => "Failed to add execution state to MeTTa");
+            var result = await _engine.AddFactAsync(sb.ToString(), ct);
+            return result.Map(_ => Unit.Value).MapError(_ => "Failed to add execution state to MeTTa");
         }
         catch (Exception ex)
         {
@@ -227,8 +226,8 @@ public sealed class MeTTaRepresentation
                 }
             }
 
-            Result<Unit, string> result = await _engine.AddFactAsync(sb.ToString(), ct);
-            return result.MapError(_ => "Failed to add tool facts to MeTTa");
+            var result = await _engine.AddFactAsync(sb.ToString(), ct);
+            return result.Map(_ => Unit.Value).MapError(_ => "Failed to add tool facts to MeTTa");
         }
         catch (Exception ex)
         {
@@ -275,7 +274,7 @@ public sealed class MeTTaRepresentation
         string constraint,
         CancellationToken ct = default)
     {
-        Result<Unit, string> result = await _engine.AddFactAsync(constraint, ct);
+        var result = await _engine.AddFactAsync(constraint, ct);
         return result.Match(
             _ => Result<Unit, string>.Success(Unit.Value),
             error => Result<Unit, string>.Failure($"Failed to add constraint: {constraint} - {error}")

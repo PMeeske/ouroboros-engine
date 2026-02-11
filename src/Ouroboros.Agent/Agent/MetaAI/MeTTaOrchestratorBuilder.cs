@@ -6,7 +6,6 @@
 // ==========================================================
 
 using Ouroboros.Core.Hyperon;
-using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Agent.MetaAI;
 

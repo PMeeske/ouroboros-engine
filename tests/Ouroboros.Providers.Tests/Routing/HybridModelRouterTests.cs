@@ -3,10 +3,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
-using FluentAssertions;
-using Ouroboros.Providers.Routing;
-using Xunit;
-
 namespace Ouroboros.Tests.Providers.Routing;
 
 /// <summary>

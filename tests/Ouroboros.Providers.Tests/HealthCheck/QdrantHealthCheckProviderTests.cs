@@ -4,7 +4,6 @@
 
 namespace Ouroboros.Tests.Database.HealthCheck;
 
-using System.Net;
 using FluentAssertions;
 using Ouroboros.Core.Infrastructure.HealthCheck;
 using Xunit;

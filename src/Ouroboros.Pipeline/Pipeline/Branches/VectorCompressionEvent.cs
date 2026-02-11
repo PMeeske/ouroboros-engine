@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using Ouroboros.Domain.Events;
 using DomainCompressionEvent = Ouroboros.Domain.VectorCompression.VectorCompressionEvent;
 
 namespace Ouroboros.Pipeline.Branches;

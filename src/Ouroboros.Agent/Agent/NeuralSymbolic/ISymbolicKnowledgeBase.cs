@@ -1,3 +1,5 @@
+using Ouroboros.Abstractions;
+
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Symbolic Knowledge Base Interface
@@ -5,8 +7,6 @@
 // ==========================================================
 
 namespace Ouroboros.Agent.NeuralSymbolic;
-
-using Ouroboros.Tools.MeTTa;
 
 /// <summary>
 /// Interface for managing symbolic knowledge and executing MeTTa queries.

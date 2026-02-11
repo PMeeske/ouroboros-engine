@@ -5,7 +5,6 @@
 
 using System.Text.RegularExpressions;
 using Ouroboros.Agent.NeuralSymbolic;
-using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Agent.ConsolidatedMind;
 

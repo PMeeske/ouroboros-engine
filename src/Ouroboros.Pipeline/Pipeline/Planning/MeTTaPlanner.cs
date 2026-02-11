@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Abstractions;
+
 namespace Ouroboros.Pipeline.Planning;
 
 using System.Text.RegularExpressions;
@@ -163,7 +165,7 @@ public sealed class MeTTaPlanner
         CancellationToken ct = default)
     {
         string fact = $"(: {toolName} (-> {inputType.Name} {outputType.Name}))";
-        return await this._engine.AddFactAsync(fact, ct);
+        return (await this._engine.AddFactAsync(fact, ct)).Map(_ => Unit.Value);
     }
 
     /// <summary>
@@ -203,10 +205,10 @@ public sealed class MeTTaPlanner
                 continue;
             }
 
-            Result<Unit, string> result = await this._engine.AddFactAsync(line, ct);
+            var result = await this._engine.AddFactAsync(line, ct);
             if (result.IsFailure)
             {
-                return result;
+                return Result<Unit, string>.Failure(result.Error);
             }
         }
 

@@ -3,9 +3,7 @@
 // </copyright>
 
 using System.Diagnostics;
-using System.Text;
 using Microsoft.Extensions.Logging;
-using Ouroboros.Core;
 
 namespace Ouroboros.Providers.Tapo;
 

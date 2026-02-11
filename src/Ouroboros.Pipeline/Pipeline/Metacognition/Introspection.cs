@@ -9,6 +9,8 @@
 // </summary>
 // --------------------------------------------------------------------------------------------------------------------
 
+using Ouroboros.Abstractions;
+
 namespace Ouroboros.Pipeline.Metacognition;
 
 using System;

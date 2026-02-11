@@ -6,10 +6,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Ouroboros.Agent.NeuralSymbolic;
-using Ouroboros.Core.Kleisli;
-using Ouroboros.Core.Steps;
-using Ouroboros.Providers.DeepSeek;
-using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Agent.ConsolidatedMind;
 

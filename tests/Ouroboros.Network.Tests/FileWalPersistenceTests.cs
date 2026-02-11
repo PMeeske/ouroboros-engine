@@ -4,7 +4,6 @@
 
 namespace Ouroboros.Tests.Network;
 
-using System.Collections.Immutable;
 using System.IO;
 using FluentAssertions;
 using Ouroboros.Domain.States;

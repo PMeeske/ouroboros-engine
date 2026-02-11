@@ -2,10 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
-using Ouroboros.Application.GitHub;
-using Xunit;
-
 namespace Ouroboros.Tests.Tests.GitHub;
 
 /// <summary>

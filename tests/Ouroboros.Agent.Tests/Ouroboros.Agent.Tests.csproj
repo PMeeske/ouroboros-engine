@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="$(OuroborosBuild)\test-infra\Ouroboros.TestKit\Ouroboros.TestKit.csproj" />
+    <ProjectReference Include="..\..\..\foundation\src\Ouroboros.Abstractions\Ouroboros.Abstractions.csproj" />
     <!-- Engine projects -->
     <ProjectReference Include="..\..\src\Ouroboros.Agent\Ouroboros.Agent.csproj" />
     <ProjectReference Include="..\..\src\Ouroboros.Pipeline\Ouroboros.Pipeline.csproj" />

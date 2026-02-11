@@ -6,7 +6,6 @@ namespace Ouroboros.Tests.Providers;
 
 using System.Reactive.Linq;
 using FluentAssertions;
-using LangChain.Providers;
 using LangChain.Providers.Ollama;
 using Ouroboros.Providers;
 using Xunit;

@@ -4,12 +4,10 @@
 
 namespace Ouroboros.Tests.Providers.Tapo;
 
-using System.Net;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Moq.Protected;
 using Ouroboros.Core.EmbodiedInteraction;
 using Ouroboros.Providers.Tapo;
 using Xunit;

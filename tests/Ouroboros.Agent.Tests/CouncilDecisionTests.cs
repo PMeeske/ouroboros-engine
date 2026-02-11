@@ -2,7 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using Ouroboros.Pipeline.Council;
+using AgentVote = Ouroboros.Pipeline.Council.AgentVote;
+
 
 namespace Ouroboros.Tests.Council;
 

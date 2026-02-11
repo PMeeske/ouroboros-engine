@@ -2,13 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
-using Moq;
-using Ouroboros.Application.GitHub;
-using Ouroboros.Core.Ethics;
-using Ouroboros.Core.Monads;
 using Ouroboros.Domain.SelfModification;
-using Xunit;
 
 namespace Ouroboros.Tests.Tests.GitHub;
 

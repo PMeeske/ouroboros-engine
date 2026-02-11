@@ -1,8 +1,5 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-using Ouroboros.Agent.MetaAI;
-using Xunit;
-
 namespace Ouroboros.Tests.Agent;
 
 /// <summary>

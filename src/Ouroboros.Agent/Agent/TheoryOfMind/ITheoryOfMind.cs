@@ -2,9 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using Ouroboros.Core.Monads;
 using Ouroboros.Domain.Embodied;
-using Unit = Ouroboros.Core.Learning.Unit;
+using Unit = Ouroboros.Abstractions.Unit;
 
 namespace Ouroboros.Agent.TheoryOfMind;
 

@@ -6,7 +6,6 @@ namespace Ouroboros.Tests.Providers;
 
 using FluentAssertions;
 using Ouroboros.Providers;
-using Ouroboros.Tests.Mocks;
 using Xunit;
 
 /// <summary>

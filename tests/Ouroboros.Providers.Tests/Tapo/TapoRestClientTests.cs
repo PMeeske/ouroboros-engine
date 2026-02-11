@@ -6,7 +6,6 @@ namespace Ouroboros.Tests.Providers.Tapo;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
@@ -16,7 +15,6 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
-using Ouroboros.Core.Learning;
 using Ouroboros.Providers.Tapo;
 using Xunit;
 

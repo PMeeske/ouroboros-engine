@@ -5,7 +5,6 @@
 namespace Ouroboros.Tests.MultiAgent;
 
 using System;
-using System.Collections.Immutable;
 using FluentAssertions;
 using Ouroboros.Core.Monads;
 using Ouroboros.Pipeline.MultiAgent;

@@ -9,8 +9,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using Ouroboros.Core.Hyperon;
 using Ouroboros.Core.LawsOfForm;
-using Ouroboros.Tools.MeTTa;
-using Unit = Ouroboros.Tools.MeTTa.Unit;
+using Unit = Ouroboros.Abstractions.Unit;
 
 namespace Ouroboros.Agent.MetaAI;
 

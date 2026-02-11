@@ -4,8 +4,6 @@
 // Intelligent tool selection based on use case and context
 // ==========================================================
 
-using Ouroboros.Tools;
-
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>

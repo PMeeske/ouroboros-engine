@@ -6,7 +6,6 @@
 
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using Ouroboros.Diagnostics;
 
 namespace Ouroboros.Agent.MetaAI;
 

@@ -2,7 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using Ouroboros.Core.Steps;
 using Ouroboros.Pipeline.GraphRAG.Models;
 
 namespace Ouroboros.Pipeline.GraphRAG;

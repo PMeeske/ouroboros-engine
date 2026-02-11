@@ -1,3 +1,5 @@
+using Unit = Ouroboros.Abstractions.Unit;
+
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Symbolic Knowledge Base Implementation
@@ -32,26 +34,26 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
     public int RuleCount => _rules.Count;
 
     /// <inheritdoc/>
-    public async Task<Result<Tools.MeTTa.Unit, string>> AddRuleAsync(SymbolicRule rule, CancellationToken ct = default)
+    public async Task<Result<Unit, string>> AddRuleAsync(SymbolicRule rule, CancellationToken ct = default)
     {
         if (rule == null)
-            return Result<Tools.MeTTa.Unit, string>.Failure("Rule cannot be null");
+            return Result<Unit, string>.Failure("Rule cannot be null");
 
         try
         {
             // Add the rule to MeTTa engine
             var addResult = await _mettaEngine.AddFactAsync(rule.MeTTaRepresentation, ct);
             if (addResult.IsFailure)
-                return Result<Tools.MeTTa.Unit, string>.Failure(addResult.Error);
+                return Result<Unit, string>.Failure(addResult.Error);
 
             // Store in local dictionary
             _rules[rule.Name] = rule;
 
-            return Result<Tools.MeTTa.Unit, string>.Success(Tools.MeTTa.Unit.Value);
+            return Result<Unit, string>.Success(Unit.Value);
         }
         catch (Exception ex)
         {
-            return Result<Tools.MeTTa.Unit, string>.Failure($"Failed to add rule: {ex.Message}");
+            return Result<Unit, string>.Failure($"Failed to add rule: {ex.Message}");
         }
     }
 

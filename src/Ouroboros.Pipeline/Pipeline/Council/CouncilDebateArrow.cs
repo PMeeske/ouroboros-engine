@@ -2,7 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using Ouroboros.Core.Steps;
 using Ouroboros.Pipeline.Council.Agents;
 
 namespace Ouroboros.Pipeline.Council;

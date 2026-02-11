@@ -6,13 +6,12 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Core.EmbodiedInteraction;
-using Ouroboros.Core.Monads;
 
 // Unit types:
 // - Ouroboros.Core.EmbodiedInteraction.Unit (EmbodimentUnit.Default) - used by IEmbodimentProvider interface
 // - Ouroboros.Core.Learning.Unit (Unit.Value) - used by Tapo device operations
-using EmbodimentUnit = Ouroboros.Core.EmbodiedInteraction.Unit;
-using TapoUnit = Ouroboros.Core.Learning.Unit;
+using EmbodimentUnit = Ouroboros.Abstractions.Unit;
+using TapoUnit = Ouroboros.Abstractions.Unit;
 
 namespace Ouroboros.Providers.Tapo;
 
@@ -234,7 +233,7 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
     /// <inheritdoc/>
     public async Task<Result<EmbodimentUnit>> DisconnectAsync(CancellationToken ct = default)
     {
-        if (!_isConnected) return Result<EmbodimentUnit>.Success(EmbodimentUnit.Default);
+        if (!_isConnected) return Result<EmbodimentUnit>.Success(EmbodimentUnit.Value);
 
         try
         {
@@ -247,7 +246,7 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
             RaiseEvent(EmbodimentProviderEventType.Disconnected);
 
             await Task.CompletedTask;
-            return Result<EmbodimentUnit>.Success(EmbodimentUnit.Default);
+            return Result<EmbodimentUnit>.Success(EmbodimentUnit.Value);
         }
         catch (Exception ex)
         {
@@ -310,7 +309,7 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
             new Dictionary<string, object> { ["sensorId"] = sensorId });
 
         _logger?.LogInformation("Activated sensor: {SensorId}", sensorId);
-        return Task.FromResult(Result<EmbodimentUnit>.Success(EmbodimentUnit.Default));
+        return Task.FromResult(Result<EmbodimentUnit>.Success(EmbodimentUnit.Value));
     }
 
     /// <inheritdoc/>
@@ -331,7 +330,7 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
                 new Dictionary<string, object> { ["sensorId"] = sensorId });
         }
 
-        return Task.FromResult(Result<EmbodimentUnit>.Success(EmbodimentUnit.Default));
+        return Task.FromResult(Result<EmbodimentUnit>.Success(EmbodimentUnit.Value));
     }
 
     /// <inheritdoc/>
