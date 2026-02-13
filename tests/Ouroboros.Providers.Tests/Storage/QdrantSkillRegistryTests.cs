@@ -364,11 +364,11 @@ public sealed class PlanStepRecordTests
 }
 
 /// <summary>
-/// Unit tests for ExecutionResult record.
+/// Unit tests for PlanExecutionResult record.
 /// </summary>
 [Trait("Category", "Unit")]
 [Trait("Category", "Database")]
-public sealed class ExecutionResultRecordTests
+public sealed class PlanExecutionResultRecordTests
 {
     private static Plan CreateTestPlan() => new Plan(
         Goal: "Test goal",
@@ -391,14 +391,14 @@ public sealed class ExecutionResultRecordTests
     };
 
     [Fact]
-    public void ExecutionResult_WithSuccessfulExecution_SetsAllProperties()
+    public void PlanExecutionResult_WithSuccessfulExecution_SetsAllProperties()
     {
         // Arrange
         var plan = CreateTestPlan();
         var stepResults = CreateTestStepResults();
 
         // Act
-        var result = new ExecutionResult(
+        var result = new PlanExecutionResult(
             Plan: plan,
             StepResults: stepResults,
             Success: true,
@@ -416,10 +416,10 @@ public sealed class ExecutionResultRecordTests
     }
 
     [Fact]
-    public void ExecutionResult_WithFailedExecution_SetsSuccessFalse()
+    public void PlanExecutionResult_WithFailedExecution_SetsSuccessFalse()
     {
         // Act
-        var result = new ExecutionResult(
+        var result = new PlanExecutionResult(
             CreateTestPlan(),
             CreateTestStepResults(),
             Success: false,

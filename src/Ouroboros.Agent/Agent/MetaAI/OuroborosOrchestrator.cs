@@ -290,7 +290,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             string verificationText = await _llm.GenerateTextAsync(prompt, ct);
 
             // Parse verification result
-            (bool verified, double qualityScore) = ParseVerificationResult(verificationText);
+            (bool verified, double qualityScore) = ParsePlanVerificationResult(verificationText);
 
             // Use MeTTa for symbolic verification
             string planMetta = $"(plan (goal \"{EscapeMeTTa(goal)}\") (output \"{EscapeMeTTa(output.Substring(0, Math.Min(MeTTaOutputTruncationLength, output.Length)))}\"))";
@@ -609,7 +609,7 @@ Provide verification in JSON format:
         return steps;
     }
 
-    private (bool Verified, double QualityScore) ParseVerificationResult(string verificationText)
+    private (bool Verified, double QualityScore) ParsePlanVerificationResult(string verificationText)
     {
         try
         {
