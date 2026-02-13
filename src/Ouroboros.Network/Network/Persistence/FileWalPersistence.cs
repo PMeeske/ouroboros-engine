@@ -221,24 +221,62 @@ public sealed class FileWalPersistence : IGraphPersistence
     // These explicit implementations satisfy the interface contract.
 
     /// <inheritdoc />
-    Task IGraphPersistence.AppendNodeAsync(
+    async Task IGraphPersistence.AppendNodeAsync(
         Ouroboros.Abstractions.Network.MonadNode node,
-        CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload accepting Ouroboros.Network.MonadNode.");
+        CancellationToken ct)
+    {
+        // Convert from Abstractions.Network.MonadNode to Network.MonadNode
+        // Note: The Network.MonadNode constructor will compute the hash automatically
+        var networkNode = new MonadNode(
+            node.Id,
+            node.TypeName,
+            node.PayloadJson,
+            node.CreatedAt,
+            node.ParentIds);
+
+        await this.AppendNodeAsync(networkNode, ct).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
-    Task IGraphPersistence.AppendEdgeAsync(
+    async Task IGraphPersistence.AppendEdgeAsync(
         Ouroboros.Abstractions.Network.TransitionEdge edge,
-        CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload accepting Ouroboros.Network.TransitionEdge.");
+        CancellationToken ct)
+    {
+        // Convert from Abstractions.Network.TransitionEdge to Network.TransitionEdge
+        // The abstraction edge has SourceId/TargetId while Network has InputIds/OutputId
+        // We need to serialize the metadata to JSON for the OperationSpecJson field
+        var metadataJson = JsonSerializer.Serialize(edge.Metadata, new JsonSerializerOptions
+        {
+            WriteIndented = false,
+        });
+
+        var networkEdge = new TransitionEdge(
+            edge.Id,
+            ImmutableArray.Create(edge.SourceId),
+            edge.TargetId,
+            edge.TransitionType,
+            metadataJson,
+            edge.CreatedAt);
+
+        await this.AppendEdgeAsync(networkEdge, ct).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
-    IAsyncEnumerable<Ouroboros.Abstractions.Network.WalEntry> IGraphPersistence.ReplayAsync(
-        CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload returning Ouroboros.Network.Persistence.WalEntry.");
+    async IAsyncEnumerable<Ouroboros.Abstractions.Network.WalEntry> IGraphPersistence.ReplayAsync(
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        // Convert from Network.Persistence.WalEntry to Abstractions.Network.WalEntry
+        long sequenceNumber = 0;
+        await foreach (var entry in this.ReplayAsync(ct))
+        {
+            yield return new Ouroboros.Abstractions.Network.WalEntry(
+                Guid.NewGuid(),
+                entry.Type.ToString(),
+                entry.Timestamp,
+                entry.PayloadJson,
+                sequenceNumber++);
+        }
+    }
 
     #endregion
 }
