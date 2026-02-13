@@ -153,4 +153,26 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
             .Where(r => !string.IsNullOrWhiteSpace(r))
             .ToList();
     }
+
+    #region Explicit ISymbolicKnowledgeBase implementation (Abstractions.Domain types)
+
+    // The ISymbolicKnowledgeBase interface is bound to Ouroboros.Abstractions.Domain.SymbolicRule,
+    // while this class operates on the richer Ouroboros.Agent.NeuralSymbolic.SymbolicRule record.
+    // These explicit implementations satisfy the interface contract.
+
+    /// <inheritdoc />
+    Task<Result<Unit, string>> ISymbolicKnowledgeBase.AddRuleAsync(
+        Ouroboros.Abstractions.Domain.SymbolicRule rule,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload accepting Ouroboros.Agent.NeuralSymbolic.SymbolicRule.");
+
+    /// <inheritdoc />
+    Task<Result<List<Ouroboros.Abstractions.Domain.SymbolicRule>, string>> ISymbolicKnowledgeBase.QueryRulesAsync(
+        string pattern,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload returning Ouroboros.Agent.NeuralSymbolic.SymbolicRule.");
+
+    #endregion
 }

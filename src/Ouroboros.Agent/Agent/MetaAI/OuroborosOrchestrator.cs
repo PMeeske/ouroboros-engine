@@ -504,7 +504,7 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
             new Dictionary<string, double> { ["quality"] = ouroborosExp.QualityScore },
             ouroborosExp.Timestamp);
 
-        ExecutionResult execution = new ExecutionResult(
+        PlanExecutionResult execution = new PlanExecutionResult(
             plan,
             new List<StepResult>(),
             ouroborosExp.Success,
@@ -512,7 +512,7 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
             new Dictionary<string, object>(),
             TimeSpan.Zero);
 
-        VerificationResult verification = new VerificationResult(
+        PlanVerificationResult verification = new PlanVerificationResult(
             execution,
             ouroborosExp.Success,
             ouroborosExp.QualityScore,

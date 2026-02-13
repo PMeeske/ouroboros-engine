@@ -280,7 +280,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
     /// Extracts and registers a skill from a successful execution.
     /// </summary>
     public async Task<Result<Skill, string>> ExtractSkillAsync(
-        ExecutionResult execution,
+        PlanExecutionResult execution,
         string skillName,
         string description)
     {

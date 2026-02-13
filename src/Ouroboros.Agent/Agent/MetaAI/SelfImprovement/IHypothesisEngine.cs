@@ -37,7 +37,7 @@ public sealed record Experiment(
 public sealed record HypothesisTestResult(
     Hypothesis Hypothesis,
     Experiment Experiment,
-    ExecutionResult Execution,
+    PlanExecutionResult Execution,
     bool HypothesisSupported,
     double ConfidenceAdjustment,
     string Explanation,

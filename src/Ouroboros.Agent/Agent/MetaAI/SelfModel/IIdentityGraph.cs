@@ -148,7 +148,7 @@ public interface IIdentityGraph
     /// Updates performance metrics.
     /// </summary>
     /// <param name="taskResult">Result of a completed task</param>
-    void RecordTaskResult(ExecutionResult taskResult);
+    void RecordTaskResult(PlanExecutionResult taskResult);
 
     /// <summary>
     /// Gets performance summary for a specific time window.

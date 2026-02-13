@@ -172,7 +172,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     /// <summary>
     /// Executes plan with symbolic next-node selection.
     /// </summary>
-    public async Task<Result<ExecutionResult, string>> ExecuteAsync(
+    public async Task<Result<PlanExecutionResult, string>> ExecuteAsync(
         Plan plan,
         CancellationToken ct = default)
     {
@@ -216,7 +216,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 stepResults.Add(stepResult);
 
                 // Update MeTTa with execution results
-                ExecutionResult execResult = new ExecutionResult(
+                PlanExecutionResult execResult = new PlanExecutionResult(
                     plan,
                     stepResults.ToList(),
                     stepResult.Success,
@@ -230,8 +230,8 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 if (!stepResult.Success && !string.IsNullOrEmpty(stepResult.Error))
                 {
                     RecordMetric("executor", sw.ElapsedMilliseconds, false);
-                    return Result<ExecutionResult, string>.Success(
-                        new ExecutionResult(plan, stepResults, false, stepResult.Error, metadata, sw.Elapsed));
+                    return Result<PlanExecutionResult, string>.Success(
+                        new PlanExecutionResult(plan, stepResults, false, stepResult.Error, metadata, sw.Elapsed));
                 }
             }
 
@@ -239,21 +239,21 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             RecordMetric("executor", sw.ElapsedMilliseconds, true);
 
             string finalOutput = stepResults.LastOrDefault()?.Output ?? string.Empty;
-            return Result<ExecutionResult, string>.Success(
-                new ExecutionResult(plan, stepResults, true, finalOutput, metadata, sw.Elapsed));
+            return Result<PlanExecutionResult, string>.Success(
+                new PlanExecutionResult(plan, stepResults, true, finalOutput, metadata, sw.Elapsed));
         }
         catch (Exception ex)
         {
             RecordMetric("executor", sw.ElapsedMilliseconds, false);
-            return Result<ExecutionResult, string>.Failure($"Execution failed: {ex.Message}");
+            return Result<PlanExecutionResult, string>.Failure($"Execution failed: {ex.Message}");
         }
     }
 
     /// <summary>
     /// Verifies execution with MeTTa symbolic reasoning.
     /// </summary>
-    public async Task<Result<VerificationResult, string>> VerifyAsync(
-        ExecutionResult execution,
+    public async Task<Result<PlanVerificationResult, string>> VerifyAsync(
+        PlanExecutionResult execution,
         CancellationToken ct = default)
     {
         try
@@ -265,7 +265,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             string verificationText = await _llm.GenerateTextAsync(verifyPrompt, ct);
 
             // Parse verification result
-            VerificationResult verification = ParseVerification(execution, verificationText);
+            PlanVerificationResult verification = ParseVerification(execution, verificationText);
 
             // Use MeTTa for symbolic plan verification if available
             string planMetta = FormatPlanForMeTTa(execution.Plan);
@@ -284,19 +284,19 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             sw.Stop();
             RecordMetric("verifier", sw.ElapsedMilliseconds, true);
 
-            return Result<VerificationResult, string>.Success(verification);
+            return Result<PlanVerificationResult, string>.Success(verification);
         }
         catch (Exception ex)
         {
             RecordMetric("verifier", 1.0, false);
-            return Result<VerificationResult, string>.Failure($"Verification failed: {ex.Message}");
+            return Result<PlanVerificationResult, string>.Failure($"Verification failed: {ex.Message}");
         }
     }
 
     /// <summary>
     /// Learns from execution and updates MeTTa knowledge base.
     /// </summary>
-    public void LearnFromExecution(VerificationResult verification)
+    public void LearnFromExecution(PlanVerificationResult verification)
     {
         // Create experience for memory
         Experience experience = new Experience(
@@ -462,7 +462,7 @@ CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ourobor
         return new Plan(goal, steps, confidenceScores, DateTime.UtcNow);
     }
 
-    private string BuildVerificationPrompt(ExecutionResult execution)
+    private string BuildVerificationPrompt(PlanExecutionResult execution)
     {
         string prompt = $"Verify the execution of plan: {execution.Plan.Goal}\n\n";
         prompt += $"Success: {execution.Success}\n";
@@ -485,7 +485,7 @@ CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ourobor
         return prompt;
     }
 
-    private VerificationResult ParseVerification(ExecutionResult execution, string verificationText)
+    private PlanVerificationResult ParseVerification(PlanExecutionResult execution, string verificationText)
     {
         try
         {
@@ -513,11 +513,11 @@ CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ourobor
                 }
             }
 
-            return new VerificationResult(execution, verified, qualityScore, issues, improvements, null);
+            return new PlanVerificationResult(execution, verified, qualityScore, issues, improvements, null);
         }
         catch
         {
-            return new VerificationResult(
+            return new PlanVerificationResult(
                 execution,
                 execution.Success,
                 execution.Success ? 0.7 : 0.3,

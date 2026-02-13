@@ -32,7 +32,7 @@ public sealed class TemporalReasoner : ITemporalReasoner
     private readonly IChatCompletionModel? llm;
     private readonly ConcurrentDictionary<Guid, TemporalEvent> eventStore = new();
     private readonly ConcurrentDictionary<string, List<TemporalEvent>> eventsByType = new();
-    private readonly ConcurrentDictionary<(Guid, Guid), TemporalRelation> relationCache = new();
+    private readonly ConcurrentDictionary<(Guid, Guid), TemporalRelationType> relationCache = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TemporalReasoner"/> class.
@@ -67,17 +67,16 @@ public sealed class TemporalReasoner : ITemporalReasoner
             var cacheKey = (event1.Id, event2.Id);
             if (this.relationCache.TryGetValue(cacheKey, out var cachedRelation))
             {
-                return Task.FromResult(Result<TemporalRelation, string>.Success(cachedRelation));
+                return Task.FromResult(Result<TemporalRelation, string>.Success(MapToTemporalRelation(cachedRelation)));
             }
 
             // Compute Allen interval relation
             var relationType = this.ComputeAllenRelation(event1, event2);
-            var relation = new TemporalRelation(event1, event2, relationType, 1.0);
 
             // Cache the result
-            this.relationCache[cacheKey] = relation;
+            this.relationCache[cacheKey] = relationType;
 
-            return Task.FromResult(Result<TemporalRelation, string>.Success(relation));
+            return Task.FromResult(Result<TemporalRelation, string>.Success(MapToTemporalRelation(relationType)));
         }
         catch (Exception ex)
         {
@@ -133,15 +132,14 @@ public sealed class TemporalReasoner : ITemporalReasoner
                 });
             }
 
-            // Filter by temporal relation to another event
-            if (query.RelationTo.HasValue &&
-                query.RelatedEventId.HasValue &&
+            // Filter by related event (temporal proximity)
+            if (query.RelatedEventId.HasValue &&
                 this.eventStore.TryGetValue(query.RelatedEventId.Value, out var relatedEvent))
             {
                 events = events.Where(e =>
                 {
                     var relation = this.ComputeAllenRelation(e, relatedEvent);
-                    return relation == query.RelationTo.Value;
+                    return relation != TemporalRelationType.Before && relation != TemporalRelationType.After;
                 });
             }
 
@@ -255,27 +253,23 @@ public sealed class TemporalReasoner : ITemporalReasoner
             // Sort events by start time
             var sortedEvents = events.OrderBy(e => e.StartTime).ToList();
 
-            // Compute relations between consecutive and overlapping events
-            var relations = new List<TemporalRelation>();
-            for (int i = 0; i < sortedEvents.Count; i++)
-            {
-                for (int j = i + 1; j < Math.Min(i + TemporalReasoningConstants.MaxRelationLookahead, sortedEvents.Count); j++)
-                {
-                    var relation = this.ComputeAllenRelation(sortedEvents[i], sortedEvents[j]);
-                    relations.Add(new TemporalRelation(
-                        sortedEvents[i],
-                        sortedEvents[j],
-                        relation,
-                        1.0));
-                }
-            }
-
             // Find earliest and latest times
             var earliestTime = sortedEvents.Min(e => e.StartTime);
             var latestTime = sortedEvents.Max(e => e.EndTime ?? e.StartTime);
 
-            // Group events by type (convert to read-only collections)
-            var eventsByType = sortedEvents
+            // Compute temporal relations between adjacent events
+            var relations = new List<TemporalRelationEdge>();
+            for (int i = 0; i < sortedEvents.Count - 1; i++)
+            {
+                for (int j = i + 1; j < Math.Min(i + 1 + TemporalReasoningConstants.MaxRelationLookahead, sortedEvents.Count); j++)
+                {
+                    var relType = this.ComputeAllenRelation(sortedEvents[i], sortedEvents[j]);
+                    relations.Add(new TemporalRelationEdge(sortedEvents[i], sortedEvents[j], relType, 1.0));
+                }
+            }
+
+            // Group events by type
+            var groupedByType = sortedEvents
                 .GroupBy(e => e.EventType)
                 .ToDictionary(
                     g => g.Key,
@@ -286,7 +280,7 @@ public sealed class TemporalReasoner : ITemporalReasoner
                 relations,
                 earliestTime,
                 latestTime,
-                eventsByType);
+                groupedByType);
 
             return Result<Timeline, string>.Success(timeline);
         }
@@ -311,11 +305,11 @@ public sealed class TemporalReasoner : ITemporalReasoner
         try
         {
             // Build constraint graph
-            var constraintMap = new Dictionary<(Guid, Guid), TemporalRelationType>();
+            var constraintMap = new Dictionary<(string, string), TemporalRelation>();
 
             foreach (var constraint in constraints)
             {
-                var key = (constraint.Event1Id, constraint.Event2Id);
+                var key = (constraint.EventIdA, constraint.EventIdB);
                 if (constraintMap.TryGetValue(key, out var existing))
                 {
                     // Check for conflicts
@@ -523,7 +517,7 @@ Provide multiple causal relationships if they exist.";
                     events[effectIdx.Value],
                     strength,
                     mechanism,
-                    confoundsBuilder.ToArray()));
+                    confoundsBuilder));
 
                 // Reset for next relation
                 causeIdx = null;
@@ -542,7 +536,7 @@ Provide multiple causal relationships if they exist.";
                 events[effectIdx.Value],
                 strength,
                 mechanism,
-                confoundsBuilder.ToArray()));
+                confoundsBuilder));
         }
 
         return relations;
@@ -646,7 +640,7 @@ REASONING: [explanation]
                     description,
                     predictedTime,
                     confidence,
-                    history,
+                    Array.Empty<TemporalEvent>(),
                     reasoning));
 
                 // Reset for next prediction
@@ -667,7 +661,7 @@ REASONING: [explanation]
                 description,
                 predictedTime,
                 confidence,
-                history,
+                Array.Empty<TemporalEvent>(),
                 reasoning));
         }
 
@@ -709,18 +703,18 @@ REASONING: [explanation]
             {
                 predictions.Add(new PredictedEvent(
                     group.Key,
-                    $"Predicted {group.Key} based on historical pattern",
+                    $"Predicted {group.Key} based on historical pattern (avg interval: {avgInterval.TotalHours:F1}h)",
                     predictedTime,
                     0.6,
                     groupEvents,
-                    $"Based on average interval of {avgInterval.TotalHours:F1} hours between {groupEvents.Count} historical events"));
+                    $"Pattern-based prediction from {groupEvents.Count} historical events"));
             }
         }
 
         return predictions;
     }
 
-    private bool CheckPathConsistency(Dictionary<(Guid, Guid), TemporalRelationType> constraints)
+    private bool CheckPathConsistency(Dictionary<(string, string), TemporalRelation> constraints)
     {
         // Simple path consistency check
         // A more complete implementation would use Allen's composition table
@@ -731,7 +725,7 @@ REASONING: [explanation]
         {
             var reverseKey = (key.Item2, key.Item1);
             if (constraints.TryGetValue(reverseKey, out var reverseRelation) &&
-                !this.AreInverseRelations(constraints[key], reverseRelation))
+                !AreInverseRelations(constraints[key], reverseRelation))
             {
                 // Relations are inconsistent (not proper inverses)
                 return false;
@@ -741,24 +735,38 @@ REASONING: [explanation]
         return true;
     }
 
-    private bool AreInverseRelations(TemporalRelationType rel1, TemporalRelationType rel2)
+    private static bool AreInverseRelations(TemporalRelation rel1, TemporalRelation rel2)
     {
         return (rel1, rel2) switch
         {
-            (TemporalRelationType.Before, TemporalRelationType.After) => true,
-            (TemporalRelationType.After, TemporalRelationType.Before) => true,
-            (TemporalRelationType.Meets, TemporalRelationType.MetBy) => true,
-            (TemporalRelationType.MetBy, TemporalRelationType.Meets) => true,
-            (TemporalRelationType.Overlaps, TemporalRelationType.OverlappedBy) => true,
-            (TemporalRelationType.OverlappedBy, TemporalRelationType.Overlaps) => true,
-            (TemporalRelationType.During, TemporalRelationType.Contains) => true,
-            (TemporalRelationType.Contains, TemporalRelationType.During) => true,
-            (TemporalRelationType.Starts, TemporalRelationType.StartedBy) => true,
-            (TemporalRelationType.StartedBy, TemporalRelationType.Starts) => true,
-            (TemporalRelationType.Finishes, TemporalRelationType.FinishedBy) => true,
-            (TemporalRelationType.FinishedBy, TemporalRelationType.Finishes) => true,
-            (TemporalRelationType.Equals, TemporalRelationType.Equals) => true,
+            (TemporalRelation.Before, TemporalRelation.After) => true,
+            (TemporalRelation.After, TemporalRelation.Before) => true,
+            (TemporalRelation.Contains, TemporalRelation.During) => true,
+            (TemporalRelation.During, TemporalRelation.Contains) => true,
+            (TemporalRelation.Simultaneous, TemporalRelation.Simultaneous) => true,
+            (TemporalRelation.Meets, TemporalRelation.Meets) => true,
+            (TemporalRelation.Overlaps, TemporalRelation.Overlaps) => true,
             _ => false,
         };
     }
+
+    /// <summary>
+    /// Maps the detailed Allen Interval Algebra relation to the simplified canonical TemporalRelation.
+    /// </summary>
+    private static TemporalRelation MapToTemporalRelation(TemporalRelationType relationType) =>
+        relationType switch
+        {
+            TemporalRelationType.Before => TemporalRelation.Before,
+            TemporalRelationType.After => TemporalRelation.After,
+            TemporalRelationType.Meets or TemporalRelationType.MetBy => TemporalRelation.Meets,
+            TemporalRelationType.Overlaps or TemporalRelationType.OverlappedBy => TemporalRelation.Overlaps,
+            TemporalRelationType.During => TemporalRelation.During,
+            TemporalRelationType.Contains => TemporalRelation.Contains,
+            TemporalRelationType.Equals => TemporalRelation.Simultaneous,
+            TemporalRelationType.Starts or TemporalRelationType.StartedBy or
+            TemporalRelationType.Finishes or TemporalRelationType.FinishedBy => TemporalRelation.Overlaps,
+            _ => TemporalRelation.Unknown,
+        };
+
+
 }

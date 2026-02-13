@@ -6,19 +6,6 @@
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Represents a learned skill that can be reused.
-/// </summary>
-public sealed record Skill(
-    string Name,
-    string Description,
-    List<string> Prerequisites,
-    List<PlanStep> Steps,
-    double SuccessRate,
-    int UsageCount,
-    DateTime CreatedAt,
-    DateTime LastUsed);
-
-/// <summary>
 /// Interface for skill acquisition and management.
 /// Enables the system to learn and reuse successful patterns.
 /// </summary>
@@ -75,7 +62,7 @@ public interface ISkillRegistry
     /// <param name="skillName">The name for the new skill</param>
     /// <param name="description">Description of what the skill does</param>
     Task<Result<Skill, string>> ExtractSkillAsync(
-        ExecutionResult execution,
+        PlanExecutionResult execution,
         string skillName,
         string description);
 }

@@ -61,7 +61,7 @@ public interface ICapabilityRegistry
     /// <param name="ct">Cancellation token</param>
     Task UpdateCapabilityAsync(
         string name,
-        ExecutionResult result,
+        PlanExecutionResult result,
         CancellationToken ct = default);
 
     /// <summary>

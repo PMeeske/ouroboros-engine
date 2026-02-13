@@ -11,12 +11,12 @@ namespace Ouroboros.Providers;
 /// </summary>
 /// <param name="llm">The underlying chat completion model.</param>
 /// <param name="registry">The tool registry for tool execution.</param>
-public sealed class ToolAwareChatModel(IChatCompletionModel llm, ToolRegistry registry)
+public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompletionModel llm, ToolRegistry registry)
 {
     /// <summary>
     /// Gets the underlying chat completion model.
     /// </summary>
-    public IChatCompletionModel InnerModel => llm;
+    public Ouroboros.Abstractions.Core.IChatCompletionModel InnerModel => llm;
 
     /// <summary>
     /// Returns true if the underlying model supports thinking mode.

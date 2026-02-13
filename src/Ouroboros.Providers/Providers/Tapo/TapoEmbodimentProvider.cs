@@ -7,12 +7,6 @@ using System.Reactive.Subjects;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Core.EmbodiedInteraction;
 
-// Unit types:
-// - Ouroboros.Core.EmbodiedInteraction.Unit (EmbodimentUnit.Default) - used by IEmbodimentProvider interface
-// - Ouroboros.Core.Learning.Unit (Unit.Value) - used by Tapo device operations
-using EmbodimentUnit = Ouroboros.Abstractions.Unit;
-using TapoUnit = Ouroboros.Abstractions.Unit;
-
 namespace Ouroboros.Providers.Tapo;
 
 /// <summary>
@@ -231,9 +225,9 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
     }
 
     /// <inheritdoc/>
-    public async Task<Result<EmbodimentUnit>> DisconnectAsync(CancellationToken ct = default)
+    public async Task<Result<Unit>> DisconnectAsync(CancellationToken ct = default)
     {
-        if (!_isConnected) return Result<EmbodimentUnit>.Success(EmbodimentUnit.Value);
+        if (!_isConnected) return Result<Unit>.Success(Unit.Value);
 
         try
         {
@@ -246,12 +240,12 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
             RaiseEvent(EmbodimentProviderEventType.Disconnected);
 
             await Task.CompletedTask;
-            return Result<EmbodimentUnit>.Success(EmbodimentUnit.Value);
+            return Result<Unit>.Success(Unit.Value);
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error disconnecting from Tapo provider");
-            return Result<EmbodimentUnit>.Failure($"Disconnect failed: {ex.Message}");
+            return Result<Unit>.Failure($"Disconnect failed: {ex.Message}");
         }
     }
 
@@ -289,14 +283,14 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
     }
 
     /// <inheritdoc/>
-    public Task<Result<EmbodimentUnit>> ActivateSensorAsync(string sensorId, CancellationToken ct = default)
+    public Task<Result<Unit>> ActivateSensorAsync(string sensorId, CancellationToken ct = default)
     {
-        if (_disposed) return Task.FromResult(Result<EmbodimentUnit>.Failure("Provider is disposed"));
-        if (!_isConnected) return Task.FromResult(Result<EmbodimentUnit>.Failure("Not connected"));
+        if (_disposed) return Task.FromResult(Result<Unit>.Failure("Provider is disposed"));
+        if (!_isConnected) return Task.FromResult(Result<Unit>.Failure("Not connected"));
 
         if (!_sensors.ContainsKey(sensorId))
         {
-            return Task.FromResult(Result<EmbodimentUnit>.Failure($"Sensor '{sensorId}' not found"));
+            return Task.FromResult(Result<Unit>.Failure($"Sensor '{sensorId}' not found"));
         }
 
         _activeSensors[sensorId] = true;
@@ -309,13 +303,13 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
             new Dictionary<string, object> { ["sensorId"] = sensorId });
 
         _logger?.LogInformation("Activated sensor: {SensorId}", sensorId);
-        return Task.FromResult(Result<EmbodimentUnit>.Success(EmbodimentUnit.Value));
+        return Task.FromResult(Result<Unit>.Success(Unit.Value));
     }
 
     /// <inheritdoc/>
-    public Task<Result<EmbodimentUnit>> DeactivateSensorAsync(string sensorId, CancellationToken ct = default)
+    public Task<Result<Unit>> DeactivateSensorAsync(string sensorId, CancellationToken ct = default)
     {
-        if (_disposed) return Task.FromResult(Result<EmbodimentUnit>.Failure("Provider is disposed"));
+        if (_disposed) return Task.FromResult(Result<Unit>.Failure("Provider is disposed"));
 
         if (_activeSensors.ContainsKey(sensorId))
         {
@@ -330,7 +324,7 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
                 new Dictionary<string, object> { ["sensorId"] = sensorId });
         }
 
-        return Task.FromResult(Result<EmbodimentUnit>.Success(EmbodimentUnit.Value));
+        return Task.FromResult(Result<Unit>.Success(Unit.Value));
     }
 
     /// <inheritdoc/>
@@ -427,7 +421,7 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
 
         try
         {
-            Result<TapoUnit>? result = null;
+            Result<Unit>? result = null;
 
             // Route action to appropriate Tapo operation
             switch (action.ActionType.ToLowerInvariant())
@@ -828,30 +822,30 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
         return caps;
     }
 
-    private async Task<Result<TapoUnit>> ExecuteTurnOnAsync(string deviceId, CancellationToken ct)
+    private async Task<Result<Unit>> ExecuteTurnOnAsync(string deviceId, CancellationToken ct)
     {
         // Try color bulb first, then regular bulb, then plug
-        Result<TapoUnit> colorResult = await _tapoClient!.ColorLightBulbs.TurnOnAsync(deviceId, ct);
+        Result<Unit> colorResult = await _tapoClient!.ColorLightBulbs.TurnOnAsync(deviceId, ct);
         if (colorResult.IsSuccess) return colorResult;
 
-        Result<TapoUnit> bulbResult = await _tapoClient!.LightBulbs.TurnOnAsync(deviceId, ct);
+        Result<Unit> bulbResult = await _tapoClient!.LightBulbs.TurnOnAsync(deviceId, ct);
         if (bulbResult.IsSuccess) return bulbResult;
 
         return await _tapoClient!.Plugs.TurnOnAsync(deviceId, ct);
     }
 
-    private async Task<Result<TapoUnit>> ExecuteTurnOffAsync(string deviceId, CancellationToken ct)
+    private async Task<Result<Unit>> ExecuteTurnOffAsync(string deviceId, CancellationToken ct)
     {
-        Result<TapoUnit> colorResult = await _tapoClient!.ColorLightBulbs.TurnOffAsync(deviceId, ct);
+        Result<Unit> colorResult = await _tapoClient!.ColorLightBulbs.TurnOffAsync(deviceId, ct);
         if (colorResult.IsSuccess) return colorResult;
 
-        Result<TapoUnit> bulbResult = await _tapoClient!.LightBulbs.TurnOffAsync(deviceId, ct);
+        Result<Unit> bulbResult = await _tapoClient!.LightBulbs.TurnOffAsync(deviceId, ct);
         if (bulbResult.IsSuccess) return bulbResult;
 
         return await _tapoClient!.Plugs.TurnOffAsync(deviceId, ct);
     }
 
-    private Task<Result<TapoUnit>> ExecuteSetColorAsync(
+    private Task<Result<Unit>> ExecuteSetColorAsync(
         string deviceId, byte r, byte g, byte b, CancellationToken ct)
     {
         return _tapoClient!.ColorLightBulbs.SetColorAsync(

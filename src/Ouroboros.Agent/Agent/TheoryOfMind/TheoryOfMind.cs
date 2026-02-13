@@ -439,4 +439,50 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
         DateTime PredictedAt,
         bool WasAccurate,
         string PredictionType);
+
+    #region Explicit ITheoryOfMind implementation (Abstractions.Domain types)
+
+    // The ITheoryOfMind interface is bound to Ouroboros.Abstractions.Domain placeholder types,
+    // while this class operates on the richer Ouroboros.Agent.TheoryOfMind types.
+    // These explicit implementations satisfy the interface contract.
+
+    /// <inheritdoc />
+    Task<Result<Ouroboros.Abstractions.Domain.BeliefState, string>> ITheoryOfMind.InferBeliefsAsync(
+        string agentId,
+        IReadOnlyList<Ouroboros.Abstractions.Domain.AgentObservation> observations,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload accepting Ouroboros.Agent.TheoryOfMind types.");
+
+    /// <inheritdoc />
+    Task<Result<Ouroboros.Abstractions.Domain.IntentionPrediction, string>> ITheoryOfMind.PredictIntentionAsync(
+        string agentId,
+        Ouroboros.Abstractions.Domain.BeliefState beliefs,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload accepting Ouroboros.Agent.TheoryOfMind types.");
+
+    /// <inheritdoc />
+    Task<Result<Ouroboros.Abstractions.Domain.ActionPrediction, string>> ITheoryOfMind.PredictNextActionAsync(
+        string agentId,
+        Ouroboros.Abstractions.Domain.BeliefState beliefs,
+        IReadOnlyList<Ouroboros.Abstractions.Domain.EmbodiedAction> availableActions,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload accepting Ouroboros.Agent.TheoryOfMind types.");
+
+    /// <inheritdoc />
+    Task<Result<Unit, string>> ITheoryOfMind.UpdateAgentModelAsync(
+        string agentId,
+        Ouroboros.Abstractions.Domain.AgentObservation observation,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload accepting Ouroboros.Agent.TheoryOfMind types.");
+
+    /// <inheritdoc />
+    Ouroboros.Abstractions.Domain.AgentModel? ITheoryOfMind.GetAgentModel(string agentId) =>
+        throw new NotImplementedException(
+            "Use the overload returning Ouroboros.Agent.TheoryOfMind.AgentModel.");
+
+    #endregion
 }

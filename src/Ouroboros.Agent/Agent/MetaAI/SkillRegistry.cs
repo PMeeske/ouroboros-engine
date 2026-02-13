@@ -140,7 +140,7 @@ public sealed class SkillRegistry : ISkillRegistry
     /// Extracts a skill from successful execution.
     /// </summary>
     public async Task<Result<Skill, string>> ExtractSkillAsync(
-        ExecutionResult execution,
+        PlanExecutionResult execution,
         string skillName,
         string description)
     {

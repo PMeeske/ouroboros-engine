@@ -19,7 +19,7 @@ public sealed class IdentityGraph : IIdentityGraph
     private readonly ICapabilityRegistry _capabilityRegistry;
     private readonly ConcurrentDictionary<string, AgentResource> _resources = new();
     private readonly ConcurrentDictionary<Guid, AgentCommitment> _commitments = new();
-    private readonly ConcurrentBag<(DateTime Time, ExecutionResult Result)> _taskHistory = new();
+    private readonly ConcurrentBag<(DateTime Time, PlanExecutionResult Result)> _taskHistory = new();
     private readonly string? _persistencePath;
 
     public IdentityGraph(
@@ -130,7 +130,7 @@ public sealed class IdentityGraph : IIdentityGraph
             .ToList();
     }
 
-    public void RecordTaskResult(ExecutionResult taskResult)
+    public void RecordTaskResult(PlanExecutionResult taskResult)
     {
         ArgumentNullException.ThrowIfNull(taskResult);
         _taskHistory.Add((DateTime.UtcNow, taskResult));
@@ -139,7 +139,7 @@ public sealed class IdentityGraph : IIdentityGraph
     public AgentPerformance GetPerformanceSummary(TimeSpan timeWindow)
     {
         DateTime cutoff = DateTime.UtcNow - timeWindow;
-        List<(DateTime Time, ExecutionResult Result)> recentTasks = _taskHistory
+        List<(DateTime Time, PlanExecutionResult Result)> recentTasks = _taskHistory
             .Where(t => t.Time >= cutoff)
             .ToList();
 

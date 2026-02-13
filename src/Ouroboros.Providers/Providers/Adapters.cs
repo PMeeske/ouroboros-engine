@@ -76,11 +76,11 @@ public sealed record ThinkingResponse(
 }
 
 /// <summary>
-/// Minimal contract used by <see cref="ToolAwareChatModel"/> to obtain text responses.
+/// Extended chat completion model contract used by providers.
+/// Extends the base <see cref="Ouroboros.Abstractions.Core.IChatCompletionModel"/> interface.
 /// </summary>
-public interface IChatCompletionModel
+public interface IChatCompletionModel : Ouroboros.Abstractions.Core.IChatCompletionModel
 {
-    Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default);
 }
 
 /// <summary>

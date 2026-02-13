@@ -393,4 +393,57 @@ public sealed class WorldModelEngine : IWorldModelEngine
 
         return Math.Sqrt(sum);
     }
+
+    #region Explicit IWorldModelEngine implementation (Abstractions types)
+
+    // The IWorldModelEngine interface is bound to Abstractions-level types
+    // (LearnedWorldModel, WorldTransition, WorldState, AgentAction, ActionPlan),
+    // while this class operates on the richer local types (WorldModel, Transition, State, Action, Plan).
+    // These explicit implementations satisfy the interface contract.
+
+    /// <inheritdoc />
+    Task<Result<LearnedWorldModel, string>> IWorldModelEngine.LearnModelAsync(
+        List<WorldTransition> transitions,
+        ModelArchitecture architecture,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload accepting local WorldModel types.");
+
+    /// <inheritdoc />
+    Task<Result<WorldState, string>> IWorldModelEngine.PredictNextStateAsync(
+        WorldState currentState,
+        AgentAction action,
+        LearnedWorldModel model,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload accepting local WorldModel types.");
+
+    /// <inheritdoc />
+    Task<Result<ActionPlan, string>> IWorldModelEngine.PlanInImaginationAsync(
+        WorldState initialState,
+        string goal,
+        LearnedWorldModel model,
+        int lookaheadDepth,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload accepting local WorldModel types.");
+
+    /// <inheritdoc />
+    Task<Result<ModelQuality, string>> IWorldModelEngine.EvaluateModelAsync(
+        LearnedWorldModel model,
+        List<WorldTransition> testSet,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload accepting local WorldModel types.");
+
+    /// <inheritdoc />
+    Task<Result<List<WorldTransition>, string>> IWorldModelEngine.GenerateSyntheticExperienceAsync(
+        LearnedWorldModel model,
+        WorldState startState,
+        int trajectoryLength,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload accepting local WorldModel types.");
+
+    #endregion
 }

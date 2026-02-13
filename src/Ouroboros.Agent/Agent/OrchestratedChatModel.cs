@@ -87,7 +87,7 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
                     // Create tool-aware model with recommended tools
                     ToolAwareChatModel toolAwareModel = new ToolAwareChatModel(
                         decision.SelectedModel,
-                        decision.RecommendedTools);
+                        (ToolRegistry)decision.RecommendedTools);
 
                     // Execute with tools
                     (string text, List<ToolExecution> tools) = await toolAwareModel.GenerateWithToolsAsync(prompt, ct);

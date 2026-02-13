@@ -96,7 +96,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
     /// </summary>
     public async Task UpdateCapabilityAsync(
         string name,
-        ExecutionResult result,
+        PlanExecutionResult result,
         CancellationToken ct = default)
     {
         await Task.CompletedTask;

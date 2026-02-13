@@ -37,7 +37,7 @@ public sealed record TestCase(
     string Name,
     string Goal,
     Dictionary<string, object>? Context,
-    Func<VerificationResult, bool>? CustomValidator);
+    Func<PlanVerificationResult, bool>? CustomValidator);
 
 /// <summary>
 /// Evaluation harness for measuring Meta-AI orchestrator performance.
@@ -79,9 +79,9 @@ public sealed class EvaluationHarness
                 throw new Exception("Plan is null");
 
             // Execute
-            Result<ExecutionResult, string> execResult = await _orchestrator.ExecuteAsync(plan, ct);
+            Result<PlanExecutionResult, string> execResult = await _orchestrator.ExecuteAsync(plan, ct);
 
-            ExecutionResult? execution = null;
+            PlanExecutionResult? execution = null;
             execResult.Match(
                 e => execution = e,
                 error => throw new Exception($"Execution failed: {error}"));
@@ -90,9 +90,9 @@ public sealed class EvaluationHarness
                 throw new Exception("Execution is null");
 
             // Verify
-            Result<VerificationResult, string> verifyResult = await _orchestrator.VerifyAsync(execution, ct);
+            Result<PlanVerificationResult, string> verifyResult = await _orchestrator.VerifyAsync(execution, ct);
 
-            VerificationResult? verification = null;
+            PlanVerificationResult? verification = null;
             verifyResult.Match(
                 v => verification = v,
                 error => throw new Exception($"Verification failed: {error}"));

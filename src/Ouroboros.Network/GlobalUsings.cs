@@ -16,6 +16,7 @@ global using System.Text.Json.Serialization;
 global using System.Text.RegularExpressions;
 global using System.Threading;
 global using System.Threading.Tasks;
+global using Ouroboros.Abstractions.Monads;
 global using Ouroboros.Core.Monads;
 global using Ouroboros.Domain.States;
 global using Ouroboros.Domain.Events;

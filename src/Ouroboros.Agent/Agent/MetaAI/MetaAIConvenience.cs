@@ -107,7 +107,7 @@ public static class MetaAIConvenience
             return Result<string, string>.Failure(planResult.Error);
 
         // Execute
-        Result<ExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value);
+        Result<PlanExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value);
         if (!execResult.IsSuccess)
             return Result<string, string>.Failure(execResult.Error);
 
@@ -131,12 +131,12 @@ public static class MetaAIConvenience
             return Result<(string, double), string>.Failure(planResult.Error);
 
         // Execute
-        Result<ExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value);
+        Result<PlanExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value);
         if (!execResult.IsSuccess)
             return Result<(string, double), string>.Failure(execResult.Error);
 
         // Verify
-        Result<VerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execResult.Value);
+        Result<PlanVerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execResult.Value);
         if (!verifyResult.IsSuccess)
             return Result<(string, double), string>.Failure(verifyResult.Error);
 
@@ -167,7 +167,7 @@ public static class MetaAIConvenience
     /// <summary>
     /// Executes a complete plan-execute-verify-learn cycle with automatic learning.
     /// </summary>
-    public static async Task<Result<VerificationResult, string>> CompleteWorkflow(
+    public static async Task<Result<PlanVerificationResult, string>> CompleteWorkflow(
         this IMetaAIPlannerOrchestrator orchestrator,
         string goal,
         Dictionary<string, object>? context = null,
@@ -176,17 +176,17 @@ public static class MetaAIConvenience
         // Plan
         Result<Plan, string> planResult = await orchestrator.PlanAsync(goal, context);
         if (!planResult.IsSuccess)
-            return Result<VerificationResult, string>.Failure(planResult.Error);
+            return Result<PlanVerificationResult, string>.Failure(planResult.Error);
 
         // Execute
-        Result<ExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value);
+        Result<PlanExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value);
         if (!execResult.IsSuccess)
-            return Result<VerificationResult, string>.Failure(execResult.Error);
+            return Result<PlanVerificationResult, string>.Failure(execResult.Error);
 
         // Verify
-        Result<VerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execResult.Value);
+        Result<PlanVerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execResult.Value);
         if (!verifyResult.IsSuccess)
-            return Result<VerificationResult, string>.Failure(verifyResult.Error);
+            return Result<PlanVerificationResult, string>.Failure(verifyResult.Error);
 
         // Learn (if enabled)
         if (autoLearn && verifyResult.Value.Verified)

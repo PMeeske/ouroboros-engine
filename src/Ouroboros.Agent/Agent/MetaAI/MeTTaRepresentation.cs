@@ -153,7 +153,7 @@ public sealed class MeTTaRepresentation
     /// Translates execution state into MeTTa atoms.
     /// </summary>
     public async Task<Result<Unit, string>> TranslateExecutionStateAsync(
-        ExecutionResult execution,
+        PlanExecutionResult execution,
         CancellationToken ct = default)
     {
         try

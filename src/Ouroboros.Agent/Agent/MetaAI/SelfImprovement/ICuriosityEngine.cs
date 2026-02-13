@@ -86,7 +86,7 @@ public interface ICuriosityEngine
     /// <param name="plan">The exploratory plan that was executed</param>
     /// <param name="execution">The execution result</param>
     /// <param name="actualNovelty">The actual novelty discovered</param>
-    void RecordExploration(Plan plan, ExecutionResult execution, double actualNovelty);
+    void RecordExploration(Plan plan, PlanExecutionResult execution, double actualNovelty);
 
     /// <summary>
     /// Gets exploration statistics.

@@ -8,6 +8,14 @@
     <Description>External service providers and adapters for Ouroboros</Description>
   </PropertyGroup>
 
+  <!-- Remove local model duplicates; use the canonical definitions from Ouroboros.Abstractions -->
+  <ItemGroup>
+    <Compile Remove="Providers\Docker\DockerModels.cs" />
+    <Compile Remove="Providers\Kubernetes\KubernetesModels.cs" />
+    <Compile Remove="Providers\DuckDuckGo\DuckDuckGoModels.cs" />
+    <Compile Remove="Providers\Firecrawl\FirecrawlModels.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Abstractions\Ouroboros.Abstractions.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Core\Ouroboros.Core.csproj" />

@@ -29,7 +29,7 @@ public sealed class SkillExtractor : ISkillExtractor
     /// Determines if a skill should be extracted from the given verification result.
     /// </summary>
     public async Task<bool> ShouldExtractSkillAsync(
-        VerificationResult verification,
+        PlanVerificationResult verification,
         SkillExtractionConfig? config = null)
     {
         config ??= new SkillExtractionConfig();
@@ -54,8 +54,8 @@ public sealed class SkillExtractor : ISkillExtractor
     /// Extracts a skill from a successful execution.
     /// </summary>
     public async Task<Result<Skill, string>> ExtractSkillAsync(
-        ExecutionResult execution,
-        VerificationResult verification,
+        PlanExecutionResult execution,
+        PlanVerificationResult verification,
         SkillExtractionConfig? config = null,
         CancellationToken ct = default)
     {
@@ -185,7 +185,7 @@ public sealed class SkillExtractor : ISkillExtractor
     /// Generates a descriptive name for the extracted skill using LLM.
     /// </summary>
     public async Task<string> GenerateSkillNameAsync(
-        ExecutionResult execution,
+        PlanExecutionResult execution,
         CancellationToken ct = default)
     {
         try
@@ -222,7 +222,7 @@ Skill name:";
     /// Generates a description for the extracted skill using LLM.
     /// </summary>
     public async Task<string> GenerateSkillDescriptionAsync(
-        ExecutionResult execution,
+        PlanExecutionResult execution,
         CancellationToken ct = default)
     {
         try
@@ -253,7 +253,7 @@ Write a 1-2 sentence description of this skill's capability:";
     /// <summary>
     /// Extracts prerequisites from successful execution steps.
     /// </summary>
-    private List<string> ExtractPrerequisites(ExecutionResult execution, SkillExtractionConfig config)
+    private List<string> ExtractPrerequisites(PlanExecutionResult execution, SkillExtractionConfig config)
     {
         List<string> prerequisites = new List<string>();
 
@@ -312,8 +312,8 @@ Write a 1-2 sentence description of this skill's capability:";
     /// </summary>
     private async Task<Result<Skill, string>> UpdateExistingSkillAsync(
         Skill existingSkill,
-        ExecutionResult execution,
-        VerificationResult verification,
+        PlanExecutionResult execution,
+        PlanVerificationResult verification,
         SkillExtractionConfig config)
     {
         try
@@ -372,7 +372,7 @@ Write a 1-2 sentence description of this skill's capability:";
     /// <summary>
     /// Generates a fallback skill name when LLM generation fails.
     /// </summary>
-    private string GenerateFallbackSkillName(ExecutionResult execution)
+    private string GenerateFallbackSkillName(PlanExecutionResult execution)
     {
         // Extract first action as basis for name
         string firstAction = execution.Plan.Steps.FirstOrDefault()?.Action ?? "skill";
@@ -383,4 +383,5 @@ Write a 1-2 sentence description of this skill's capability:";
 
         return $"{sanitized}_{timestamp}";
     }
+
 }

@@ -196,7 +196,7 @@ CRITERIA: [how to measure success]";
                 DateTime.UtcNow);
 
             // Execute experiment
-            Result<ExecutionResult, string> execResult = await _orchestrator.ExecuteAsync(plan, ct);
+            Result<PlanExecutionResult, string> execResult = await _orchestrator.ExecuteAsync(plan, ct);
 
             if (!execResult.IsSuccess)
             {
@@ -204,7 +204,7 @@ CRITERIA: [how to measure success]";
                     $"Experiment execution failed: {execResult.Error}");
             }
 
-            ExecutionResult execution = execResult.Value;
+            PlanExecutionResult execution = execResult.Value;
 
             // Analyze results against expected outcomes
             bool supported = AnalyzeExperimentResults(execution, experiment.ExpectedOutcomes);
@@ -513,7 +513,7 @@ EVIDENCE: [supporting points]";
         return outcomes;
     }
 
-    private bool AnalyzeExperimentResults(ExecutionResult execution, Dictionary<string, object> expectedOutcomes)
+    private bool AnalyzeExperimentResults(PlanExecutionResult execution, Dictionary<string, object> expectedOutcomes)
     {
         // Check if execution was successful
         if (!execution.Success)
@@ -530,7 +530,7 @@ EVIDENCE: [supporting points]";
     }
 
     [Obsolete("This method uses additive confidence adjustment. Use BayesianConfidence.Update() instead.")]
-    private double CalculateConfidenceAdjustment(ExecutionResult execution, bool supported)
+    private double CalculateConfidenceAdjustment(PlanExecutionResult execution, bool supported)
     {
         // Handle empty step results
         if (execution.StepResults.Count == 0)
@@ -563,7 +563,7 @@ EVIDENCE: [supporting points]";
         return baseLikelihood + (0.5 - baseLikelihood) * (1.0 - quality);
     }
 
-    private string GenerateExplanation(Hypothesis hypothesis, ExecutionResult execution, bool supported)
+    private string GenerateExplanation(Hypothesis hypothesis, PlanExecutionResult execution, bool supported)
     {
         if (supported)
         {

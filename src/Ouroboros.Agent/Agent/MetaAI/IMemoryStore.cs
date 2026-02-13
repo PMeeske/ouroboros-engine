@@ -12,8 +12,8 @@ public sealed record Experience(
     Guid Id,
     string Goal,
     Plan Plan,
-    ExecutionResult Execution,
-    VerificationResult Verification,
+    PlanExecutionResult Execution,
+    PlanVerificationResult Verification,
     DateTime Timestamp,
     Dictionary<string, object> Metadata);
 

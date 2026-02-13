@@ -60,7 +60,7 @@ public interface IAdaptivePlanner
     /// <summary>
     /// Executes a plan with real-time adaptation.
     /// </summary>
-    Task<Result<ExecutionResult, string>> ExecuteWithAdaptationAsync(
+    Task<Result<PlanExecutionResult, string>> ExecuteWithAdaptationAsync(
         Plan plan,
         AdaptivePlanningConfig? config = null,
         CancellationToken ct = default);
@@ -101,7 +101,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
     /// <summary>
     /// Executes a plan with real-time adaptation.
     /// </summary>
-    public async Task<Result<ExecutionResult, string>> ExecuteWithAdaptationAsync(
+    public async Task<Result<PlanExecutionResult, string>> ExecuteWithAdaptationAsync(
         Plan plan,
         AdaptivePlanningConfig? config = null,
         CancellationToken ct = default)
@@ -161,7 +161,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
 
                         case AdaptationStrategy.Abort:
                             sw.Stop();
-                            return Result<ExecutionResult, string>.Failure($"Execution aborted: {adaptationAction.Reason}");
+                            return Result<PlanExecutionResult, string>.Failure($"Execution aborted: {adaptationAction.Reason}");
 
                         case AdaptationStrategy.AddStep:
                             // Add additional step after current
@@ -202,7 +202,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
             bool overallSuccess = allStepResults.All(r => r.Success);
             string finalOutput = string.Join("\n", allStepResults.Select(r => r.Output));
 
-            ExecutionResult execution = new ExecutionResult(
+            PlanExecutionResult execution = new PlanExecutionResult(
                 currentPlan,
                 allStepResults,
                 overallSuccess,
@@ -214,11 +214,11 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                 },
                 sw.Elapsed);
 
-            return Result<ExecutionResult, string>.Success(execution);
+            return Result<PlanExecutionResult, string>.Success(execution);
         }
         catch (Exception ex)
         {
-            return Result<ExecutionResult, string>.Failure($"Adaptive execution failed: {ex.Message}");
+            return Result<PlanExecutionResult, string>.Failure($"Adaptive execution failed: {ex.Message}");
         }
     }
 

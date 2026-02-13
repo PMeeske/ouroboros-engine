@@ -70,10 +70,10 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
         {
             await foreach (var entry in persistence.ReplayAsync(ct).ConfigureAwait(false))
             {
-                switch (entry.Type)
+                switch (entry.EntryType)
                 {
-                    case WalEntryType.AddNode:
-                        var node = JsonSerializer.Deserialize<MonadNode>(entry.PayloadJson);
+                    case nameof(WalEntryType.AddNode):
+                        var node = JsonSerializer.Deserialize<MonadNode>(entry.DataJson);
                         if (node != null)
                         {
                             var nodeResult = dag.AddNode(node);
@@ -85,8 +85,8 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
 
                         break;
 
-                    case WalEntryType.AddEdge:
-                        var edge = JsonSerializer.Deserialize<TransitionEdge>(entry.PayloadJson);
+                    case nameof(WalEntryType.AddEdge):
+                        var edge = JsonSerializer.Deserialize<TransitionEdge>(entry.DataJson);
                         if (edge != null)
                         {
                             var edgeResult = dag.AddEdge(edge);
@@ -164,7 +164,7 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
         // Future enhancement: Implement rollback or two-phase commit.
         try
         {
-            await this.persistence.AppendNodeAsync(node, ct).ConfigureAwait(false);
+            await this.persistence.AppendNodeAsync(ToAbstractionsNode(node), ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -203,7 +203,7 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
         // Future enhancement: Implement rollback or two-phase commit.
         try
         {
-            await this.persistence.AppendEdgeAsync(edge, ct).ConfigureAwait(false);
+            await this.persistence.AppendEdgeAsync(ToAbstractionsEdge(edge), ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -306,6 +306,18 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
         await this.persistence.DisposeAsync().ConfigureAwait(false);
         this.disposed = true;
     }
+
+    private static Ouroboros.Abstractions.Network.MonadNode ToAbstractionsNode(MonadNode node) =>
+        new(node.Id, node.TypeName, node.PayloadJson, node.CreatedAt, node.ParentIds, node.Hash);
+
+    private static Ouroboros.Abstractions.Network.TransitionEdge ToAbstractionsEdge(TransitionEdge edge) =>
+        new(
+            edge.Id,
+            edge.InputIds.Length > 0 ? edge.InputIds[0] : Guid.Empty,
+            edge.OutputId,
+            edge.OperationName,
+            edge.CreatedAt,
+            new Dictionary<string, object>());
 
     private void ThrowIfDisposed()
     {

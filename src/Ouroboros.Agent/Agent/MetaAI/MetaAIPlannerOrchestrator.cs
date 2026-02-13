@@ -154,12 +154,12 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
     /// Executes a plan step by step with monitoring and safety checks.
     /// Supports optional parallel execution of independent steps.
     /// </summary>
-    public async Task<Result<ExecutionResult, string>> ExecuteAsync(
+    public async Task<Result<PlanExecutionResult, string>> ExecuteAsync(
         Plan plan,
         CancellationToken ct = default)
     {
         if (plan == null)
-            return Result<ExecutionResult, string>.Failure("Plan cannot be null");
+            return Result<PlanExecutionResult, string>.Failure("Plan cannot be null");
 
         Stopwatch stopwatch = Stopwatch.StartNew();
 
@@ -211,7 +211,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
 
             stopwatch.Stop();
 
-            ExecutionResult execution = new ExecutionResult(
+            PlanExecutionResult execution = new PlanExecutionResult(
                 plan,
                 stepResults,
                 overallSuccess,
@@ -226,25 +226,25 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
                 stopwatch.Elapsed);
 
             RecordMetric("executor", stopwatch.Elapsed.TotalMilliseconds, overallSuccess);
-            return Result<ExecutionResult, string>.Success(execution);
+            return Result<PlanExecutionResult, string>.Success(execution);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
             RecordMetric("executor", stopwatch.Elapsed.TotalMilliseconds, false);
-            return Result<ExecutionResult, string>.Failure($"Execution failed: {ex.Message}");
+            return Result<PlanExecutionResult, string>.Failure($"Execution failed: {ex.Message}");
         }
     }
 
     /// <summary>
     /// Verifies execution results and provides feedback for improvement.
     /// </summary>
-    public async Task<Result<VerificationResult, string>> VerifyAsync(
-        ExecutionResult execution,
+    public async Task<Result<PlanVerificationResult, string>> VerifyAsync(
+        PlanExecutionResult execution,
         CancellationToken ct = default)
     {
         if (execution == null)
-            return Result<VerificationResult, string>.Failure("Execution cannot be null");
+            return Result<PlanVerificationResult, string>.Failure("Execution cannot be null");
 
         try
         {
@@ -253,22 +253,22 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             string verificationText = await _llm.GenerateTextAsync(verifyPrompt, ct);
 
             // Parse verification result
-            VerificationResult verification = ParseVerification(execution, verificationText);
+            PlanVerificationResult verification = ParseVerification(execution, verificationText);
 
             RecordMetric("verifier", 1.0, verification.Verified);
-            return Result<VerificationResult, string>.Success(verification);
+            return Result<PlanVerificationResult, string>.Success(verification);
         }
         catch (Exception ex)
         {
             RecordMetric("verifier", 1.0, false);
-            return Result<VerificationResult, string>.Failure($"Verification failed: {ex.Message}");
+            return Result<PlanVerificationResult, string>.Failure($"Verification failed: {ex.Message}");
         }
     }
 
     /// <summary>
     /// Learns from execution experience to improve future planning.
     /// </summary>
-    public void LearnFromExecution(VerificationResult verification)
+    public void LearnFromExecution(PlanVerificationResult verification)
     {
         if (verification == null)
             return;
@@ -562,7 +562,7 @@ STEP 2: ...
         return new Plan(goal, steps, confidenceScores, DateTime.UtcNow);
     }
 
-    private string BuildVerificationPrompt(ExecutionResult execution)
+    private string BuildVerificationPrompt(PlanExecutionResult execution)
     {
         return $@"Verify the following execution result:
 
@@ -592,7 +592,7 @@ Provide:
 ";
     }
 
-    private VerificationResult ParseVerification(ExecutionResult execution, string verificationText)
+    private PlanVerificationResult ParseVerification(PlanExecutionResult execution, string verificationText)
     {
         bool verified = verificationText.Contains("VERIFIED: yes", StringComparison.OrdinalIgnoreCase);
 
@@ -611,7 +611,7 @@ Provide:
         string? revisedPlan = null;
 
         // Simple parsing - in production use more robust approach
-        return new VerificationResult(
+        return new PlanVerificationResult(
             execution,
             verified,
             qualityScore,

@@ -378,4 +378,5 @@ EXPECTED: [expected outcome]
 
         return adaptations.Take(5).ToList();
     }
+
 }

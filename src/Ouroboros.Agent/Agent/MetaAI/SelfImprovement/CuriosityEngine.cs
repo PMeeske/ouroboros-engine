@@ -375,7 +375,7 @@ INFO_GAIN: [0-1]
     /// <summary>
     /// Records the outcome of an exploration attempt.
     /// </summary>
-    public void RecordExploration(Plan plan, ExecutionResult execution, double actualNovelty)
+    public void RecordExploration(Plan plan, PlanExecutionResult execution, double actualNovelty)
     {
         if (plan == null || execution == null)
             return;

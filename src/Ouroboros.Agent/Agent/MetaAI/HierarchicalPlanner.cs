@@ -189,7 +189,7 @@ public interface IHierarchicalPlanner
     /// <summary>
     /// Executes a hierarchical plan recursively.
     /// </summary>
-    Task<Result<ExecutionResult, string>> ExecuteHierarchicalAsync(
+    Task<Result<PlanExecutionResult, string>> ExecuteHierarchicalAsync(
         HierarchicalPlan plan,
         CancellationToken ct = default);
 
@@ -341,7 +341,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
     /// <summary>
     /// Executes a hierarchical plan recursively.
     /// </summary>
-    public async Task<Result<ExecutionResult, string>> ExecuteHierarchicalAsync(
+    public async Task<Result<PlanExecutionResult, string>> ExecuteHierarchicalAsync(
         HierarchicalPlan plan,
         CancellationToken ct = default)
     {
@@ -358,7 +358,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
             // Execute top-level plan, replacing complex steps with sub-plan execution
             Plan expandedPlan = await ExpandPlanAsync(plan, ct);
 
-            Result<ExecutionResult, string> executionResult = await _orchestrator.ExecuteAsync(expandedPlan, ct);
+            Result<PlanExecutionResult, string> executionResult = await _orchestrator.ExecuteAsync(expandedPlan, ct);
 
             stopwatch.Stop();
             executionResult.Match(
@@ -380,7 +380,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
             stopwatch.Stop();
             OrchestrationTracing.CompletePlanExecution(activity, 0, 0, stopwatch.Elapsed, success: false);
             OrchestrationTracing.RecordError(activity, "execute_plan", ex);
-            return Result<ExecutionResult, string>.Failure($"Hierarchical execution failed: {ex.Message}");
+            return Result<PlanExecutionResult, string>.Failure($"Hierarchical execution failed: {ex.Message}");
         }
     }
 

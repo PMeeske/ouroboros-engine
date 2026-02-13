@@ -213,4 +213,32 @@ public sealed class FileWalPersistence : IGraphPersistence
             throw new ObjectDisposedException(nameof(FileWalPersistence));
         }
     }
+
+    #region Explicit IGraphPersistence implementation (Abstractions.Network types)
+
+    // The IGraphPersistence interface is bound to Ouroboros.Abstractions.Network types,
+    // while this class operates on the richer Ouroboros.Network types.
+    // These explicit implementations satisfy the interface contract.
+
+    /// <inheritdoc />
+    Task IGraphPersistence.AppendNodeAsync(
+        Ouroboros.Abstractions.Network.MonadNode node,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload accepting Ouroboros.Network.MonadNode.");
+
+    /// <inheritdoc />
+    Task IGraphPersistence.AppendEdgeAsync(
+        Ouroboros.Abstractions.Network.TransitionEdge edge,
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload accepting Ouroboros.Network.TransitionEdge.");
+
+    /// <inheritdoc />
+    IAsyncEnumerable<Ouroboros.Abstractions.Network.WalEntry> IGraphPersistence.ReplayAsync(
+        CancellationToken ct) =>
+        throw new NotImplementedException(
+            "Use the overload returning Ouroboros.Network.Persistence.WalEntry.");
+
+    #endregion
 }

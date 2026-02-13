@@ -82,7 +82,7 @@ public interface IHumanInTheLoopOrchestrator
     /// <summary>
     /// Executes a plan with human oversight.
     /// </summary>
-    Task<Result<ExecutionResult, string>> ExecuteWithHumanOversightAsync(
+    Task<Result<PlanExecutionResult, string>> ExecuteWithHumanOversightAsync(
         Plan plan,
         HumanInTheLoopConfig? config = null,
         CancellationToken ct = default);
@@ -183,7 +183,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
     /// <summary>
     /// Executes a plan with human oversight.
     /// </summary>
-    public async Task<Result<ExecutionResult, string>> ExecuteWithHumanOversightAsync(
+    public async Task<Result<PlanExecutionResult, string>> ExecuteWithHumanOversightAsync(
         Plan plan,
         HumanInTheLoopConfig? config = null,
         CancellationToken ct = default)
@@ -234,7 +234,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                 }
 
                 // Execute step
-                Result<ExecutionResult, string> executionResult = await _orchestrator.ExecuteAsync(
+                Result<PlanExecutionResult, string> executionResult = await _orchestrator.ExecuteAsync(
                     new Plan(plan.Goal, new List<PlanStep> { step }, plan.ConfidenceScores, DateTime.UtcNow),
                     ct);
 
@@ -259,7 +259,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
             bool overallSuccess = stepResults.All(r => r.Success);
             string finalOutput = string.Join("\n", stepResults.Select(r => r.Output));
 
-            ExecutionResult execution = new ExecutionResult(
+            PlanExecutionResult execution = new PlanExecutionResult(
                 plan,
                 stepResults,
                 overallSuccess,
@@ -271,11 +271,11 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                 },
                 sw.Elapsed);
 
-            return Result<ExecutionResult, string>.Success(execution);
+            return Result<PlanExecutionResult, string>.Success(execution);
         }
         catch (Exception ex)
         {
-            return Result<ExecutionResult, string>.Failure($"Human oversight execution failed: {ex.Message}");
+            return Result<PlanExecutionResult, string>.Failure($"Human oversight execution failed: {ex.Message}");
         }
     }
 

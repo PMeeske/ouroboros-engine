@@ -74,7 +74,7 @@ public interface IDistributedOrchestrator
     /// <summary>
     /// Executes a plan across multiple agents.
     /// </summary>
-    Task<Result<ExecutionResult, string>> ExecuteDistributedAsync(
+    Task<Result<PlanExecutionResult, string>> ExecuteDistributedAsync(
         Plan plan,
         CancellationToken ct = default);
 
@@ -132,12 +132,12 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
     /// <summary>
     /// Executes a plan across multiple agents.
     /// </summary>
-    public async Task<Result<ExecutionResult, string>> ExecuteDistributedAsync(
+    public async Task<Result<PlanExecutionResult, string>> ExecuteDistributedAsync(
         Plan plan,
         CancellationToken ct = default)
     {
         if (plan == null)
-            return Result<ExecutionResult, string>.Failure("Plan cannot be null");
+            return Result<PlanExecutionResult, string>.Failure("Plan cannot be null");
 
         System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
         List<StepResult> stepResults = new List<StepResult>();
@@ -151,7 +151,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
             List<AgentInfo> availableAgents = GetAvailableAgents();
             if (availableAgents.Count == 0)
             {
-                return Result<ExecutionResult, string>.Failure("No agents available for execution");
+                return Result<PlanExecutionResult, string>.Failure("No agents available for execution");
             }
 
             // Assign steps to agents
@@ -193,7 +193,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
 
             string finalOutput = string.Join("\n", stepResults.Select(r => r.Output));
 
-            ExecutionResult execution = new ExecutionResult(
+            PlanExecutionResult execution = new PlanExecutionResult(
                 plan,
                 stepResults,
                 overallSuccess,
@@ -205,11 +205,11 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
                 },
                 sw.Elapsed);
 
-            return Result<ExecutionResult, string>.Success(execution);
+            return Result<PlanExecutionResult, string>.Success(execution);
         }
         catch (Exception ex)
         {
-            return Result<ExecutionResult, string>.Failure($"Distributed execution failed: {ex.Message}");
+            return Result<PlanExecutionResult, string>.Failure($"Distributed execution failed: {ex.Message}");
         }
     }
 
