@@ -58,7 +58,7 @@ public sealed class CuriosityEngine : ICuriosityEngine
                 MaxResults: 20,
                 MinSimilarity: 0.0);
 
-            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Experience> experiences = await _memory.QueryExperiencesAsync(query, ct);
 
             if (!experiences.Any())
                 return 1.0; // Completely novel - no similar experiences
@@ -105,7 +105,7 @@ public sealed class CuriosityEngine : ICuriosityEngine
             // Generate plan for exploration
             string prompt = $@"Create an exploratory plan for learning:
 
-Exploration Goal: {bestOpportunity.Description}
+Exploration ContextSimilarity: {bestOpportunity.Description}
 Expected Information Gain: {bestOpportunity.InformationGainEstimate:P0}
 Novelty: {bestOpportunity.NoveltyScore:P0}
 
@@ -355,7 +355,7 @@ INFO_GAIN: [0-1]
                 MaxResults: 10,
                 MinSimilarity: 0.5);
 
-            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Experience> experiences = await _memory.QueryExperiencesAsync(query, ct);
 
             // Less knowledge = higher potential information gain
             if (!experiences.Any())
@@ -424,12 +424,12 @@ INFO_GAIN: [0-1]
     private async Task<List<Experience>> GetAllExperiences(CancellationToken ct)
     {
         MemoryQuery query = new MemoryQuery(
-            Goal: "",
+            ContextSimilarity: "",
             Context: null,
             MaxResults: 100,
             MinSimilarity: 0.0);
 
-        return await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+        return await _memory.QueryExperiencesAsync(query, ct);
     }
 
     private List<PlanStep> ParseExploratorySteps(string response)

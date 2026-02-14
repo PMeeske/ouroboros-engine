@@ -97,7 +97,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
                 await AddToVectorStoreAsync(skill, ct);
             }
 
-            return Result<Unit, string>.Success(Unit.Default);
+            return Result<Unit, string>.Success(new Unit());
         }
         catch (Exception ex)
         {
@@ -272,7 +272,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
                 await AddToVectorStoreAsync(skill, ct);
             }
 
-            return Result<Unit, string>.Success(Unit.Default);
+            return Result<Unit, string>.Success(new Unit());
         }
         catch (Exception ex)
         {
@@ -316,7 +316,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
                 await SaveSkillsAsync(ct);
             }
 
-            return Result<Unit, string>.Success(Unit.Default);
+            return Result<Unit, string>.Success(new Unit());
         }
         catch (Exception ex)
         {
@@ -338,7 +338,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
             {
                 _isDirty = true;
                 await SaveSkillsAsync(ct);
-                return Result<Unit, string>.Success(Unit.Default);
+                return Result<Unit, string>.Success(new Unit());
             }
 
             return Result<Unit, string>.Failure($"Skill '{skillId}' not found");
