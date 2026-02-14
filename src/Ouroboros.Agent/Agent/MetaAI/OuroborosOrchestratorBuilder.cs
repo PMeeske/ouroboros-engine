@@ -23,6 +23,7 @@ public sealed class OuroborosOrchestratorBuilder
     private IMeTTaEngine? _mettaEngine;
     private OuroborosAtom? _atom;
     private OrchestratorConfig? _config;
+    private bool _enableStrategyEvolution;
 
     /// <summary>
     /// Sets the language model for the orchestrator.
@@ -103,6 +104,18 @@ public sealed class OuroborosOrchestratorBuilder
     }
 
     /// <summary>
+    /// Enables evolutionary optimization of planning strategies using genetic algorithms.
+    /// When enabled, the orchestrator will evolve planning parameters over time based on performance.
+    /// </summary>
+    /// <param name="enabled">Whether to enable strategy evolution (default: true).</param>
+    /// <returns>This builder for chaining.</returns>
+    public OuroborosOrchestratorBuilder WithStrategyEvolution(bool enabled = true)
+    {
+        _enableStrategyEvolution = enabled;
+        return this;
+    }
+
+    /// <summary>
     /// Builds the OuroborosOrchestrator instance.
     /// </summary>
     /// <returns>Configured OuroborosOrchestrator instance.</returns>
@@ -135,6 +148,23 @@ public sealed class OuroborosOrchestratorBuilder
             tools = tools.WithMeTTaTools(mettaEngine);
         }
 
+        // Create genetic algorithm for strategy evolution if enabled
+        Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? strategyEvolver = null;
+        if (_enableStrategyEvolution)
+        {
+            // Create fitness function using the atom (or a default one)
+            OuroborosAtom atom = _atom ?? OuroborosAtom.CreateDefault();
+            var fitnessFunction = new Evolution.PlanStrategyFitness(atom);
+            
+            // Create GA with mutation function
+            strategyEvolver = new Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>(
+                fitnessFunction: fitnessFunction,
+                mutateGene: gene => gene.Mutate(new Random()),
+                mutationRate: 0.1,
+                crossoverRate: 0.8,
+                elitismRate: 0.2);
+        }
+
         return new OuroborosOrchestrator(
             _llm,
             tools,
@@ -142,7 +172,8 @@ public sealed class OuroborosOrchestratorBuilder
             _safety,
             mettaEngine,
             _atom,
-            _config);
+            _config,
+            strategyEvolver);
     }
 
     /// <summary>

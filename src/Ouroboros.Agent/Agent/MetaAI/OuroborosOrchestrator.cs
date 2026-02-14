@@ -46,6 +46,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     private readonly IMeTTaEngine _mettaEngine;
     private readonly OuroborosAtom _atom;
     private readonly ConcurrentDictionary<string, double> _performanceMetrics = new();
+    private readonly Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? _strategyEvolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OuroborosOrchestrator"/> class.
@@ -57,6 +58,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     /// <param name="mettaEngine">The MeTTa engine for symbolic reasoning.</param>
     /// <param name="atom">Optional pre-configured OuroborosAtom.</param>
     /// <param name="configuration">Optional orchestrator configuration.</param>
+    /// <param name="strategyEvolver">Optional genetic algorithm for evolving planning strategies.</param>
     public OuroborosOrchestrator(
         Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
@@ -64,7 +66,8 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         ISafetyGuard safety,
         IMeTTaEngine mettaEngine,
         OuroborosAtom? atom = null,
-        OrchestratorConfig? configuration = null)
+        OrchestratorConfig? configuration = null,
+        Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? strategyEvolver = null)
         : base("OuroborosOrchestrator", configuration ?? OrchestratorConfig.Default(), safety)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
@@ -73,6 +76,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
         _mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
         _atom = atom ?? OuroborosAtom.CreateDefault();
+        _strategyEvolver = strategyEvolver;
     }
 
     /// <summary>
@@ -384,6 +388,9 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                 }
             }
 
+            // Evolutionary optimization of planning strategies (optional, graceful)
+            await TryEvolveStrategiesAsync(ct);
+
             sw.Stop();
             RecordPhaseMetric("learn", sw.ElapsedMilliseconds, true);
 
@@ -649,6 +656,65 @@ Provide verification in JSON format:
         string key = $"{phase}_{(success ? "success" : "failure")}";
         _performanceMetrics.AddOrUpdate(key, 1, (_, count) => count + 1);
         _performanceMetrics.AddOrUpdate($"{phase}_avg_latency", latencyMs, (_, avg) => (avg + latencyMs) / 2);
+    }
+
+    /// <summary>
+    /// Tries to evolve planning strategies using the genetic algorithm, if configured.
+    /// This method is graceful - failures are logged but don't prevent the Learn phase from completing.
+    /// </summary>
+    private async Task TryEvolveStrategiesAsync(CancellationToken ct)
+    {
+        // Skip if no GA configured or not enough experiences
+        if (_strategyEvolver == null || _atom.Experiences.Count < 5)
+        {
+            return;
+        }
+
+        try
+        {
+            // Create initial population from current planning parameters
+            var random = new Random();
+            var initialPopulation = new List<Genetic.Abstractions.IChromosome<Evolution.PlanStrategyGene>>
+            {
+                Evolution.PlanStrategyChromosome.FromAtom(_atom),
+                Evolution.PlanStrategyChromosome.CreateRandom(random),
+                Evolution.PlanStrategyChromosome.CreateRandom(random),
+                Evolution.PlanStrategyChromosome.CreateRandom(random),
+                Evolution.PlanStrategyChromosome.CreateRandom(random),
+            };
+
+            // Run evolution for 3-5 generations (start with 3 for speed)
+            Result<Genetic.Abstractions.IChromosome<Evolution.PlanStrategyGene>, string> evolutionResult =
+                await _strategyEvolver.EvolveAsync(initialPopulation, generations: 3);
+
+            if (evolutionResult.IsSuccess)
+            {
+                // Extract best evolved strategy
+                var bestChromosome = evolutionResult.Match(
+                    success => success as Evolution.PlanStrategyChromosome,
+                    _ => null);
+
+                if (bestChromosome != null && bestChromosome.Fitness > 0.6)
+                {
+                    // Store evolved strategies as capabilities in the atom
+                    foreach (var gene in bestChromosome.Genes)
+                    {
+                        var capability = new OuroborosCapability(
+                            Name: $"Strategy_{gene.StrategyName}",
+                            Description: gene.Description,
+                            ConfidenceLevel: gene.Weight);
+                        _atom.AddCapability(capability);
+                    }
+
+                    Console.WriteLine($"[GA] Evolved planning strategy with fitness {bestChromosome.Fitness:F3}: {bestChromosome}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Graceful degradation - log but don't fail
+            Console.WriteLine($"[GA] Strategy evolution failed (non-fatal): {ex.Message}");
+        }
     }
 
     private static string EscapeMeTTa(string text)
