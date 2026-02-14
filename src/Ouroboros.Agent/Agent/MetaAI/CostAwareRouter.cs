@@ -109,22 +109,36 @@ public sealed class CostAwareRouter : ICostAwareRouter
 
         try
         {
-            // Get uncertainty-based routing
-            Result<RoutingDecision, string> routingResult = await _uncertaintyRouter.RouteAsync(task, context, ct);
+            // Build context string for routing
+            string contextStr = context != null
+                ? string.Join("; ", context.Select(kv => $"{kv.Key}={kv.Value}"))
+                : string.Empty;
 
-            if (!routingResult.IsSuccess)
+            // Estimate initial confidence (simplified)
+            double estimatedConfidence = EstimateInitialConfidence(task);
+            
+            // Get uncertainty-based routing decision
+            RoutingDecision decision = await _uncertaintyRouter.RouteDecisionAsync(
+                contextStr,
+                task,
+                estimatedConfidence,
+                ct);
+
+            if (!decision.ShouldProceed)
             {
-                return Result<CostBenefitAnalysis, string>.Failure(routingResult.Error);
+                return Result<CostBenefitAnalysis, string>.Failure(
+                    $"Routing decision suggests not proceeding: {decision.Reason}");
             }
 
-            RoutingDecision decision = routingResult.Value;
-
+            // Determine route from decision
+            string routeName = DetermineRouteFromDecision(decision);
+            
             // Get cost info for the route
-            CostInfo costInfo = GetCostInfoForRoute(decision.Route);
+            CostInfo costInfo = GetCostInfoForRoute(routeName);
 
             // Estimate cost and quality
             double estimatedCost = CalculateEstimatedCost(task, costInfo);
-            double estimatedQuality = decision.Confidence * costInfo.EstimatedQuality;
+            double estimatedQuality = decision.ConfidenceLevel * costInfo.EstimatedQuality;
 
             // Check constraints
             if (estimatedCost > config.MaxCostPerPlan)
@@ -315,6 +329,37 @@ public sealed class CostAwareRouter : ICostAwareRouter
             CostOptimizationStrategy.MaximizeValue => quality / (cost + 0.001), // Quality per cost
             CostOptimizationStrategy.Balanced => (quality + (1.0 / (cost + 0.001))) / 2.0,
             _ => quality / (cost + 0.001)
+        };
+    }
+
+    private double EstimateInitialConfidence(string task)
+    {
+        // Simple heuristic: longer, more detailed tasks have higher confidence
+        // More sophisticated implementations would use ML models
+        double baseConfidence = 0.7;
+        
+        // Adjust for task length
+        int wordCount = task.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        if (wordCount < 5)
+            baseConfidence -= 0.2;
+        else if (wordCount > 20)
+            baseConfidence += 0.1;
+
+        return Math.Clamp(baseConfidence, 0.0, 1.0);
+    }
+
+    private string DetermineRouteFromDecision(RoutingDecision decision)
+    {
+        // Map strategy to route name
+        return decision.RecommendedStrategy switch
+        {
+            FallbackStrategy.UseConservativeApproach => "gpt-3.5-turbo",
+            FallbackStrategy.EscalateToHuman => "human",
+            FallbackStrategy.Retry => "default",
+            FallbackStrategy.Abort => "none",
+            FallbackStrategy.Defer => "deferred",
+            FallbackStrategy.RequestClarification => "clarification",
+            _ => decision.ConfidenceLevel > 0.8 ? "gpt-4" : "default"
         };
     }
 }
