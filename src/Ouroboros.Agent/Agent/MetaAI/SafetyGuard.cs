@@ -13,6 +13,8 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class SafetyGuard : ISafetyGuard
 {
+    private const double RiskThresholdForDenial = 0.8;
+    
     private readonly ConcurrentDictionary<string, PermissionPolicy> _permissionPolicies = new();
     private readonly ConcurrentDictionary<string, PermissionLevel> _agentPermissions = new();
     private readonly PermissionLevel _defaultLevel;
@@ -36,7 +38,10 @@ public sealed class SafetyGuard : ISafetyGuard
         ArgumentNullException.ThrowIfNull(parameters);
 
         PermissionLevel requiredLevel = GetRequiredPermissionLevel(actionName);
-        List<Permission> requiredPermissions = new() { new Permission(actionName, requiredLevel, "Action execution") };
+        string permissionReason = _permissionPolicies.TryGetValue(actionName, out var policy)
+            ? policy.Description
+            : $"Permission for {actionName} action";
+        List<Permission> requiredPermissions = new() { new Permission(actionName, requiredLevel, permissionReason) };
         List<string> reasons = new();
 
         // Check for dangerous patterns
@@ -55,7 +60,7 @@ public sealed class SafetyGuard : ISafetyGuard
         }
 
         double riskScore = await AssessRiskAsync(actionName, parameters, ct);
-        bool isAllowed = reasons.Count == 0 && riskScore < 0.8;
+        bool isAllowed = reasons.Count == 0 && riskScore < RiskThresholdForDenial;
         string reason = isAllowed ? "Action is safe to execute" : string.Join("; ", reasons);
 
         return new SafetyCheckResult(isAllowed, reason, requiredPermissions, riskScore);
@@ -150,6 +155,8 @@ public sealed class SafetyGuard : ISafetyGuard
     /// <summary>
     /// Legacy method: Checks if an operation is safe to execute (synchronous).
     /// Kept for backward compatibility - prefer CheckActionSafetyAsync.
+    /// Warning: Uses GetAwaiter().GetResult() which may cause deadlocks in certain contexts.
+    /// Avoid calling from UI threads or ASP.NET contexts.
     /// </summary>
     [Obsolete("Use CheckActionSafetyAsync instead")]
     public SafetyCheckResult CheckSafety(
@@ -160,9 +167,10 @@ public sealed class SafetyGuard : ISafetyGuard
         ArgumentNullException.ThrowIfNull(operation);
         ArgumentNullException.ThrowIfNull(parameters);
 
-        // Convert to async call and wait (not ideal but maintains compatibility)
+        // Use Task.Run to avoid potential deadlock scenarios
         IReadOnlyDictionary<string, object> readOnlyParams = parameters;
-        SafetyCheckResult result = CheckActionSafetyAsync(operation, readOnlyParams, null, CancellationToken.None)
+        SafetyCheckResult result = Task.Run(async () =>
+            await CheckActionSafetyAsync(operation, readOnlyParams, null, CancellationToken.None))
             .GetAwaiter()
             .GetResult();
 
