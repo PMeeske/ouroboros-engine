@@ -1,4 +1,4 @@
-using Ouroboros.Abstractions.Core;
+using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
 
 namespace Ouroboros.Specs.Steps;
 
@@ -6,7 +6,7 @@ namespace Ouroboros.Specs.Steps;
 [Scope(Feature = "Tool-Aware Chat Model")]
 public class ToolAwareChatModelSteps
 {
-    private Ouroboros.Tools.ToolRegistry? _registry;
+    private ToolRegistry? _registry;
     private IChatCompletionModel? _mockModel;
     private ToolAwareChatModel? _toolAwareModel;
     private string? _responseText;
@@ -54,7 +54,7 @@ public class ToolAwareChatModelSteps
     [Given("I have a tool registry")]
     public void GivenIHaveAToolRegistry()
     {
-        _registry = new Ouroboros.Tools.ToolRegistry();
+        _registry = new ToolRegistry();
         _cancellationToken = CancellationToken.None;
     }
 
