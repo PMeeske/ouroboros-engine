@@ -13,7 +13,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class Phase2OrchestratorBuilder
 {
-    private IChatCompletionModel? _llm;
+    private Ouroboros.Abstractions.Core.IChatCompletionModel? _llm;
     private ToolRegistry? _tools;
     private IMemoryStore? _memory;
     private ISkillRegistry? _skills;
@@ -34,7 +34,7 @@ public sealed class Phase2OrchestratorBuilder
     /// <summary>
     /// Sets the language model for the orchestrator.
     /// </summary>
-    public Phase2OrchestratorBuilder WithLLM(IChatCompletionModel llm)
+    public Phase2OrchestratorBuilder WithLLM(Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         return this;
@@ -199,7 +199,7 @@ public sealed class Phase2OrchestratorBuilder
         IMetaAIPlannerOrchestrator Orchestrator,
         ICapabilityRegistry CapabilityRegistry,
         IGoalHierarchy GoalHierarchy,
-        ISelfEvaluator SelfEvaluator) CreateDefault(IChatCompletionModel llm)
+        ISelfEvaluator SelfEvaluator) CreateDefault(Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
         ToolRegistry tools = ToolRegistry.CreateDefault();
 

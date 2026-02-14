@@ -32,7 +32,7 @@ public sealed record MetaLearnerConfig(
 /// </summary>
 public sealed class MetaLearner : IMetaLearner
 {
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ISkillRegistry _skillRegistry;
     private readonly IMemoryStore _memory;
     private readonly MetaLearnerConfig _config;
@@ -46,7 +46,7 @@ public sealed class MetaLearner : IMetaLearner
     /// <param name="memory">Memory store for experiences</param>
     /// <param name="config">Optional configuration</param>
     public MetaLearner(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ISkillRegistry skillRegistry,
         IMemoryStore memory,
         MetaLearnerConfig? config = null)

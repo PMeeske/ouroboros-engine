@@ -16,7 +16,7 @@ namespace Ouroboros.Agent.MetaAI;
 public sealed class ResearchSkillExtractor
 {
     private readonly ISkillRegistry _skillRegistry;
-    private readonly IChatCompletionModel _model;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _model;
     private readonly ResearchKnowledgeSource _researchSource;
 
     /// <summary>
@@ -24,7 +24,7 @@ public sealed class ResearchSkillExtractor
     /// </summary>
     public ResearchSkillExtractor(
         ISkillRegistry skillRegistry,
-        IChatCompletionModel model,
+        Ouroboros.Abstractions.Core.IChatCompletionModel model,
         ResearchKnowledgeSource researchSource)
     {
         _skillRegistry = skillRegistry ?? throw new ArgumentNullException(nameof(skillRegistry));

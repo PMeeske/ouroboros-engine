@@ -14,9 +14,9 @@ namespace Ouroboros.Agent.MetaAI.Affect;
 public sealed class PriorityModulator : IPriorityModulator
 {
     private readonly ConcurrentDictionary<Guid, PrioritizedTask> _tasks = new();
-    private readonly IChatCompletionModel? _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel? _llm;
 
-    public PriorityModulator(IChatCompletionModel? llm = null)
+    public PriorityModulator(Ouroboros.Abstractions.Core.IChatCompletionModel? llm = null)
     {
         _llm = llm;
     }

@@ -73,7 +73,7 @@ public sealed record MindConfig(
 /// This implements a "Society of Mind" architecture where each specialist contributes
 /// its expertise, coordinated by a meta-cognitive controller.
 /// </summary>
-public sealed class ConsolidatedMind : IChatCompletionModel, IDisposable
+public sealed class ConsolidatedMind : Ouroboros.Abstractions.Core.IChatCompletionModel, IDisposable
 {
     private readonly ConcurrentDictionary<SpecializedRole, SpecializedModel> _specialists = new();
     private readonly MindConfig _config;

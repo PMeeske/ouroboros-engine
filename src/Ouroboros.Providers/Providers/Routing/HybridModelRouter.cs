@@ -10,10 +10,10 @@ namespace Ouroboros.Providers.Routing;
 /// Routes simple queries to lightweight models and complex tasks to specialized models.
 /// Implements IChatCompletionModel for seamless integration with existing code.
 /// </summary>
-public sealed class HybridModelRouter : IChatCompletionModel
+public sealed class HybridModelRouter : Ouroboros.Abstractions.Core.IChatCompletionModel
 {
     private readonly HybridRoutingConfig _config;
-    private readonly Dictionary<TaskType, IChatCompletionModel> _taskModels;
+    private readonly Dictionary<TaskType, Ouroboros.Abstractions.Core.IChatCompletionModel> _taskModels;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HybridModelRouter"/> class.
@@ -24,7 +24,7 @@ public sealed class HybridModelRouter : IChatCompletionModel
         _config = config ?? throw new ArgumentNullException(nameof(config));
 
         // Build task-to-model mapping
-        _taskModels = new Dictionary<TaskType, IChatCompletionModel>
+        _taskModels = new Dictionary<TaskType, Ouroboros.Abstractions.Core.IChatCompletionModel>
         {
             [TaskType.Simple] = config.DefaultModel,
             [TaskType.Unknown] = config.DefaultModel,
@@ -46,7 +46,7 @@ public sealed class HybridModelRouter : IChatCompletionModel
         TaskType taskType = TaskDetector.DetectTaskType(prompt, _config.DetectionStrategy);
 
         // Select appropriate model
-        IChatCompletionModel selectedModel = _taskModels[taskType];
+        Ouroboros.Abstractions.Core.IChatCompletionModel selectedModel = _taskModels[taskType];
 
         Console.WriteLine($"[HybridModelRouter] Detected task: {taskType}, routing to appropriate model");
 
@@ -93,9 +93,9 @@ public sealed class HybridModelRouter : IChatCompletionModel
     /// </summary>
     /// <param name="taskType">The task type.</param>
     /// <returns>The model assigned to handle this task type.</returns>
-    public IChatCompletionModel GetModelForTaskType(TaskType taskType)
+    public Ouroboros.Abstractions.Core.IChatCompletionModel GetModelForTaskType(TaskType taskType)
     {
-        return _taskModels.TryGetValue(taskType, out IChatCompletionModel? model)
+        return _taskModels.TryGetValue(taskType, out Ouroboros.Abstractions.Core.IChatCompletionModel? model)
             ? model
             : _config.DefaultModel;
     }

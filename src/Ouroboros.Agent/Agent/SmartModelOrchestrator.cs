@@ -23,7 +23,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
     private const double PerformanceWeight = 0.25;
     private const double CostWeight = 0.15;
 
-    private readonly ConcurrentDictionary<string, IChatCompletionModel> _models = new();
+    private readonly ConcurrentDictionary<string, Ouroboros.Abstractions.Core.IChatCompletionModel> _models = new();
     private readonly ConcurrentDictionary<string, ModelCapability> _capabilities = new();
     private readonly ConcurrentDictionary<string, PerformanceMetrics> _metrics = new();
     private readonly ToolRegistry _baseTools;
@@ -80,7 +80,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
     /// <summary>
     /// Registers a model with its capabilities and the actual model instance.
     /// </summary>
-    public void RegisterModel(ModelCapability capability, IChatCompletionModel model)
+    public void RegisterModel(ModelCapability capability, Ouroboros.Abstractions.Core.IChatCompletionModel model)
     {
         if (capability is null) throw new ArgumentNullException(nameof(capability));
         if (model is null) throw new ArgumentNullException(nameof(model));
@@ -268,10 +268,10 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
         var best = scoredModels.First();
 
         // Get model instance or create fallback
-        if (!_models.TryGetValue(best.Capability.ModelName, out IChatCompletionModel? model))
+        if (!_models.TryGetValue(best.Capability.ModelName, out Ouroboros.Abstractions.Core.IChatCompletionModel? model))
         {
             // If model not registered, try fallback
-            if (_models.TryGetValue(_fallbackModel, out IChatCompletionModel? fallback))
+            if (_models.TryGetValue(_fallbackModel, out Ouroboros.Abstractions.Core.IChatCompletionModel? fallback))
             {
                 model = fallback;
             }

@@ -45,13 +45,13 @@ public sealed record GoalHierarchyConfig(
 public sealed class GoalHierarchy : IGoalHierarchy
 {
     private readonly ConcurrentDictionary<Guid, Goal> _goals = new();
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ISafetyGuard _safety;
     private readonly Core.Ethics.IEthicsFramework _ethics;
     private readonly GoalHierarchyConfig _config;
 
     public GoalHierarchy(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ISafetyGuard safety,
         Core.Ethics.IEthicsFramework ethics,
         GoalHierarchyConfig? config = null)

@@ -21,7 +21,7 @@ using Polly.CircuitBreaker;
 public sealed class ResilientReasoner : IReasoner
 {
     private readonly INeuralSymbolicBridge _bridge;
-    private readonly IChatCompletionModel? _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel? _llm;
     private readonly AsyncCircuitBreakerPolicy<Result<ReasoningResult, string>> _circuitBreakerPolicy;
     private readonly CircuitBreakerConfig _config;
     private readonly ILogger<ResilientReasoner>? _logger;
@@ -39,7 +39,7 @@ public sealed class ResilientReasoner : IReasoner
     /// <param name="logger">Optional logger for monitoring state changes.</param>
     public ResilientReasoner(
         INeuralSymbolicBridge bridge,
-        IChatCompletionModel? llm = null,
+        Ouroboros.Abstractions.Core.IChatCompletionModel? llm = null,
         CircuitBreakerConfig? config = null,
         ILogger<ResilientReasoner>? logger = null)
     {

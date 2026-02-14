@@ -13,7 +13,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class CuriosityEngine : ICuriosityEngine
 {
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly IMemoryStore _memory;
     private readonly ISkillRegistry _skills;
     private readonly ISafetyGuard _safety;
@@ -24,7 +24,7 @@ public sealed class CuriosityEngine : ICuriosityEngine
     private int _sessionExplorations = 0;
 
     public CuriosityEngine(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         IMemoryStore memory,
         ISkillRegistry skills,
         ISafetyGuard safety,

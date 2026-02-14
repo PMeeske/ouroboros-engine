@@ -76,17 +76,9 @@ public sealed record ThinkingResponse(
 }
 
 /// <summary>
-/// Extended chat completion model contract used by providers.
-/// Extends the base <see cref="Ouroboros.Abstractions.Core.IChatCompletionModel"/> interface.
-/// </summary>
-public interface IChatCompletionModel : Ouroboros.Abstractions.Core.IChatCompletionModel
-{
-}
-
-/// <summary>
 /// Extended contract for models that support streaming responses.
 /// </summary>
-public interface IStreamingChatModel : IChatCompletionModel
+public interface IStreamingChatModel : Ouroboros.Abstractions.Core.IChatCompletionModel
 {
     IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default);
 }
@@ -96,7 +88,7 @@ public interface IStreamingChatModel : IChatCompletionModel
 /// These models can return separate thinking content and response content.
 /// Examples include Claude (with extended thinking), DeepSeek R1, and o1 models.
 /// </summary>
-public interface IThinkingChatModel : IChatCompletionModel
+public interface IThinkingChatModel : Ouroboros.Abstractions.Core.IChatCompletionModel
 {
     /// <summary>
     /// Generates a response with separate thinking and content.
@@ -124,7 +116,7 @@ public interface IStreamingThinkingChatModel : IThinkingChatModel, IStreamingCha
 /// <summary>
 /// Contract for models that support cost tracking.
 /// </summary>
-public interface ICostAwareChatModel : IChatCompletionModel
+public interface ICostAwareChatModel : Ouroboros.Abstractions.Core.IChatCompletionModel
 {
     /// <summary>
     /// Gets the cost tracker for this model instance.
@@ -334,7 +326,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
 /// keep it permissive – if the call fails we simply echo the prompt with context.
 /// Uses Polly for exponential backoff retry policy to handle rate limiting.
 /// </summary>
-public sealed class HttpOpenAiCompatibleChatModel : IChatCompletionModel, ICostAwareChatModel
+public sealed class HttpOpenAiCompatibleChatModel : Ouroboros.Abstractions.Core.IChatCompletionModel, ICostAwareChatModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
@@ -1093,12 +1085,12 @@ public sealed class LiteLLMChatModel : OpenAiCompatibleChatModelBase
 /// logic is outside the scope of the repair, but preserving the public surface
 /// lets CLI switches keep working.
 /// </summary>
-public sealed class MultiModelRouter : IChatCompletionModel
+public sealed class MultiModelRouter : Ouroboros.Abstractions.Core.IChatCompletionModel
 {
-    private readonly IReadOnlyDictionary<string, IChatCompletionModel> _models;
+    private readonly IReadOnlyDictionary<string, Ouroboros.Abstractions.Core.IChatCompletionModel> _models;
     private readonly string _fallbackKey;
 
-    public MultiModelRouter(IReadOnlyDictionary<string, IChatCompletionModel> models, string fallbackKey)
+    public MultiModelRouter(IReadOnlyDictionary<string, Ouroboros.Abstractions.Core.IChatCompletionModel> models, string fallbackKey)
     {
         if (models.Count == 0) throw new ArgumentException("At least one model is required", nameof(models));
         _models = models;
@@ -1108,20 +1100,20 @@ public sealed class MultiModelRouter : IChatCompletionModel
     /// <inheritdoc/>
     public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
-        IChatCompletionModel target = SelectModel(prompt);
+        Ouroboros.Abstractions.Core.IChatCompletionModel target = SelectModel(prompt);
         return target.GenerateTextAsync(prompt, ct);
     }
 
-    private IChatCompletionModel SelectModel(string prompt)
+    private Ouroboros.Abstractions.Core.IChatCompletionModel SelectModel(string prompt)
     {
         if (string.IsNullOrWhiteSpace(prompt)) return _models[_fallbackKey];
-        if (prompt.Contains("code", StringComparison.OrdinalIgnoreCase) && _models.TryGetValue("coder", out IChatCompletionModel? coder))
+        if (prompt.Contains("code", StringComparison.OrdinalIgnoreCase) && _models.TryGetValue("coder", out Ouroboros.Abstractions.Core.IChatCompletionModel? coder))
             return coder;
-        if (prompt.Length > 600 && _models.TryGetValue("summarize", out IChatCompletionModel? summarize))
+        if (prompt.Length > 600 && _models.TryGetValue("summarize", out Ouroboros.Abstractions.Core.IChatCompletionModel? summarize))
             return summarize;
-        if (prompt.Contains("reason", StringComparison.OrdinalIgnoreCase) && _models.TryGetValue("reason", out IChatCompletionModel? reason))
+        if (prompt.Contains("reason", StringComparison.OrdinalIgnoreCase) && _models.TryGetValue("reason", out Ouroboros.Abstractions.Core.IChatCompletionModel? reason))
             return reason;
-        return _models.TryGetValue(_fallbackKey, out IChatCompletionModel? fallback) ? fallback : _models.Values.First();
+        return _models.TryGetValue(_fallbackKey, out Ouroboros.Abstractions.Core.IChatCompletionModel? fallback) ? fallback : _models.Values.First();
     }
 }
 

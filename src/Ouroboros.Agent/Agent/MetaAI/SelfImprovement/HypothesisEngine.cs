@@ -13,7 +13,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class HypothesisEngine : IHypothesisEngine
 {
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly IMetaAIPlannerOrchestrator _orchestrator;
     private readonly IMemoryStore _memory;
     private readonly Core.Ethics.IEthicsFramework _ethics;
@@ -22,7 +22,7 @@ public sealed class HypothesisEngine : IHypothesisEngine
     private readonly ConcurrentDictionary<Guid, List<(DateTime time, double confidence)>> _confidenceTrends = new();
 
     public HypothesisEngine(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         IMetaAIPlannerOrchestrator orchestrator,
         IMemoryStore memory,
         Core.Ethics.IEthicsFramework ethics,

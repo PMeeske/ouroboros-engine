@@ -15,7 +15,7 @@ using Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class NeuralSymbolicBridge : INeuralSymbolicBridge
 {
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ISymbolicKnowledgeBase _knowledgeBase;
 
     /// <summary>
@@ -23,7 +23,7 @@ public sealed class NeuralSymbolicBridge : INeuralSymbolicBridge
     /// </summary>
     /// <param name="llm">The language model for neural reasoning.</param>
     /// <param name="knowledgeBase">The symbolic knowledge base.</param>
-    public NeuralSymbolicBridge(IChatCompletionModel llm, ISymbolicKnowledgeBase knowledgeBase)
+    public NeuralSymbolicBridge(Ouroboros.Abstractions.Core.IChatCompletionModel llm, ISymbolicKnowledgeBase knowledgeBase)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _knowledgeBase = knowledgeBase ?? throw new ArgumentNullException(nameof(knowledgeBase));

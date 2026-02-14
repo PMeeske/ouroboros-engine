@@ -14,11 +14,11 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class SkillExtractor : ISkillExtractor
 {
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ISkillRegistry _skillRegistry;
     private readonly IEthicsFramework _ethics;
 
-    public SkillExtractor(IChatCompletionModel llm, ISkillRegistry skillRegistry, IEthicsFramework ethics)
+    public SkillExtractor(Ouroboros.Abstractions.Core.IChatCompletionModel llm, ISkillRegistry skillRegistry, IEthicsFramework ethics)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _skillRegistry = skillRegistry ?? throw new ArgumentNullException(nameof(skillRegistry));

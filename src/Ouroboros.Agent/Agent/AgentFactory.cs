@@ -13,7 +13,7 @@ public static class AgentFactory
 {
     public static AgentInstance Create(
         string mode,
-        IChatCompletionModel chatModel,
+        Ouroboros.Abstractions.Core.IChatCompletionModel chatModel,
         ToolRegistry tools,
         bool debug,
         int maxSteps,
@@ -35,11 +35,11 @@ public static class AgentFactory
 
 public sealed class AgentInstance
 {
-    private readonly IChatCompletionModel _chat;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _chat;
     private readonly ToolRegistry _tools;
     private readonly int _maxSteps;
 
-    internal AgentInstance(string mode, IChatCompletionModel chat, ToolRegistry tools, int maxSteps)
+    internal AgentInstance(string mode, Ouroboros.Abstractions.Core.IChatCompletionModel chat, ToolRegistry tools, int maxSteps)
     {
         Mode = string.IsNullOrWhiteSpace(mode) ? "simple" : mode;
         _chat = chat;

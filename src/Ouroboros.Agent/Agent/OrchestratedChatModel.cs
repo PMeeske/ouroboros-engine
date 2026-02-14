@@ -14,7 +14,7 @@ namespace Ouroboros.Agent;
 /// optimal models and tools based on prompt analysis and metrics.
 /// Implements monadic patterns for consistent error handling.
 /// </summary>
-public sealed class OrchestratedChatModel : IChatCompletionModel
+public sealed class OrchestratedChatModel : Ouroboros.Abstractions.Core.IChatCompletionModel
 {
     private readonly IModelOrchestrator _orchestrator;
     private readonly bool _trackMetrics;
@@ -134,7 +134,7 @@ public sealed class OrchestratedChatModel : IChatCompletionModel
 public sealed class OrchestratorBuilder
 {
     private readonly SmartModelOrchestrator _orchestrator;
-    private readonly List<(ModelCapability, IChatCompletionModel)> _models = new();
+    private readonly List<(ModelCapability, Ouroboros.Abstractions.Core.IChatCompletionModel)> _models = new();
     private bool _trackMetrics = true;
 
     public OrchestratorBuilder(ToolRegistry baseTools, string fallbackModel = "default")
@@ -147,7 +147,7 @@ public sealed class OrchestratorBuilder
     /// </summary>
     public OrchestratorBuilder WithModel(
         string name,
-        IChatCompletionModel model,
+        Ouroboros.Abstractions.Core.IChatCompletionModel model,
         ModelType type,
         string[] strengths,
         int maxTokens = 4096,
@@ -181,7 +181,7 @@ public sealed class OrchestratorBuilder
     public OrchestratedChatModel Build()
     {
         // Register all models
-        foreach ((ModelCapability capability, IChatCompletionModel model) in _models)
+        foreach ((ModelCapability capability, Ouroboros.Abstractions.Core.IChatCompletionModel model) in _models)
         {
             _orchestrator.RegisterModel(capability, model);
         }

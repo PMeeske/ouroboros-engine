@@ -17,7 +17,7 @@ namespace Ouroboros.Agent.TheoryOfMind;
 /// </summary>
 public sealed class TheoryOfMind : ITheoryOfMind
 {
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ConcurrentDictionary<string, AgentModel> _agentModels = new();
     private readonly ConcurrentDictionary<string, List<PredictionAccuracy>> _predictionHistory = new();
 
@@ -25,7 +25,7 @@ public sealed class TheoryOfMind : ITheoryOfMind
     /// Initializes a new instance of the <see cref="TheoryOfMind"/> class.
     /// </summary>
     /// <param name="llm">LLM for inference and reasoning</param>
-    public TheoryOfMind(IChatCompletionModel llm)
+    public TheoryOfMind(Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
     }

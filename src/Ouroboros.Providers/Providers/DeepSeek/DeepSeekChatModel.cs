@@ -15,7 +15,7 @@ namespace Ouroboros.Providers.DeepSeek;
 /// </summary>
 public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
 {
-    private readonly IChatCompletionModel _underlyingModel;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _underlyingModel;
     private readonly string _modelName;
 
     /// <summary>

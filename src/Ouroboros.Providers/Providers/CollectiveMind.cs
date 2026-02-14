@@ -16,7 +16,7 @@ public sealed class NeuralPathway
 {
     public string Name { get; init; } = "";
     public ChatEndpointType EndpointType { get; init; }
-    public IChatCompletionModel Model { get; init; } = null!;
+    public Ouroboros.Abstractions.Core.IChatCompletionModel Model { get; init; } = null!;
     public LlmCostTracker CostTracker { get; init; } = null!;
     public AsyncCircuitBreakerPolicy CircuitBreaker { get; init; } = null!;
 
@@ -481,7 +481,7 @@ public sealed class CollectiveMind : IStreamingThinkingChatModel, ICostAwareChat
                     _thoughtStream.OnNext($"🔶 Probing pathway '{name}'...");
                 });
 
-        IChatCompletionModel chatModel = CreateModel(endpointType, resolvedEndpoint ?? "", resolvedApiKey ?? "", model, settings, costTracker);
+        Ouroboros.Abstractions.Core.IChatCompletionModel chatModel = CreateModel(endpointType, resolvedEndpoint ?? "", resolvedApiKey ?? "", model, settings, costTracker);
 
         // Auto-detect tier based on endpoint type
         var tier = InferTier(endpointType, model);
@@ -599,7 +599,7 @@ public sealed class CollectiveMind : IStreamingThinkingChatModel, ICostAwareChat
         _ => "gpt-4o"
     };
 
-    private static IChatCompletionModel CreateModel(
+    private static Ouroboros.Abstractions.Core.IChatCompletionModel CreateModel(
         ChatEndpointType endpointType,
         string endpoint,
         string apiKey,

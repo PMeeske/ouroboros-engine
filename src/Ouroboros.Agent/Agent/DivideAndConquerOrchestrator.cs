@@ -37,12 +37,12 @@ public sealed record ChunkResult(
 /// </summary>
 public sealed class DivideAndConquerOrchestrator
 {
-    private readonly IChatCompletionModel _model;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _model;
     private readonly DivideAndConquerConfig _config;
     private readonly ConcurrentDictionary<string, PerformanceMetrics> _metrics = new();
 
     public DivideAndConquerOrchestrator(
-        IChatCompletionModel model,
+        Ouroboros.Abstractions.Core.IChatCompletionModel model,
         DivideAndConquerConfig? config = null)
     {
         _model = model ?? throw new ArgumentNullException(nameof(model));

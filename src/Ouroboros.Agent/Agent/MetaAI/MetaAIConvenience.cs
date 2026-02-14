@@ -17,7 +17,7 @@ public static class MetaAIConvenience
     /// Best for: Quick prototyping and simple tasks.
     /// </summary>
     public static Result<IMetaAIPlannerOrchestrator, string> CreateSimple(
-        IChatCompletionModel llm)
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
         try
         {
@@ -39,7 +39,7 @@ public static class MetaAIConvenience
     /// Best for: Most production use cases with basic safety and memory.
     /// </summary>
     public static Result<IMetaAIPlannerOrchestrator, string> CreateStandard(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
         IEmbeddingModel embedding)
     {
@@ -69,7 +69,7 @@ public static class MetaAIConvenience
     /// Best for: Complex workflows requiring uncertainty handling and skill learning.
     /// </summary>
     public static Result<IMetaAIPlannerOrchestrator, string> CreateAdvanced(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
         IEmbeddingModel embedding,
         double confidenceThreshold = 0.8)
@@ -220,7 +220,7 @@ public static class MetaAIConvenience
     /// Quick preset: Research assistant orchestrator
     /// </summary>
     public static Result<IMetaAIPlannerOrchestrator, string> CreateResearchAssistant(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
         IEmbeddingModel embedding)
     {
@@ -246,7 +246,7 @@ public static class MetaAIConvenience
     /// Quick preset: Code assistant orchestrator
     /// </summary>
     public static Result<IMetaAIPlannerOrchestrator, string> CreateCodeAssistant(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools)
     {
         try
@@ -270,7 +270,7 @@ public static class MetaAIConvenience
     /// Quick preset: Interactive chat orchestrator
     /// </summary>
     public static Result<IMetaAIPlannerOrchestrator, string> CreateChatAssistant(
-        IChatCompletionModel llm)
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
         try
         {

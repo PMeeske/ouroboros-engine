@@ -13,7 +13,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class MetaAIBuilder
 {
-    private IChatCompletionModel? _llm;
+    private Ouroboros.Abstractions.Core.IChatCompletionModel? _llm;
     private ToolRegistry? _tools;
     private IMemoryStore? _memory;
     private ISkillRegistry? _skills;
@@ -29,7 +29,7 @@ public sealed class MetaAIBuilder
     /// <summary>
     /// Sets the language model for the orchestrator.
     /// </summary>
-    public MetaAIBuilder WithLLM(IChatCompletionModel llm)
+    public MetaAIBuilder WithLLM(Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
         _llm = llm;
         return this;

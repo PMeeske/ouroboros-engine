@@ -84,12 +84,12 @@ public interface IAdaptivePlanner
 public sealed class AdaptivePlanner : IAdaptivePlanner
 {
     private readonly IMetaAIPlannerOrchestrator _orchestrator;
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly List<AdaptationTrigger> _triggers = new();
 
     public AdaptivePlanner(
         IMetaAIPlannerOrchestrator orchestrator,
-        IChatCompletionModel llm)
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));

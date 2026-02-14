@@ -29,7 +29,7 @@ internal static class TemporalReasoningConstants
 /// </summary>
 public sealed class TemporalReasoner : ITemporalReasoner
 {
-    private readonly IChatCompletionModel? llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel? llm;
     private readonly ConcurrentDictionary<Guid, TemporalEvent> eventStore = new();
     private readonly ConcurrentDictionary<string, List<TemporalEvent>> eventsByType = new();
     private readonly ConcurrentDictionary<(Guid, Guid), TemporalRelationType> relationCache = new();
@@ -38,7 +38,7 @@ public sealed class TemporalReasoner : ITemporalReasoner
     /// Initializes a new instance of the <see cref="TemporalReasoner"/> class.
     /// </summary>
     /// <param name="llm">Optional LLM for causal inference and pattern recognition.</param>
-    public TemporalReasoner(IChatCompletionModel? llm = null)
+    public TemporalReasoner(Ouroboros.Abstractions.Core.IChatCompletionModel? llm = null)
     {
         this.llm = llm;
     }

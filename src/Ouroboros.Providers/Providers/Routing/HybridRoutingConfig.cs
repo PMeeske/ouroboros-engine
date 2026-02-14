@@ -15,11 +15,11 @@ namespace Ouroboros.Providers.Routing;
 /// <param name="FallbackModel">Optional fallback model when primary models fail (uses DefaultModel if null).</param>
 /// <param name="DetectionStrategy">Strategy for detecting task types (default: Heuristic).</param>
 public record HybridRoutingConfig(
-    IChatCompletionModel DefaultModel,
-    IChatCompletionModel? ReasoningModel = null,
-    IChatCompletionModel? PlanningModel = null,
-    IChatCompletionModel? CodingModel = null,
-    IChatCompletionModel? FallbackModel = null,
+    Ouroboros.Abstractions.Core.IChatCompletionModel DefaultModel,
+    Ouroboros.Abstractions.Core.IChatCompletionModel? ReasoningModel = null,
+    Ouroboros.Abstractions.Core.IChatCompletionModel? PlanningModel = null,
+    Ouroboros.Abstractions.Core.IChatCompletionModel? CodingModel = null,
+    Ouroboros.Abstractions.Core.IChatCompletionModel? FallbackModel = null,
     TaskDetectionStrategy DetectionStrategy = TaskDetectionStrategy.Heuristic);
 
 /// <summary>

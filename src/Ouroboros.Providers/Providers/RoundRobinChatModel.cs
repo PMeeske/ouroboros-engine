@@ -37,7 +37,7 @@ public sealed class ProviderStats
 /// </summary>
 public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwareChatModel, IDisposable
 {
-    private readonly List<(IChatCompletionModel Model, ProviderConfig Config, ProviderStats Stats)> _providers = new();
+    private readonly List<(Ouroboros.Abstractions.Core.IChatCompletionModel Model, ProviderConfig Config, ProviderStats Stats)> _providers = new();
     private readonly object _lock = new();
     private int _currentIndex;
     private readonly bool _failoverEnabled;
@@ -92,7 +92,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
     /// <summary>
     /// Adds a provider to the round-robin pool.
     /// </summary>
-    public void AddProvider(IChatCompletionModel model, ProviderConfig config)
+    public void AddProvider(Ouroboros.Abstractions.Core.IChatCompletionModel model, ProviderConfig config)
     {
         lock (_lock)
         {
@@ -115,12 +115,12 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
         endpoint ??= ChatConfig.GetDefaultEndpoint(config.EndpointType);
 
         var costTracker = new LlmCostTracker(config.Model ?? "unknown", config.Name);
-        IChatCompletionModel model = CreateModel(config.EndpointType, endpoint ?? "", apiKey ?? "", config.Model ?? "", settings, costTracker);
+        Ouroboros.Abstractions.Core.IChatCompletionModel model = CreateModel(config.EndpointType, endpoint ?? "", apiKey ?? "", config.Model ?? "", settings, costTracker);
 
         AddProvider(model, config);
     }
 
-    private static IChatCompletionModel CreateModel(
+    private static Ouroboros.Abstractions.Core.IChatCompletionModel CreateModel(
         ChatEndpointType endpointType,
         string endpoint,
         string apiKey,
@@ -141,7 +141,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
     /// <summary>
     /// Gets the next provider using weighted round-robin selection.
     /// </summary>
-    private (IChatCompletionModel Model, ProviderConfig Config, ProviderStats Stats)? GetNextProvider(HashSet<int>? excludeIndices = null)
+    private (Ouroboros.Abstractions.Core.IChatCompletionModel Model, ProviderConfig Config, ProviderStats Stats)? GetNextProvider(HashSet<int>? excludeIndices = null)
     {
         lock (_lock)
         {

@@ -16,10 +16,10 @@ public sealed class PredictiveMonitor : IPredictiveMonitor
     private readonly ConcurrentDictionary<Guid, Forecast> _forecasts = new();
     private readonly ConcurrentBag<AnomalyDetection> _anomalies = new();
     private readonly Dictionary<string, List<double>> _metricHistory = new();
-    private readonly IChatCompletionModel? _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel? _llm;
     private readonly object _lock = new();
 
-    public PredictiveMonitor(IChatCompletionModel? llm = null)
+    public PredictiveMonitor(Ouroboros.Abstractions.Core.IChatCompletionModel? llm = null)
     {
         _llm = llm;
     }

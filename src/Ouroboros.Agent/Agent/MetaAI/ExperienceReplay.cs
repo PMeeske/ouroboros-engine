@@ -65,12 +65,12 @@ public sealed class ExperienceReplay : IExperienceReplay
 {
     private readonly IMemoryStore _memory;
     private readonly ISkillRegistry _skills;
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
 
     public ExperienceReplay(
         IMemoryStore memory,
         ISkillRegistry skills,
-        IChatCompletionModel llm)
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));

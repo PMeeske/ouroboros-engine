@@ -9,14 +9,14 @@ using Ouroboros.Agent.NeuralSymbolic;
 namespace Ouroboros.Agent.ConsolidatedMind;
 
 /// <summary>
-/// Adapts the symbolic reasoning engine (MeTTa/Hyperon) to the IChatCompletionModel interface,
+/// Adapts the symbolic reasoning engine (MeTTa/Hyperon) to the Ouroboros.Abstractions.Core.IChatCompletionModel interface,
 /// allowing it to serve as a specialist within the ConsolidatedMind.
 ///
 /// This enables symbolic reasoning as the ultimate fallback when all LLM-based
 /// specialists are unavailable. While responses may be less fluent than LLM output,
 /// they provide deterministic, logic-based answers that don't require external services.
 /// </summary>
-public sealed class SymbolicReasonerAdapter : IChatCompletionModel
+public sealed class SymbolicReasonerAdapter : Ouroboros.Abstractions.Core.IChatCompletionModel
 {
     private readonly INeuralSymbolicBridge? _bridge;
     private readonly IMeTTaEngine? _engine;
