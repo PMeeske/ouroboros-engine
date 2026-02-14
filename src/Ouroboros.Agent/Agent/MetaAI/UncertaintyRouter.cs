@@ -232,7 +232,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
 
     private void RecordRoutingOutcome(string context, double confidence, bool success)
     {
-        string key = context.Length > 50 ? context.Substring(0, 50) : context;
+        string key = context.Length > 50 ? context[..Math.Min(50, context.Length)] : context;
         
         _routingHistory.AddOrUpdate(
             key,
