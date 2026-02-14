@@ -99,7 +99,7 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
             ArgumentNullException.ThrowIfNull(skill);
             _skillsCache[skill.Id] = skill;
             await SaveSkillToQdrantAsync(skill, ct);
-            return Result<Unit, string>.Success(Unit.Default);
+            return Result<Unit, string>.Success(Unit.Value);
         }
         catch (Exception ex)
         {
@@ -234,7 +234,7 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
             _skillsCache[skill.Id] = skill;
             await SaveSkillToQdrantAsync(skill, ct);
 
-            return Result<Unit, string>.Success(Unit.Default);
+            return Result<Unit, string>.Success(Unit.Value);
         }
         catch (Exception ex)
         {
@@ -277,7 +277,7 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
                 await SaveSkillToQdrantAsync(updated, ct);
             }
 
-            return Result<Unit, string>.Success(Unit.Default);
+            return Result<Unit, string>.Success(Unit.Value);
         }
         catch (Exception ex)
         {
@@ -328,7 +328,7 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
                 Console.Error.WriteLine($"[WARN] Failed to delete skill '{skillId}' from Qdrant: {ex.Message}");
             }
 
-            return Result<Unit, string>.Success(Unit.Default);
+            return Result<Unit, string>.Success(Unit.Value);
         }
         catch (Exception ex)
         {

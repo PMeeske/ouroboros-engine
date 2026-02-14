@@ -53,12 +53,19 @@ public sealed class CuriosityEngine : ICuriosityEngine
         {
             // Check similarity to past experiences
             MemoryQuery query = new MemoryQuery(
-                plan.Goal,
-                null,
-                MaxResults: 20,
-                MinSimilarity: 0.0);
+                Tags: null,
+                ContextSimilarity: plan.Goal,
+                SuccessOnly: null,
+                FromDate: null,
+                ToDate: null,
+                MaxResults: 20);
 
-            List<Experience> experiences = await _memory.QueryExperiencesAsync(query, ct);
+            var experiencesResult = await _memory.QueryExperiencesAsync(query, ct);
+
+            if (!experiencesResult.IsSuccess)
+                return 0.5; // Default moderate novelty on query failure
+
+            IReadOnlyList<Experience> experiences = experiencesResult.Value;
 
             if (!experiences.Any())
                 return 1.0; // Completely novel - no similar experiences
@@ -350,12 +357,19 @@ INFO_GAIN: [0-1]
         {
             // Check how much we already know about this area
             MemoryQuery query = new MemoryQuery(
-                explorationDescription,
-                null,
-                MaxResults: 10,
-                MinSimilarity: 0.5);
+                Tags: null,
+                ContextSimilarity: explorationDescription,
+                SuccessOnly: null,
+                FromDate: null,
+                ToDate: null,
+                MaxResults: 10);
 
-            List<Experience> experiences = await _memory.QueryExperiencesAsync(query, ct);
+            var experiencesResult = await _memory.QueryExperiencesAsync(query, ct);
+
+            if (!experiencesResult.IsSuccess)
+                return 0.5; // Default moderate potential on query failure
+
+            IReadOnlyList<Experience> experiences = experiencesResult.Value;
 
             // Less knowledge = higher potential information gain
             if (!experiences.Any())
@@ -424,12 +438,22 @@ INFO_GAIN: [0-1]
     private async Task<List<Experience>> GetAllExperiences(CancellationToken ct)
     {
         MemoryQuery query = new MemoryQuery(
-            ContextSimilarity: "",
-            Context: null,
-            MaxResults: 100,
-            MinSimilarity: 0.0);
+            Tags: null,
+            ContextSimilarity: null,
+            SuccessOnly: null,
+            FromDate: null,
+            ToDate: null,
+            MaxResults: 100);
 
-        return await _memory.QueryExperiencesAsync(query, ct);
+        var result = await _memory.QueryExperiencesAsync(query, ct);
+
+        if (!result.IsSuccess)
+        {
+            // If the memory query fails, return an empty list to avoid propagating errors.
+            return new List<Experience>();
+        }
+
+        return result.Value.ToList();
     }
 
     private List<PlanStep> ParseExploratorySteps(string response)

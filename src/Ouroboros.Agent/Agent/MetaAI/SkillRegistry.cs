@@ -31,7 +31,7 @@ public sealed class SkillRegistry : ISkillRegistry
         {
             ArgumentNullException.ThrowIfNull(skill);
             _skills[skill.Id] = skill;
-            return Task.FromResult(Result<Unit, string>.Success(Unit.Default));
+            return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
         }
         catch (Exception ex)
         {
@@ -141,7 +141,7 @@ public sealed class SkillRegistry : ISkillRegistry
                 return Task.FromResult(Result<Unit, string>.Failure($"Skill '{skill.Id}' not found"));
 
             _skills[skill.Id] = skill;
-            return Task.FromResult(Result<Unit, string>.Success(Unit.Default));
+            return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
         }
         catch (Exception ex)
         {
@@ -178,7 +178,7 @@ public sealed class SkillRegistry : ISkillRegistry
             };
 
             _skills[skillId] = updated;
-            return Task.FromResult(Result<Unit, string>.Success(Unit.Default));
+            return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
         }
         catch (Exception ex)
         {
@@ -197,7 +197,7 @@ public sealed class SkillRegistry : ISkillRegistry
                 return Task.FromResult(Result<Unit, string>.Failure("Skill ID cannot be empty"));
 
             if (_skills.TryRemove(skillId, out _))
-                return Task.FromResult(Result<Unit, string>.Success(Unit.Default));
+                return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
 
             return Task.FromResult(Result<Unit, string>.Failure($"Skill '{skillId}' not found"));
         }

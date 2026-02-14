@@ -155,8 +155,9 @@ public sealed class SafetyGuard : ISafetyGuard
     /// <summary>
     /// Legacy method: Checks if an operation is safe to execute (synchronous).
     /// Kept for backward compatibility - prefer CheckActionSafetyAsync.
-    /// Warning: Uses GetAwaiter().GetResult() which may cause deadlocks in certain contexts.
-    /// Avoid calling from UI threads or ASP.NET contexts.
+    /// WARNING: This method blocks on async code and should ONLY be used in console applications
+    /// or background tasks. Do NOT use in ASP.NET Core, UI contexts, or any environment with
+    /// a synchronization context, as it can still cause deadlocks despite Task.Run.
     /// </summary>
     [Obsolete("Use CheckActionSafetyAsync instead")]
     public SafetyCheckResult CheckSafety(
@@ -167,7 +168,7 @@ public sealed class SafetyGuard : ISafetyGuard
         ArgumentNullException.ThrowIfNull(operation);
         ArgumentNullException.ThrowIfNull(parameters);
 
-        // Use Task.Run to avoid potential deadlock scenarios
+        // Task.Run helps but doesn't eliminate deadlock risk in all contexts
         IReadOnlyDictionary<string, object> readOnlyParams = parameters;
         SafetyCheckResult result = Task.Run(async () =>
             await CheckActionSafetyAsync(operation, readOnlyParams, null, CancellationToken.None))
