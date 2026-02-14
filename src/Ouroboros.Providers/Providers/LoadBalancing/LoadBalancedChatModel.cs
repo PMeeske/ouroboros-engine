@@ -16,9 +16,9 @@ namespace Ouroboros.Providers.LoadBalancing;
 /// Uses Polly for resilient retry logic with exponential backoff.
 /// Implements IChatCompletionModel for seamless integration with existing code.
 /// </summary>
-public sealed class LoadBalancedChatModel : IChatCompletionModel, IDisposable
+public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCompletionModel, IDisposable
 {
-    private readonly IProviderLoadBalancer<IChatCompletionModel> _loadBalancer;
+    private readonly IProviderLoadBalancer<Ouroboros.Abstractions.Core.IChatCompletionModel> _loadBalancer;
     private readonly AsyncRetryPolicy _retryPolicy;
     private bool _disposed;
 
@@ -28,7 +28,7 @@ public sealed class LoadBalancedChatModel : IChatCompletionModel, IDisposable
     /// <param name="strategy">The load balancing strategy to use. If null, defaults to AdaptiveHealth.</param>
     public LoadBalancedChatModel(IProviderSelectionStrategy? strategy = null)
     {
-        _loadBalancer = new ProviderLoadBalancer<IChatCompletionModel>(strategy);
+        _loadBalancer = new ProviderLoadBalancer<Ouroboros.Abstractions.Core.IChatCompletionModel>(strategy);
         _retryPolicy = CreateRetryPolicy();
     }
 
@@ -36,7 +36,7 @@ public sealed class LoadBalancedChatModel : IChatCompletionModel, IDisposable
     /// Initializes a new instance of the <see cref="LoadBalancedChatModel"/> class with a custom load balancer.
     /// </summary>
     /// <param name="loadBalancer">Custom load balancer instance.</param>
-    public LoadBalancedChatModel(IProviderLoadBalancer<IChatCompletionModel> loadBalancer)
+    public LoadBalancedChatModel(IProviderLoadBalancer<Ouroboros.Abstractions.Core.IChatCompletionModel> loadBalancer)
     {
         _loadBalancer = loadBalancer ?? throw new ArgumentNullException(nameof(loadBalancer));
         _retryPolicy = CreateRetryPolicy();
@@ -64,9 +64,9 @@ public sealed class LoadBalancedChatModel : IChatCompletionModel, IDisposable
     /// </summary>
     /// <param name="providerId">Unique identifier for the provider.</param>
     /// <param name="model">The chat model instance.</param>
-    public void RegisterProvider(string providerId, IChatCompletionModel model)
+    public void RegisterProvider(string providerId, Ouroboros.Abstractions.Core.IChatCompletionModel model)
     {
-        if (_loadBalancer is ProviderLoadBalancer<IChatCompletionModel> balancer)
+        if (_loadBalancer is ProviderLoadBalancer<Ouroboros.Abstractions.Core.IChatCompletionModel> balancer)
         {
             balancer.RegisterProvider(providerId, model);
         }
@@ -109,7 +109,7 @@ public sealed class LoadBalancedChatModel : IChatCompletionModel, IDisposable
             return await _retryPolicy.ExecuteAsync(async () =>
             {
                 // Select a provider
-                Result<ProviderSelectionResult<IChatCompletionModel>, string> selectionResult =
+                Result<ProviderSelectionResult<Ouroboros.Abstractions.Core.IChatCompletionModel>, string> selectionResult =
                     await _loadBalancer.SelectProviderAsync();
 
                 if (selectionResult.IsFailure)
@@ -122,7 +122,7 @@ public sealed class LoadBalancedChatModel : IChatCompletionModel, IDisposable
                     throw new InvalidOperationException($"No healthy providers available: {error}");
                 }
 
-                ProviderSelectionResult<IChatCompletionModel> selection = selectionResult.Match(
+                ProviderSelectionResult<Ouroboros.Abstractions.Core.IChatCompletionModel> selection = selectionResult.Match(
                     result => result,
                     _ => throw new InvalidOperationException("Should not reach here"));
 

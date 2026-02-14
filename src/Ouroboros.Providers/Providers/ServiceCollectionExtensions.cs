@@ -32,7 +32,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<OllamaProvider>();
 
-        services.AddSingleton<IChatCompletionModel>(sp =>
+        services.AddSingleton<Ouroboros.Abstractions.Core.IChatCompletionModel>(sp =>
         {
             (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.Resolve();
             if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
@@ -105,7 +105,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp =>
         {
             ToolRegistry registry = sp.GetRequiredService<ToolRegistry>();
-            IChatCompletionModel chat = sp.GetRequiredService<IChatCompletionModel>();
+            Ouroboros.Abstractions.Core.IChatCompletionModel chat = sp.GetRequiredService<Ouroboros.Abstractions.Core.IChatCompletionModel>();
             return new ToolAwareChatModel(chat, registry);
         });
 
