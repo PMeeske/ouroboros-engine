@@ -242,7 +242,7 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
     protected SafetyCheckResult CheckSafety(
         string action,
         Dictionary<string, object> parameters,
-        PermissionLevel permissionLevel = PermissionLevel.ReadOnly)
+        PermissionLevel permissionLevel = PermissionLevel.Read)
     {
         if (!Configuration.EnableSafetyChecks || _safetyGuard == null)
         {

@@ -13,18 +13,145 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class SafetyGuard : ISafetyGuard
 {
-    private readonly ConcurrentDictionary<string, Permission> _permissions = new();
+    private readonly ConcurrentDictionary<string, PermissionPolicy> _permissionPolicies = new();
+    private readonly ConcurrentDictionary<string, PermissionLevel> _agentPermissions = new();
     private readonly PermissionLevel _defaultLevel;
 
-    public SafetyGuard(PermissionLevel defaultLevel = PermissionLevel.Isolated)
+    public SafetyGuard(PermissionLevel defaultLevel = PermissionLevel.Read)
     {
         _defaultLevel = defaultLevel;
         InitializeDefaultPermissions();
     }
 
     /// <summary>
-    /// Checks if an operation is safe to execute.
+    /// Checks if an action is safe to execute.
     /// </summary>
+    public async Task<SafetyCheckResult> CheckActionSafetyAsync(
+        string actionName,
+        IReadOnlyDictionary<string, object> parameters,
+        object? context = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(actionName);
+        ArgumentNullException.ThrowIfNull(parameters);
+
+        PermissionLevel requiredLevel = GetRequiredPermissionLevel(actionName);
+        List<Permission> requiredPermissions = new() { new Permission(actionName, requiredLevel, "Action execution") };
+        List<string> reasons = new();
+
+        // Check for dangerous patterns
+        if (ContainsDangerousPatterns(actionName, parameters))
+        {
+            reasons.Add("Action contains potentially dangerous patterns");
+        }
+
+        // Check parameter safety
+        foreach (KeyValuePair<string, object> param in parameters)
+        {
+            if (param.Value is string strValue && ContainsInjectionPatterns(strValue))
+            {
+                reasons.Add($"Parameter '{param.Key}' contains potential injection patterns");
+            }
+        }
+
+        double riskScore = await AssessRiskAsync(actionName, parameters, ct);
+        bool isAllowed = reasons.Count == 0 && riskScore < 0.8;
+        string reason = isAllowed ? "Action is safe to execute" : string.Join("; ", reasons);
+
+        return new SafetyCheckResult(isAllowed, reason, requiredPermissions, riskScore);
+    }
+
+    /// <summary>
+    /// Checks if an agent has the required permissions.
+    /// </summary>
+    public Task<bool> CheckPermissionsAsync(
+        string agentId,
+        IReadOnlyList<Permission> permissions,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(agentId);
+        ArgumentNullException.ThrowIfNull(permissions);
+
+        // Get agent's permission level (or use default)
+        PermissionLevel agentLevel = _agentPermissions.GetValueOrDefault(agentId, _defaultLevel);
+
+        // Check if agent has sufficient permission for all required permissions
+        foreach (Permission permission in permissions)
+        {
+            if (agentLevel < permission.Level)
+            {
+                return Task.FromResult(false);
+            }
+        }
+
+        return Task.FromResult(true);
+    }
+
+    /// <summary>
+    /// Assesses the risk level of an action.
+    /// </summary>
+    public Task<double> AssessRiskAsync(
+        string actionName,
+        IReadOnlyDictionary<string, object> parameters,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(actionName);
+        ArgumentNullException.ThrowIfNull(parameters);
+
+        double risk = 0.0;
+
+        // Base risk from action name patterns
+        string actionLower = actionName.ToLowerInvariant();
+        if (actionLower.Contains("delete") || actionLower.Contains("drop") || actionLower.Contains("remove"))
+            risk += 0.4;
+        else if (actionLower.Contains("system") || actionLower.Contains("admin") || actionLower.Contains("exec"))
+            risk += 0.5;
+        else if (actionLower.Contains("write") || actionLower.Contains("update") || actionLower.Contains("create"))
+            risk += 0.2;
+        else if (actionLower.Contains("read") || actionLower.Contains("get") || actionLower.Contains("list"))
+            risk += 0.1;
+
+        // Additional risk from dangerous patterns
+        if (ContainsDangerousPatterns(actionName, parameters))
+            risk += 0.3;
+
+        // Risk from parameter injection patterns
+        foreach (KeyValuePair<string, object> param in parameters)
+        {
+            if (param.Value is string strValue && ContainsInjectionPatterns(strValue))
+            {
+                risk += 0.2;
+            }
+        }
+
+        // Cap at 1.0
+        return Task.FromResult(Math.Min(risk, 1.0));
+    }
+
+    /// <summary>
+    /// Sets permission level for an agent.
+    /// </summary>
+    public void SetAgentPermissionLevel(string agentId, PermissionLevel level)
+    {
+        _agentPermissions[agentId] = level;
+    }
+
+    /// <summary>
+    /// Registers a permission policy for an action.
+    /// </summary>
+    public void RegisterPermissionPolicy(string actionName, PermissionLevel level, string description)
+    {
+        _permissionPolicies[actionName] = new PermissionPolicy(actionName, level, description);
+    }
+
+    // Backward compatibility methods for existing callers
+    // These adapt the old API to the new Foundation interface
+
+    /// <summary>
+    /// Legacy method: Checks if an operation is safe to execute (synchronous).
+    /// Kept for backward compatibility - prefer CheckActionSafetyAsync.
+    /// </summary>
+    [Obsolete("Use CheckActionSafetyAsync instead")]
     public SafetyCheckResult CheckSafety(
         string operation,
         Dictionary<string, object> parameters,
@@ -33,73 +160,20 @@ public sealed class SafetyGuard : ISafetyGuard
         ArgumentNullException.ThrowIfNull(operation);
         ArgumentNullException.ThrowIfNull(parameters);
 
-        List<string> violations = new List<string>();
-        List<string> warnings = new List<string>();
-        PermissionLevel requiredLevel = GetRequiredPermission(operation);
+        // Convert to async call and wait (not ideal but maintains compatibility)
+        IReadOnlyDictionary<string, object> readOnlyParams = parameters;
+        SafetyCheckResult result = CheckActionSafetyAsync(operation, readOnlyParams, null, CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
 
-        // Check if current permission level is sufficient
-        if (currentLevel < requiredLevel)
-        {
-            violations.Add($"Operation '{operation}' requires {requiredLevel} but current level is {currentLevel}");
-        }
-
-        // Check for dangerous patterns
-        if (ContainsDangerousPatterns(operation, parameters))
-        {
-            violations.Add("Operation contains potentially dangerous patterns");
-            warnings.Add("Operation contains potentially dangerous patterns");
-        }
-
-        // Check parameter safety
-        foreach (KeyValuePair<string, object> param in parameters)
-        {
-            if (param.Value is string strValue)
-            {
-                if (ContainsInjectionPatterns(strValue))
-                {
-                    violations.Add($"Parameter '{param.Key}' contains potential injection patterns");
-                }
-            }
-        }
-
-        bool isSafe = violations.Count == 0;
-        return new SafetyCheckResult(isSafe, violations, warnings, requiredLevel);
+        return result;
     }
 
     /// <summary>
-    /// Validates tool execution permission.
+    /// Legacy method: Sandboxes a plan step for safe execution.
+    /// Kept for backward compatibility.
     /// </summary>
-    public bool IsToolExecutionPermitted(
-        string toolName,
-        string arguments,
-        PermissionLevel currentLevel)
-    {
-        if (string.IsNullOrWhiteSpace(toolName))
-            return false;
-
-        PermissionLevel requiredLevel = GetRequiredPermission(toolName);
-
-        if (currentLevel < requiredLevel)
-            return false;
-
-        // Additional checks for specific tools
-        if (toolName.Contains("delete", StringComparison.OrdinalIgnoreCase) ||
-            toolName.Contains("remove", StringComparison.OrdinalIgnoreCase))
-        {
-            return currentLevel >= PermissionLevel.UserDataWithConfirmation;
-        }
-
-        if (toolName.Contains("system", StringComparison.OrdinalIgnoreCase))
-        {
-            return currentLevel >= PermissionLevel.System;
-        }
-
-        return true;
-    }
-
-    /// <summary>
-    /// Sandboxes a plan step for safe execution.
-    /// </summary>
+    [Obsolete("This method is deprecated and will be removed in a future version")]
     public PlanStep SandboxStep(PlanStep step)
     {
         ArgumentNullException.ThrowIfNull(step);
@@ -127,104 +201,72 @@ public sealed class SafetyGuard : ISafetyGuard
         return step with { Parameters = sandboxedParams };
     }
 
-    /// <summary>
-    /// Gets required permission level for an action.
-    /// </summary>
-    public PermissionLevel GetRequiredPermission(string action)
+    private string SanitizeString(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return value;
+
+        // Remove potentially dangerous characters
+        string sanitized = value
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;")
+            .Replace("'", "&#39;")
+            .Replace("\"", "&quot;");
+
+        // Limit length to prevent DOS
+        if (sanitized.Length > 10000)
+        {
+            sanitized = sanitized.Substring(0, 10000);
+        }
+
+        return sanitized;
+    }
+
+    private PermissionLevel GetRequiredPermissionLevel(string action)
     {
         if (string.IsNullOrWhiteSpace(action))
             return _defaultLevel;
 
-        // Check registered permissions
-        if (_permissions.TryGetValue(action, out Permission? permission))
+        // Check registered policies
+        if (_permissionPolicies.TryGetValue(action, out PermissionPolicy? policy))
         {
-            return permission.Level;
+            return policy.Level;
         }
 
         // Determine based on action patterns
         string actionLower = action.ToLowerInvariant();
 
         if (actionLower.Contains("read") || actionLower.Contains("get") || actionLower.Contains("list"))
-            return PermissionLevel.ReadOnly;
-
-        if (actionLower.Contains("http") || actionLower.Contains("network"))
-            return PermissionLevel.Isolated;
+            return PermissionLevel.Read;
 
         if (actionLower.Contains("delete") || actionLower.Contains("drop") || actionLower.Contains("remove"))
-            return PermissionLevel.UserDataWithConfirmation;
+            return PermissionLevel.Admin;
 
         if (actionLower.Contains("system") || actionLower.Contains("admin"))
-            return PermissionLevel.System;
+            return PermissionLevel.Admin;
 
         if (actionLower.Contains("write") || actionLower.Contains("update") || actionLower.Contains("create"))
-            return PermissionLevel.UserData;
+            return PermissionLevel.Write;
+
+        if (actionLower.Contains("exec") || actionLower.Contains("run") || actionLower.Contains("execute"))
+            return PermissionLevel.Execute;
 
         return _defaultLevel;
     }
 
-    /// <summary>
-    /// Registers a permission policy.
-    /// </summary>
-    public void RegisterPermission(Permission permission)
-    {
-        ArgumentNullException.ThrowIfNull(permission);
-        _permissions[permission.Name] = permission;
-    }
-
-    /// <summary>
-    /// Gets all registered permissions.
-    /// </summary>
-    public IReadOnlyList<Permission> GetPermissions()
-        => _permissions.Values.OrderBy(p => p.Level).ToList();
-
     private void InitializeDefaultPermissions()
     {
-        // Register common tool permissions
-        RegisterPermission(new Permission(
-            "math",
-            "Mathematical calculations",
-            PermissionLevel.ReadOnly,
-            new List<string> { "calculate", "compute", "evaluate" }));
-
-        RegisterPermission(new Permission(
-            "search",
-            "Search operations",
-            PermissionLevel.ReadOnly,
-            new List<string> { "search", "find", "query" }));
-
-        RegisterPermission(new Permission(
-            "llm",
-            "LLM text generation",
-            PermissionLevel.Isolated,
-            new List<string> { "generate", "complete", "chat" }));
-
-        RegisterPermission(new Permission(
-            "run_usedraft",
-            "Generate draft",
-            PermissionLevel.Isolated,
-            new List<string> { "draft" }));
-
-        RegisterPermission(new Permission(
-            "run_usecritique",
-            "Critique content",
-            PermissionLevel.Isolated,
-            new List<string> { "critique", "review" }));
-
-        RegisterPermission(new Permission(
-            "file_write",
-            "File write operations",
-            PermissionLevel.UserDataWithConfirmation,
-            new List<string> { "write_file", "save_file" }));
-
-        // Ouroboros's own memory admin - safe for self-management
-        RegisterPermission(new Permission(
-            "qdrant_admin",
-            "Qdrant vector database administration",
-            PermissionLevel.UserData,
-            new List<string> { "status", "diagnose", "fix", "compact", "stats", "collections", "compress" }));
+        // Register common tool permissions with new permission levels
+        RegisterPermissionPolicy("math", PermissionLevel.Read, "Mathematical calculations");
+        RegisterPermissionPolicy("search", PermissionLevel.Read, "Search operations");
+        RegisterPermissionPolicy("llm", PermissionLevel.Execute, "LLM text generation");
+        RegisterPermissionPolicy("run_usedraft", PermissionLevel.Execute, "Generate draft");
+        RegisterPermissionPolicy("run_usecritique", PermissionLevel.Execute, "Critique content");
+        RegisterPermissionPolicy("file_write", PermissionLevel.Write, "File write operations");
+        RegisterPermissionPolicy("qdrant_admin", PermissionLevel.Write, "Qdrant vector database administration");
     }
 
-    private bool ContainsDangerousPatterns(string operation, Dictionary<string, object> parameters)
+    private bool ContainsDangerousPatterns(string operation, IReadOnlyDictionary<string, object> parameters)
     {
         string[] dangerousPatterns = new[]
         {
@@ -254,24 +296,6 @@ public sealed class SafetyGuard : ISafetyGuard
             value.Contains(pattern, StringComparison.OrdinalIgnoreCase));
     }
 
-    private string SanitizeString(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return value;
-
-        // Remove potentially dangerous characters
-        string sanitized = value
-            .Replace("<", "&lt;")
-            .Replace(">", "&gt;")
-            .Replace("'", "&#39;")
-            .Replace("\"", "&quot;");
-
-        // Limit length to prevent DOS
-        if (sanitized.Length > 10000)
-        {
-            sanitized = sanitized.Substring(0, 10000);
-        }
-
-        return sanitized;
-    }
+    // Internal helper record for permission policies
+    private sealed record PermissionPolicy(string ActionName, PermissionLevel Level, string Description);
 }
