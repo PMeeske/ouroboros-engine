@@ -146,13 +146,16 @@ public sealed class PlanStrategyFitness : IFitnessFunction<PlanStrategyGene>
             return 0.5;
         }
 
-        // Calculate average execution time
-        // Note: OuroborosExperience has Timestamp but not duration
-        // We'll use a simple heuristic: assume recent experiences are better optimized
-        // In a real implementation, we'd track execution times explicitly
-        
-        // For now, just return a constant value since we don't have execution times
-        // This can be improved when execution duration tracking is added
-        return 0.7; // Slightly favor current strategies
+        // TODO: Implement proper speed scoring when execution duration tracking is added to OuroborosExperience
+        // Currently, OuroborosExperience only has Timestamp but not execution Duration.
+        // 
+        // Proposed enhancement:
+        //   1. Add Duration field to OuroborosExperience record
+        //   2. Track execution time in OuroborosOrchestrator.RunAsync()
+        //   3. Calculate speed score here as: 1.0 / (1.0 + normalized_avg_duration)
+        //
+        // For now, return a neutral-to-positive constant to slightly favor current strategies
+        // without penalizing any particular approach.
+        return 0.7; // Placeholder: slightly favor current strategies until duration tracking is implemented
     }
 }

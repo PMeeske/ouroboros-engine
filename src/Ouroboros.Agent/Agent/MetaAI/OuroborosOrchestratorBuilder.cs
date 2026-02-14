@@ -152,8 +152,11 @@ public sealed class OuroborosOrchestratorBuilder
         Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? strategyEvolver = null;
         if (_enableStrategyEvolution)
         {
-            // Create fitness function using the atom (or a default one)
+            // Ensure we have an atom instance (will be the same one used by orchestrator)
             OuroborosAtom atom = _atom ?? OuroborosAtom.CreateDefault();
+            _atom = atom; // Store it so orchestrator uses the same instance
+            
+            // Create fitness function using the actual atom that will be used
             var fitnessFunction = new Evolution.PlanStrategyFitness(atom);
             
             // Create GA with mutation function
