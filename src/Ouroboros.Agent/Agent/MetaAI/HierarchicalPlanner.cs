@@ -250,11 +250,11 @@ public interface IHierarchicalPlanner
 public sealed class HierarchicalPlanner : IHierarchicalPlanner
 {
     private readonly IMetaAIPlannerOrchestrator _orchestrator;
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
 
     public HierarchicalPlanner(
         IMetaAIPlannerOrchestrator orchestrator,
-        IChatCompletionModel llm)
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));

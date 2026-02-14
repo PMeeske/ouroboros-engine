@@ -23,12 +23,12 @@ public sealed record CapabilityRegistryConfig(
 public sealed class CapabilityRegistry : ICapabilityRegistry
 {
     private readonly ConcurrentDictionary<string, AgentCapability> _capabilities = new();
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ToolRegistry _tools;
     private readonly CapabilityRegistryConfig _config;
 
     public CapabilityRegistry(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
         CapabilityRegistryConfig? config = null)
     {

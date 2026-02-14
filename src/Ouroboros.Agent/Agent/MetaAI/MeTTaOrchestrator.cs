@@ -20,7 +20,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 {
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ToolRegistry _tools;
     private readonly IMemoryStore _memory;
     private readonly ISkillRegistry _skills;
@@ -42,7 +42,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     public bool FormReasoningEnabled => _formBridge != null;
 
     public MeTTaOrchestrator(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
         IMemoryStore memory,
         ISkillRegistry skills,

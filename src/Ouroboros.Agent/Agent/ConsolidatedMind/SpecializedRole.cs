@@ -93,7 +93,7 @@ public enum SpecializedRole
 /// <param name="AverageLatencyMs">Expected average latency in milliseconds.</param>
 public sealed record SpecializedModel(
     SpecializedRole Role,
-    IChatCompletionModel Model,
+    Ouroboros.Abstractions.Core.IChatCompletionModel Model,
     string ModelName,
     string[] Capabilities,
     double Priority = 1.0,

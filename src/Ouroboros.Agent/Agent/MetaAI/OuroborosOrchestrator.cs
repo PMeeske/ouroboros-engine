@@ -39,7 +39,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     /// </summary>
     private const double ConfidenceBoostIncrement = 0.05;
 
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ToolRegistry _tools;
     private readonly IMemoryStore _memory;
     private readonly ISafetyGuard _safety;
@@ -58,7 +58,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     /// <param name="atom">Optional pre-configured OuroborosAtom.</param>
     /// <param name="configuration">Optional orchestrator configuration.</param>
     public OuroborosOrchestrator(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
         IMemoryStore memory,
         ISafetyGuard safety,

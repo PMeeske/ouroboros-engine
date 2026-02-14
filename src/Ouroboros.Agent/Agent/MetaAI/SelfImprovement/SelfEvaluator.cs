@@ -40,7 +40,7 @@ internal sealed record CalibrationRecord(
 /// </summary>
 public sealed class SelfEvaluator : ISelfEvaluator
 {
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ICapabilityRegistry _capabilities;
     private readonly ISkillRegistry _skills;
     private readonly IMemoryStore _memory;
@@ -49,7 +49,7 @@ public sealed class SelfEvaluator : ISelfEvaluator
     private readonly ConcurrentBag<CalibrationRecord> _calibrationRecords = new();
 
     public SelfEvaluator(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ICapabilityRegistry capabilities,
         ISkillRegistry skills,
         IMemoryStore memory,

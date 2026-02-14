@@ -16,13 +16,13 @@ namespace Ouroboros.Agent.MetaAI;
 public sealed class SkillBasedDslExtension
 {
     private readonly ISkillRegistry _skillRegistry;
-    private readonly IChatCompletionModel _model;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _model;
     private readonly Dictionary<string, DynamicSkillToken> _skillTokens = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Initializes the skill-based DSL extension.
     /// </summary>
-    public SkillBasedDslExtension(ISkillRegistry skillRegistry, IChatCompletionModel model)
+    public SkillBasedDslExtension(ISkillRegistry skillRegistry, Ouroboros.Abstractions.Core.IChatCompletionModel model)
     {
         _skillRegistry = skillRegistry ?? throw new ArgumentNullException(nameof(skillRegistry));
         _model = model ?? throw new ArgumentNullException(nameof(model));
@@ -167,12 +167,12 @@ public sealed class SkillBasedDslExtension
 /// </summary>
 public sealed class DynamicSkillToken
 {
-    private readonly IChatCompletionModel _model;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _model;
 
     /// <summary>
     /// Initializes a dynamic skill token.
     /// </summary>
-    public DynamicSkillToken(Skill skill, IChatCompletionModel model)
+    public DynamicSkillToken(Skill skill, Ouroboros.Abstractions.Core.IChatCompletionModel model)
     {
         Skill = skill ?? throw new ArgumentNullException(nameof(skill));
         _model = model ?? throw new ArgumentNullException(nameof(model));

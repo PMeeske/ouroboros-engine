@@ -16,7 +16,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
 {
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ToolRegistry _tools;
     private readonly IMemoryStore _memory;
     private readonly ISkillRegistry _skills;
@@ -27,7 +27,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
     private readonly ConcurrentDictionary<string, PerformanceMetrics> _metrics = new();
 
     public MetaAIPlannerOrchestrator(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
         IMemoryStore memory,
         ISkillRegistry skills,

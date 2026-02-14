@@ -95,13 +95,13 @@ public interface IExternalKnowledgeSource
 public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposable
 {
     private readonly HttpClient _httpClient;
-    private readonly IChatCompletionModel? _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel? _llm;
     private readonly ExternalKnowledgeConfig _config;
     private readonly Dictionary<string, (DateTime fetched, object data)> _cache = new();
     private bool _disposed;
 
     public ResearchKnowledgeSource(
-        IChatCompletionModel? llm = null,
+        Ouroboros.Abstractions.Core.IChatCompletionModel? llm = null,
         ExternalKnowledgeConfig? config = null,
         HttpClient? httpClient = null)
     {

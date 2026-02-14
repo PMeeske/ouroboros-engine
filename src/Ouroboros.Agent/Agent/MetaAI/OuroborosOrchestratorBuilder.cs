@@ -16,7 +16,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class OuroborosOrchestratorBuilder
 {
-    private IChatCompletionModel? _llm;
+    private Ouroboros.Abstractions.Core.IChatCompletionModel? _llm;
     private ToolRegistry? _tools;
     private IMemoryStore? _memory;
     private ISafetyGuard? _safety;
@@ -29,7 +29,7 @@ public sealed class OuroborosOrchestratorBuilder
     /// </summary>
     /// <param name="llm">The chat completion model.</param>
     /// <returns>This builder for chaining.</returns>
-    public OuroborosOrchestratorBuilder WithLLM(IChatCompletionModel llm)
+    public OuroborosOrchestratorBuilder WithLLM(Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         return this;

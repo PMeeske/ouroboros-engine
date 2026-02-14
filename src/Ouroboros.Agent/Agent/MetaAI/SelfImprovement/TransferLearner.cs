@@ -13,14 +13,14 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class TransferLearner : ITransferLearner
 {
-    private readonly IChatCompletionModel _llm;
+    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ISkillRegistry _skills;
     private readonly IMemoryStore _memory;
     private readonly TransferLearningConfig _config;
     private readonly ConcurrentDictionary<string, List<TransferResult>> _transferHistory = new();
 
     public TransferLearner(
-        IChatCompletionModel llm,
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ISkillRegistry skills,
         IMemoryStore memory,
         TransferLearningConfig? config = null)
