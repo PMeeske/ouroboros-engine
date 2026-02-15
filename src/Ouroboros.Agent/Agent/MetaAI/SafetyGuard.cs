@@ -14,7 +14,7 @@ namespace Ouroboros.Agent.MetaAI;
 public sealed class SafetyGuard : ISafetyGuard
 {
     private const double RiskThresholdForDenial = 0.8;
-    
+
     private readonly ConcurrentDictionary<string, PermissionPolicy> _permissionPolicies = new();
     private readonly ConcurrentDictionary<string, PermissionLevel> _agentPermissions = new();
     private readonly PermissionLevel _defaultLevel;
@@ -42,12 +42,12 @@ public sealed class SafetyGuard : ISafetyGuard
             ? policy.Description
             : $"Permission for {actionName} action";
         List<Permission> requiredPermissions = new() { new Permission(actionName, requiredLevel, permissionReason) };
-        List<string> reasons = new();
+        List<string> violations = new();
 
         // Check for dangerous patterns
         if (ContainsDangerousPatterns(actionName, parameters))
         {
-            reasons.Add("Action contains potentially dangerous patterns");
+            violations.Add("Action contains potentially dangerous patterns");
         }
 
         // Check parameter safety
@@ -55,15 +55,81 @@ public sealed class SafetyGuard : ISafetyGuard
         {
             if (param.Value is string strValue && ContainsInjectionPatterns(strValue))
             {
-                reasons.Add($"Parameter '{param.Key}' contains potential injection patterns");
+                violations.Add($"Parameter '{param.Key}' contains potential injection patterns");
             }
         }
 
         double riskScore = await AssessRiskAsync(actionName, parameters, ct);
-        bool isAllowed = reasons.Count == 0 && riskScore < RiskThresholdForDenial;
-        string reason = isAllowed ? "Action is safe to execute" : string.Join("; ", reasons);
+        bool isAllowed = violations.Count == 0 && riskScore < RiskThresholdForDenial;
+        string reason = isAllowed ? "Action is safe to execute" : string.Join("; ", violations);
 
-        return new SafetyCheckResult(isAllowed, reason, requiredPermissions, riskScore);
+        return new SafetyCheckResult(isAllowed, reason, requiredPermissions, riskScore, violations);
+    }
+
+    /// <summary>
+    /// Checks safety of an action (simplified overload).
+    /// </summary>
+    public async Task<SafetyCheckResult> CheckSafetyAsync(
+        string action,
+        PermissionLevel permissionLevel,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        var parameters = new Dictionary<string, object>
+        {
+            ["requiredLevel"] = permissionLevel
+        };
+
+        return await CheckActionSafetyAsync(action, parameters, null, ct);
+    }
+
+    /// <summary>
+    /// Sandboxes a step for safe execution.
+    /// </summary>
+    public Task<SandboxResult> SandboxStepAsync(
+        PlanStep step,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+
+        try
+        {
+            // Create sandboxed version with restricted parameters
+            Dictionary<string, object> sandboxedParams = new Dictionary<string, object>();
+            List<string> restrictions = new List<string>();
+
+            foreach (KeyValuePair<string, object> param in step.Parameters)
+            {
+                if (param.Value is string strValue)
+                {
+                    // Sanitize string values
+                    string sanitized = SanitizeString(strValue);
+                    sandboxedParams[param.Key] = sanitized;
+                    if (sanitized != strValue)
+                    {
+                        restrictions.Add($"Parameter '{param.Key}' was sanitized");
+                    }
+                }
+                else
+                {
+                    sandboxedParams[param.Key] = param.Value;
+                }
+            }
+
+            // Add sandbox metadata
+            sandboxedParams["__sandboxed__"] = true;
+            sandboxedParams["__original_action__"] = step.Action;
+            restrictions.Add("Execution is sandboxed");
+
+            PlanStep sandboxedStep = step with { Parameters = sandboxedParams };
+
+            return Task.FromResult(new SandboxResult(true, sandboxedStep, restrictions, null));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(new SandboxResult(false, null, Array.Empty<string>(), ex.Message));
+        }
     }
 
     /// <summary>

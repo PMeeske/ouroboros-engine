@@ -262,4 +262,26 @@ public sealed class MemoryStore : IMemoryStore
             return Task.FromResult(Result<Unit, string>.Failure($"Failed to delete experience: {ex.Message}"));
         }
     }
+
+
+    /// <summary>
+    /// Retrieves relevant experiences based on a query (alias for QueryExperiencesAsync).
+    /// </summary>
+    public Task<Result<IReadOnlyList<Experience>, string>> RetrieveRelevantExperiencesAsync(
+        MemoryQuery query,
+        CancellationToken ct = default)
+    {
+        return QueryExperiencesAsync(query, ct);
+    }
+
+    /// <summary>
+    /// Gets statistics (returns MemoryStatistics directly).
+    /// </summary>
+    public async Task<MemoryStatistics> GetStatsAsync(CancellationToken ct = default)
+    {
+        var result = await GetStatisticsAsync(ct);
+        return result.IsSuccess
+            ? result.Value
+            : new MemoryStatistics(0, 0, 0, 0, 0);
+    }
 }

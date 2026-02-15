@@ -246,11 +246,7 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
     {
         if (!Configuration.EnableSafetyChecks || _safetyGuard == null)
         {
-            return new SafetyCheckResult(
-                Safe: true,
-                Violations: new List<string>(),
-                Warnings: new List<string>(),
-                RequiredLevel: permissionLevel);
+            return SafetyCheckResult.Allowed("Safety checks disabled or no guard configured");
         }
 
         return _safetyGuard.CheckSafety(action, parameters, permissionLevel);
