@@ -577,6 +577,148 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
         }
         await Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Registers a skill (sync convenience method).
+    /// </summary>
+    public Result<Unit, string> RegisterSkill(AgentSkill skill)
+    {
+        try
+        {
+            ArgumentNullException.ThrowIfNull(skill);
+            _skillsCache[skill.Id] = skill;
+            return Result<Unit, string>.Success(Unit.Value);
+        }
+        catch (Exception ex)
+        {
+            return Result<Unit, string>.Failure($"Failed to register skill: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Gets a skill by identifier (sync convenience method).
+    /// </summary>
+    public AgentSkill? GetSkill(string skillId)
+    {
+        if (string.IsNullOrWhiteSpace(skillId))
+            return null;
+
+        return _skillsCache.TryGetValue(skillId, out AgentSkill? skill) ? skill : null;
+    }
+
+    /// <summary>
+    /// Gets all registered skills (sync convenience method).
+    /// </summary>
+    public IReadOnlyList<AgentSkill> GetAllSkills()
+    {
+        return _skillsCache.Values.OrderByDescending(s => s.SuccessRate).ToList();
+    }
+
+    /// <summary>
+    /// Records a skill execution (sync convenience method).
+    /// </summary>
+    public void RecordSkillExecution(string skillId, bool success, long executionTimeMs)
+    {
+        if (string.IsNullOrWhiteSpace(skillId))
+            return;
+
+        if (!_skillsCache.TryGetValue(skillId, out var existing))
+            return;
+
+        int newCount = existing.UsageCount + 1;
+        double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
+        long newAvgTime = ((existing.AverageExecutionTime * existing.UsageCount) + executionTimeMs) / newCount;
+
+        var updated = existing with
+        {
+            UsageCount = newCount,
+            SuccessRate = newSuccessRate,
+            AverageExecutionTime = newAvgTime
+        };
+
+        _skillsCache[skillId] = updated;
+    }
+
+    /// <summary>
+    /// Finds skills matching a goal and context.
+    /// </summary>
+    public async Task<List<Skill>> FindMatchingSkillsAsync(
+        string goal,
+        Dictionary<string, object>? context = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var tags = ExtractTagsFromGoal(goal);
+            var result = await FindSkillsAsync(null, tags, ct);
+            if (!result.IsSuccess)
+                return new List<Skill>();
+
+            return result.Value.Select(s => new Skill(
+                s.Name, s.Description, s.Preconditions.ToList(),
+                s.Effects.Select(e => new PlanStep(e, new Dictionary<string, object>(), e, s.SuccessRate)).ToList(),
+                s.SuccessRate, s.UsageCount, DateTime.UtcNow.AddDays(-s.UsageCount), DateTime.UtcNow)).ToList();
+        }
+        catch
+        {
+            return new List<Skill>();
+        }
+    }
+
+    /// <summary>
+    /// Extracts a skill from an execution result.
+    /// </summary>
+    public Task<Result<Skill, string>> ExtractSkillAsync(
+        PlanExecutionResult execution,
+        string skillName,
+        string description,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            ArgumentNullException.ThrowIfNull(execution);
+
+            var skill = new Skill(
+                Name: skillName,
+                Description: description,
+                Prerequisites: new List<string>(),
+                Steps: execution.Plan.Steps,
+                SuccessRate: execution.Success ? 1.0 : 0.0,
+                UsageCount: 1,
+                CreatedAt: DateTime.UtcNow,
+                LastUsed: DateTime.UtcNow);
+
+            // Also register as AgentSkill
+            var agentSkill = new AgentSkill(
+                Guid.NewGuid().ToString(), skill.Name, skill.Description, "learned",
+                skill.Prerequisites, skill.Steps.Select(s => s.ExpectedOutcome).ToList(),
+                skill.SuccessRate, skill.UsageCount,
+                (long)execution.Duration.TotalMilliseconds,
+                ExtractTagsFromGoal(execution.Plan.Goal));
+            _skillsCache[agentSkill.Id] = agentSkill;
+
+            return Task.FromResult(Result<Skill, string>.Success(skill));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(Result<Skill, string>.Failure($"Failed to extract skill: {ex.Message}"));
+        }
+    }
+
+    private static IReadOnlyList<string> ExtractTagsFromGoal(string goal)
+    {
+        if (string.IsNullOrWhiteSpace(goal))
+            return Array.Empty<string>();
+
+        var words = goal.ToLowerInvariant()
+            .Split(new[] { ' ', ',', '.', ':', ';', '-', '_' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 3)
+            .Distinct()
+            .Take(10)
+            .ToList();
+
+        return words;
+    }
 }
 
 /// <summary>

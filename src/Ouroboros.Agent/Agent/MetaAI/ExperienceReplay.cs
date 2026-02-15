@@ -195,16 +195,18 @@ public sealed class ExperienceReplay : IExperienceReplay
         ExperienceReplayConfig config,
         CancellationToken ct = default)
     {
-        MemoryStatistics stats = await _memory.GetStatisticsAsync();
+                var statsResult = await _memory.GetStatisticsAsync();
+        MemoryStatistics stats = statsResult.IsSuccess ? statsResult.Value : new MemoryStatistics(0, 0, 0, 0, 0);
 
         // Get all experiences and filter
         MemoryQuery query = new MemoryQuery(
-            Goal: "",
-            Context: null,
+            Tags: null,
+            ContextSimilarity: null,
             MaxResults: config.MaxExperiences,
             MinSimilarity: 0.0);
 
-        List<Experience> allExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+        var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+        List<Experience> allExperiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
 
         // Filter by quality
         List<Experience> qualityFiltered = allExperiences

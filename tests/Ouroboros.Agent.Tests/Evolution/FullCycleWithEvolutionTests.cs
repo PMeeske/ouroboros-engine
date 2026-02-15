@@ -3,9 +3,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using Ouroboros.Abstractions;
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Core.Hyperon;
+using Plan = Ouroboros.Agent.MetaAI.Plan;
+using PlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using ToolRegistry = Ouroboros.Tools.ToolRegistry;
 
 namespace Ouroboros.Tests.Evolution;
 
@@ -60,19 +64,35 @@ public class FullCycleWithEvolutionTests
 
         public Task LoadFileAsync(string path, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task<Result<string, string>> ExecuteQueryAsync(string query, CancellationToken ct = default)
+            => Task.FromResult(Result<string, string>.Success("(success)"));
+
+        public Task<Result<Unit, string>> AddFactAsync(string fact, CancellationToken ct = default)
+            => Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+
+        public Task<Result<string, string>> ApplyRuleAsync(string rule, CancellationToken ct = default)
+            => Task.FromResult(Result<string, string>.Success("Rule applied"));
+
+        public Task<Result<bool, string>> VerifyPlanAsync(string plan, CancellationToken ct = default)
+            => Task.FromResult(Result<bool, string>.Success(true));
+
+        public Task<Result<Unit, string>> ResetAsync(CancellationToken ct = default)
+            => Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+
+        public void Dispose() { }
     }
 
     /// <summary>
     /// Mock Hyperon MeTTa engine for Form reasoning.
     /// </summary>
-    private class MockHyperonMeTTaEngine : HyperonMeTTaEngine
+    private class MockHyperonMeTTaEngine : IMeTTaEngine
     {
         public MockHyperonMeTTaEngine(AtomSpace atomSpace)
-            : base(atomSpace)
         {
         }
 
-        public override Task<string> ExecuteAsync(string mettaCode, CancellationToken ct = default)
+        public Task<string> ExecuteAsync(string mettaCode, CancellationToken ct = default)
         {
             // Handle Form reasoning queries
             if (mettaCode.Contains("distinction") || mettaCode.Contains("lof"))
@@ -81,6 +101,23 @@ public class FullCycleWithEvolutionTests
             }
             return Task.FromResult("(verified True)");
         }
+
+        public Task<Result<string, string>> ExecuteQueryAsync(string query, CancellationToken ct = default)
+            => Task.FromResult(Result<string, string>.Success("(success)"));
+
+        public Task<Result<Unit, string>> AddFactAsync(string fact, CancellationToken ct = default)
+            => Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+
+        public Task<Result<string, string>> ApplyRuleAsync(string rule, CancellationToken ct = default)
+            => Task.FromResult(Result<string, string>.Success("Rule applied"));
+
+        public Task<Result<bool, string>> VerifyPlanAsync(string plan, CancellationToken ct = default)
+            => Task.FromResult(Result<bool, string>.Success(true));
+
+        public Task<Result<Unit, string>> ResetAsync(CancellationToken ct = default)
+            => Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+
+        public void Dispose() { }
     }
 
     /// <summary>
@@ -89,6 +126,9 @@ public class FullCycleWithEvolutionTests
     private class MockEmbeddingModel : IEmbeddingModel
     {
         public Task<float[]> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
+            => Task.FromResult(new float[384]);
+
+        public Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
             => Task.FromResult(new float[384]);
     }
 
@@ -114,12 +154,12 @@ public class FullCycleWithEvolutionTests
 
         // Act
         var result = await orchestrator.ExecuteAsync(
-            "Test goal with both evolution and form reasoning",
+            new Plan("Test goal with both evolution and form reasoning", new List<PlanStep>(), new Dictionary<string, double>(), DateTime.UtcNow),
             CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
-        result.Output.Should().NotBeNullOrEmpty();
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -139,9 +179,9 @@ public class FullCycleWithEvolutionTests
             .Build();
 
         // Act - Run multiple cycles
-        await orchestrator.RunAsync("Goal 1", CancellationToken.None);
-        await orchestrator.RunAsync("Goal 2", CancellationToken.None);
-        await orchestrator.RunAsync("Goal 3", CancellationToken.None);
+        await orchestrator.ExecuteAsync("Goal 1", OrchestratorContext.Create(ct: CancellationToken.None));
+        await orchestrator.ExecuteAsync("Goal 2", OrchestratorContext.Create(ct: CancellationToken.None));
+        await orchestrator.ExecuteAsync("Goal 3", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert
         orchestrator.Atom.Experiences.Should().HaveCount(3);
@@ -167,12 +207,12 @@ public class FullCycleWithEvolutionTests
         // Act - Run 5 cycles to trigger GA evolution
         for (int i = 0; i < 5; i++)
         {
-            var result = await orchestrator.RunAsync($"Goal {i}", CancellationToken.None);
+            var result = await orchestrator.ExecuteAsync($"Goal {i}", OrchestratorContext.Create(ct: CancellationToken.None));
             result.Should().NotBeNull("Orchestrator should remain functional after cycle {0}", i);
         }
 
         // Assert - Orchestrator should still be operational
-        var finalResult = await orchestrator.RunAsync("Final goal", CancellationToken.None);
+        var finalResult = await orchestrator.ExecuteAsync("Final goal", OrchestratorContext.Create(ct: CancellationToken.None));
         finalResult.Should().NotBeNull();
         orchestrator.Atom.Experiences.Should().HaveCount(6);
     }
@@ -199,7 +239,7 @@ public class FullCycleWithEvolutionTests
 
         // Act
         var result = await orchestrator.ExecuteAsync(
-            "Test distinction-based verification",
+            new Plan("Test distinction-based verification", new List<PlanStep>(), new Dictionary<string, double>(), DateTime.UtcNow),
             CancellationToken.None);
 
         // Assert
@@ -231,10 +271,10 @@ public class FullCycleWithEvolutionTests
             .Build();
 
         // Act - Run a cycle to populate data
-        await orchestrator.RunAsync("Test goal", CancellationToken.None);
+        await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert - Check atom state includes expected data
-        atom.Id.Should().NotBeEmpty();
+        atom.InstanceId.Should().NotBeEmpty();
         atom.Experiences.Should().HaveCount(1);
         atom.Capabilities.Should().NotBeEmpty();
     }
@@ -256,9 +296,9 @@ public class FullCycleWithEvolutionTests
             .Build();
 
         // Act
-        var result1 = await orchestrator.RunAsync("Analyze data", CancellationToken.None);
-        var result2 = await orchestrator.RunAsync("Generate report", CancellationToken.None);
-        var result3 = await orchestrator.RunAsync("Send notification", CancellationToken.None);
+        var result1 = await orchestrator.ExecuteAsync("Analyze data", OrchestratorContext.Create(ct: CancellationToken.None));
+        var result2 = await orchestrator.ExecuteAsync("Generate report", OrchestratorContext.Create(ct: CancellationToken.None));
+        var result3 = await orchestrator.ExecuteAsync("Send notification", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert
         result1.Should().NotBeNull();
@@ -288,12 +328,12 @@ public class FullCycleWithEvolutionTests
             .Build();
 
         // Act
-        await orchestrator.RunAsync("Test goal", CancellationToken.None);
+        await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert
         var experience = orchestrator.Atom.Experiences.First();
         experience.QualityScore.Should().BeInRange(0.0, 1.0);
-        experience.Success.Should().BeOfType<bool>();
+        experience.Success.Should().BeTrue();
         experience.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
     }
 
@@ -319,12 +359,12 @@ public class FullCycleWithEvolutionTests
 
         // Act
         var result = await orchestrator.ExecuteAsync(
-            "Complex goal requiring distinction-based reasoning and verification",
+            new Plan("Complex goal requiring distinction-based reasoning and verification", new List<PlanStep>(), new Dictionary<string, double>(), DateTime.UtcNow),
             CancellationToken.None);
 
         // Assert
         result.Should().NotBeNull();
-        result.Output.Should().NotBeNullOrEmpty();
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -349,7 +389,7 @@ public class FullCycleWithEvolutionTests
         // Act & Assert
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
         {
-            await orchestrator.RunAsync("Test goal", cts.Token);
+            await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: cts.Token));
         });
     }
 }

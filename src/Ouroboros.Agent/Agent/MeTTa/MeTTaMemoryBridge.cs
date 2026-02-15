@@ -33,7 +33,10 @@ public sealed class MeTTaMemoryBridge
     {
         try
         {
-            MetaAIMemoryStatistics stats = await _memory.GetStatisticsAsync();
+            var statsResult = await _memory.GetStatisticsAsync();
+            MetaAIMemoryStatistics stats = statsResult.IsSuccess 
+                ? new MetaAIMemoryStatistics(statsResult.Value.TotalExperiences, statsResult.Value.SuccessfulExperiences, statsResult.Value.FailedExperiences, statsResult.Value.UniqueContexts, statsResult.Value.UniqueTags, AverageQualityScore: statsResult.Value.AverageQualityScore)
+                : new MetaAIMemoryStatistics(0, 0, 0, 0, 0, AverageQualityScore: 0.0);
             List<Experience> experiences = new List<Experience>();
 
             // Retrieve all experiences (this is a simplified approach)

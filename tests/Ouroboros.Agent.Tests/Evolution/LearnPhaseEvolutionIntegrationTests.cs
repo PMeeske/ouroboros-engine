@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using Ouroboros.Abstractions;
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Agent.MetaAI.Evolution;
@@ -41,6 +42,23 @@ public class LearnPhaseEvolutionIntegrationTests
 
         public Task LoadFileAsync(string path, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task<Result<string, string>> ExecuteQueryAsync(string query, CancellationToken ct = default)
+            => Task.FromResult(Result<string, string>.Success("(verified)"));
+
+        public Task<Result<Unit, string>> AddFactAsync(string fact, CancellationToken ct = default)
+            => Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+
+        public Task<Result<string, string>> ApplyRuleAsync(string rule, CancellationToken ct = default)
+            => Task.FromResult(Result<string, string>.Success("Rule applied"));
+
+        public Task<Result<bool, string>> VerifyPlanAsync(string plan, CancellationToken ct = default)
+            => Task.FromResult(Result<bool, string>.Success(true));
+
+        public Task<Result<Unit, string>> ResetAsync(CancellationToken ct = default)
+            => Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+
+        public void Dispose() { }
     }
 
     /// <summary>
@@ -53,6 +71,9 @@ public class LearnPhaseEvolutionIntegrationTests
             // Return a simple fixed-size embedding
             return Task.FromResult(new float[384]);
         }
+
+        public Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
+            => Task.FromResult(new float[384]);
     }
 
     [Fact]
@@ -73,7 +94,7 @@ public class LearnPhaseEvolutionIntegrationTests
             .Build();
 
         // Act
-        var result = await orchestrator.RunAsync("Test goal", CancellationToken.None);
+        var result = await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert
         result.Should().NotBeNull();
@@ -100,7 +121,7 @@ public class LearnPhaseEvolutionIntegrationTests
             .Build();
 
         // Act
-        await orchestrator.RunAsync("Test goal", CancellationToken.None);
+        await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert
         atom.Experiences.Should().NotBeEmpty();
@@ -126,7 +147,7 @@ public class LearnPhaseEvolutionIntegrationTests
             .Build();
 
         // Act - Run only once (less than minimum for GA)
-        var result = await orchestrator.RunAsync("Test goal", CancellationToken.None);
+        var result = await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert - Should complete successfully without GA running
         result.Should().NotBeNull();
@@ -165,7 +186,7 @@ public class LearnPhaseEvolutionIntegrationTests
             .Build();
 
         // Act - Even if GA has issues internally, the orchestrator should complete
-        var result = await orchestrator.RunAsync("Test goal", CancellationToken.None);
+        var result = await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert - Orchestrator completes successfully
         result.Should().NotBeNull();
@@ -195,7 +216,7 @@ public class LearnPhaseEvolutionIntegrationTests
         // Act - Run multiple cycles to accumulate experiences
         for (int i = 0; i < 6; i++)
         {
-            await orchestrator.RunAsync($"Test goal {i}", CancellationToken.None);
+            await orchestrator.ExecuteAsync($"Test goal {i}", OrchestratorContext.Create(ct: CancellationToken.None));
         }
 
         // Assert
@@ -227,7 +248,7 @@ public class LearnPhaseEvolutionIntegrationTests
             .Build(); // No WithStrategyEvolution() call
 
         // Act
-        var result = await orchestrator.RunAsync("Test goal", CancellationToken.None);
+        var result = await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert - Should work normally without GA
         result.Should().NotBeNull();
@@ -252,9 +273,9 @@ public class LearnPhaseEvolutionIntegrationTests
             .Build();
 
         // Act - Run multiple times
-        await orchestrator.RunAsync("Goal 1", CancellationToken.None);
-        await orchestrator.RunAsync("Goal 2", CancellationToken.None);
-        await orchestrator.RunAsync("Goal 3", CancellationToken.None);
+        await orchestrator.ExecuteAsync("Goal 1", OrchestratorContext.Create(ct: CancellationToken.None));
+        await orchestrator.ExecuteAsync("Goal 2", OrchestratorContext.Create(ct: CancellationToken.None));
+        await orchestrator.ExecuteAsync("Goal 3", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert
         orchestrator.Atom.Experiences.Should().HaveCount(3);
@@ -281,7 +302,7 @@ public class LearnPhaseEvolutionIntegrationTests
             .Build();
 
         // Act
-        await orchestrator.RunAsync("Test goal", CancellationToken.None);
+        await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert
         var experience = orchestrator.Atom.Experiences.First();

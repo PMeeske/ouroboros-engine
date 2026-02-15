@@ -7,6 +7,7 @@ namespace Ouroboros.Tests.Providers;
 using System.Reactive.Linq;
 using FluentAssertions;
 using LangChain.Providers.Ollama;
+using Ouroboros.Abstractions.Core;
 using Ouroboros.Providers;
 using Xunit;
 

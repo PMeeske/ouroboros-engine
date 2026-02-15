@@ -260,7 +260,7 @@ STEP 2: ...";
         try
         {
             // Analyze what hasn't been explored
-            IReadOnlyList<Skill> allSkills = _skills.GetAllSkills();
+            IReadOnlyList<Skill> allSkills = _skills.GetAllSkills().ToSkills();
             List<Experience> experiences = await GetAllExperiences(ct);
 
             string prompt = $@"Identify unexplored areas for learning:

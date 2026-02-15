@@ -84,7 +84,7 @@ public sealed class TransferLearner : ITransferLearner
                 DateTime.UtcNow);
 
             // Register the adapted skill
-            _skills.RegisterSkill(adaptedSkill);
+            _skills.RegisterSkill(adaptedSkill.ToAgentSkill());
 
             TransferResult result = new TransferResult(
                 adaptedSkill,
@@ -257,7 +257,7 @@ database_query -> library_search (confidence: 0.8)
 
         // Update the adapted skill's success rate
         string skillName = transferResult.AdaptedSkill.Name;
-        _skills.RecordSkillExecution(skillName, success);
+        _skills.RecordSkillExecution(skillName, success, 0L);
 
         // Could also update transferability estimates based on validation
     }

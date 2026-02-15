@@ -120,9 +120,10 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         {
             Stopwatch sw = Stopwatch.StartNew();
 
-            // Get past experiences and skills
-            MemoryQuery query = new MemoryQuery(goal, context, MaxResults: 5, MinSimilarity: 0.7);
-            List<Experience> pastExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+                        // Get past experiences and skills
+            MemoryQuery query = MemoryQueryExtensions.ForGoal(goal, context, maxResults: 5, minSimilarity: 0.7);
+            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Experience> pastExperiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
             List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context);
 
             // Generate initial plan using LLM
@@ -298,16 +299,12 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     /// </summary>
     public void LearnFromExecution(PlanVerificationResult verification)
     {
-        // Create experience for memory
-        Experience experience = new Experience(
-            Id: Guid.NewGuid(),
-            Goal: verification.Execution.Plan.Goal,
-            Plan: verification.Execution.Plan,
-            Execution: verification.Execution,
-            Verification: verification,
-            Timestamp: DateTime.UtcNow,
-            Metadata: verification.Execution.Metadata
-        );
+                // Create experience for memory using factory
+        Experience experience = ExperienceFactory.FromExecution(
+            goal: verification.Execution.Plan.Goal,
+            execution: verification.Execution,
+            verification: verification,
+            metadata: verification.Execution.Metadata);
 
         // Store in memory asynchronously
         _ = _memory.StoreExperienceAsync(experience);

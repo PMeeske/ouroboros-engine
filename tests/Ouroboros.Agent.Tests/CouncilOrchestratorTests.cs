@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
+
 namespace Ouroboros.Tests.Council;
 
 /// <summary>

@@ -58,7 +58,7 @@ public class PlanStrategyFitnessTests
 
         // Assert
         result.Should().BeGreaterThan(0.7); // High fitness for all successful
-        result.Should().BeLessOrEqualTo(1.0); // Max fitness is 1.0
+        result.Should().BeLessThanOrEqualTo(1.0); // Max fitness is 1.0
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class PlanStrategyFitnessTests
 
         // Assert
         result.Should().BeLessThan(0.4); // Low fitness for all failed
-        result.Should().BeGreaterOrEqualTo(0.0); // Min fitness is 0.0
+        result.Should().BeGreaterThanOrEqualTo(0.0); // Min fitness is 0.0
     }
 
     [Fact]

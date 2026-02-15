@@ -90,7 +90,7 @@ public sealed class SkillComposer : ISkillComposer
             List<Skill> componentSkills = new List<Skill>();
             foreach (string skillName in componentSkillNames)
             {
-                Skill? skill = _skills.GetSkill(skillName);
+                Skill? skill = _skills.GetSkill(skillName)?.ToSkill();
                 if (skill == null)
                     return Result<Skill, string>.Failure($"Component skill '{skillName}' not found");
 
@@ -128,7 +128,7 @@ public sealed class SkillComposer : ISkillComposer
                 DateTime.UtcNow);
 
             // Register the composite skill
-            _skills.RegisterSkill(compositeSkill);
+            _skills.RegisterSkill(compositeSkill.ToAgentSkill());
 
             return await Task.FromResult(Result<Skill, string>.Success(compositeSkill));
         }
@@ -156,7 +156,8 @@ public sealed class SkillComposer : ISkillComposer
                 MaxResults: 100,
                 MinSimilarity: 0.0);
 
-            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Experience> experiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
 
             // Analyze which skills are used together
             Dictionary<string, int> skillCombinations = new Dictionary<string, int>();
@@ -201,7 +202,7 @@ public sealed class SkillComposer : ISkillComposer
         if (string.IsNullOrWhiteSpace(compositeName))
             return Result<List<Skill>, string>.Failure("Composite name cannot be empty");
 
-        Skill? skill = _skills.GetSkill(compositeName);
+        Skill? skill = _skills.GetSkill(compositeName)?.ToSkill();
         if (skill == null)
             return Result<List<Skill>, string>.Failure($"Skill '{compositeName}' not found");
 
@@ -215,7 +216,7 @@ public sealed class SkillComposer : ISkillComposer
 
         foreach (string? componentName in componentNames)
         {
-            Skill? component = _skills.GetSkill(componentName);
+            Skill? component = _skills.GetSkill(componentName)?.ToSkill();
             if (component != null)
             {
                 components.Add(component);
@@ -230,7 +231,7 @@ public sealed class SkillComposer : ISkillComposer
         List<string> usedSkills = new List<string>();
 
         // Check which registered skills were used in the plan
-        IReadOnlyList<Skill> allSkills = _skills.GetAllSkills();
+        IReadOnlyList<Skill> allSkills = _skills.GetAllSkills().ToSkills();
 
         foreach (Skill skill in allSkills)
         {

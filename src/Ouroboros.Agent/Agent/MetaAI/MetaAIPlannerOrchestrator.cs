@@ -59,9 +59,10 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
 
         try
         {
-            // Check if we have relevant past experiences
-            MemoryQuery query = new MemoryQuery(goal, context, MaxResults: 5, MinSimilarity: 0.7);
-            List<Experience> pastExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+                        // Check if we have relevant past experiences
+            MemoryQuery query = MemoryQueryExtensions.ForGoal(goal, context, maxResults: 5, minSimilarity: 0.7);
+            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Experience> pastExperiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
 
             // Find matching skills
             List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context);
@@ -273,15 +274,12 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         if (verification == null)
             return;
 
-        // Store experience in memory
-        Experience experience = new Experience(
-            Guid.NewGuid(),
-            verification.Execution.Plan.Goal,
-            verification.Execution.Plan,
-            verification.Execution,
-            verification,
-            DateTime.UtcNow,
-            new Dictionary<string, object>
+                // Store experience in memory using factory
+        Experience experience = ExperienceFactory.FromExecution(
+            goal: verification.Execution.Plan.Goal,
+            execution: verification.Execution,
+            verification: verification,
+            metadata: new Dictionary<string, object>
             {
                 ["quality_score"] = verification.QualityScore,
                 ["verified"] = verification.Verified
@@ -606,18 +604,17 @@ Provide:
             qualityScore = score;
         }
 
-        List<string> issues = new List<string>();
+                List<string> issues = new List<string>();
         List<string> improvements = new List<string>();
-        string? revisedPlan = null;
 
         // Simple parsing - in production use more robust approach
         return new PlanVerificationResult(
-            execution,
-            verified,
-            qualityScore,
-            issues,
-            improvements,
-            revisedPlan);
+            Execution: execution,
+            Verified: verified,
+            QualityScore: qualityScore,
+            Issues: issues,
+            Improvements: improvements,
+            Timestamp: DateTime.UtcNow);
     }
 
     private void RecordMetric(string component, double latencyMs, bool success)

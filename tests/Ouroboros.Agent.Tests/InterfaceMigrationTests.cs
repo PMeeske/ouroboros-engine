@@ -7,6 +7,7 @@ using Ouroboros.Abstractions.Agent;
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Providers;
+using ToolRegistry = Ouroboros.Tools.ToolRegistry;
 
 namespace Ouroboros.Tests;
 
@@ -52,7 +53,7 @@ public class InterfaceMigrationTests
         try
         {
             // Act
-            var persistentMemoryStore = new PersistentMemoryStore(mockEmbed, tempPath);
+            var persistentMemoryStore = new PersistentMemoryStore(mockEmbed, vectorStore: null, config: null, persistencePath: tempPath);
 
             // Assert
             persistentMemoryStore.Should().BeAssignableTo<IMemoryStore>();
@@ -97,7 +98,9 @@ public class InterfaceMigrationTests
     public void OllamaChatAdapter_ImplementsIChatCompletionModel()
     {
         // Arrange & Act
-        var adapter = new OllamaChatAdapter("http://localhost:11434", "llama2");
+        var provider = new LangChain.Providers.Ollama.OllamaProvider("http://localhost:11434");
+        var model = new LangChain.Providers.Ollama.OllamaChatModel(provider, "llama2");
+        var adapter = new OllamaChatAdapter(model);
 
         // Assert
         adapter.Should().BeAssignableTo<IChatCompletionModel>();
@@ -166,6 +169,9 @@ public class InterfaceMigrationTests
     private class MockEmbeddingModel : IEmbeddingModel
     {
         public Task<float[]> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
+            => Task.FromResult(new float[384]);
+
+        public Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
             => Task.FromResult(new float[384]);
     }
 }

@@ -80,7 +80,7 @@ public sealed class SkillExtractor : ISkillExtractor
             string description = await GenerateSkillDescriptionAsync(execution, ct);
 
             // Check if similar skill already exists
-            Skill? existingSkill = _skillRegistry.GetSkill(skillName);
+            Skill? existingSkill = _skillRegistry.GetSkill(skillName)?.ToSkill();
             if (existingSkill != null)
             {
                 // Update existing skill with new execution data
@@ -171,7 +171,7 @@ public sealed class SkillExtractor : ISkillExtractor
             }
 
             // Register the skill
-            _skillRegistry.RegisterSkill(skill);
+            _skillRegistry.RegisterSkill(skill.ToAgentSkill());
 
             return Result<Skill, string>.Success(skill);
         }
@@ -332,7 +332,7 @@ Write a 1-2 sentence description of this skill's capability:";
             };
 
             // Update in registry
-            _skillRegistry.RegisterSkill(updatedSkill);
+            _skillRegistry.RegisterSkill(updatedSkill.ToAgentSkill());
 
             return await Task.FromResult(Result<Skill, string>.Success(updatedSkill));
         }

@@ -5,6 +5,7 @@
 namespace Ouroboros.Tests.Providers;
 
 using FluentAssertions;
+using Ouroboros.Abstractions.Core;
 using Ouroboros.Providers;
 using Xunit;
 

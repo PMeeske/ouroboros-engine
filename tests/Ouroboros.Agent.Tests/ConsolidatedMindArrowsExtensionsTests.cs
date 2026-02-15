@@ -4,6 +4,7 @@
 // </copyright>
 
 using ReasoningStep = Ouroboros.Domain.Events.ReasoningStep;
+using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
 
 namespace Ouroboros.Tests.Agent;
 

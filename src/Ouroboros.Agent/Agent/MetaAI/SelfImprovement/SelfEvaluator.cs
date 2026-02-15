@@ -74,7 +74,7 @@ public sealed class SelfEvaluator : ISelfEvaluator
         {
             // Get all capabilities
             List<AgentCapability> capabilities = await _capabilities.GetCapabilitiesAsync(ct);
-            IReadOnlyList<Skill> skills = _skills.GetAllSkills();
+            IReadOnlyList<Skill> skills = _skills.GetAllSkills().ToSkills();
             IReadOnlyDictionary<string, PerformanceMetrics> metrics = _orchestrator.GetMetrics();
 
             // Calculate capability scores
@@ -142,13 +142,14 @@ public sealed class SelfEvaluator : ISelfEvaluator
         try
         {
             // Analyze recent experiences
-            MemoryQuery query = new MemoryQuery(
-                Goal: "all",
-                Context: new Dictionary<string, object>(),
-                MaxResults: _config.InsightGenerationBatchSize,
-                MinSimilarity: 0.0);
+            MemoryQuery query = MemoryQueryExtensions.ForGoal(
+                "all",
+                new Dictionary<string, object>(),
+                _config.InsightGenerationBatchSize,
+                0.0);
 
-            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Experience> experiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
 
             // Pattern detection: success/failure patterns
             List<Experience> successfulExperiences = experiences.Where(e => e.Verification.Verified).ToList();
@@ -358,7 +359,7 @@ DURATION: [days/weeks]";
                 break;
 
             case "skill_count":
-                IReadOnlyList<Skill> skills = _skills.GetAllSkills();
+                IReadOnlyList<Skill> skills = _skills.GetAllSkills().ToSkills();
                 // Approximate: assume linear growth
                 int currentCount = skills.Count;
                 int daysAgo = (int)timeWindow.TotalDays;

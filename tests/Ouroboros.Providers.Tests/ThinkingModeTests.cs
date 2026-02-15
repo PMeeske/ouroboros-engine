@@ -5,6 +5,7 @@
 namespace Ouroboros.Tests.Providers;
 
 using FluentAssertions;
+using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
 using Ouroboros.Providers;
 using Ouroboros.Tools;
 using Xunit;

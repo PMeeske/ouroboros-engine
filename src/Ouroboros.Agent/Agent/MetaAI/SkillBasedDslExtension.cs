@@ -36,7 +36,7 @@ public sealed class SkillBasedDslExtension
     {
         _skillTokens.Clear();
 
-        foreach (Skill skill in _skillRegistry.GetAllSkills())
+        foreach (Skill skill in _skillRegistry.GetAllSkills().ToSkills())
         {
             string tokenName = $"UseSkill_{SanitizeTokenName(skill.Name)}";
             _skillTokens[tokenName] = new DynamicSkillToken(skill, _model);
@@ -82,7 +82,7 @@ public sealed class SkillBasedDslExtension
         {
             // Try to find by skill name directly
             string skillName = tokenName.Replace("UseSkill_", string.Empty);
-            Skill? skill = _skillRegistry.GetSkill(skillName);
+            Skill? skill = _skillRegistry.GetSkill(skillName)?.ToSkill();
             if (skill == null)
                 return false;
 

@@ -3,9 +3,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using Ouroboros.Abstractions;
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Core.Hyperon;
+using ToolRegistry = Ouroboros.Tools.ToolRegistry;
 
 namespace Ouroboros.Tests.MetaAI;
 
@@ -36,20 +38,53 @@ public class OuroborosOrchestratorBuilderFormReasoningTests
 
         public Task LoadFileAsync(string path, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task<Result<string, string>> ExecuteQueryAsync(string query, CancellationToken ct = default)
+            => Task.FromResult(Result<string, string>.Success("(verified)"));
+
+        public Task<Result<Unit, string>> AddFactAsync(string fact, CancellationToken ct = default)
+            => Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+
+        public Task<Result<string, string>> ApplyRuleAsync(string rule, CancellationToken ct = default)
+            => Task.FromResult(Result<string, string>.Success("Rule applied"));
+
+        public Task<Result<bool, string>> VerifyPlanAsync(string plan, CancellationToken ct = default)
+            => Task.FromResult(Result<bool, string>.Success(true));
+
+        public Task<Result<Unit, string>> ResetAsync(CancellationToken ct = default)
+            => Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+
+        public void Dispose() { }
     }
 
     /// <summary>
     /// Mock Hyperon MeTTa engine with AtomSpace for Form reasoning.
     /// </summary>
-    private class MockHyperonMeTTaEngine : HyperonMeTTaEngine
+    private class MockHyperonMeTTaEngine : IMeTTaEngine
     {
         public MockHyperonMeTTaEngine(AtomSpace atomSpace)
-            : base(atomSpace)
         {
         }
 
-        public override Task<string> ExecuteAsync(string mettaCode, CancellationToken ct = default)
+        public Task<string> ExecuteAsync(string mettaCode, CancellationToken ct = default)
             => Task.FromResult("(verified)");
+
+        public Task<Result<string, string>> ExecuteQueryAsync(string query, CancellationToken ct = default)
+            => Task.FromResult(Result<string, string>.Success("(verified)"));
+
+        public Task<Result<Unit, string>> AddFactAsync(string fact, CancellationToken ct = default)
+            => Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+
+        public Task<Result<string, string>> ApplyRuleAsync(string rule, CancellationToken ct = default)
+            => Task.FromResult(Result<string, string>.Success("Rule applied"));
+
+        public Task<Result<bool, string>> VerifyPlanAsync(string plan, CancellationToken ct = default)
+            => Task.FromResult(Result<bool, string>.Success(true));
+
+        public Task<Result<Unit, string>> ResetAsync(CancellationToken ct = default)
+            => Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+
+        public void Dispose() { }
     }
 
     /// <summary>
@@ -58,6 +93,9 @@ public class OuroborosOrchestratorBuilderFormReasoningTests
     private class MockEmbeddingModel : IEmbeddingModel
     {
         public Task<float[]> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
+            => Task.FromResult(new float[384]);
+
+        public Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
             => Task.FromResult(new float[384]);
     }
 

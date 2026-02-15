@@ -3,6 +3,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using Ouroboros.Abstractions.Core;
+
 namespace Ouroboros.Tests.Providers.LoadBalancing;
 
 /// <summary>

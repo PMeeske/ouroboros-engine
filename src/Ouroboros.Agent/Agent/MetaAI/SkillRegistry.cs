@@ -301,11 +301,8 @@ public sealed class SkillRegistry : ISkillRegistry
             if (!result.IsSuccess)
                 return new List<Skill>();
 
-            // Convert AgentSkill to Skill
-            return result.Value.Select(s => new Skill(
-                s.Id, s.Name, s.Description, s.Category,
-                s.Preconditions, s.Effects, s.SuccessRate,
-                s.UsageCount, s.AverageExecutionTime, s.Tags)).ToList();
+                        // Convert AgentSkill to Skill using extension method
+            return result.Value.Select(s => s.ToSkill()).ToList();
         }
         catch
         {
@@ -326,24 +323,19 @@ public sealed class SkillRegistry : ISkillRegistry
         {
             ArgumentNullException.ThrowIfNull(execution);
 
-            // Create skill from execution
+                        // Create skill from execution
             var skill = new Skill(
-                Id: Guid.NewGuid().ToString(),
                 Name: skillName,
                 Description: description,
-                Category: "learned",
-                Preconditions: new List<string>(),
-                Effects: execution.Plan.Steps.Select(s => s.ExpectedOutcome).ToList(),
+                Prerequisites: new List<string>(),
+                Steps: execution.Plan.Steps,
                 SuccessRate: execution.Success ? 1.0 : 0.0,
                 UsageCount: 1,
-                AverageExecutionTime: (long)execution.Duration.TotalMilliseconds,
-                Tags: ExtractTagsFromGoal(execution.Plan.Goal));
+                CreatedAt: DateTime.UtcNow,
+                LastUsed: DateTime.UtcNow);
 
-            // Also register as AgentSkill
-            var agentSkill = new AgentSkill(
-                skill.Id, skill.Name, skill.Description, skill.Category,
-                skill.Preconditions, skill.Effects, skill.SuccessRate,
-                skill.UsageCount, skill.AverageExecutionTime, skill.Tags);
+            // Also register as AgentSkill using extension method
+            var agentSkill = skill.ToAgentSkill();
             _skills[agentSkill.Id] = agentSkill;
 
             return Task.FromResult(Result<Skill, string>.Success(skill));

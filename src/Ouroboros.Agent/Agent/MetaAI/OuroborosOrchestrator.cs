@@ -536,7 +536,10 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
             Action: System.Text.Json.JsonSerializer.Serialize(plan),
             Outcome: execution.Success ? "Success" : "Failed",
             Success: execution.Success,
-            Tags: new List<string> { "ouroboros", "orchestrator" });
+            Tags: new List<string> { "ouroboros", "orchestrator" },
+            Goal: ouroborosExp.Goal,
+            Execution: execution,
+            Verification: verification);
 
         var result = await _memory.StoreExperienceAsync(experience, ct);
         if (!result.IsSuccess)

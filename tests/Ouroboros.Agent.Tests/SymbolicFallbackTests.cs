@@ -4,6 +4,7 @@
 // </copyright>
 
 using Ouroboros.Abstractions;
+using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
 
 namespace Ouroboros.Tests.ConsolidatedMind;
 

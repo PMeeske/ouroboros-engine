@@ -60,7 +60,7 @@ public sealed class ResearchSkillExtractor
                 Skill? skill = await ExtractSkillFromMethodologyAsync(methodology, relatedPapers);
                 if (skill != null)
                 {
-                    _skillRegistry.RegisterSkill(skill);
+                    _skillRegistry.RegisterSkill(skill.ToAgentSkill());
                     extractedSkills.Add(skill);
                 }
             }
@@ -71,7 +71,7 @@ public sealed class ResearchSkillExtractor
                 Skill? synthesisSkill = await ExtractSynthesisSkillAsync(papers, researchDomain);
                 if (synthesisSkill != null)
                 {
-                    _skillRegistry.RegisterSkill(synthesisSkill);
+                    _skillRegistry.RegisterSkill(synthesisSkill.ToAgentSkill());
                     extractedSkills.Add(synthesisSkill);
                 }
             }
@@ -105,7 +105,7 @@ public sealed class ResearchSkillExtractor
             SuccessRate: 0.85,
             UsageCount: 0,
             CreatedAt: DateTime.UtcNow,
-            LastUsed: DateTime.UtcNow));
+            LastUsed: DateTime.UtcNow).ToAgentSkill());
 
         // Skill 2: Hypothesis Generation from Observations
         _skillRegistry.RegisterSkill(new Skill(
@@ -122,7 +122,7 @@ public sealed class ResearchSkillExtractor
             SuccessRate: 0.78,
             UsageCount: 0,
             CreatedAt: DateTime.UtcNow,
-            LastUsed: DateTime.UtcNow));
+            LastUsed: DateTime.UtcNow).ToAgentSkill());
 
         // Skill 3: Cross-Domain Transfer
         _skillRegistry.RegisterSkill(new Skill(
@@ -139,7 +139,7 @@ public sealed class ResearchSkillExtractor
             SuccessRate: 0.65,
             UsageCount: 0,
             CreatedAt: DateTime.UtcNow,
-            LastUsed: DateTime.UtcNow));
+            LastUsed: DateTime.UtcNow).ToAgentSkill());
 
         // Skill 4: Citation Network Analysis
         _skillRegistry.RegisterSkill(new Skill(
@@ -156,7 +156,7 @@ public sealed class ResearchSkillExtractor
             SuccessRate: 0.82,
             UsageCount: 0,
             CreatedAt: DateTime.UtcNow,
-            LastUsed: DateTime.UtcNow));
+            LastUsed: DateTime.UtcNow).ToAgentSkill());
 
         // Skill 5: Emergent Pattern Discovery
         _skillRegistry.RegisterSkill(new Skill(
@@ -173,7 +173,7 @@ public sealed class ResearchSkillExtractor
             SuccessRate: 0.71,
             UsageCount: 0,
             CreatedAt: DateTime.UtcNow,
-            LastUsed: DateTime.UtcNow));
+            LastUsed: DateTime.UtcNow).ToAgentSkill());
     }
 
     private async Task<Dictionary<string, List<ResearchPaper>>> GroupByMethodologyAsync(List<ResearchPaper> papers)

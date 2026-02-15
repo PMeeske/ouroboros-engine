@@ -49,13 +49,14 @@ public sealed class HypothesisEngine : IHypothesisEngine
         try
         {
             // Gather relevant past experiences
-            MemoryQuery query = new MemoryQuery(
+            MemoryQuery query = MemoryQueryExtensions.ForGoal(
                 observation,
                 context,
-                MaxResults: 10,
-                MinSimilarity: 0.6);
+                maxResults: 10,
+                minSimilarity: 0.6);
 
-            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            List<Experience> experiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
 
             // Build hypothesis generation prompt
             string prompt = BuildHypothesisPrompt(observation, experiences, context);
