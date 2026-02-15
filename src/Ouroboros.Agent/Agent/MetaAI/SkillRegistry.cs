@@ -5,6 +5,7 @@
 // ==========================================================
 
 using System.Collections.Concurrent;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -13,7 +14,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed class SkillRegistry : ISkillRegistry
 {
-    private readonly ConcurrentDictionary<string, Skill> _skills = new();
+    private readonly ConcurrentDictionary<string, AgentSkill> _skills = new();
     private readonly IEmbeddingModel? _embedding;
 
     public SkillRegistry(IEmbeddingModel? embedding = null)
@@ -24,162 +25,201 @@ public sealed class SkillRegistry : ISkillRegistry
     /// <summary>
     /// Registers a new skill.
     /// </summary>
-    public void RegisterSkill(Skill skill)
+    public Task<Result<Unit, string>> RegisterSkillAsync(AgentSkill skill, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(skill);
-        _skills[skill.Name] = skill;
+        try
+        {
+            ArgumentNullException.ThrowIfNull(skill);
+            _skills[skill.Id] = skill;
+            return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(Result<Unit, string>.Failure($"Failed to register skill: {ex.Message}"));
+        }
     }
 
     /// <summary>
-    /// Registers a skill asynchronously (for in-memory this is the same as sync).
+    /// Gets a skill by identifier.
     /// </summary>
-    public Task RegisterSkillAsync(Skill skill, CancellationToken ct = default)
+    public Task<Result<AgentSkill, string>> GetSkillAsync(string skillId, CancellationToken ct = default)
     {
-        RegisterSkill(skill);
-        return Task.CompletedTask;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(skillId))
+                return Task.FromResult(Result<AgentSkill, string>.Failure("Skill ID cannot be empty"));
+
+            if (_skills.TryGetValue(skillId, out AgentSkill? skill))
+                return Task.FromResult(Result<AgentSkill, string>.Success(skill));
+
+            return Task.FromResult(Result<AgentSkill, string>.Failure($"Skill '{skillId}' not found"));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(Result<AgentSkill, string>.Failure($"Failed to get skill: {ex.Message}"));
+        }
     }
 
     /// <summary>
     /// Minimum similarity threshold for semantic skill matching.
     /// Skills with similarity below this value are considered unrelated.
     /// </summary>
-    /// <summary>
-    /// Minimum similarity score threshold - 0.75+ ensures strong match.
-    /// </summary>
     private const double MinimumSimilarityThreshold = 0.75;
 
     /// <summary>
-    /// Finds skills matching a goal.
+    /// Finds skills matching the given criteria.
     /// </summary>
-    public async Task<List<Skill>> FindMatchingSkillsAsync(
-        string goal,
-        Dictionary<string, object>? context = null)
+    public async Task<Result<IReadOnlyList<AgentSkill>, string>> FindSkillsAsync(
+        string? category = null,
+        IReadOnlyList<string>? tags = null,
+        CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(goal))
-            return new List<Skill>();
-
-        List<Skill> allSkills = _skills.Values.ToList();
-
-        if (_embedding != null)
+        try
         {
-            // Use semantic similarity if embedding model available
-            float[] goalEmbedding = await _embedding.CreateEmbeddingsAsync(goal);
+            List<AgentSkill> allSkills = _skills.Values.ToList();
+            List<AgentSkill> filtered = allSkills;
 
-            List<(Skill skill, double score)> skillScores = new List<(Skill skill, double score)>();
-            foreach (Skill? skill in allSkills)
+            // Filter by category
+            if (!string.IsNullOrWhiteSpace(category))
             {
-                float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description);
-                double similarity = CosineSimilarity(goalEmbedding, skillEmbedding);
-                skillScores.Add((skill, similarity));
+                filtered = filtered.Where(s => s.Category.Equals(category, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
-            // Only return skills that meet the minimum similarity threshold
-            return skillScores
-                .Where(x => x.score >= MinimumSimilarityThreshold)
-                .OrderByDescending(x => x.score)
-                .Select(x => x.skill)
-                .ToList();
-        }
-        else
-        {
-            // Use simple keyword matching
-            string goalLower = goal.ToLowerInvariant();
-            return allSkills
-                .Where(s => s.Description.ToLowerInvariant().Contains(goalLower) ||
-                           goalLower.Contains(s.Name.ToLowerInvariant()))
-                .OrderByDescending(s => s.SuccessRate)
-                .ThenByDescending(s => s.UsageCount)
-                .ToList();
-        }
-    }
-
-    /// <summary>
-    /// Gets a skill by name.
-    /// </summary>
-    public Skill? GetSkill(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return null;
-
-        _skills.TryGetValue(name, out Skill? skill);
-        return skill;
-    }
-
-    /// <summary>
-    /// Records skill execution outcome.
-    /// </summary>
-    public void RecordSkillExecution(string name, bool success)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return;
-
-        _skills.AddOrUpdate(
-            name,
-            _ => throw new InvalidOperationException($"Skill '{name}' not found"),
-            (_, existing) =>
+            // Filter by tags
+            if (tags != null && tags.Count > 0)
             {
-                int newCount = existing.UsageCount + 1;
-                double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
+                filtered = filtered.Where(s => tags.Any(t => s.Tags.Contains(t, StringComparer.OrdinalIgnoreCase))).ToList();
+            }
 
-                return existing with
+            // Use semantic similarity if embedding model available and we have tags/category as query
+            if (_embedding != null && (tags?.Count > 0 || !string.IsNullOrWhiteSpace(category)))
+            {
+                string query = category ?? string.Join(" ", tags ?? Array.Empty<string>());
+                float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct);
+
+                var skillScores = new List<(AgentSkill skill, double score)>();
+                foreach (var skill in filtered)
                 {
-                    UsageCount = newCount,
-                    SuccessRate = newSuccessRate,
-                    LastUsed = DateTime.UtcNow
-                };
-            });
+                    float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description, ct);
+                    double similarity = CosineSimilarity(queryEmbedding, skillEmbedding);
+                    skillScores.Add((skill, similarity));
+                }
+
+                filtered = skillScores
+                    .Where(x => x.score >= MinimumSimilarityThreshold)
+                    .OrderByDescending(x => x.score)
+                    .Select(x => x.skill)
+                    .ToList();
+            }
+            else
+            {
+                // Order by success rate and usage count
+                filtered = filtered
+                    .OrderByDescending(s => s.SuccessRate)
+                    .ThenByDescending(s => s.UsageCount)
+                    .ToList();
+            }
+
+            return Result<IReadOnlyList<AgentSkill>, string>.Success(filtered);
+        }
+        catch (Exception ex)
+        {
+            return Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to find skills: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Updates an existing skill's information.
+    /// </summary>
+    public Task<Result<Unit, string>> UpdateSkillAsync(AgentSkill skill, CancellationToken ct = default)
+    {
+        try
+        {
+            ArgumentNullException.ThrowIfNull(skill);
+            
+            if (!_skills.ContainsKey(skill.Id))
+                return Task.FromResult(Result<Unit, string>.Failure($"Skill '{skill.Id}' not found"));
+
+            _skills[skill.Id] = skill;
+            return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(Result<Unit, string>.Failure($"Failed to update skill: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Records a skill execution result to update statistics.
+    /// </summary>
+    public Task<Result<Unit, string>> RecordExecutionAsync(
+        string skillId,
+        bool success,
+        long executionTimeMs,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(skillId))
+                return Task.FromResult(Result<Unit, string>.Failure("Skill ID cannot be empty"));
+
+            if (!_skills.TryGetValue(skillId, out var existing))
+                return Task.FromResult(Result<Unit, string>.Failure($"Skill '{skillId}' not found"));
+
+            int newCount = existing.UsageCount + 1;
+            double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
+            long newAvgTime = ((existing.AverageExecutionTime * existing.UsageCount) + executionTimeMs) / newCount;
+
+            var updated = existing with
+            {
+                UsageCount = newCount,
+                SuccessRate = newSuccessRate,
+                AverageExecutionTime = newAvgTime
+            };
+
+            _skills[skillId] = updated;
+            return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(Result<Unit, string>.Failure($"Failed to record execution: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Removes a skill from the registry.
+    /// </summary>
+    public Task<Result<Unit, string>> UnregisterSkillAsync(string skillId, CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(skillId))
+                return Task.FromResult(Result<Unit, string>.Failure("Skill ID cannot be empty"));
+
+            if (_skills.TryRemove(skillId, out _))
+                return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
+
+            return Task.FromResult(Result<Unit, string>.Failure($"Skill '{skillId}' not found"));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(Result<Unit, string>.Failure($"Failed to unregister skill: {ex.Message}"));
+        }
     }
 
     /// <summary>
     /// Gets all registered skills.
     /// </summary>
-    public IReadOnlyList<Skill> GetAllSkills()
-        => _skills.Values.OrderByDescending(s => s.SuccessRate).ToList();
-
-    /// <summary>
-    /// Extracts a skill from successful execution.
-    /// </summary>
-    public async Task<Result<Skill, string>> ExtractSkillAsync(
-        PlanExecutionResult execution,
-        string skillName,
-        string description)
+    public Task<Result<IReadOnlyList<AgentSkill>, string>> GetAllSkillsAsync(CancellationToken ct = default)
     {
-        if (execution == null)
-            return Result<Skill, string>.Failure("Execution cannot be null");
-
-        if (!execution.Success)
-            return Result<Skill, string>.Failure("Cannot extract skill from failed execution");
-
-        if (string.IsNullOrWhiteSpace(skillName))
-            return Result<Skill, string>.Failure("Skill name cannot be empty");
-
         try
         {
-            // Extract prerequisites from plan context
-            List<string> prerequisites = execution.Plan.Steps
-                .Where(s => s.ConfidenceScore > 0.7)
-                .Select(s => s.Action)
-                .Distinct()
-                .ToList();
-
-            // Create skill from successful execution steps
-            Skill skill = new Skill(
-                skillName,
-                description,
-                prerequisites,
-                execution.Plan.Steps,
-                SuccessRate: 1.0,
-                UsageCount: 0,
-                CreatedAt: DateTime.UtcNow,
-                LastUsed: DateTime.UtcNow);
-
-            RegisterSkill(skill);
-
-            return await Task.FromResult(Result<Skill, string>.Success(skill));
+            var skills = _skills.Values.OrderByDescending(s => s.SuccessRate).ToList();
+            return Task.FromResult(Result<IReadOnlyList<AgentSkill>, string>.Success((IReadOnlyList<AgentSkill>)skills));
         }
         catch (Exception ex)
         {
-            return Result<Skill, string>.Failure($"Failed to extract skill: {ex.Message}");
+            return Task.FromResult(Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to get all skills: {ex.Message}"));
         }
     }
 

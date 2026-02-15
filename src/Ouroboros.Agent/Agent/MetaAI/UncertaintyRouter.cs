@@ -15,204 +15,233 @@ namespace Ouroboros.Agent.MetaAI;
 public sealed class UncertaintyRouter : IUncertaintyRouter
 {
     private readonly IModelOrchestrator _orchestrator;
-    private readonly ConcurrentDictionary<string, List<(RoutingDecision decision, bool success)>> _routingHistory = new();
+    private readonly double _minConfidenceThreshold;
+    private readonly double _humanOversightThreshold;
+    private readonly ConcurrentDictionary<string, List<(string context, double confidence, bool success)>> _routingHistory = new();
 
-    /// <inheritdoc/>
-    public double MinimumConfidenceThreshold { get; }
-
-    public UncertaintyRouter(IModelOrchestrator orchestrator, double minConfidenceThreshold = 0.7)
+    public UncertaintyRouter(
+        IModelOrchestrator orchestrator,
+        double minConfidenceThreshold = 0.7,
+        double humanOversightThreshold = 0.5)
     {
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
-        MinimumConfidenceThreshold = Math.Clamp(minConfidenceThreshold, 0.0, 1.0);
+        _minConfidenceThreshold = Math.Clamp(minConfidenceThreshold, 0.0, 1.0);
+        _humanOversightThreshold = Math.Clamp(humanOversightThreshold, 0.0, 1.0);
     }
 
-    /// <summary>
-    /// Routes a task based on confidence analysis.
-    /// </summary>
-    public async Task<Result<RoutingDecision, string>> RouteAsync(
-        string task,
-        Dictionary<string, object>? context = null,
+    /// <inheritdoc/>
+    public async Task<RoutingDecision> RouteDecisionAsync(
+        string context,
+        string proposedAction,
+        double confidenceLevel,
         CancellationToken ct = default)
     {
-        using var activity = OrchestrationTracing.StartRouting(task);
+        using var activity = OrchestrationTracing.StartRouting(proposedAction);
         var stopwatch = Stopwatch.StartNew();
 
-        if (string.IsNullOrWhiteSpace(task))
+        if (string.IsNullOrWhiteSpace(proposedAction))
         {
             stopwatch.Stop();
             OrchestrationTracing.CompleteRouting(activity, "error", 0, false, stopwatch.Elapsed, success: false);
-            return Result<RoutingDecision, string>.Failure("Task cannot be empty");
+            return new RoutingDecision(
+                ShouldProceed: false,
+                ConfidenceLevel: 0.0,
+                RecommendedStrategy: FallbackStrategy.Abort,
+                Reason: "Proposed action cannot be empty",
+                RequiresHumanOversight: false,
+                AlternativeActions: Array.Empty<string>());
         }
 
-        // Use orchestrator to determine best route and compose decision monadically
-        Result<OrchestratorDecision, string> orchestratorDecision = await _orchestrator.SelectModelAsync(task, context, ct);
+        // Determine if we should proceed based on confidence
+        bool shouldProceed = confidenceLevel >= _minConfidenceThreshold;
+        
+        // Get fallback strategy
+        FallbackStrategy strategy = await GetFallbackStrategyAsync(confidenceLevel, 0, ct);
+        
+        // Determine if human oversight is needed
+        double riskLevel = CalculateRiskLevel(context, proposedAction);
+        bool requiresOversight = await RequiresHumanOversightAsync(context, riskLevel, confidenceLevel, ct);
 
-        return orchestratorDecision.Match(
-            decision =>
-            {
-                var result = BuildRoutingDecision(decision, task, context);
-                stopwatch.Stop();
+        // Generate alternative actions if confidence is low
+        List<string> alternatives = new();
+        if (!shouldProceed || requiresOversight)
+        {
+            alternatives = GenerateAlternatives(proposedAction, confidenceLevel, strategy);
+        }
 
-                result.Match(
-                    routingDecision =>
-                    {
-                        bool usedFallback = routingDecision.Metadata.ContainsKey("fallback_strategy");
-                        OrchestrationTracing.CompleteRouting(
-                            activity,
-                            usedFallback ? "fallback" : "direct",
-                            routingDecision.Confidence,
-                            usedFallback,
-                            stopwatch.Elapsed);
-                        return routingDecision;
-                    },
-                    _ => default!);
+        string reason = BuildReason(confidenceLevel, strategy, requiresOversight);
 
-                return result;
-            },
-            error =>
-            {
-                stopwatch.Stop();
-                OrchestrationTracing.CompleteRouting(activity, "error", 0, false, stopwatch.Elapsed, success: false);
-                return Result<RoutingDecision, string>.Failure(error);
-            });
+        stopwatch.Stop();
+        OrchestrationTracing.CompleteRouting(
+            activity,
+            strategy.ToString(),
+            confidenceLevel,
+            !shouldProceed,
+            stopwatch.Elapsed,
+            success: shouldProceed);
+
+        // Record in history
+        RecordRoutingOutcome(context, confidenceLevel, shouldProceed);
+
+        return new RoutingDecision(
+            ShouldProceed: shouldProceed,
+            ConfidenceLevel: confidenceLevel,
+            RecommendedStrategy: strategy,
+            Reason: reason,
+            RequiresHumanOversight: requiresOversight,
+            AlternativeActions: alternatives);
     }
 
-    private Result<RoutingDecision, string> BuildRoutingDecision(
-        OrchestratorDecision decision,
-        string task,
-        Dictionary<string, object>? context)
+    /// <inheritdoc/>
+    public async Task<bool> RequiresHumanOversightAsync(
+        string context,
+        double riskLevel,
+        double confidenceLevel,
+        CancellationToken ct = default)
     {
-        double confidence = decision.ConfidenceScore;
+        // Require human oversight if:
+        // 1. Risk is high and confidence is low
+        // 2. Confidence is below human oversight threshold
+        // 3. Context suggests critical decision
+        
+        if (confidenceLevel < _humanOversightThreshold)
+            return true;
 
-        if (confidence < MinimumConfidenceThreshold)
-        {
-            FallbackStrategy fallback = DetermineFallback(task, confidence);
-            Dictionary<string, object> metadata = new Dictionary<string, object>
-            {
-                ["original_route"] = decision.ModelName,
-                ["fallback_strategy"] = fallback.ToString(),
-                ["original_confidence"] = confidence,
-                ["threshold"] = MinimumConfidenceThreshold
-            };
+        if (riskLevel > 0.7 && confidenceLevel < 0.8)
+            return true;
 
-            RoutingDecision routingDecision = new RoutingDecision(
-                ApplyFallbackRoute(decision.ModelName, fallback),
-                $"Low confidence ({confidence:P0}), using {fallback}",
-                confidence,
-                metadata);
+        // Check if context indicates critical situation
+        bool isCritical = context.Contains("critical", StringComparison.OrdinalIgnoreCase) ||
+                         context.Contains("important", StringComparison.OrdinalIgnoreCase) ||
+                         context.Contains("sensitive", StringComparison.OrdinalIgnoreCase);
 
-            return Result<RoutingDecision, string>.Success(routingDecision);
-        }
+        if (isCritical && confidenceLevel < 0.9)
+            return true;
 
-        // High confidence - use direct route
-        RoutingDecision directDecision = new RoutingDecision(
-            decision.ModelName,
-            decision.Reason,
-            confidence,
-            new Dictionary<string, object>
-            {
-                ["strategy"] = "direct",
-                ["use_case"] = context?.GetValueOrDefault("use_case", "unknown")?.ToString() ?? "unknown",
-                ["threshold"] = MinimumConfidenceThreshold
-            });
-
-        return Result<RoutingDecision, string>.Success(directDecision);
+        return await Task.FromResult(false);
     }
 
-    /// <summary>
-    /// Determines fallback strategy based on confidence.
-    /// </summary>
-    public FallbackStrategy DetermineFallback(string task, double confidence)
+    /// <inheritdoc/>
+    public async Task<FallbackStrategy> GetFallbackStrategyAsync(
+        double confidenceLevel,
+        int attemptCount,
+        CancellationToken ct = default)
     {
-        // Very low confidence - need more information
-        if (confidence < 0.3)
+        // If we've attempted multiple times, escalate or abort
+        if (attemptCount > 3)
         {
-            return task.Length < 50
-                ? FallbackStrategy.RequestClarification
-                : FallbackStrategy.GatherMoreContext;
+            return confidenceLevel < 0.3 ? FallbackStrategy.Abort : FallbackStrategy.EscalateToHuman;
         }
 
-        // Low confidence - use safer approaches
-        if (confidence < 0.5)
+        // Very low confidence - need more information or abort
+        if (confidenceLevel < 0.3)
         {
-            return task.Split(' ').Length > 20
-                ? FallbackStrategy.DecomposeTask
-                : FallbackStrategy.UseEnsemble;
+            return attemptCount == 0 ? FallbackStrategy.RequestClarification : FallbackStrategy.Abort;
         }
 
-        // Moderate confidence - use ensemble for better results
-        if (confidence < MinimumConfidenceThreshold)
+        // Low confidence - try conservative approach or retry
+        if (confidenceLevel < 0.5)
         {
-            return FallbackStrategy.UseEnsemble;
+            return attemptCount == 0 ? FallbackStrategy.UseConservativeApproach : FallbackStrategy.Retry;
         }
 
-        // Should not reach here, but provide safe default
-        return FallbackStrategy.UseDefault;
+        // Moderate confidence - retry or defer
+        if (confidenceLevel < _minConfidenceThreshold)
+        {
+            return attemptCount == 0 ? FallbackStrategy.Retry : FallbackStrategy.Defer;
+        }
+
+        // High confidence - conservative approach as safety net
+        return await Task.FromResult(FallbackStrategy.UseConservativeApproach);
     }
 
-    /// <summary>
-    /// Calculates confidence for a routing decision.
-    /// </summary>
-    public async Task<double> CalculateConfidenceAsync(
-        string task,
-        string route,
-        Dictionary<string, object>? context = null)
+    private double CalculateRiskLevel(string context, string proposedAction)
     {
-        if (string.IsNullOrWhiteSpace(task) || string.IsNullOrWhiteSpace(route))
-            return 0.0;
+        double risk = 0.5; // Base risk level
 
-        // Get historical performance for this route
-        List<(RoutingDecision decision, bool success)> history = GetRouteHistory(route);
-        double baseConfidence = history.Any()
-            ? history.Count(h => h.success) / (double)history.Count
-            : 0.5;
+        // Increase risk for certain keywords
+        string[] highRiskKeywords = { "delete", "remove", "drop", "terminate", "destroy", "critical" };
+        string[] moderateRiskKeywords = { "modify", "update", "change", "alter" };
 
-        // Adjust based on task complexity
-        double complexityFactor = 1.0 - (task.Split(' ').Length / 100.0);
-        complexityFactor = Math.Clamp(complexityFactor, 0.5, 1.0);
+        string lowerAction = proposedAction.ToLowerInvariant();
+        string lowerContext = context.ToLowerInvariant();
 
-        // Adjust based on context availability
-        double contextFactor = context != null && context.Any() ? 1.1 : 0.9;
+        if (highRiskKeywords.Any(k => lowerAction.Contains(k) || lowerContext.Contains(k)))
+            risk += 0.3;
 
-        double confidence = baseConfidence * complexityFactor * contextFactor;
-        return await Task.FromResult(Math.Clamp(confidence, 0.0, 1.0));
+        if (moderateRiskKeywords.Any(k => lowerAction.Contains(k) || lowerContext.Contains(k)))
+            risk += 0.15;
+
+        return Math.Clamp(risk, 0.0, 1.0);
     }
 
-    /// <summary>
-    /// Records routing outcome for learning.
-    /// </summary>
-    public void RecordRoutingOutcome(RoutingDecision decision, bool success)
+    private List<string> GenerateAlternatives(string proposedAction, double confidence, FallbackStrategy strategy)
     {
-        ArgumentNullException.ThrowIfNull(decision);
+        List<string> alternatives = new();
 
+        switch (strategy)
+        {
+            case FallbackStrategy.Retry:
+                alternatives.Add("Retry with more context");
+                alternatives.Add("Break down into smaller steps");
+                break;
+
+            case FallbackStrategy.EscalateToHuman:
+                alternatives.Add("Request human review and approval");
+                alternatives.Add("Defer decision to human operator");
+                break;
+
+            case FallbackStrategy.UseConservativeApproach:
+                alternatives.Add("Use read-only or safer alternative");
+                alternatives.Add("Apply minimal changes");
+                break;
+
+            case FallbackStrategy.Defer:
+                alternatives.Add("Postpone until more information is available");
+                alternatives.Add("Gather additional context first");
+                break;
+
+            case FallbackStrategy.RequestClarification:
+                alternatives.Add("Request more specific instructions");
+                alternatives.Add("Ask for examples or clarification");
+                break;
+
+            case FallbackStrategy.Abort:
+                alternatives.Add("Cancel operation");
+                alternatives.Add("Return to previous state");
+                break;
+        }
+
+        return alternatives;
+    }
+
+    private string BuildReason(double confidence, FallbackStrategy strategy, bool requiresOversight)
+    {
+        if (confidence >= _minConfidenceThreshold && !requiresOversight)
+        {
+            return $"High confidence ({confidence:P0}), proceeding with action";
+        }
+
+        if (requiresOversight)
+        {
+            return $"Confidence {confidence:P0} requires human oversight, strategy: {strategy}";
+        }
+
+        return $"Low confidence ({confidence:P0}), recommended strategy: {strategy}";
+    }
+
+    private void RecordRoutingOutcome(string context, double confidence, bool success)
+    {
+        string key = context.Length > 50 ? context[..Math.Min(50, context.Length)] : context;
+        
         _routingHistory.AddOrUpdate(
-            decision.Route,
-            _ => new List<(RoutingDecision, bool)> { (decision, success) },
+            key,
+            _ => new List<(string, double, bool)> { (context, confidence, success) },
             (_, existing) =>
             {
-                existing.Add((decision, success));
+                existing.Add((context, confidence, success));
                 // Keep only recent history (last 100 entries)
                 return existing.TakeLast(100).ToList();
             });
-    }
-
-    private List<(RoutingDecision decision, bool success)> GetRouteHistory(string route)
-    {
-        return _routingHistory.TryGetValue(route, out List<(RoutingDecision decision, bool success)>? history)
-            ? history
-            : new List<(RoutingDecision, bool)>();
-    }
-
-    private string ApplyFallbackRoute(string originalRoute, FallbackStrategy fallback)
-    {
-        return fallback switch
-        {
-            FallbackStrategy.UseDefault => "default",
-            FallbackStrategy.RequestClarification => "clarification_needed",
-            FallbackStrategy.UseEnsemble => $"ensemble:{originalRoute}",
-            FallbackStrategy.DecomposeTask => "task_decomposer",
-            FallbackStrategy.GatherMoreContext => "context_gatherer",
-            _ => originalRoute
-        };
     }
 }

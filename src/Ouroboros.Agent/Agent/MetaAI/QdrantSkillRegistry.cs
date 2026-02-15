@@ -14,6 +14,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
+using Ouroboros.Abstractions;
 using Match = Qdrant.Client.Grpc.Match;
 
 namespace Ouroboros.Agent.MetaAI;
@@ -33,7 +34,7 @@ public sealed record QdrantSkillConfig(
 /// </summary>
 public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
 {
-    private readonly ConcurrentDictionary<string, Skill> _skillsCache = new();
+    private readonly ConcurrentDictionary<string, AgentSkill> _skillsCache = new();
     private readonly IEmbeddingModel? _embedding;
     private readonly QdrantClient _client;
     private readonly QdrantSkillConfig _config;
@@ -91,26 +92,19 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
     /// <summary>
     /// Registers a new skill and persists it to Qdrant.
     /// </summary>
-    public void RegisterSkill(Skill skill)
+    public async Task<Result<Unit, string>> RegisterSkillAsync(AgentSkill skill, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(skill);
-        _skillsCache[skill.Name] = skill;
-
-        if (_config.AutoSave)
+        try
         {
-            // Fire and forget save (async in background)
-            _ = SaveSkillToQdrantAsync(skill);
+            ArgumentNullException.ThrowIfNull(skill);
+            _skillsCache[skill.Id] = skill;
+            await SaveSkillToQdrantAsync(skill, ct);
+            return Result<Unit, string>.Success(Unit.Value);
         }
-    }
-
-    /// <summary>
-    /// Registers a skill asynchronously with immediate persistence.
-    /// </summary>
-    public async Task RegisterSkillAsync(Skill skill, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(skill);
-        _skillsCache[skill.Name] = skill;
-        await SaveSkillToQdrantAsync(skill, ct);
+        catch (Exception ex)
+        {
+            return Result<Unit, string>.Failure($"Failed to register skill: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -122,169 +116,194 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
     private const float MinimumSimilarityThreshold = 0.75f;
 
     /// <summary>
-    /// Finds skills matching a goal using semantic similarity.
+    /// Gets a skill by identifier.
     /// </summary>
-    public async Task<List<Skill>> FindMatchingSkillsAsync(
-        string goal,
-        Dictionary<string, object>? context = null)
+    public Task<Result<AgentSkill, string>> GetSkillAsync(string skillId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(goal))
-            return new List<Skill>();
-
-        // Use semantic search if embedding model is available
-        if (_embedding != null)
-        {
-            try
-            {
-                float[] goalEmbedding = await _embedding.CreateEmbeddingsAsync(goal);
-
-                var collectionExists = await _client.CollectionExistsAsync(_config.CollectionName);
-                if (collectionExists)
-                {
-                    var searchResults = await _client.SearchAsync(
-                        _config.CollectionName,
-                        goalEmbedding,
-                        limit: 10,
-                        scoreThreshold: MinimumSimilarityThreshold);
-
-                    var matchedSkills = new List<Skill>();
-                    foreach (var result in searchResults)
-                    {
-                        if (result.Payload.TryGetValue("skill_name", out var nameValue) &&
-                            _skillsCache.TryGetValue(nameValue.StringValue, out var skill))
-                        {
-                            matchedSkills.Add(skill);
-                        }
-                    }
-
-                    if (matchedSkills.Count > 0)
-                        return matchedSkills;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[WARN] Qdrant semantic search failed: {ex.Message}");
-                // Fall back to keyword matching
-            }
-        }
-
-        // Fallback: keyword matching on cached skills
-        string goalLower = goal.ToLowerInvariant();
-        return _skillsCache.Values
-            .Where(s => s.Description.ToLowerInvariant().Contains(goalLower) ||
-                       goalLower.Contains(s.Name.ToLowerInvariant()) ||
-                       s.Prerequisites.Any(p => p.ToLowerInvariant().Contains(goalLower)))
-            .OrderByDescending(s => s.SuccessRate)
-            .ThenByDescending(s => s.UsageCount)
-            .ToList();
-    }
-
-    /// <summary>
-    /// Gets a skill by name.
-    /// </summary>
-    public Skill? GetSkill(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return null;
-
-        _skillsCache.TryGetValue(name, out Skill? skill);
-        return skill;
-    }
-
-    /// <summary>
-    /// Records skill execution outcome and updates Qdrant.
-    /// </summary>
-    public void RecordSkillExecution(string name, bool success)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return;
-
-        _skillsCache.AddOrUpdate(
-            name,
-            _ => throw new InvalidOperationException($"Skill '{name}' not found"),
-            (_, existing) =>
-            {
-                int newCount = existing.UsageCount + 1;
-                double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
-
-                return existing with
-                {
-                    UsageCount = newCount,
-                    SuccessRate = newSuccessRate,
-                    LastUsed = DateTime.UtcNow
-                };
-            });
-
-        if (_config.AutoSave && _skillsCache.TryGetValue(name, out var updatedSkill))
-        {
-            _ = SaveSkillToQdrantAsync(updatedSkill);
-        }
-    }
-
-    /// <summary>
-    /// Gets all registered skills.
-    /// </summary>
-    public IReadOnlyList<Skill> GetAllSkills()
-        => _skillsCache.Values.OrderByDescending(s => s.SuccessRate).ToList();
-
-    /// <summary>
-    /// Extracts and registers a skill from a successful execution.
-    /// </summary>
-    public async Task<Result<Skill, string>> ExtractSkillAsync(
-        PlanExecutionResult execution,
-        string skillName,
-        string description)
-    {
-        if (execution == null)
-            return Result<Skill, string>.Failure("Execution cannot be null");
-
-        if (!execution.Success)
-            return Result<Skill, string>.Failure("Cannot extract skill from failed execution");
-
-        if (string.IsNullOrWhiteSpace(skillName))
-            return Result<Skill, string>.Failure("Skill name cannot be empty");
-
         try
         {
-            List<string> prerequisites = execution.Plan.Steps
-                .Where(s => s.ConfidenceScore > 0.7)
-                .Select(s => s.Action)
-                .Distinct()
-                .ToList();
+            if (string.IsNullOrWhiteSpace(skillId))
+                return Task.FromResult(Result<AgentSkill, string>.Failure("Skill ID cannot be empty"));
 
-            Skill skill = new Skill(
-                skillName,
-                description,
-                prerequisites,
-                execution.Plan.Steps,
-                SuccessRate: 1.0,
-                UsageCount: 0,
-                CreatedAt: DateTime.UtcNow,
-                LastUsed: DateTime.UtcNow);
+            if (_skillsCache.TryGetValue(skillId, out AgentSkill? skill))
+                return Task.FromResult(Result<AgentSkill, string>.Success(skill));
 
-            await RegisterSkillAsync(skill);
-
-            return Result<Skill, string>.Success(skill);
+            return Task.FromResult(Result<AgentSkill, string>.Failure($"Skill '{skillId}' not found"));
         }
         catch (Exception ex)
         {
-            return Result<Skill, string>.Failure($"Failed to extract skill: {ex.Message}");
+            return Task.FromResult(Result<AgentSkill, string>.Failure($"Failed to get skill: {ex.Message}"));
         }
     }
 
     /// <summary>
-    /// Deletes a skill by name from both cache and Qdrant.
+    /// Finds skills matching the given criteria.
     /// </summary>
-    public async Task DeleteSkillAsync(string name, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<AgentSkill>, string>> FindSkillsAsync(
+        string? category = null,
+        IReadOnlyList<string>? tags = null,
+        CancellationToken ct = default)
     {
-        if (_skillsCache.TryRemove(name, out _))
+        try
         {
+            List<AgentSkill> allSkills = _skillsCache.Values.ToList();
+            List<AgentSkill> filtered = allSkills;
+
+            // Filter by category
+            if (!string.IsNullOrWhiteSpace(category))
+            {
+                filtered = filtered.Where(s => s.Category.Equals(category, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            // Filter by tags
+            if (tags != null && tags.Count > 0)
+            {
+                filtered = filtered.Where(s => tags.Any(t => s.Tags.Contains(t, StringComparer.OrdinalIgnoreCase))).ToList();
+            }
+
+            // Use semantic search if embedding model is available
+            if (_embedding != null && (tags?.Count > 0 || !string.IsNullOrWhiteSpace(category)))
+            {
+                try
+                {
+                    string query = category ?? string.Join(" ", tags ?? Array.Empty<string>());
+                    float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct);
+
+                    var collectionExists = await _client.CollectionExistsAsync(_config.CollectionName, ct);
+                    if (collectionExists)
+                    {
+                        var searchResults = await _client.SearchAsync(
+                            _config.CollectionName,
+                            queryEmbedding,
+                            limit: 10,
+                            scoreThreshold: MinimumSimilarityThreshold,
+                            cancellationToken: ct);
+
+                        var matchedSkills = new List<AgentSkill>();
+                        foreach (var result in searchResults)
+                        {
+                            if (result.Payload.TryGetValue("skill_id", out var idValue) &&
+                                _skillsCache.TryGetValue(idValue.StringValue, out var skill))
+                            {
+                                matchedSkills.Add(skill);
+                            }
+                        }
+
+                        if (matchedSkills.Count > 0)
+                        {
+                            filtered = matchedSkills;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[WARN] Qdrant semantic search failed: {ex.Message}");
+                    // Fall back to simple filtering
+                }
+            }
+
+            // Order by success rate and usage count if no semantic matching
+            if (filtered == allSkills)
+            {
+                filtered = filtered
+                    .OrderByDescending(s => s.SuccessRate)
+                    .ThenByDescending(s => s.UsageCount)
+                    .ToList();
+            }
+
+            return Result<IReadOnlyList<AgentSkill>, string>.Success(filtered);
+        }
+        catch (Exception ex)
+        {
+            return Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to find skills: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Updates an existing skill's information.
+    /// </summary>
+    public async Task<Result<Unit, string>> UpdateSkillAsync(AgentSkill skill, CancellationToken ct = default)
+    {
+        try
+        {
+            ArgumentNullException.ThrowIfNull(skill);
+            
+            if (!_skillsCache.ContainsKey(skill.Id))
+                return Result<Unit, string>.Failure($"Skill '{skill.Id}' not found");
+
+            _skillsCache[skill.Id] = skill;
+            await SaveSkillToQdrantAsync(skill, ct);
+
+            return Result<Unit, string>.Success(Unit.Value);
+        }
+        catch (Exception ex)
+        {
+            return Result<Unit, string>.Failure($"Failed to update skill: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Records a skill execution result to update statistics.
+    /// </summary>
+    public async Task<Result<Unit, string>> RecordExecutionAsync(
+        string skillId,
+        bool success,
+        long executionTimeMs,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(skillId))
+                return Result<Unit, string>.Failure("Skill ID cannot be empty");
+
+            if (!_skillsCache.TryGetValue(skillId, out var existing))
+                return Result<Unit, string>.Failure($"Skill '{skillId}' not found");
+
+            int newCount = existing.UsageCount + 1;
+            double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
+            long newAvgTime = ((existing.AverageExecutionTime * existing.UsageCount) + executionTimeMs) / newCount;
+
+            var updated = existing with
+            {
+                UsageCount = newCount,
+                SuccessRate = newSuccessRate,
+                AverageExecutionTime = newAvgTime
+            };
+
+            _skillsCache[skillId] = updated;
+            
+            if (_config.AutoSave)
+            {
+                await SaveSkillToQdrantAsync(updated, ct);
+            }
+
+            return Result<Unit, string>.Success(Unit.Value);
+        }
+        catch (Exception ex)
+        {
+            return Result<Unit, string>.Failure($"Failed to record execution: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Removes a skill from the registry.
+    /// </summary>
+    public async Task<Result<Unit, string>> UnregisterSkillAsync(string skillId, CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(skillId))
+                return Result<Unit, string>.Failure("Skill ID cannot be empty");
+
+            if (!_skillsCache.TryRemove(skillId, out _))
+                return Result<Unit, string>.Failure($"Skill '{skillId}' not found");
+
+            // Remove from Qdrant
             try
             {
                 var collectionExists = await _client.CollectionExistsAsync(_config.CollectionName, ct);
                 if (collectionExists)
                 {
-                    // Delete by filter on skill_name
                     await _client.DeleteAsync(
                         _config.CollectionName,
                         new Filter
@@ -295,8 +314,8 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
                                 {
                                     Field = new FieldCondition
                                     {
-                                        Key = "skill_name",
-                                        Match = new Match { Keyword = name }
+                                        Key = "skill_id",
+                                        Match = new Match { Keyword = skillId }
                                     }
                                 }
                             }
@@ -306,8 +325,30 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[WARN] Failed to delete skill '{name}' from Qdrant: {ex.Message}");
+                Console.Error.WriteLine($"[WARN] Failed to delete skill '{skillId}' from Qdrant: {ex.Message}");
             }
+
+            return Result<Unit, string>.Success(Unit.Value);
+        }
+        catch (Exception ex)
+        {
+            return Result<Unit, string>.Failure($"Failed to unregister skill: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Gets all registered skills.
+    /// </summary>
+    public Task<Result<IReadOnlyList<AgentSkill>, string>> GetAllSkillsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var skills = _skillsCache.Values.OrderByDescending(s => s.SuccessRate).ToList();
+            return Task.FromResult(Result<IReadOnlyList<AgentSkill>, string>.Success((IReadOnlyList<AgentSkill>)skills));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to get all skills: {ex.Message}"));
         }
     }
 
@@ -372,13 +413,13 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
         }
     }
 
-    private async Task SaveSkillToQdrantAsync(Skill skill, CancellationToken ct = default)
+    private async Task SaveSkillToQdrantAsync(AgentSkill skill, CancellationToken ct = default)
     {
         await _syncLock.WaitAsync(ct);
         try
         {
             // Create searchable text from skill
-            string searchText = $"{skill.Name}: {skill.Description}. Prerequisites: {string.Join(", ", skill.Prerequisites)}. Steps: {string.Join(", ", skill.Steps.Select(s => s.Action))}";
+            string searchText = $"{skill.Name}: {skill.Description}. Category: {skill.Category}. Tags: {string.Join(", ", skill.Tags)}. Preconditions: {string.Join(", ", skill.Preconditions)}. Effects: {string.Join(", ", skill.Effects)}";
 
             // Generate embedding
             float[] embedding;
@@ -395,28 +436,31 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
 
             // Serialize skill data for storage
             var skillJson = JsonSerializer.Serialize(new SerializableSkillData(
+                skill.Id,
                 skill.Name,
                 skill.Description,
-                skill.Prerequisites,
-                skill.Steps.Select(s => new SerializableStepData(s.Action, s.ExpectedOutcome, s.ConfidenceScore)).ToList(),
+                skill.Category,
+                skill.Preconditions.ToList(),
+                skill.Effects.ToList(),
                 skill.SuccessRate,
                 skill.UsageCount,
-                skill.CreatedAt,
-                skill.LastUsed
+                skill.AverageExecutionTime,
+                skill.Tags.ToList()
             ), JsonOptions);
 
             var point = new PointStruct
             {
-                Id = new PointId { Uuid = GenerateSkillId(skill.Name) },
+                Id = new PointId { Uuid = GenerateSkillId(skill.Id) },
                 Vectors = embedding,
                 Payload =
                 {
+                    ["skill_id"] = skill.Id,
                     ["skill_name"] = skill.Name,
                     ["description"] = skill.Description,
+                    ["category"] = skill.Category,
                     ["success_rate"] = skill.SuccessRate,
                     ["usage_count"] = skill.UsageCount,
-                    ["created_at"] = skill.CreatedAt.ToString("O"),
-                    ["last_used"] = skill.LastUsed.ToString("O"),
+                    ["average_execution_time"] = skill.AverageExecutionTime,
                     ["skill_data"] = skillJson,
                     ["type"] = "skill"
                 }
@@ -462,21 +506,19 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
 
                         if (skillData != null)
                         {
-                            var skill = new Skill(
+                            var skill = new AgentSkill(
+                                skillData.Id,
                                 skillData.Name,
                                 skillData.Description,
-                                skillData.Prerequisites,
-                                skillData.Steps.Select(s => new PlanStep(
-                                    s.Action,
-                                    new Dictionary<string, object>(),
-                                    s.ExpectedOutcome,
-                                    s.ConfidenceScore)).ToList(),
+                                skillData.Category,
+                                skillData.Preconditions,
+                                skillData.Effects,
                                 skillData.SuccessRate,
                                 skillData.UsageCount,
-                                skillData.CreatedAt,
-                                skillData.LastUsed);
+                                skillData.AverageExecutionTime,
+                                skillData.Tags);
 
-                            _skillsCache[skill.Name] = skill;
+                            _skillsCache[skill.Id] = skill;
                         }
                     }
                 }
@@ -541,22 +583,16 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
 /// Serializable skill data for Qdrant storage.
 /// </summary>
 internal sealed record SerializableSkillData(
+    string Id,
     string Name,
     string Description,
-    List<string> Prerequisites,
-    List<SerializableStepData> Steps,
+    string Category,
+    List<string> Preconditions,
+    List<string> Effects,
     double SuccessRate,
     int UsageCount,
-    DateTime CreatedAt,
-    DateTime LastUsed);
-
-/// <summary>
-/// Serializable step data for Qdrant storage.
-/// </summary>
-internal sealed record SerializableStepData(
-    string Action,
-    string ExpectedOutcome,
-    double ConfidenceScore);
+    long AverageExecutionTime,
+    List<string> Tags);
 
 /// <summary>
 /// Statistics about the Qdrant skill registry.

@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using LangChain.Databases;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -24,23 +25,16 @@ public sealed record PersistentSkillConfig(
 /// Serializable skill format for JSON persistence.
 /// </summary>
 internal sealed record SerializableSkill(
+    string Id,
     string Name,
     string Description,
-    List<string> Prerequisites,
-    List<SerializablePlanStep> Steps,
+    string Category,
+    List<string> Preconditions,
+    List<string> Effects,
     double SuccessRate,
     int UsageCount,
-    DateTime CreatedAt,
-    DateTime LastUsed);
-
-/// <summary>
-/// Serializable plan step for JSON persistence.
-/// </summary>
-internal sealed record SerializablePlanStep(
-    string Action,
-    Dictionary<string, object> Parameters,
-    string ExpectedOutcome,
-    double ConfidenceScore);
+    long AverageExecutionTime,
+    List<string> Tags);
 
 /// <summary>
 /// Persistent implementation of skill registry that saves skills to disk and optionally to a vector store.
@@ -48,7 +42,7 @@ internal sealed record SerializablePlanStep(
 /// </summary>
 public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
 {
-    private readonly ConcurrentDictionary<string, Skill> _skills = new();
+    private readonly ConcurrentDictionary<string, AgentSkill> _skills = new();
     private readonly IEmbeddingModel? _embedding;
     private readonly TrackedVectorStore? _vectorStore;
     private readonly PersistentSkillConfig _config;
@@ -88,39 +82,26 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
     /// <summary>
     /// Registers a new skill and persists it.
     /// </summary>
-    public void RegisterSkill(Skill skill)
+    public async Task<Result<Unit, string>> RegisterSkillAsync(AgentSkill skill, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(skill);
-        _skills[skill.Name] = skill;
-        _isDirty = true;
-
-        if (_config.AutoSave)
+        try
         {
-            // Fire and forget save (async in background)
-            _ = SaveSkillsAsync();
+            ArgumentNullException.ThrowIfNull(skill);
+            _skills[skill.Id] = skill;
+            _isDirty = true;
+
+            await SaveSkillsAsync(ct);
+
+            if (_embedding != null && _vectorStore != null)
+            {
+                await AddToVectorStoreAsync(skill, ct);
+            }
+
+            return Result<Unit, string>.Success(Unit.Value);
         }
-
-        // Add to vector store for semantic search
-        if (_embedding != null && _vectorStore != null)
+        catch (Exception ex)
         {
-            _ = AddToVectorStoreAsync(skill);
-        }
-    }
-
-    /// <summary>
-    /// Registers a skill asynchronously with immediate persistence.
-    /// </summary>
-    public async Task RegisterSkillAsync(Skill skill, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(skill);
-        _skills[skill.Name] = skill;
-        _isDirty = true;
-
-        await SaveSkillsAsync(ct);
-
-        if (_embedding != null && _vectorStore != null)
-        {
-            await AddToVectorStoreAsync(skill, ct);
+            return Result<Unit, string>.Failure($"Failed to register skill: {ex.Message}");
         }
     }
 
@@ -128,196 +109,259 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
     /// Minimum similarity threshold for semantic skill matching.
     /// Skills with similarity below this value are considered unrelated.
     /// </summary>
-    /// <summary>
-    /// Minimum similarity score threshold - 0.75+ ensures strong match.
-    /// </summary>
     private const double MinimumSimilarityThreshold = 0.75;
 
     /// <summary>
-    /// Finds skills matching a goal using semantic similarity if available.
+    /// Gets a skill by identifier.
     /// </summary>
-    public async Task<List<Skill>> FindMatchingSkillsAsync(
-        string goal,
-        Dictionary<string, object>? context = null)
+    public Task<Result<AgentSkill, string>> GetSkillAsync(string skillId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(goal))
-            return new List<Skill>();
-
-        List<Skill> allSkills = _skills.Values.ToList();
-
-        // Use vector store for semantic search if available
-        if (_embedding != null && _vectorStore != null && _vectorStore.GetAll().Any())
+        try
         {
-            try
+            if (string.IsNullOrWhiteSpace(skillId))
+                return Task.FromResult(Result<AgentSkill, string>.Failure("Skill ID cannot be empty"));
+
+            if (_skills.TryGetValue(skillId, out AgentSkill? skill))
+                return Task.FromResult(Result<AgentSkill, string>.Success(skill));
+
+            return Task.FromResult(Result<AgentSkill, string>.Failure($"Skill '{skillId}' not found"));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(Result<AgentSkill, string>.Failure($"Failed to get skill: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Finds skills matching the given criteria.
+    /// </summary>
+    public async Task<Result<IReadOnlyList<AgentSkill>, string>> FindSkillsAsync(
+        string? category = null,
+        IReadOnlyList<string>? tags = null,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            List<AgentSkill> allSkills = _skills.Values.ToList();
+            List<AgentSkill> filtered = allSkills;
+
+            // Filter by category
+            if (!string.IsNullOrWhiteSpace(category))
             {
-                float[] goalEmbedding = await _embedding.CreateEmbeddingsAsync(goal);
-                var similarDocs = await _vectorStore.GetSimilarDocumentsAsync(goalEmbedding, Math.Min(10, allSkills.Count));
+                filtered = filtered.Where(s => s.Category.Equals(category, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
 
-                var matchedSkills = new List<Skill>();
-                foreach (var doc in similarDocs)
-                {
-                    // Check similarity score if available (stored during indexing)
-                    // This is a fallback check since GetSimilarDocumentsAsync doesn't filter by score
-                    if (doc.Metadata?.TryGetValue("skill_name", out var nameObj) == true &&
-                        nameObj is string name &&
-                        _skills.TryGetValue(name, out var skill))
-                    {
-                        matchedSkills.Add(skill);
-                    }
-                }
+            // Filter by tags
+            if (tags != null && tags.Count > 0)
+            {
+                filtered = filtered.Where(s => tags.Any(t => s.Tags.Contains(t, StringComparer.OrdinalIgnoreCase))).ToList();
+            }
 
-                // Re-score and filter by threshold to ensure quality matches
-                if (matchedSkills.Count > 0)
+            // Use vector store for semantic search if available
+            if (_embedding != null && _vectorStore != null && _vectorStore.GetAll().Any() && (tags?.Count > 0 || !string.IsNullOrWhiteSpace(category)))
+            {
+                try
                 {
-                    var scoredSkills = new List<(Skill skill, double score)>();
-                    foreach (var skill in matchedSkills)
+                    string query = category ?? string.Join(" ", tags ?? Array.Empty<string>());
+                    float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct);
+                    var similarDocs = await _vectorStore.GetSimilarDocumentsAsync(queryEmbedding, Math.Min(10, filtered.Count));
+
+                    var matchedSkills = new List<AgentSkill>();
+                    foreach (var doc in similarDocs)
                     {
-                        float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description);
-                        double similarity = CosineSimilarity(goalEmbedding, skillEmbedding);
-                        if (similarity >= MinimumSimilarityThreshold)
+                        if (doc.Metadata?.TryGetValue("skill_id", out var idObj) == true &&
+                            idObj is string id &&
+                            _skills.TryGetValue(id, out var skill))
                         {
-                            scoredSkills.Add((skill, similarity));
+                            matchedSkills.Add(skill);
                         }
                     }
 
-                    if (scoredSkills.Count > 0)
+                    if (matchedSkills.Count > 0)
                     {
-                        return scoredSkills
-                            .OrderByDescending(x => x.score)
-                            .Select(x => x.skill)
-                            .ToList();
+                        var scoredSkills = new List<(AgentSkill skill, double score)>();
+                        foreach (var skill in matchedSkills)
+                        {
+                            float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description, ct);
+                            double similarity = CosineSimilarity(queryEmbedding, skillEmbedding);
+                            if (similarity >= MinimumSimilarityThreshold)
+                            {
+                                scoredSkills.Add((skill, similarity));
+                            }
+                        }
+
+                        if (scoredSkills.Count > 0)
+                        {
+                            filtered = scoredSkills
+                                .OrderByDescending(x => x.score)
+                                .Select(x => x.skill)
+                                .ToList();
+                        }
                     }
                 }
-            }
-            catch
-            {
-                // Fall back to keyword matching if vector search fails
-            }
-        }
-
-        // Fallback: embedding-based similarity on cached embeddings
-        if (_embedding != null)
-        {
-            float[] goalEmbedding = await _embedding.CreateEmbeddingsAsync(goal);
-
-            var skillScores = new List<(Skill skill, double score)>();
-            foreach (var skill in allSkills)
-            {
-                float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description);
-                double similarity = CosineSimilarity(goalEmbedding, skillEmbedding);
-                skillScores.Add((skill, similarity));
-            }
-
-            // Only return skills meeting the minimum similarity threshold
-            return skillScores
-                .Where(x => x.score >= MinimumSimilarityThreshold)
-                .OrderByDescending(x => x.score)
-                .Select(x => x.skill)
-                .ToList();
-        }
-
-        // Final fallback: keyword matching
-        string goalLower = goal.ToLowerInvariant();
-        return allSkills
-            .Where(s => s.Description.ToLowerInvariant().Contains(goalLower) ||
-                       goalLower.Contains(s.Name.ToLowerInvariant()) ||
-                       s.Prerequisites.Any(p => p.ToLowerInvariant().Contains(goalLower)))
-            .OrderByDescending(s => s.SuccessRate)
-            .ThenByDescending(s => s.UsageCount)
-            .ToList();
-    }
-
-    /// <summary>
-    /// Gets a skill by name.
-    /// </summary>
-    public Skill? GetSkill(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return null;
-
-        _skills.TryGetValue(name, out Skill? skill);
-        return skill;
-    }
-
-    /// <summary>
-    /// Records skill execution outcome and updates persistence.
-    /// </summary>
-    public void RecordSkillExecution(string name, bool success)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return;
-
-        _skills.AddOrUpdate(
-            name,
-            _ => throw new InvalidOperationException($"Skill '{name}' not found"),
-            (_, existing) =>
-            {
-                int newCount = existing.UsageCount + 1;
-                double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
-
-                return existing with
+                catch
                 {
-                    UsageCount = newCount,
-                    SuccessRate = newSuccessRate,
-                    LastUsed = DateTime.UtcNow
-                };
-            });
+                    // Fall back to simple filtering
+                }
+            }
 
-        _isDirty = true;
-        if (_config.AutoSave)
+            // Use embedding-based similarity if available and no vector store
+            if (_embedding != null && (tags?.Count > 0 || !string.IsNullOrWhiteSpace(category)))
+            {
+                try
+                {
+                    string query = category ?? string.Join(" ", tags ?? Array.Empty<string>());
+                    float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct);
+
+                    var skillScores = new List<(AgentSkill skill, double score)>();
+                    foreach (var skill in filtered)
+                    {
+                        float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description, ct);
+                        double similarity = CosineSimilarity(queryEmbedding, skillEmbedding);
+                        skillScores.Add((skill, similarity));
+                    }
+
+                    filtered = skillScores
+                        .Where(x => x.score >= MinimumSimilarityThreshold)
+                        .OrderByDescending(x => x.score)
+                        .Select(x => x.skill)
+                        .ToList();
+                }
+                catch
+                {
+                    // Fall back to simple ordering
+                }
+            }
+
+            // Order by success rate and usage count if no semantic matching applied
+            if (filtered == allSkills)
+            {
+                filtered = filtered
+                    .OrderByDescending(s => s.SuccessRate)
+                    .ThenByDescending(s => s.UsageCount)
+                    .ToList();
+            }
+
+            return Result<IReadOnlyList<AgentSkill>, string>.Success(filtered);
+        }
+        catch (Exception ex)
         {
-            _ = SaveSkillsAsync();
+            return Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to find skills: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Updates an existing skill's information.
+    /// </summary>
+    public async Task<Result<Unit, string>> UpdateSkillAsync(AgentSkill skill, CancellationToken ct = default)
+    {
+        try
+        {
+            ArgumentNullException.ThrowIfNull(skill);
+            
+            if (!_skills.ContainsKey(skill.Id))
+                return Result<Unit, string>.Failure($"Skill '{skill.Id}' not found");
+
+            _skills[skill.Id] = skill;
+            _isDirty = true;
+            await SaveSkillsAsync(ct);
+
+            // Update in vector store if available
+            if (_embedding != null && _vectorStore != null)
+            {
+                await AddToVectorStoreAsync(skill, ct);
+            }
+
+            return Result<Unit, string>.Success(Unit.Value);
+        }
+        catch (Exception ex)
+        {
+            return Result<Unit, string>.Failure($"Failed to update skill: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Records a skill execution result to update statistics.
+    /// </summary>
+    public async Task<Result<Unit, string>> RecordExecutionAsync(
+        string skillId,
+        bool success,
+        long executionTimeMs,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(skillId))
+                return Result<Unit, string>.Failure("Skill ID cannot be empty");
+
+            if (!_skills.TryGetValue(skillId, out var existing))
+                return Result<Unit, string>.Failure($"Skill '{skillId}' not found");
+
+            int newCount = existing.UsageCount + 1;
+            double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
+            long newAvgTime = ((existing.AverageExecutionTime * existing.UsageCount) + executionTimeMs) / newCount;
+
+            var updated = existing with
+            {
+                UsageCount = newCount,
+                SuccessRate = newSuccessRate,
+                AverageExecutionTime = newAvgTime
+            };
+
+            _skills[skillId] = updated;
+            _isDirty = true;
+            
+            if (_config.AutoSave)
+            {
+                await SaveSkillsAsync(ct);
+            }
+
+            return Result<Unit, string>.Success(Unit.Value);
+        }
+        catch (Exception ex)
+        {
+            return Result<Unit, string>.Failure($"Failed to record execution: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Removes a skill from the registry.
+    /// </summary>
+    public async Task<Result<Unit, string>> UnregisterSkillAsync(string skillId, CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(skillId))
+                return Result<Unit, string>.Failure("Skill ID cannot be empty");
+
+            if (_skills.TryRemove(skillId, out _))
+            {
+                _isDirty = true;
+                await SaveSkillsAsync(ct);
+                return Result<Unit, string>.Success(Unit.Value);
+            }
+
+            return Result<Unit, string>.Failure($"Skill '{skillId}' not found");
+        }
+        catch (Exception ex)
+        {
+            return Result<Unit, string>.Failure($"Failed to unregister skill: {ex.Message}");
         }
     }
 
     /// <summary>
     /// Gets all registered skills.
     /// </summary>
-    public IReadOnlyList<Skill> GetAllSkills()
-        => _skills.Values.OrderByDescending(s => s.SuccessRate).ToList();
-
-    /// <summary>
-    /// Extracts and registers a skill from a successful execution.
-    /// </summary>
-    public async Task<Result<Skill, string>> ExtractSkillAsync(
-        PlanExecutionResult execution,
-        string skillName,
-        string description)
+    public Task<Result<IReadOnlyList<AgentSkill>, string>> GetAllSkillsAsync(CancellationToken ct = default)
     {
-        if (execution == null)
-            return Result<Skill, string>.Failure("Execution cannot be null");
-
-        if (!execution.Success)
-            return Result<Skill, string>.Failure("Cannot extract skill from failed execution");
-
-        if (string.IsNullOrWhiteSpace(skillName))
-            return Result<Skill, string>.Failure("Skill name cannot be empty");
-
         try
         {
-            List<string> prerequisites = execution.Plan.Steps
-                .Where(s => s.ConfidenceScore > 0.7)
-                .Select(s => s.Action)
-                .Distinct()
-                .ToList();
-
-            Skill skill = new Skill(
-                skillName,
-                description,
-                prerequisites,
-                execution.Plan.Steps,
-                SuccessRate: 1.0,
-                UsageCount: 0,
-                CreatedAt: DateTime.UtcNow,
-                LastUsed: DateTime.UtcNow);
-
-            await RegisterSkillAsync(skill);
-
-            return Result<Skill, string>.Success(skill);
+            var skills = _skills.Values.OrderByDescending(s => s.SuccessRate).ToList();
+            return Task.FromResult(Result<IReadOnlyList<AgentSkill>, string>.Success((IReadOnlyList<AgentSkill>)skills));
         }
         catch (Exception ex)
         {
-            return Result<Skill, string>.Failure($"Failed to extract skill: {ex.Message}");
+            return Task.FromResult(Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to get all skills: {ex.Message}"));
         }
     }
 
@@ -369,7 +413,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
                 foreach (var ss in serializableSkills)
                 {
                     var skill = FromSerializable(ss);
-                    _skills[skill.Name] = skill;
+                    _skills[skill.Id] = skill;
 
                     // Add to vector store if available
                     if (_embedding != null && _vectorStore != null)
@@ -387,11 +431,11 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
     }
 
     /// <summary>
-    /// Deletes a skill by name.
+    /// Deletes a skill by ID (backward compatibility).
     /// </summary>
-    public async Task DeleteSkillAsync(string name, CancellationToken ct = default)
+    public async Task DeleteSkillAsync(string skillId, CancellationToken ct = default)
     {
-        if (_skills.TryRemove(name, out _))
+        if (_skills.TryRemove(skillId, out _))
         {
             _isDirty = true;
             await SaveSkillsAsync(ct);
@@ -414,29 +458,30 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
             IsPersisted: File.Exists(_config.StoragePath));
     }
 
-    private async Task AddToVectorStoreAsync(Skill skill, CancellationToken ct = default)
+    private async Task AddToVectorStoreAsync(AgentSkill skill, CancellationToken ct = default)
     {
         if (_embedding == null || _vectorStore == null) return;
 
         try
         {
             // Create searchable text from skill
-            string searchText = $"{skill.Name}: {skill.Description}. Steps: {string.Join(", ", skill.Steps.Select(s => s.Action))}";
+            string searchText = $"{skill.Name}: {skill.Description}. Category: {skill.Category}. Tags: {string.Join(", ", skill.Tags)}. Preconditions: {string.Join(", ", skill.Preconditions)}. Effects: {string.Join(", ", skill.Effects)}";
             float[] embedding = await _embedding.CreateEmbeddingsAsync(searchText, ct);
 
             var metadata = new Dictionary<string, object>
             {
+                ["skill_id"] = skill.Id,
                 ["skill_name"] = skill.Name,
                 ["description"] = skill.Description,
+                ["category"] = skill.Category,
                 ["success_rate"] = skill.SuccessRate,
                 ["usage_count"] = skill.UsageCount,
-                ["created_at"] = skill.CreatedAt.ToString("O"),
                 ["type"] = "skill"
             };
 
             var vector = new Vector
             {
-                Id = $"skill_{skill.Name}",
+                Id = $"skill_{skill.Id}",
                 Text = searchText,
                 Embedding = embedding,
                 Metadata = metadata!
@@ -450,33 +495,29 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
         }
     }
 
-    private static SerializableSkill ToSerializable(Skill skill) => new(
+    private static SerializableSkill ToSerializable(AgentSkill skill) => new(
+        skill.Id,
         skill.Name,
         skill.Description,
-        skill.Prerequisites,
-        skill.Steps.Select(s => new SerializablePlanStep(
-            s.Action,
-            s.Parameters,
-            s.ExpectedOutcome,
-            s.ConfidenceScore)).ToList(),
+        skill.Category,
+        skill.Preconditions.ToList(),
+        skill.Effects.ToList(),
         skill.SuccessRate,
         skill.UsageCount,
-        skill.CreatedAt,
-        skill.LastUsed);
+        skill.AverageExecutionTime,
+        skill.Tags.ToList());
 
-    private static Skill FromSerializable(SerializableSkill ss) => new(
+    private static AgentSkill FromSerializable(SerializableSkill ss) => new(
+        ss.Id,
         ss.Name,
         ss.Description,
-        ss.Prerequisites,
-        ss.Steps.Select(s => new PlanStep(
-            s.Action,
-            s.Parameters,
-            s.ExpectedOutcome,
-            s.ConfidenceScore)).ToList(),
+        ss.Category,
+        ss.Preconditions,
+        ss.Effects,
         ss.SuccessRate,
         ss.UsageCount,
-        ss.CreatedAt,
-        ss.LastUsed);
+        ss.AverageExecutionTime,
+        ss.Tags);
 
     private static double CosineSimilarity(float[] a, float[] b)
     {

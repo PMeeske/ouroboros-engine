@@ -5,7 +5,9 @@
 // ==========================================================
 
 using System.Collections.Concurrent;
+using System.Text.Json;
 using LangChain.Databases;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -38,124 +40,259 @@ public sealed record PersistentMemoryConfig(
 /// </summary>
 public sealed class PersistentMemoryStore : IMemoryStore
 {
-    private readonly ConcurrentDictionary<Guid, (Experience experience, MemoryType type, double importance)> _experiences = new();
+    private readonly ConcurrentDictionary<string, (Experience experience, MemoryType type, double importance)> _experiences = new();
     private readonly IEmbeddingModel? _embedding;
     private readonly TrackedVectorStore? _vectorStore;
     private readonly PersistentMemoryConfig _config;
     private DateTime _lastConsolidation = DateTime.UtcNow;
+    private readonly string? _persistencePath;
 
     public PersistentMemoryStore(
         IEmbeddingModel? embedding = null,
         TrackedVectorStore? vectorStore = null,
-        PersistentMemoryConfig? config = null)
+        PersistentMemoryConfig? config = null,
+        string? persistencePath = null)
     {
         _embedding = embedding;
         _vectorStore = vectorStore;
         _config = config ?? new PersistentMemoryConfig(
             ConsolidationInterval: TimeSpan.FromHours(1));
+        _persistencePath = persistencePath;
+
+        if (!string.IsNullOrEmpty(_persistencePath))
+        {
+            LoadFromDiskAsync().GetAwaiter().GetResult();
+        }
     }
 
     /// <summary>
     /// Stores an experience in memory with automatic importance scoring.
     /// </summary>
-    public async Task StoreExperienceAsync(Experience experience, CancellationToken ct = default)
+    public async Task<Result<Unit, string>> StoreExperienceAsync(Experience experience, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(experience);
-
-        // Calculate importance score
-        double importance = CalculateImportance(experience);
-
-        // Store in short-term episodic memory initially
-        _experiences[experience.Id] = (experience, MemoryType.Episodic, importance);
-
-        // Store in vector database if available
-        if (_embedding != null && _vectorStore != null)
+        try
         {
-            await StoreInVectorStoreAsync(experience, MemoryType.Episodic, ct);
+            ArgumentNullException.ThrowIfNull(experience);
+
+            if (string.IsNullOrWhiteSpace(experience.Id))
+                return Result<Unit, string>.Failure("Experience ID cannot be empty");
+
+            // Calculate importance score
+            double importance = CalculateImportance(experience);
+
+            // Store in short-term episodic memory initially
+            _experiences[experience.Id] = (experience, MemoryType.Episodic, importance);
+
+            // Store in vector database if available
+            if (_embedding != null && _vectorStore != null)
+            {
+                await StoreInVectorStoreAsync(experience, MemoryType.Episodic, ct);
+            }
+
+            // Persist to disk if configured
+            if (!string.IsNullOrEmpty(_persistencePath))
+            {
+                await SaveToDiskAsync(ct);
+            }
+
+            // Check if consolidation is needed
+            if (ShouldConsolidate())
+            {
+                await ConsolidateMemoriesAsync(ct);
+            }
+
+            // Check if forgetting is needed
+            if (_config.EnableForgetting && _experiences.Count > _config.LongTermCapacity)
+            {
+                await ForgetLowImportanceMemoriesAsync();
+            }
+
+            return Result<Unit, string>.Success(Unit.Value);
         }
-
-        // Check if consolidation is needed
-        if (ShouldConsolidate())
+        catch (Exception ex)
         {
-            await ConsolidateMemoriesAsync(ct);
-        }
-
-        // Check if forgetting is needed
-        if (_config.EnableForgetting && _experiences.Count > _config.LongTermCapacity)
-        {
-            await ForgetLowImportanceMemoriesAsync();
+            return Result<Unit, string>.Failure($"Failed to store experience: {ex.Message}");
         }
     }
 
     /// <summary>
     /// Retrieves relevant experiences based on similarity and recency.
     /// </summary>
-    public async Task<List<Experience>> RetrieveRelevantExperiencesAsync(
+    public async Task<Result<IReadOnlyList<Experience>, string>> QueryExperiencesAsync(
         MemoryQuery query,
         CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(query);
-
-        // If vector store available, use semantic search
-        if (_embedding != null && _vectorStore != null)
+        try
         {
-            return await RetrieveViaSimilarityAsync(query, ct);
+            ArgumentNullException.ThrowIfNull(query);
+
+            // If vector store available and context similarity specified, use semantic search
+            if (_embedding != null && _vectorStore != null && !string.IsNullOrEmpty(query.ContextSimilarity))
+            {
+                return await RetrieveViaSimilarityAsync(query, ct);
+            }
+
+            // Fallback to filtering based on query parameters
+            IEnumerable<(Experience experience, MemoryType type, double importance)> filtered = _experiences.Values;
+
+            // Filter by tags if specified
+            if (query.Tags != null && query.Tags.Count > 0)
+            {
+                filtered = filtered.Where(e => query.Tags.Any(tag => e.experience.Tags.Contains(tag)));
+            }
+
+            // Filter by success if specified
+            if (query.SuccessOnly.HasValue)
+            {
+                filtered = filtered.Where(e => e.experience.Success == query.SuccessOnly.Value);
+            }
+
+            // Filter by date range
+            if (query.FromDate.HasValue)
+            {
+                filtered = filtered.Where(e => e.experience.Timestamp >= query.FromDate.Value);
+            }
+
+            if (query.ToDate.HasValue)
+            {
+                filtered = filtered.Where(e => e.experience.Timestamp <= query.ToDate.Value);
+            }
+
+            // Order by importance and take max results
+            List<Experience> experiences = filtered
+                .OrderByDescending(e => e.importance)
+                .Take(query.MaxResults)
+                .Select(e => e.experience)
+                .ToList();
+
+            return Result<IReadOnlyList<Experience>, string>.Success(experiences);
         }
-
-        // Fallback to simple filtering
-        List<Experience> experiences = _experiences.Values
-            .Where(e => e.experience.Verification.Verified)
-            .OrderByDescending(e => e.importance)
-            .Take(query.MaxResults)
-            .Select(e => e.experience)
-            .ToList();
-
-        return experiences;
+        catch (Exception ex)
+        {
+            return Result<IReadOnlyList<Experience>, string>.Failure($"Failed to query experiences: {ex.Message}");
+        }
     }
 
     /// <summary>
     /// Gets memory statistics.
     /// </summary>
-    public Task<MemoryStatistics> GetStatisticsAsync()
+    public Task<Result<MemoryStatistics, string>> GetStatisticsAsync(CancellationToken ct = default)
     {
-        List<Experience> experiences = _experiences.Values.Select(v => v.experience).ToList();
+        try
+        {
+            List<Experience> experiences = _experiences.Values.Select(v => v.experience).ToList();
 
-        MemoryStatistics stats = new MemoryStatistics(
-            TotalExperiences: experiences.Count,
-            SuccessfulExecutions: experiences.Count(e => e.Verification.Verified),
-            FailedExecutions: experiences.Count(e => !e.Verification.Verified),
-            AverageQualityScore: experiences.Any()
-                ? experiences.Average(e => e.Verification.QualityScore)
-                : 0.0,
-            GoalCounts: experiences
-                .GroupBy(e => e.Goal)
-                .ToDictionary(g => g.Key, g => g.Count()));
+            int totalExperiences = experiences.Count;
+            int successfulExperiences = experiences.Count(e => e.Success);
+            int failedExperiences = totalExperiences - successfulExperiences;
 
-        return Task.FromResult(stats);
+            int uniqueContexts = experiences.Select(e => e.Context).Distinct().Count();
+            int uniqueTags = experiences.SelectMany(e => e.Tags).Distinct().Count();
+
+            DateTime? oldestExperience = experiences.Any() ? experiences.Min(e => e.Timestamp) : null;
+            DateTime? newestExperience = experiences.Any() ? experiences.Max(e => e.Timestamp) : null;
+
+            MemoryStatistics stats = new MemoryStatistics(
+                TotalExperiences: totalExperiences,
+                SuccessfulExperiences: successfulExperiences,
+                FailedExperiences: failedExperiences,
+                UniqueContexts: uniqueContexts,
+                UniqueTags: uniqueTags,
+                OldestExperience: oldestExperience,
+                NewestExperience: newestExperience);
+
+            return Task.FromResult(Result<MemoryStatistics, string>.Success(stats));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(Result<MemoryStatistics, string>.Failure($"Failed to get statistics: {ex.Message}"));
+        }
     }
 
     /// <summary>
     /// Clears all experiences from memory.
     /// </summary>
-    public async Task ClearAsync(CancellationToken ct = default)
+    public async Task<Result<Unit, string>> ClearAsync(CancellationToken ct = default)
     {
-        _experiences.Clear();
-
-        if (_vectorStore != null)
+        try
         {
-            // Note: TrackedVectorStore doesn't have a Clear method
-            // In a real implementation with Qdrant, we would clear the collection
-            await Task.CompletedTask;
+            _experiences.Clear();
+
+            if (_vectorStore != null)
+            {
+                // Note: TrackedVectorStore doesn't have a Clear method
+                // In a real implementation with Qdrant, we would clear the collection
+                await Task.CompletedTask;
+            }
+
+            // Clear persisted data if configured
+            if (!string.IsNullOrEmpty(_persistencePath) && File.Exists(_persistencePath))
+            {
+                File.Delete(_persistencePath);
+            }
+
+            return Result<Unit, string>.Success(Unit.Value);
+        }
+        catch (Exception ex)
+        {
+            return Result<Unit, string>.Failure($"Failed to clear memory: {ex.Message}");
         }
     }
 
     /// <summary>
     /// Gets an experience by ID.
     /// </summary>
-    public Task<Experience?> GetExperienceAsync(Guid id, CancellationToken ct = default)
+    public Task<Result<Experience, string>> GetExperienceAsync(string id, CancellationToken ct = default)
     {
-        bool found = _experiences.TryGetValue(id, out (Experience experience, MemoryType type, double importance) entry);
-        return Task.FromResult(found ? entry.experience : null);
+        try
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return Task.FromResult(Result<Experience, string>.Failure("Experience ID cannot be empty"));
+
+            bool found = _experiences.TryGetValue(id, out (Experience experience, MemoryType type, double importance) entry);
+            if (found)
+            {
+                return Task.FromResult(Result<Experience, string>.Success(entry.experience));
+            }
+            else
+            {
+                return Task.FromResult(Result<Experience, string>.Failure($"Experience with ID '{id}' not found"));
+            }
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(Result<Experience, string>.Failure($"Failed to get experience: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Deletes an experience from memory.
+    /// </summary>
+    public async Task<Result<Unit, string>> DeleteExperienceAsync(string id, CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return Result<Unit, string>.Failure("Experience ID cannot be empty");
+
+            bool removed = _experiences.TryRemove(id, out _);
+            if (!removed)
+            {
+                return Result<Unit, string>.Failure($"Experience with ID '{id}' not found");
+            }
+
+            // Persist changes if configured
+            if (!string.IsNullOrEmpty(_persistencePath))
+            {
+                await SaveToDiskAsync(ct);
+            }
+
+            return Result<Unit, string>.Success(Unit.Value);
+        }
+        catch (Exception ex)
+        {
+            return Result<Unit, string>.Failure($"Failed to delete experience: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -171,22 +308,22 @@ public sealed class PersistentMemoryStore : IMemoryStore
 
     /// <summary>
     /// Calculates importance score for an experience.
-    /// Based on quality, recency, and uniqueness.
+    /// Based on success, recency, and tag diversity.
     /// </summary>
     private double CalculateImportance(Experience experience)
     {
-        // Base importance from quality
-        double qualityScore = experience.Verification.QualityScore;
+        // Base importance from success
+        double successScore = experience.Success ? 0.7 : 0.3;
 
         // Recency bonus (newer memories are more important initially)
         double recencyHours = (DateTime.UtcNow - experience.Timestamp).TotalHours;
         double recencyBonus = Math.Max(0, 1.0 - (recencyHours / 24.0)); // Decays over 24 hours
 
-        // Success bonus
-        double successBonus = experience.Verification.Verified ? 0.2 : 0.0;
+        // Tag diversity bonus (more tags = potentially more useful)
+        double tagBonus = Math.Min(0.2, experience.Tags.Count * 0.05);
 
-        // Combined importance (weighted average)
-        double importance = (qualityScore * 0.5) + (recencyBonus * 0.3) + successBonus;
+        // Combined importance (weighted sum)
+        double importance = (successScore * 0.5) + (recencyBonus * 0.3) + (tagBonus * 0.2);
 
         return Math.Clamp(importance, 0.0, 1.0);
     }
@@ -262,24 +399,25 @@ public sealed class PersistentMemoryStore : IMemoryStore
         if (_embedding == null || _vectorStore == null)
             return;
 
-        string text = $"[{type}] Goal: {experience.Goal}\n" +
-                   $"Plan: {string.Join(", ", experience.Plan.Steps.Select(s => s.Action))}\n" +
-                   $"Quality: {experience.Verification.QualityScore:P0}\n" +
-                   $"Verified: {experience.Verification.Verified}";
+        string text = $"[{type}] Context: {experience.Context}\n" +
+                   $"Action: {experience.Action}\n" +
+                   $"Outcome: {experience.Outcome}\n" +
+                   $"Success: {experience.Success}\n" +
+                   $"Tags: {string.Join(", ", experience.Tags)}";
 
         float[] embedding = await _embedding.CreateEmbeddingsAsync(text, ct);
 
         Vector vector = new Vector
         {
-            Id = experience.Id.ToString(),
+            Id = experience.Id,
             Text = text,
             Embedding = embedding,
             Metadata = new Dictionary<string, object>
             {
-                ["id"] = experience.Id.ToString(),
-                ["goal"] = experience.Goal,
-                ["quality"] = experience.Verification.QualityScore,
-                ["verified"] = experience.Verification.Verified,
+                ["id"] = experience.Id,
+                ["context"] = experience.Context,
+                ["action"] = experience.Action,
+                ["success"] = experience.Success,
                 ["timestamp"] = experience.Timestamp,
                 ["memory_type"] = type.ToString()
             }
@@ -291,42 +429,138 @@ public sealed class PersistentMemoryStore : IMemoryStore
     /// <summary>
     /// Retrieves experiences using vector similarity search.
     /// </summary>
-    private async Task<List<Experience>> RetrieveViaSimilarityAsync(
+    private async Task<Result<IReadOnlyList<Experience>, string>> RetrieveViaSimilarityAsync(
         MemoryQuery query,
         CancellationToken ct)
     {
-        if (_embedding == null || _vectorStore == null)
-            return new List<Experience>();
+        if (_embedding == null || _vectorStore == null || string.IsNullOrEmpty(query.ContextSimilarity))
+            return Result<IReadOnlyList<Experience>, string>.Success(Array.Empty<Experience>());
 
         try
         {
-            float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.Goal, ct);
+            float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.ContextSimilarity, ct);
 
             IReadOnlyCollection<LangChain.DocumentLoaders.Document> searchResults = await _vectorStore.GetSimilarDocuments(
                 _embedding,
-                query.Goal,
+                query.ContextSimilarity,
                 amount: query.MaxResults);
 
             List<Experience> experiences = new List<Experience>();
             foreach (LangChain.DocumentLoaders.Document doc in searchResults)
             {
                 if (doc.Metadata?.TryGetValue("id", out object? idObj) == true &&
-                    Guid.TryParse(idObj?.ToString(), out Guid id) &&
+                    idObj?.ToString() is string id &&
                     _experiences.TryGetValue(id, out (Experience experience, MemoryType type, double importance) entry))
                 {
+                    // Apply additional filters
+                    if (query.SuccessOnly.HasValue && entry.experience.Success != query.SuccessOnly.Value)
+                        continue;
+
+                    if (query.FromDate.HasValue && entry.experience.Timestamp < query.FromDate.Value)
+                        continue;
+
+                    if (query.ToDate.HasValue && entry.experience.Timestamp > query.ToDate.Value)
+                        continue;
+
+                    if (query.Tags != null && query.Tags.Count > 0 &&
+                        !query.Tags.Any(tag => entry.experience.Tags.Contains(tag)))
+                        continue;
+
                     experiences.Add(entry.experience);
                 }
             }
 
-            return experiences;
+            return Result<IReadOnlyList<Experience>, string>.Success(experiences);
         }
         catch
         {
             // Fallback to simple retrieval
-            return _experiences.Values
+            List<Experience> fallbackExperiences = _experiences.Values
                 .Select(e => e.experience)
                 .Take(query.MaxResults)
                 .ToList();
+
+            return Result<IReadOnlyList<Experience>, string>.Success(fallbackExperiences);
+        }
+    }
+
+    /// <summary>
+    /// Saves experiences to disk as JSON.
+    /// </summary>
+    private async Task SaveToDiskAsync(CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(_persistencePath))
+            return;
+
+        try
+        {
+            string? directory = Path.GetDirectoryName(_persistencePath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var data = _experiences.Values.Select(v => new
+            {
+                Experience = v.experience,
+                Type = v.type.ToString(),
+                Importance = v.importance
+            }).ToList();
+
+            string json = JsonSerializer.Serialize(data, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            await File.WriteAllTextAsync(_persistencePath, json, ct);
+        }
+        catch
+        {
+            // Silent failure - persistence is optional
+        }
+    }
+
+    /// <summary>
+    /// Loads experiences from disk.
+    /// </summary>
+    private async Task LoadFromDiskAsync()
+    {
+        if (string.IsNullOrEmpty(_persistencePath) || !File.Exists(_persistencePath))
+            return;
+
+        try
+        {
+            string json = await File.ReadAllTextAsync(_persistencePath);
+            var data = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(json);
+
+            if (data != null)
+            {
+                foreach (var item in data)
+                {
+                    if (item.TryGetValue("Experience", out JsonElement expElement))
+                    {
+                        var experience = JsonSerializer.Deserialize<Experience>(expElement.GetRawText());
+                        if (experience != null)
+                        {
+                            MemoryType type = item.TryGetValue("Type", out JsonElement typeElement) &&
+                                            Enum.TryParse<MemoryType>(typeElement.GetString(), out MemoryType parsedType)
+                                ? parsedType
+                                : MemoryType.Episodic;
+
+                            double importance = item.TryGetValue("Importance", out JsonElement impElement) &&
+                                              impElement.TryGetDouble(out double imp)
+                                ? imp
+                                : 0.5;
+
+                            _experiences[experience.Id] = (experience, type, importance);
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Silent failure - if we can't load, start fresh
         }
     }
 }

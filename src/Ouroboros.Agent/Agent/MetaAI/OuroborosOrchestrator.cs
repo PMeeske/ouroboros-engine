@@ -435,14 +435,15 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             ITool tool = toolOption.Value;
 
             // Check safety
-            SafetyCheckResult safetyCheck = _safety.CheckSafety(
+            SafetyCheckResult safetyCheck = await _safety.CheckActionSafetyAsync(
                 tool.Name,
                 new Dictionary<string, object> { ["step"] = step },
-                PermissionLevel.ReadOnly);
+                context: null,
+                ct);
 
-            if (!safetyCheck.Safe)
+            if (!safetyCheck.IsAllowed)
             {
-                return Result<string, string>.Failure($"Safety violation: {string.Join(", ", safetyCheck.Violations)}");
+                return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
             }
 
             // Execute tool
@@ -527,16 +528,21 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
             ouroborosExp.Insights.ToList(),
             null);
 
+        // Convert to Foundation Experience format
         Experience experience = new Experience(
-            ouroborosExp.Id,
-            ouroborosExp.Goal,
-            plan,
-            execution,
-            verification,
+            ouroborosExp.Id.ToString(),
             ouroborosExp.Timestamp,
-            new Dictionary<string, object> { ["source"] = "OuroborosOrchestrator" });
+            Context: ouroborosExp.Goal,
+            Action: System.Text.Json.JsonSerializer.Serialize(plan),
+            Outcome: execution.Success ? "Success" : "Failed",
+            Success: execution.Success,
+            Tags: new List<string> { "ouroboros", "orchestrator" });
 
-        await _memory.StoreExperienceAsync(experience, ct);
+        var result = await _memory.StoreExperienceAsync(experience, ct);
+        if (!result.IsSuccess)
+        {
+            // Log error but don't fail the execution
+        }
     }
 
     /// <summary>
