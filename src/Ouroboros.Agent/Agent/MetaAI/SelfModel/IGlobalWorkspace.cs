@@ -7,67 +7,6 @@
 namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>
-/// Priority level for workspace items.
-/// </summary>
-public enum WorkspacePriority
-{
-    /// <summary>Low priority - background information</summary>
-    Low = 0,
-    
-    /// <summary>Normal priority - standard working memory</summary>
-    Normal = 1,
-    
-    /// <summary>High priority - important information requiring attention</summary>
-    High = 2,
-    
-    /// <summary>Critical priority - urgent information</summary>
-    Critical = 3
-}
-
-/// <summary>
-/// Represents an item in the global workspace.
-/// </summary>
-public sealed record WorkspaceItem(
-    Guid Id,
-    string Content,
-    WorkspacePriority Priority,
-    string Source,
-    DateTime CreatedAt,
-    DateTime ExpiresAt,
-    List<string> Tags,
-    Dictionary<string, object> Metadata)
-{
-    /// <summary>
-    /// Gets the attention weight based on priority, recency, and expiration.
-    /// </summary>
-    public double GetAttentionWeight()
-    {
-        double priorityWeight = (int)Priority / 3.0; // 0.0 to 1.0
-        double recencyWeight = 1.0 - Math.Min(1.0, (DateTime.UtcNow - CreatedAt).TotalHours / 24.0);
-        double urgencyWeight = ExpiresAt < DateTime.UtcNow.AddHours(1) ? 1.0 : 0.0;
-        
-        return (priorityWeight * 0.5) + (recencyWeight * 0.3) + (urgencyWeight * 0.2);
-    }
-}
-
-/// <summary>
-/// Attention policy configuration.
-/// </summary>
-public sealed record AttentionPolicy(
-    int MaxWorkspaceSize,
-    int MaxHighPriorityItems,
-    TimeSpan DefaultItemLifetime,
-    double MinAttentionThreshold);
-
-/// <summary>
-/// Workspace broadcast event.
-/// </summary>
-public sealed record WorkspaceBroadcast(
-    WorkspaceItem Item,
-    string BroadcastReason,
-    DateTime BroadcastTime);
-
-/// <summary>
 /// Interface for global workspace management.
 /// Implements shared working memory with attention-based policies.
 /// </summary>
@@ -141,14 +80,3 @@ public interface IGlobalWorkspace
     /// <returns>Current workspace statistics</returns>
     WorkspaceStatistics GetStatistics();
 }
-
-/// <summary>
-/// Statistics about the global workspace.
-/// </summary>
-public sealed record WorkspaceStatistics(
-    int TotalItems,
-    int HighPriorityItems,
-    int CriticalItems,
-    int ExpiredItems,
-    double AverageAttentionWeight,
-    Dictionary<string, int> ItemsBySource);

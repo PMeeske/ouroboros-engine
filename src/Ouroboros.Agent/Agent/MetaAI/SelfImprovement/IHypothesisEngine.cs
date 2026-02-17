@@ -7,52 +7,6 @@
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Represents a hypothesis about system behavior or domain knowledge.
-/// </summary>
-public sealed record Hypothesis(
-    Guid Id,
-    string Statement,
-    string Domain,
-    double Confidence,
-    List<string> SupportingEvidence,
-    List<string> CounterEvidence,
-    DateTime CreatedAt,
-    bool Tested,
-    bool? Validated);
-
-/// <summary>
-/// Represents an experiment designed to test a hypothesis.
-/// </summary>
-public sealed record Experiment(
-    Guid Id,
-    Hypothesis Hypothesis,
-    string Description,
-    List<PlanStep> Steps,
-    Dictionary<string, object> ExpectedOutcomes,
-    DateTime DesignedAt);
-
-/// <summary>
-/// Result of hypothesis testing.
-/// </summary>
-public sealed record HypothesisTestResult(
-    Hypothesis Hypothesis,
-    Experiment Experiment,
-    PlanExecutionResult Execution,
-    bool HypothesisSupported,
-    double ConfidenceAdjustment,
-    string Explanation,
-    DateTime TestedAt);
-
-/// <summary>
-/// Configuration for hypothesis generation and testing.
-/// </summary>
-public sealed record HypothesisEngineConfig(
-    double MinConfidenceForTesting = 0.3,
-    int MaxHypothesesPerDomain = 10,
-    bool EnableAbductiveReasoning = true,
-    bool AutoGenerateCounterExamples = true);
-
-/// <summary>
 /// Interface for hypothesis generation and scientific reasoning.
 /// Enables the agent to form and test hypotheses about its environment.
 /// </summary>

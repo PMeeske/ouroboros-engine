@@ -12,29 +12,6 @@ using Ouroboros.Abstractions;
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Memory type classification.
-/// </summary>
-public enum MemoryType
-{
-    /// <summary>Specific execution instances (recent experiences)</summary>
-    Episodic,
-
-    /// <summary>Generalized knowledge and patterns (consolidated)</summary>
-    Semantic
-}
-
-/// <summary>
-/// Configuration for persistent memory behavior.
-/// </summary>
-public sealed record PersistentMemoryConfig(
-    int ShortTermCapacity = 100,
-    int LongTermCapacity = 1000,
-    double ConsolidationThreshold = 0.7,
-    TimeSpan ConsolidationInterval = default,
-    bool EnableForgetting = true,
-    double ForgettingThreshold = 0.3);
-
-/// <summary>
 /// Enhanced memory store with persistence, consolidation, and intelligent forgetting.
 /// Implements short-term → long-term memory transfer and episodic/semantic separation.
 /// </summary>

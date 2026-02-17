@@ -7,55 +7,6 @@
 namespace Ouroboros.Agent.MetaAI.Affect;
 
 /// <summary>
-/// Represents a task with priority modulation.
-/// </summary>
-public sealed record PrioritizedTask(
-    Guid Id,
-    string Name,
-    string Description,
-    double BasePriority,
-    double ModulatedPriority,
-    TaskAppraisal Appraisal,
-    DateTime CreatedAt,
-    DateTime? DueAt,
-    TaskStatus Status,
-    Dictionary<string, object> Metadata);
-
-/// <summary>
-/// Result of threat/opportunity appraisal.
-/// </summary>
-public sealed record TaskAppraisal(
-    double ThreatLevel,
-    double OpportunityScore,
-    double UrgencyFactor,
-    double RelevanceScore,
-    string Rationale);
-
-/// <summary>
-/// Task status.
-/// </summary>
-public enum TaskStatus
-{
-    /// <summary>Task is pending execution</summary>
-    Pending,
-    
-    /// <summary>Task is currently executing</summary>
-    InProgress,
-    
-    /// <summary>Task completed successfully</summary>
-    Completed,
-    
-    /// <summary>Task failed</summary>
-    Failed,
-    
-    /// <summary>Task was cancelled</summary>
-    Cancelled,
-    
-    /// <summary>Task is blocked by another task</summary>
-    Blocked
-}
-
-/// <summary>
 /// Interface for affect-driven priority modulation.
 /// Adjusts task priorities based on affective state and threat/opportunity appraisal.
 /// </summary>
@@ -137,17 +88,3 @@ public interface IPriorityModulator
     /// </summary>
     void PrioritizeByOpportunity();
 }
-
-/// <summary>
-/// Queue statistics.
-/// </summary>
-public sealed record QueueStatistics(
-    int TotalTasks,
-    int PendingTasks,
-    int InProgressTasks,
-    int CompletedTasks,
-    int FailedTasks,
-    double AverageBasePriority,
-    double AverageModulatedPriority,
-    double HighestThreat,
-    double HighestOpportunity);

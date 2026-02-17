@@ -17,21 +17,3 @@ public sealed record SymbolicRule(
     List<string> Effects,
     double Confidence,
     RuleSource Source);
-
-/// <summary>
-/// Source of a symbolic rule.
-/// </summary>
-public enum RuleSource
-{
-    /// <summary>Rule extracted from a learned skill.</summary>
-    ExtractedFromSkill,
-
-    /// <summary>Rule learned from experience.</summary>
-    LearnedFromExperience,
-
-    /// <summary>Rule provided by user.</summary>
-    UserProvided,
-
-    /// <summary>Rule inferred from hypothesis.</summary>
-    InferredFromHypothesis
-}

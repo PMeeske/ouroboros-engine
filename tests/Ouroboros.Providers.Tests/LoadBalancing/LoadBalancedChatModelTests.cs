@@ -3,8 +3,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
-using Ouroboros.Abstractions.Core;
-
 namespace Ouroboros.Tests.Providers.LoadBalancing;
 
 /// <summary>
@@ -191,42 +189,5 @@ public sealed class LoadBalancedChatModelTests
         var health = model.GetHealthStatus();
         health["rate-limited"].IsInCooldown.Should().BeTrue();
         health["healthy"].IsHealthy.Should().BeTrue();
-    }
-}
-
-/// <summary>
-/// Mock chat model that simulates rate limiting (429 error).
-/// </summary>
-internal sealed class RateLimitedMockChatModel : IChatCompletionModel
-{
-    private readonly string _name;
-
-    public RateLimitedMockChatModel(string name)
-    {
-        _name = name;
-    }
-
-    public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
-    {
-        // Simulate 429 Too Many Requests error
-        throw new HttpRequestException("429 (Too Many Requests)", null, System.Net.HttpStatusCode.TooManyRequests);
-    }
-}
-
-/// <summary>
-/// Mock chat model that always fails with a generic error.
-/// </summary>
-internal sealed class FailingMockChatModel : IChatCompletionModel
-{
-    private readonly string _name;
-
-    public FailingMockChatModel(string name)
-    {
-        _name = name;
-    }
-
-    public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
-    {
-        throw new InvalidOperationException("Provider is unavailable");
     }
 }

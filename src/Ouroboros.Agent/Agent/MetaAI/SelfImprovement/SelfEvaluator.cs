@@ -9,32 +9,6 @@ using System.Collections.Concurrent;
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Configuration for self-evaluator behavior.
-/// </summary>
-public sealed record SelfEvaluatorConfig(
-    int CalibrationSampleSize = 100,
-    double MinConfidenceForPrediction = 0.3,
-    int InsightGenerationBatchSize = 20,
-    TimeSpan PerformanceAnalysisWindow = default)
-{
-    public SelfEvaluatorConfig() : this(
-        100,
-        0.3,
-        20,
-        TimeSpan.FromDays(7))
-    {
-    }
-}
-
-/// <summary>
-/// Represents a recorded prediction for calibration tracking.
-/// </summary>
-internal sealed record CalibrationRecord(
-    double PredictedConfidence,
-    bool ActualSuccess,
-    DateTime RecordedAt);
-
-/// <summary>
 /// Implementation of self-evaluator for metacognitive monitoring.
 /// Tracks performance, identifies patterns, and suggests improvements.
 /// </summary>

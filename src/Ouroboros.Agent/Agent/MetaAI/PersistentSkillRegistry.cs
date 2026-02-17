@@ -13,30 +13,6 @@ using Ouroboros.Abstractions;
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Configuration for persistent skill storage.
-/// </summary>
-public sealed record PersistentSkillConfig(
-    string StoragePath = "skills.json",
-    bool UseVectorStore = true,
-    string CollectionName = "ouroboros_skills",
-    bool AutoSave = true);
-
-/// <summary>
-/// Serializable skill format for JSON persistence.
-/// </summary>
-internal sealed record SerializableSkill(
-    string Id,
-    string Name,
-    string Description,
-    string Category,
-    List<string> Preconditions,
-    List<string> Effects,
-    double SuccessRate,
-    int UsageCount,
-    long AverageExecutionTime,
-    List<string> Tags);
-
-/// <summary>
 /// Persistent implementation of skill registry that saves skills to disk and optionally to a vector store.
 /// Enables skill persistence across application restarts and semantic skill search via embeddings.
 /// </summary>
@@ -689,15 +665,3 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
         return words;
     }
 }
-
-/// <summary>
-/// Statistics about the skill registry.
-/// </summary>
-public sealed record SkillRegistryStats(
-    int TotalSkills,
-    double AverageSuccessRate,
-    int TotalExecutions,
-    string? MostUsedSkill,
-    string? MostSuccessfulSkill,
-    string StoragePath,
-    bool IsPersisted);

@@ -20,15 +20,6 @@ using Match = Qdrant.Client.Grpc.Match;
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Configuration for Qdrant skill storage.
-/// </summary>
-public sealed record QdrantSkillConfig(
-    string ConnectionString = "http://localhost:6334",
-    string CollectionName = "ouroboros_skills",
-    bool AutoSave = true,
-    int VectorSize = 1536);
-
-/// <summary>
 /// Qdrant-backed implementation of skill registry.
 /// Stores skills directly in Qdrant for persistence and semantic search.
 /// </summary>
@@ -720,31 +711,3 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
         return words;
     }
 }
-
-/// <summary>
-/// Serializable skill data for Qdrant storage.
-/// </summary>
-internal sealed record SerializableSkillData(
-    string Id,
-    string Name,
-    string Description,
-    string Category,
-    List<string> Preconditions,
-    List<string> Effects,
-    double SuccessRate,
-    int UsageCount,
-    long AverageExecutionTime,
-    List<string> Tags);
-
-/// <summary>
-/// Statistics about the Qdrant skill registry.
-/// </summary>
-public sealed record QdrantSkillRegistryStats(
-    int TotalSkills,
-    double AverageSuccessRate,
-    int TotalExecutions,
-    string? MostUsedSkill,
-    string? MostSuccessfulSkill,
-    string ConnectionString,
-    string CollectionName,
-    bool IsConnected);

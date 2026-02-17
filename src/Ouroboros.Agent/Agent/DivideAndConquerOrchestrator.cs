@@ -11,26 +11,6 @@ using System.Text;
 namespace Ouroboros.Agent;
 
 /// <summary>
-/// Configuration for divide-and-conquer execution.
-/// </summary>
-public sealed record DivideAndConquerConfig(
-    int MaxParallelism = 4,
-    int ChunkSize = 500,
-    bool MergeResults = true,
-    string MergeSeparator = "\n\n---\n\n");
-
-/// <summary>
-/// Result of a chunk execution in divide-and-conquer pattern.
-/// </summary>
-public sealed record ChunkResult(
-    int ChunkIndex,
-    string Input,
-    string Output,
-    TimeSpan ExecutionTime,
-    bool Success,
-    string? Error = null);
-
-/// <summary>
 /// Orchestrator implementing divide-and-conquer strategy for high-performance parallel execution.
 /// Splits tasks into chunks, processes them in parallel, and merges results into a unified stream.
 /// Optimized for use with lightweight models like TinyLlama.

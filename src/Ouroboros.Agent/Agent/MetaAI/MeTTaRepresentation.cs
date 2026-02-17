@@ -351,12 +351,3 @@ public sealed class MeTTaRepresentation
         return text.Replace("\"", "\\\"").Replace("\n", "\\n");
     }
 }
-
-/// <summary>
-/// Represents a candidate next node in the execution graph.
-/// </summary>
-public sealed record NextNodeCandidate(
-    string NodeId,
-    string Action,
-    double Confidence
-);

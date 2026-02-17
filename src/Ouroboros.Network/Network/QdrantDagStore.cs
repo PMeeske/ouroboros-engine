@@ -9,21 +9,6 @@ using Match = Qdrant.Client.Grpc.Match;
 namespace Ouroboros.Network;
 
 /// <summary>
-/// Configuration for Qdrant DAG storage.
-/// </summary>
-/// <param name="Endpoint">Qdrant server endpoint (e.g., "http://localhost:6334").</param>
-/// <param name="NodesCollection">Collection name for MonadNodes.</param>
-/// <param name="EdgesCollection">Collection name for TransitionEdges.</param>
-/// <param name="VectorSize">Embedding vector dimension (default 1536 for OpenAI).</param>
-/// <param name="UseHttps">Whether to use HTTPS connection.</param>
-public sealed record QdrantDagConfig(
-    string Endpoint = "http://localhost:6334",
-    string NodesCollection = "ouroboros_dag_nodes",
-    string EdgesCollection = "ouroboros_dag_edges",
-    int VectorSize = 1536,
-    bool UseHttps = false);
-
-/// <summary>
 /// Persists MerkleDag nodes and transitions to Qdrant for durable storage and semantic search.
 /// Enables loading DAG history across sessions and searching nodes by semantic similarity.
 /// </summary>
@@ -641,18 +626,3 @@ public sealed class QdrantDagStore : IAsyncDisposable
         return result;
     }
 }
-
-/// <summary>
-/// Result of saving a DAG to Qdrant.
-/// </summary>
-/// <param name="NodesSaved">Number of nodes saved.</param>
-/// <param name="EdgesSaved">Number of edges saved.</param>
-/// <param name="Errors">Any errors encountered.</param>
-public sealed record DagSaveResult(int NodesSaved, int EdgesSaved, IReadOnlyList<string> Errors);
-
-/// <summary>
-/// A node with its semantic search score.
-/// </summary>
-/// <param name="Node">The matching node.</param>
-/// <param name="Score">Similarity score (0-1).</param>
-public sealed record ScoredNode(MonadNode Node, float Score);

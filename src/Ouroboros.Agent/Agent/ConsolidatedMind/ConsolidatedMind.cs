@@ -10,62 +10,6 @@ using Ouroboros.Agent.NeuralSymbolic;
 namespace Ouroboros.Agent.ConsolidatedMind;
 
 /// <summary>
-/// Result of a ConsolidatedMind execution.
-/// </summary>
-/// <param name="Response">The generated response.</param>
-/// <param name="ThinkingContent">Optional thinking/reasoning content if available.</param>
-/// <param name="UsedRoles">Roles that contributed to this response.</param>
-/// <param name="ExecutionTimeMs">Total execution time in milliseconds.</param>
-/// <param name="WasVerified">Whether the response was verified.</param>
-/// <param name="Confidence">Overall confidence in the response.</param>
-public sealed record MindResponse(
-    string Response,
-    string? ThinkingContent,
-    SpecializedRole[] UsedRoles,
-    double ExecutionTimeMs,
-    bool WasVerified,
-    double Confidence);
-
-/// <summary>
-/// Configuration for the ConsolidatedMind.
-/// </summary>
-/// <param name="EnableThinking">Whether to use thinking mode when appropriate.</param>
-/// <param name="EnableVerification">Whether to verify complex responses.</param>
-/// <param name="EnableParallelExecution">Whether to run sub-models in parallel when possible.</param>
-/// <param name="MaxParallelism">Maximum parallel model executions.</param>
-/// <param name="DefaultTimeout">Default timeout for model calls.</param>
-/// <param name="FallbackOnError">Whether to fallback to alternative models on error.</param>
-public sealed record MindConfig(
-    bool EnableThinking = true,
-    bool EnableVerification = true,
-    bool EnableParallelExecution = true,
-    int MaxParallelism = 3,
-    TimeSpan? DefaultTimeout = null,
-    bool FallbackOnError = true)
-{
-    /// <summary>
-    /// Creates a minimal configuration for resource-constrained environments.
-    /// </summary>
-    public static MindConfig Minimal() => new(
-        EnableThinking: false,
-        EnableVerification: false,
-        EnableParallelExecution: false,
-        MaxParallelism: 1,
-        FallbackOnError: true);
-
-    /// <summary>
-    /// Creates a high-quality configuration for production use.
-    /// </summary>
-    public static MindConfig HighQuality() => new(
-        EnableThinking: true,
-        EnableVerification: true,
-        EnableParallelExecution: true,
-        MaxParallelism: 4,
-        DefaultTimeout: TimeSpan.FromMinutes(5),
-        FallbackOnError: true);
-}
-
-/// <summary>
 /// The ConsolidatedMind is a central orchestrator that coordinates multiple specialized AI models
 /// to handle complex tasks. It analyzes incoming requests, routes them to appropriate specialists,
 /// and synthesizes responses using functional composition patterns.

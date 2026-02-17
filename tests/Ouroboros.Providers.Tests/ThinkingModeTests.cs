@@ -5,7 +5,6 @@
 namespace Ouroboros.Tests.Providers;
 
 using FluentAssertions;
-using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
 using Ouroboros.Providers;
 using Ouroboros.Tools;
 using Xunit;
@@ -290,80 +289,5 @@ public class ThinkingModeTests
 }
 
 #region Mock Classes
-
-/// <summary>
-/// Mock chat model for testing.
-/// </summary>
-internal class MockChatModel : IChatCompletionModel
-{
-    private readonly string _response;
-
-    public MockChatModel(string response)
-    {
-        _response = response;
-    }
-
-    public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
-    {
-        return Task.FromResult(_response);
-    }
-}
-
-/// <summary>
-/// Mock chat model that supports thinking mode for testing.
-/// </summary>
-internal class MockThinkingChatModel : IThinkingChatModel
-{
-    private readonly string _thinking;
-    private readonly string _content;
-
-    public MockThinkingChatModel(string thinking, string content)
-    {
-        _thinking = thinking;
-        _content = content;
-    }
-
-    public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
-    {
-        var response = new ThinkingResponse(_thinking, _content);
-        return Task.FromResult(response.ToFormattedString());
-    }
-
-    public Task<ThinkingResponse> GenerateWithThinkingAsync(string prompt, CancellationToken ct = default)
-    {
-        return Task.FromResult(new ThinkingResponse(_thinking, _content));
-    }
-}
-
-/// <summary>
-/// Simple math tool for testing thinking mode.
-/// Note: This is intentionally a minimal mock that only handles specific expressions.
-/// </summary>
-internal class SimpleMathToolForThinking : ITool
-{
-    public string Name => "math";
-    public string Description => "Performs basic math operations";
-    public string? JsonSchema => null;
-
-    public Task<Ouroboros.Abstractions.Monads.Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
-    {
-        try
-        {
-            // Simple expression evaluation for testing
-            var result = input.Trim() switch
-            {
-                "10+5" => "15",
-                "2+2" => "4",
-                "1+1" => "2",
-                _ => "unknown"
-            };
-            return Task.FromResult(Ouroboros.Abstractions.Monads.Result<string, string>.Success(result));
-        }
-        catch (Exception ex)
-        {
-            return Task.FromResult(Ouroboros.Abstractions.Monads.Result<string, string>.Failure(ex.Message));
-        }
-    }
-}
 
 #endregion

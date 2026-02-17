@@ -7,68 +7,6 @@
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Types of goals in the hierarchy.
-/// </summary>
-public enum GoalType
-{
-    /// <summary>Primary goal - the main objective</summary>
-    Primary,
-
-    /// <summary>Secondary goal - supporting objective</summary>
-    Secondary,
-
-    /// <summary>Instrumental goal - means to achieve other goals</summary>
-    Instrumental,
-
-    /// <summary>Safety goal - constraint or boundary condition</summary>
-    Safety
-}
-
-/// <summary>
-/// Represents a goal with hierarchical structure.
-/// </summary>
-public sealed record Goal(
-    Guid Id,
-    string Description,
-    GoalType Type,
-    double Priority,
-    Goal? ParentGoal,
-    List<Goal> Subgoals,
-    Dictionary<string, object> Constraints,
-    DateTime CreatedAt,
-    bool IsComplete,
-    string? CompletionReason)
-{
-    /// <summary>
-    /// Creates a new goal with default values.
-    /// </summary>
-    public Goal(string description, GoalType type, double priority)
-        : this(
-            Guid.NewGuid(),
-            description,
-            type,
-            priority,
-            ParentGoal: null,
-            Subgoals: new List<Goal>(),
-            Constraints: new Dictionary<string, object>(),
-            DateTime.UtcNow,
-            IsComplete: false,
-            CompletionReason: null)
-    {
-    }
-}
-
-/// <summary>
-/// Result of goal conflict detection.
-/// </summary>
-public sealed record GoalConflict(
-    Goal Goal1,
-    Goal Goal2,
-    string ConflictType,
-    string Description,
-    List<string> SuggestedResolutions);
-
-/// <summary>
 /// Interface for hierarchical goal management and value alignment.
 /// </summary>
 public interface IGoalHierarchy

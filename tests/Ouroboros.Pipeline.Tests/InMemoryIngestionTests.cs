@@ -1,57 +1,6 @@
 namespace Ouroboros.Tests.Pipeline;
 
 /// <summary>
-/// Mock document loader for testing purposes.
-/// </summary>
-public class MockDocumentLoader : IDocumentLoader
-{
-    private readonly List<Document> _documents;
-
-    public MockDocumentLoader() : this(new List<Document>())
-    {
-    }
-
-    public MockDocumentLoader(List<Document> documents)
-    {
-        _documents = documents;
-    }
-
-    public Task<IReadOnlyCollection<Document>> LoadAsync(
-        DataSource source,
-        DocumentLoaderSettings? settings = null,
-        CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult<IReadOnlyCollection<Document>>(_documents);
-    }
-}
-
-/// <summary>
-/// Mock document loader that returns a single document with predefined content.
-/// </summary>
-public class SingleDocumentLoader : IDocumentLoader
-{
-    public Task<IReadOnlyCollection<Document>> LoadAsync(
-        DataSource source,
-        DocumentLoaderSettings? settings = null,
-        CancellationToken cancellationToken = default)
-    {
-        // Return a moderately long document that will be split into multiple chunks
-        var longContent = string.Join(" ", Enumerable.Range(0, 100).Select(i => $"Word{i}"));
-        var doc = new Document
-        {
-            PageContent = longContent,
-            Metadata = new Dictionary<string, object>
-            {
-                ["path"] = "test.txt",
-                ["name"] = "test.txt"
-            }
-        };
-
-        return Task.FromResult<IReadOnlyCollection<Document>>(new[] { doc });
-    }
-}
-
-/// <summary>
 /// Tests for InMemoryIngestion covering document loading, chunking, embedding, and error handling.
 /// </summary>
 [Trait("Category", "Unit")]

@@ -7,26 +7,6 @@
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Represents a novel exploration opportunity.
-/// </summary>
-public sealed record ExplorationOpportunity(
-    string Description,
-    double NoveltyScore,
-    double InformationGainEstimate,
-    List<string> Prerequisites,
-    DateTime IdentifiedAt);
-
-/// <summary>
-/// Configuration for curiosity-driven behavior.
-/// </summary>
-public sealed record CuriosityEngineConfig(
-    double ExplorationThreshold = 0.6,
-    double ExploitationBias = 0.7,
-    int MaxExplorationPerSession = 5,
-    bool EnableSafeExploration = true,
-    double MinSafetyScore = 0.8);
-
-/// <summary>
 /// Interface for curiosity-driven exploration capabilities.
 /// Enables autonomous learning through intrinsic motivation.
 /// </summary>

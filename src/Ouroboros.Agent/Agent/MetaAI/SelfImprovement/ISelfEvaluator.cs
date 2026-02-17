@@ -7,40 +7,6 @@
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Represents a self-assessment of agent performance.
-/// </summary>
-public sealed record SelfAssessment(
-    double OverallPerformance,
-    double ConfidenceCalibration,
-    double SkillAcquisitionRate,
-    Dictionary<string, double> CapabilityScores,
-    List<string> Strengths,
-    List<string> Weaknesses,
-    DateTime AssessmentTime,
-    string Summary);
-
-/// <summary>
-/// Represents an insight gained from self-reflection.
-/// </summary>
-public sealed record Insight(
-    string Category,
-    string Description,
-    double Confidence,
-    List<string> SupportingEvidence,
-    DateTime DiscoveredAt);
-
-/// <summary>
-/// Represents a plan for self-improvement.
-/// </summary>
-public sealed record ImprovementPlan(
-    string Goal,
-    List<string> Actions,
-    Dictionary<string, double> ExpectedImprovements,
-    TimeSpan EstimatedDuration,
-    double Priority,
-    DateTime CreatedAt);
-
-/// <summary>
 /// Interface for agent self-evaluation and metacognition.
 /// Enables autonomous performance assessment and improvement planning.
 /// </summary>

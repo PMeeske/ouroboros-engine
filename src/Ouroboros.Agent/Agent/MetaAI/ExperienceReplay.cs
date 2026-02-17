@@ -6,59 +6,6 @@
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Represents a training batch from experience replay.
-/// </summary>
-public sealed record TrainingBatch(
-    List<Experience> Experiences,
-    Dictionary<string, double> Metrics,
-    DateTime CreatedAt);
-
-/// <summary>
-/// Represents training result from experience replay.
-/// </summary>
-public sealed record TrainingResult(
-    int ExperiencesProcessed,
-    Dictionary<string, double> ImprovedMetrics,
-    List<string> LearnedPatterns,
-    bool Success);
-
-/// <summary>
-/// Configuration for experience replay.
-/// </summary>
-public sealed record ExperienceReplayConfig(
-    int BatchSize = 10,
-    double MinQualityScore = 0.6,
-    int MaxExperiences = 100,
-    bool PrioritizeHighQuality = true);
-
-/// <summary>
-/// Interface for experience replay capabilities.
-/// </summary>
-public interface IExperienceReplay
-{
-    /// <summary>
-    /// Trains the orchestrator on stored experiences.
-    /// </summary>
-    Task<Result<TrainingResult, string>> TrainOnExperiencesAsync(
-        ExperienceReplayConfig? config = null,
-        CancellationToken ct = default);
-
-    /// <summary>
-    /// Analyzes experiences to extract patterns.
-    /// </summary>
-    Task<List<string>> AnalyzeExperiencePatternsAsync(
-        List<Experience> experiences,
-        CancellationToken ct = default);
-
-    /// <summary>
-    /// Selects experiences for training based on priority.
-    /// </summary>
-    Task<List<Experience>> SelectTrainingExperiencesAsync(
-        ExperienceReplayConfig config,
-        CancellationToken ct = default);
-}
-
-/// <summary>
 /// Implementation of experience replay for continual learning.
 /// </summary>
 public sealed class ExperienceReplay : IExperienceReplay

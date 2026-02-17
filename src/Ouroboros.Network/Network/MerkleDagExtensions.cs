@@ -229,33 +229,3 @@ public static class MerkleDagExtensions
         return sb.ToString();
     }
 }
-
-/// <summary>
-/// Internal serialization data for MerkleDag.
-/// </summary>
-internal sealed record DagSerializationData(NodeData[] Nodes, EdgeData[] Edges);
-
-/// <summary>
-/// Internal serialization data for MonadNode.
-/// </summary>
-internal sealed record NodeData(
-    Guid Id,
-    string TypeName,
-    string PayloadJson,
-    DateTimeOffset CreatedAt,
-    Guid[] ParentIds,
-    string Hash);
-
-/// <summary>
-/// Internal serialization data for TransitionEdge.
-/// </summary>
-internal sealed record EdgeData(
-    Guid Id,
-    Guid[] InputIds,
-    Guid OutputId,
-    string OperationName,
-    string OperationSpecJson,
-    DateTimeOffset CreatedAt,
-    double? Confidence,
-    long? DurationMs,
-    string Hash);

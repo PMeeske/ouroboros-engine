@@ -9,17 +9,6 @@ using Ouroboros.Pipeline.Extraction;
 using Ouroboros.Tools.MeTTa;
 
 /// <summary>
-/// Result of symbolic ingestion containing both vector and symbolic representations.
-/// </summary>
-/// <param name="DocumentId">The document identifier.</param>
-/// <param name="VectorIds">The IDs of vectors stored in the vector store.</param>
-/// <param name="Triples">The semantic triples stored in the AtomSpace.</param>
-public sealed record SymbolicIngestionResult(
-    string DocumentId,
-    IReadOnlyList<string> VectorIds,
-    IReadOnlyList<SemanticTriple> Triples);
-
-/// <summary>
 /// Pipeline step that ingests documents into both vector store and MeTTa AtomSpace.
 /// Combines semantic embeddings with symbolic triple extraction for hybrid retrieval.
 /// </summary>

@@ -6,40 +6,6 @@
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
-/// Evaluation metrics for a single test case.
-/// </summary>
-public sealed record EvaluationMetrics(
-    string TestCase,
-    bool Success,
-    double QualityScore,
-    TimeSpan ExecutionTime,
-    int PlanSteps,
-    double ConfidenceScore,
-    Dictionary<string, double> CustomMetrics);
-
-/// <summary>
-/// Aggregated evaluation results.
-/// </summary>
-public sealed record EvaluationResults(
-    int TotalTests,
-    int SuccessfulTests,
-    int FailedTests,
-    double AverageQualityScore,
-    double AverageConfidence,
-    TimeSpan AverageExecutionTime,
-    List<EvaluationMetrics> TestResults,
-    Dictionary<string, double> AggregatedMetrics);
-
-/// <summary>
-/// A test case for evaluation.
-/// </summary>
-public sealed record TestCase(
-    string Name,
-    string Goal,
-    Dictionary<string, object>? Context,
-    Func<PlanVerificationResult, bool>? CustomValidator);
-
-/// <summary>
 /// Evaluation harness for measuring Meta-AI orchestrator performance.
 /// Provides benchmarking and quality assessment capabilities.
 /// </summary>
