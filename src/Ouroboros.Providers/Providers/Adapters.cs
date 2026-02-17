@@ -423,6 +423,10 @@ public sealed class HttpOpenAiCompatibleChatModel : Ouroboros.Abstractions.Core.
 /// </summary>
 public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwareChatModel
 {
+    // Global concurrency limiter: prevents thundering herd when multiple model slots
+    // (coder, reasoner, summarizer) all target the same cloud endpoint simultaneously.
+    private static readonly SemaphoreSlim s_cloudConcurrency = new(2, 2);
+
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly ChatRuntimeSettings _settings;
@@ -502,6 +506,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
         _costTracker?.StartRequest();
+        await s_cloudConcurrency.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             // Use Ollama's native /api/generate endpoint and JSON format
@@ -558,6 +563,10 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             // Log other errors for debugging (but not BrokenCircuitException)
             Console.WriteLine($"[OllamaCloudChatModel] Error: {ex.GetType().Name}: {ex.Message}");
         }
+        finally
+        {
+            s_cloudConcurrency.Release();
+        }
         return $"[ollama-cloud-fallback:{_model}] {prompt}";
     }
 
@@ -573,6 +582,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
     {
         return Observable.Create<(bool IsThinking, string Chunk)>(async (observer, token) =>
         {
+            await s_cloudConcurrency.WaitAsync(token).ConfigureAwait(false);
             try
             {
                 using JsonContent payload = JsonContent.Create(new
@@ -676,6 +686,10 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             {
                 observer.OnError(ex);
             }
+            finally
+            {
+                s_cloudConcurrency.Release();
+            }
         });
     }
 
@@ -684,6 +698,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
     {
         return Observable.Create<string>(async (observer, token) =>
         {
+            await s_cloudConcurrency.WaitAsync(token).ConfigureAwait(false);
             try
             {
                 using JsonContent payload = JsonContent.Create(new
@@ -748,6 +763,10 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             catch (Exception ex)
             {
                 observer.OnError(ex);
+            }
+            finally
+            {
+                s_cloudConcurrency.Release();
             }
         });
     }
