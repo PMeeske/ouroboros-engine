@@ -5,7 +5,7 @@ namespace Ouroboros.Tests.Providers.Tapo;
 /// <summary>
 /// Mock TTS model for testing.
 /// </summary>
-file class MockTtsModel : ITtsModel
+internal sealed class MockTtsModel : ITtsModel
 {
     public string ModelName => "MockTTS";
     public bool SupportsStreaming => false;
