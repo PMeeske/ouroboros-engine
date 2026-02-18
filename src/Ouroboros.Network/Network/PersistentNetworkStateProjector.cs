@@ -39,11 +39,54 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
     {
         this.dag = dag ?? throw new ArgumentNullException(nameof(dag));
         this.embeddingFunc = embeddingFunc ?? throw new ArgumentNullException(nameof(embeddingFunc));
-        this.qdrantClient = new QdrantClient(qdrantEndpoint);
+        var normalizedEndpoint = NormalizeEndpoint(qdrantEndpoint, "http://localhost:6334");
+        var endpointUri = new Uri(normalizedEndpoint, UriKind.Absolute);
+        var host = endpointUri.Host;
+        var port = endpointUri.Port > 0 ? endpointUri.Port : 6334;
+        var useHttps = endpointUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
+        this.qdrantClient = new QdrantClient(host, port, useHttps);
         this.snapshots = new List<GlobalNetworkState>();
         this.recentLearnings = new List<Learning>();
         this.currentEpoch = 0;
         this.initialized = false;
+    }
+
+    private static string NormalizeEndpoint(string? rawEndpoint, string fallbackEndpoint)
+    {
+        var endpoint = (rawEndpoint ?? string.Empty).Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            return fallbackEndpoint;
+        }
+
+        var schemeSeparatorCount = endpoint.Split("://", StringSplitOptions.None).Length - 1;
+        if (schemeSeparatorCount > 1)
+        {
+            return fallbackEndpoint;
+        }
+
+        if (!endpoint.Contains("://", StringComparison.Ordinal))
+        {
+            endpoint = $"http://{endpoint}";
+        }
+
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+        {
+            return fallbackEndpoint;
+        }
+
+        if (!uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) &&
+            !uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
+        {
+            return fallbackEndpoint;
+        }
+
+        if (string.IsNullOrWhiteSpace(uri.Host) || uri.Host.Contains("://", StringComparison.Ordinal))
+        {
+            return fallbackEndpoint;
+        }
+
+        return uri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
     }
 
     /// <summary>
