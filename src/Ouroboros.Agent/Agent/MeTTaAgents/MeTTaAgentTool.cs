@@ -160,7 +160,7 @@ public sealed class MeTTaAgentTool : ITool
         if (string.IsNullOrEmpty(provider) || string.IsNullOrEmpty(model))
         {
             // Query MeTTa for the existing definition (escape agentId to prevent injection)
-            string escapedAgentId = EscapeMeTTaString(agentId);
+            string escapedAgentId = MeTTaParsingHelpers.EscapeMeTTaString(agentId);
             var queryResult = await _engine.ExecuteQueryAsync(
                 $"!(match &self (AgentDef \"{escapedAgentId}\" $prov $model $role $prompt $tokens $temp) " +
                 $"(AgentDef \"{escapedAgentId}\" $prov $model $role $prompt $tokens $temp))", ct);
@@ -262,7 +262,7 @@ public sealed class MeTTaAgentTool : ITool
         if (agentIds == null || agentIds.Count == 0)
         {
             // Try to get pipeline from MeTTa (escape prompt to prevent injection)
-            string escapedPrompt = EscapeMeTTaString(prompt);
+            string escapedPrompt = MeTTaParsingHelpers.EscapeMeTTaString(prompt);
             var pipelineResult = await _engine.ExecuteQueryAsync(
                 $"!(code-pipeline \"{escapedPrompt}\")", ct);
 
@@ -359,7 +359,4 @@ public sealed class MeTTaAgentTool : ITool
 
         return defs;
     }
-
-    private static string EscapeMeTTaString(string text)
-        => MeTTaParsingHelpers.EscapeMeTTaString(text);
 }
