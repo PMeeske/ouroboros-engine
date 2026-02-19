@@ -385,7 +385,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
            MeTTaSymbolRegex().IsMatch(symbol);
 
     [GeneratedRegex(
-        @"\(AgentDef\s+""((?:[^""\\]|\\.)+)""\s+(\w+)\s+""((?:[^""\\]|\\.)+)""\s+(\w+)\s+""((?:[^""\\]|\\.)*)""\s+(\d+)\s+([\d.]+)\)",
+        MeTTaParsingHelpers.AgentDefPattern,
         RegexOptions.Compiled)]
     private static partial Regex AgentDefRegex();
 

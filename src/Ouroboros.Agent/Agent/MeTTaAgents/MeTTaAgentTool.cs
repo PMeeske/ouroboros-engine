@@ -159,10 +159,11 @@ public sealed class MeTTaAgentTool : ITool
 
         if (string.IsNullOrEmpty(provider) || string.IsNullOrEmpty(model))
         {
-            // Query MeTTa for the existing definition
+            // Query MeTTa for the existing definition (escape agentId to prevent injection)
+            string escapedAgentId = EscapeMeTTaString(agentId);
             var queryResult = await _engine.ExecuteQueryAsync(
-                $"!(match &self (AgentDef \"{agentId}\" $prov $model $role $prompt $tokens $temp) " +
-                $"(AgentDef \"{agentId}\" $prov $model $role $prompt $tokens $temp))", ct);
+                $"!(match &self (AgentDef \"{escapedAgentId}\" $prov $model $role $prompt $tokens $temp) " +
+                $"(AgentDef \"{escapedAgentId}\" $prov $model $role $prompt $tokens $temp))", ct);
 
             if (queryResult.IsFailure || string.IsNullOrWhiteSpace(queryResult.Value))
             {
@@ -332,10 +333,9 @@ public sealed class MeTTaAgentTool : ITool
         if (string.IsNullOrWhiteSpace(mettaOutput))
             return defs;
 
-        // Match patterns like: (AgentDef "id" Provider "model" Role "prompt" tokens temp)
-        // Pattern handles escaped quotes in strings
-        var pattern = @"\(AgentDef\s+""((?:[^""\\]|\\.)+)""\s+(\w+)\s+""((?:[^""\\]|\\.)+)""\s+(\w+)\s+""((?:[^""\\]|\\.)*)""\s+(\d+)\s+([\d.]+)\)";
-        var matches = System.Text.RegularExpressions.Regex.Matches(mettaOutput, pattern);
+        // Use shared pattern from MeTTaParsingHelpers
+        var matches = System.Text.RegularExpressions.Regex.Matches(
+            mettaOutput, MeTTaParsingHelpers.AgentDefPattern);
 
         foreach (System.Text.RegularExpressions.Match match in matches)
         {
@@ -361,5 +361,5 @@ public sealed class MeTTaAgentTool : ITool
     }
 
     private static string EscapeMeTTaString(string text)
-        => text.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        => MeTTaParsingHelpers.EscapeMeTTaString(text);
 }
