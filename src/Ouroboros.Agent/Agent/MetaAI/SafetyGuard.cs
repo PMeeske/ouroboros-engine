@@ -5,11 +5,16 @@
 // ==========================================================
 
 using System.Collections.Concurrent;
+using Ouroboros.Abstractions;
+using Ouroboros.Core.LawsOfForm;
+using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Implementation of safety guard for permission-based execution.
+/// Combines string-matching safety checks with optional MeTTa symbolic reasoning
+/// for neuro-symbolic safety validation.
 /// </summary>
 public sealed class SafetyGuard : ISafetyGuard
 {
@@ -18,15 +23,24 @@ public sealed class SafetyGuard : ISafetyGuard
     private readonly ConcurrentDictionary<string, PermissionPolicy> _permissionPolicies = new();
     private readonly ConcurrentDictionary<string, PermissionLevel> _agentPermissions = new();
     private readonly PermissionLevel _defaultLevel;
+    private readonly IMeTTaEngine? _mettaEngine;
 
-    public SafetyGuard(PermissionLevel defaultLevel = PermissionLevel.Read)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SafetyGuard"/> class.
+    /// </summary>
+    /// <param name="defaultLevel">The default permission level.</param>
+    /// <param name="mettaEngine">Optional MeTTa engine for symbolic safety reasoning.</param>
+    public SafetyGuard(PermissionLevel defaultLevel = PermissionLevel.Read, IMeTTaEngine? mettaEngine = null)
     {
         _defaultLevel = defaultLevel;
+        _mettaEngine = mettaEngine;
         InitializeDefaultPermissions();
     }
 
     /// <summary>
-    /// Checks if an action is safe to execute.
+    /// Checks if an action is safe to execute using neuro-symbolic safety validation.
+    /// First checks with OuroborosAtom string matching (if available in context),
+    /// then queries MeTTa symbolic reasoning (if engine is available).
     /// </summary>
     public async Task<SafetyCheckResult> CheckActionSafetyAsync(
         string actionName,
@@ -44,6 +58,19 @@ public sealed class SafetyGuard : ISafetyGuard
         List<Permission> requiredPermissions = new() { new Permission(actionName, requiredLevel, permissionReason) };
         List<string> violations = new();
 
+        // Step 1: Check with OuroborosAtom.IsSafeAction() if available in context
+        if (context is OuroborosAtom atom)
+        {
+            if (!atom.IsSafeAction(actionName))
+            {
+                violations.Add("Action rejected by OuroborosAtom safety constraints");
+                return SafetyCheckResult.Denied(
+                    "Action violates Ouroboros safety constraints",
+                    violations,
+                    1.0);
+            }
+        }
+
         // Check for dangerous patterns
         if (ContainsDangerousPatterns(actionName, parameters))
         {
@@ -60,10 +87,50 @@ public sealed class SafetyGuard : ISafetyGuard
         }
 
         double riskScore = await AssessRiskAsync(actionName, parameters, ct);
-        bool isAllowed = violations.Count == 0 && riskScore < RiskThresholdForDenial;
-        string reason = isAllowed ? "Action is safe to execute" : string.Join("; ", violations);
 
-        return new SafetyCheckResult(isAllowed, reason, requiredPermissions, riskScore, violations);
+        // Step 2: Query MeTTa symbolic reasoning if engine is available
+        if (_mettaEngine != null)
+        {
+            Form mettaResult = await QueryMeTTaSafetyAsync(actionName, ct);
+
+            // Map Form results to safety decisions
+            return mettaResult.Match(
+                onMark: () =>
+                {
+                    // Mark (certain affirmative) → safe
+                    bool isAllowed = violations.Count == 0 && riskScore < RiskThresholdForDenial;
+                    string reason = isAllowed
+                        ? "Action approved by symbolic reasoning"
+                        : string.Join("; ", violations);
+                    return new SafetyCheckResult(isAllowed, reason, requiredPermissions, riskScore, violations);
+                },
+                onVoid: () =>
+                {
+                    // Void (certain negative) → unsafe
+                    violations.Add("Action rejected by MeTTa symbolic reasoning");
+                    return SafetyCheckResult.Denied(
+                        "Action violates symbolic safety rules",
+                        violations,
+                        Math.Max(riskScore, 0.9));
+                },
+                onImaginary: () =>
+                {
+                    // Imaginary (uncertain) → requires review
+                    violations.Add("Symbolic reasoning is uncertain about action safety");
+                    return new SafetyCheckResult(
+                        false, // Not allowed without review
+                        "Action requires human review (symbolic uncertainty)",
+                        requiredPermissions,
+                        Math.Max(riskScore, 0.6),
+                        violations);
+                });
+        }
+
+        // Step 3: Fallback to atom-only check if MeTTa is unavailable
+        bool isAllowedFallback = violations.Count == 0 && riskScore < RiskThresholdForDenial;
+        string reasonFallback = isAllowedFallback ? "Action is safe to execute" : string.Join("; ", violations);
+
+        return new SafetyCheckResult(isAllowedFallback, reasonFallback, requiredPermissions, riskScore, violations);
     }
 
     /// <summary>
@@ -369,6 +436,122 @@ public sealed class SafetyGuard : ISafetyGuard
 
         return injectionPatterns.Any(pattern =>
             value.Contains(pattern, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Queries MeTTa symbolic reasoning for action safety.
+    /// </summary>
+    /// <param name="action">The action to check.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Form representing MeTTa's safety assessment (Mark/Void/Imaginary).</returns>
+    private async Task<Form> QueryMeTTaSafetyAsync(string action, CancellationToken ct)
+    {
+        if (_mettaEngine == null)
+        {
+            return Form.Imaginary; // No engine means uncertain
+        }
+
+        try
+        {
+            // Escape the action string for MeTTa query
+            string escapedAction = EscapeMeTTaString(action);
+
+            // Query: (IsSafeAction "action")
+            string query = $"(IsSafeAction \"{escapedAction}\")";
+            Result<string, string> result = await _mettaEngine.ExecuteQueryAsync(query, ct);
+
+            // Map result to Form
+            return result.Match(
+                onSuccess: queryResult =>
+                {
+                    string trimmed = queryResult.Trim();
+
+                    // MeTTa returns atoms like Mark, Void, or empty results
+                    if (trimmed.Contains("Mark", StringComparison.OrdinalIgnoreCase) ||
+                        trimmed.Contains("⌐", StringComparison.OrdinalIgnoreCase)) // '⌐' is the Laws of Form notation for Mark
+                    {
+                        return Form.Mark;
+                    }
+                    else if (trimmed.Contains("Void", StringComparison.OrdinalIgnoreCase) ||
+                             trimmed.Contains("∅", StringComparison.OrdinalIgnoreCase) || // '∅' is the Unicode empty set symbol used by Laws of Form / MeTTa to denote Void
+                             string.IsNullOrWhiteSpace(trimmed))
+                    {
+                        return Form.Void;
+                    }
+                    else
+                    {
+                        // Unknown result → uncertain
+                        return Form.Imaginary;
+                    }
+                },
+                onFailure: _ => Form.Imaginary); // Query failure → uncertain
+        }
+        catch
+        {
+            // Exception during query → uncertain
+            return Form.Imaginary;
+        }
+    }
+
+    /// <summary>
+    /// Adds MeTTa safety rules to the knowledge base.
+    /// Should be called during orchestrator initialization.
+    /// </summary>
+    /// <param name="instanceId">The Ouroboros instance ID for scoping rules.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Result indicating success or failure.</returns>
+    public async Task<Result<Unit, string>> AddMeTTaSafetyRulesAsync(string instanceId, CancellationToken ct = default)
+    {
+        if (_mettaEngine == null)
+        {
+            return Result<Unit, string>.Success(Unit.Value); // No engine, skip silently
+        }
+
+        try
+        {
+            // Escape the instance ID to prevent injection attacks
+            string escapedInstanceId = EscapeMeTTaString(instanceId);
+
+            // Rule: Actions are safe if the instance respects safety constraints
+            // and the action doesn't match destructive patterns
+            string safetyRule = $@"
+(= (IsSafeAction $action)
+   (if (and (Respects (OuroborosInstance ""{escapedInstanceId}"") NoSelfDestruction)
+            (not (MatchesPattern $action ""destructive"")))
+       Mark
+       Void))
+
+(= (MatchesPattern $action ""destructive"")
+   (or (contains $action ""delete self"")
+       (contains $action ""terminate"")
+       (contains $action ""disable oversight"")))";
+
+            Result<string, string> result = await _mettaEngine.ApplyRuleAsync(safetyRule, ct);
+
+            return result.Match(
+                onSuccess: _ => Result<Unit, string>.Success(Unit.Value),
+                onFailure: error => Result<Unit, string>.Failure($"Failed to add MeTTa safety rules: {error}"));
+        }
+        catch (Exception ex)
+        {
+            return Result<Unit, string>.Failure($"Exception adding MeTTa safety rules: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Escapes a string for use in MeTTa queries.
+    /// </summary>
+    private static string EscapeMeTTaString(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        // Escape quotes and backslashes for MeTTa
+        return value
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"");
     }
 
     // Internal helper record for permission policies
