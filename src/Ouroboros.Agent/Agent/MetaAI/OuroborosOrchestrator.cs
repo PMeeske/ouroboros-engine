@@ -294,13 +294,19 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             string verificationText = await _llm.GenerateTextAsync(prompt, ct);
 
             // Parse verification result
-            (bool verified, double qualityScore) = ParsePlanVerificationResult(verificationText);
+            (bool verified, double qualityScore) = await ParsePlanVerificationResult(verificationText, goal, output, ct);
 
             // Use MeTTa for symbolic verification
             string planMetta = $"(plan (goal \"{EscapeMeTTa(goal)}\") (output \"{EscapeMeTTa(output.Substring(0, Math.Min(MeTTaOutputTruncationLength, output.Length)))}\"))";
             Result<bool, string> mettaResult = await _mettaEngine.VerifyPlanAsync(planMetta, ct);
 
-            bool mettaVerified = mettaResult.Match(v => v, _ => true);
+            bool mettaVerified = mettaResult.Match(
+                success: v => v,
+                failure: err =>
+                {
+                    Console.WriteLine($"[VERIFY] MeTTa verification failed: {err}, treating as unverified");
+                    return false;
+                });
 
             sw.Stop();
             RecordPhaseMetric("verify", sw.ElapsedMilliseconds, verified);
@@ -625,7 +631,7 @@ Provide verification in JSON format:
         return steps;
     }
 
-    private (bool Verified, double QualityScore) ParsePlanVerificationResult(string verificationText)
+    private async Task<(bool Verified, double QualityScore)> ParsePlanVerificationResult(string verificationText, string goal, string output, CancellationToken ct)
     {
         try
         {
@@ -634,11 +640,35 @@ Provide verification in JSON format:
             double qualityScore = doc.RootElement.GetProperty("quality_score").GetDouble();
             return (verified, qualityScore);
         }
-        catch
+        catch (Exception ex)
         {
-            // Default to success if parsing fails but output exists
-            return (true, 0.7);
+            // Retry once with a more structured prompt
+            Console.WriteLine($"[VERIFY] Failed to parse verification result, attempting retry with structured prompt: {ex.Message}");
+            
+            try
+            {
+                string retryResponse = await RequestStructuredVerificationAsync(goal, output, ct);
+                using System.Text.Json.JsonDocument retryDoc = System.Text.Json.JsonDocument.Parse(retryResponse);
+                bool verified = retryDoc.RootElement.GetProperty("verified").GetBoolean();
+                double qualityScore = retryDoc.RootElement.GetProperty("quality_score").GetDouble();
+                Console.WriteLine($"[VERIFY] Retry successful: verified={verified}, quality={qualityScore}");
+                return (verified, qualityScore);
+            }
+            catch (Exception retryEx)
+            {
+                // Fail-closed: treat as verification failure
+                Console.WriteLine($"[VERIFY] Failed to parse verification result after retry, treating as failed: {retryEx.Message}");
+                return (false, 0.0);
+            }
         }
+    }
+
+    private async Task<string> RequestStructuredVerificationAsync(string goal, string output, CancellationToken ct)
+    {
+        string prompt = $"Verify if the output achieves the goal. " +
+                        $"Respond ONLY with JSON: {{\"verified\": true/false, \"quality_score\": 0.0-1.0}}\n" +
+                        $"Goal: {goal}\nOutput: {output}";
+        return await _llm.GenerateTextAsync(prompt, ct);
     }
 
     private OuroborosResult CreateResult(string goal, List<PhaseResult> phases, string? output, bool success, TimeSpan duration)
