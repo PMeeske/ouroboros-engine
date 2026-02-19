@@ -11,6 +11,8 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -67,6 +69,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     private readonly OuroborosAtom _atom;
     private readonly ConcurrentDictionary<string, double> _performanceMetrics = new();
     private readonly Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? _strategyEvolver;
+    private readonly ILogger<OuroborosOrchestrator> _logger;
     private readonly ToolSelector _toolSelector;
     private readonly Affect.IValenceMonitor? _valenceMonitor;
     private readonly Affect.IPriorityModulator? _priorityModulator;
@@ -84,6 +87,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     /// <param name="atom">Optional pre-configured OuroborosAtom.</param>
     /// <param name="configuration">Optional orchestrator configuration.</param>
     /// <param name="strategyEvolver">Optional genetic algorithm for evolving planning strategies.</param>
+    /// <param name="logger">Optional logger for structured logging.</param>
     /// <param name="valenceMonitor">Optional valence monitor for affective state tracking.</param>
     /// <param name="priorityModulator">Optional priority modulator for affect-driven task ordering.</param>
     /// <param name="urgeSystem">Optional urge system for Psi-theory drive management.</param>
@@ -97,6 +101,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         OuroborosAtom? atom = null,
         OrchestratorConfig? configuration = null,
         Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? strategyEvolver = null,
+        ILogger<OuroborosOrchestrator>? logger = null)
         Affect.IValenceMonitor? valenceMonitor = null,
         Affect.IPriorityModulator? priorityModulator = null,
         Affect.IUrgeSystem? urgeSystem = null,
@@ -110,6 +115,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         _mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
         _atom = atom ?? OuroborosAtom.CreateDefault();
         _strategyEvolver = strategyEvolver;
+        _logger = logger ?? NullLogger<OuroborosOrchestrator>.Instance;
         _toolSelector = new ToolSelector(_tools.All.ToList(), _llm);
         _valenceMonitor = valenceMonitor;
         _priorityModulator = priorityModulator;
@@ -401,7 +407,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             string verificationText = await _llm.GenerateTextAsync(prompt, ct);
 
             // Parse verification result
-            (bool verified, double qualityScore) = ParsePlanVerificationResult(verificationText);
+            (bool verified, double qualityScore) = await ParsePlanVerificationResult(verificationText, goal, output, ct);
 
             // Apply quality threshold based on evolved strictness
             bool meetsQualityThreshold = qualityScore >= qualityThreshold;
@@ -410,7 +416,13 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             string planMetta = $"(plan (goal \"{EscapeMeTTa(goal)}\") (output \"{EscapeMeTTa(output.Substring(0, Math.Min(MeTTaOutputTruncationLength, output.Length)))}\"))";
             Result<bool, string> mettaResult = await _mettaEngine.VerifyPlanAsync(planMetta, ct);
 
-            bool mettaVerified = mettaResult.Match(v => v, _ => true);
+            bool mettaVerified = mettaResult.Match(
+                v => v,
+                err =>
+                {
+                    _logger.LogWarning("[VERIFY] MeTTa verification failed: {Error}. Treating as unverified.", err);
+                    return false;
+                });
 
             // Overall success requires: LLM verification, quality threshold, and MeTTa verification
             bool overallSuccess = verified && meetsQualityThreshold && mettaVerified;
@@ -895,7 +907,7 @@ Provide verification in JSON format:
         return steps;
     }
 
-    private (bool Verified, double QualityScore) ParsePlanVerificationResult(string verificationText)
+    private async Task<(bool Verified, double QualityScore)> ParsePlanVerificationResult(string verificationText, string goal, string output, CancellationToken ct)
     {
         try
         {
@@ -904,11 +916,86 @@ Provide verification in JSON format:
             double qualityScore = doc.RootElement.GetProperty("quality_score").GetDouble();
             return (verified, qualityScore);
         }
-        catch
+        catch (System.Text.Json.JsonException jsonEx)
         {
-            // Default to success if parsing fails but output exists
-            return (true, 0.7);
+            // Retry once with a more structured prompt
+            _logger.LogWarning(
+                jsonEx,
+                "[VERIFY] Failed to parse verification result (JSON error), attempting retry with structured prompt. ExceptionMessage: {ExceptionMessage}",
+                jsonEx.Message);
+            return await RetryVerificationParsingAsync(goal, output, ct);
         }
+        catch (KeyNotFoundException keyEx)
+        {
+            // Missing required property (verified or quality_score)
+            _logger.LogWarning(
+                keyEx,
+                "[VERIFY] Missing required property in verification result. ExceptionMessage: {ExceptionMessage}",
+                keyEx.Message);
+            return await RetryVerificationParsingAsync(goal, output, ct);
+        }
+        catch (InvalidOperationException invalidOpEx)
+        {
+            // Property exists but has wrong type
+            _logger.LogWarning(
+                invalidOpEx,
+                "[VERIFY] Invalid property type in verification result. ExceptionMessage: {ExceptionMessage}",
+                invalidOpEx.Message);
+            return await RetryVerificationParsingAsync(goal, output, ct);
+        }
+    }
+
+    private async Task<(bool Verified, double QualityScore)> RetryVerificationParsingAsync(string goal, string output, CancellationToken ct)
+    {
+        try
+        {
+            string retryResponse = await RequestStructuredVerificationAsync(goal, output, ct);
+            using System.Text.Json.JsonDocument retryDoc = System.Text.Json.JsonDocument.Parse(retryResponse);
+            bool verified = retryDoc.RootElement.GetProperty("verified").GetBoolean();
+            double qualityScore = retryDoc.RootElement.GetProperty("quality_score").GetDouble();
+            _logger.LogInformation("[VERIFY] Retry successful: verified={Verified}, quality={QualityScore}", verified, qualityScore);
+            return (verified, qualityScore);
+        }
+        catch (System.Text.Json.JsonException retryJsonEx)
+        {
+            // Fail-closed: treat as verification failure
+            _logger.LogWarning(
+                retryJsonEx,
+                "[VERIFY] Failed to parse verification result after retry (JSON error), treating as failed. ExceptionMessage: {ExceptionMessage}",
+                retryJsonEx.Message);
+            return (false, 0.0);
+        }
+        catch (KeyNotFoundException retryKeyEx)
+        {
+            // Missing required property on retry
+            _logger.LogWarning(
+                retryKeyEx,
+                "[VERIFY] Missing required property after retry, treating as failed. ExceptionMessage: {ExceptionMessage}",
+                retryKeyEx.Message);
+            return (false, 0.0);
+        }
+        catch (InvalidOperationException retryInvalidOpEx)
+        {
+            // Invalid property type on retry
+            _logger.LogWarning(
+                retryInvalidOpEx,
+                "[VERIFY] Invalid property type after retry, treating as failed. ExceptionMessage: {ExceptionMessage}",
+                retryInvalidOpEx.Message);
+            return (false, 0.0);
+        }
+    }
+
+    private async Task<string> RequestStructuredVerificationAsync(string goal, string output, CancellationToken ct)
+    {
+        // Truncate goal and output to prevent excessively long prompts
+        const int maxLength = 2000;
+        string truncatedGoal = goal.Length > maxLength ? goal.Substring(0, maxLength) + "..." : goal;
+        string truncatedOutput = output.Length > maxLength ? output.Substring(0, maxLength) + "..." : output;
+        
+        string prompt = $"Verify if the output achieves the goal. " +
+                        $"Respond ONLY with JSON: {{\"verified\": true/false, \"quality_score\": 0.0-1.0}}\n" +
+                        $"Goal: {truncatedGoal}\nOutput: {truncatedOutput}";
+        return await _llm.GenerateTextAsync(prompt, ct);
     }
 
     private OuroborosResult CreateResult(string goal, List<PhaseResult> phases, string? output, bool success, TimeSpan duration)
