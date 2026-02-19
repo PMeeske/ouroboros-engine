@@ -316,7 +316,9 @@ public sealed class CollectiveMind : IStreamingThinkingChatModel, ICostAwareChat
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
         var response = await GenerateWithThinkingAsync(prompt, ct);
-        return response.HasThinking ? response.ToFormattedString() : response.Content;
+        // Return only the content — election thinking/metadata is already
+        // streamed to the UI via ThoughtStream (SplitConsole upper pane).
+        return response.Content;
     }
 
     /// <inheritdoc/>

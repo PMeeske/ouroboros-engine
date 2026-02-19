@@ -16,7 +16,6 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
 {
     private const string SnapshotCollectionName = "network_state_snapshots";
     private const string LearningsCollectionName = "network_learnings";
-    private const int VectorDimension = 384; // For nomic-embed-text
 
     private readonly MerkleDag dag;
     private readonly QdrantClient qdrantClient;
@@ -25,6 +24,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
     private readonly List<Learning> recentLearnings;
     private long currentEpoch;
     private bool initialized;
+    private int detectedVectorDimension;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PersistentNetworkStateProjector"/> class.
@@ -114,6 +114,10 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         {
             return;
         }
+
+        // Detect embedding dimension from the actual model
+        var probe = await this.embeddingFunc("dimension probe");
+        this.detectedVectorDimension = probe.Length;
 
         await EnsureCollectionsExistAsync(ct);
         await LoadPreviousStateAsync(ct);
@@ -338,27 +342,34 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
     {
         try
         {
-            // Create snapshots collection
-            if (!await this.qdrantClient.CollectionExistsAsync(SnapshotCollectionName, ct))
-            {
-                await this.qdrantClient.CreateCollectionAsync(
-                    SnapshotCollectionName,
-                    new VectorParams { Size = VectorDimension, Distance = Distance.Cosine },
-                    cancellationToken: ct);
-            }
-
-            // Create learnings collection
-            if (!await this.qdrantClient.CollectionExistsAsync(LearningsCollectionName, ct))
-            {
-                await this.qdrantClient.CreateCollectionAsync(
-                    LearningsCollectionName,
-                    new VectorParams { Size = VectorDimension, Distance = Distance.Cosine },
-                    cancellationToken: ct);
-            }
+            await EnsureCollectionWithDimensionAsync(SnapshotCollectionName, ct);
+            await EnsureCollectionWithDimensionAsync(LearningsCollectionName, ct);
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"[WARN] Failed to create Qdrant collections: {ex.Message}");
+        }
+    }
+
+    private async Task EnsureCollectionWithDimensionAsync(string collectionName, CancellationToken ct)
+    {
+        var vectorParams = new VectorParams { Size = (ulong)this.detectedVectorDimension, Distance = Distance.Cosine };
+
+        if (await this.qdrantClient.CollectionExistsAsync(collectionName, ct))
+        {
+            // Check if existing collection dimension matches
+            var info = await this.qdrantClient.GetCollectionInfoAsync(collectionName, ct);
+            var currentDim = info.Config?.Params?.VectorsConfig?.Params?.Size;
+            if (currentDim.HasValue && currentDim.Value != (ulong)this.detectedVectorDimension)
+            {
+                Console.WriteLine($"  [NetworkState] Dimension mismatch in {collectionName} ({currentDim} vs {this.detectedVectorDimension}), recreating...");
+                await this.qdrantClient.DeleteCollectionAsync(collectionName, cancellationToken: ct);
+                await this.qdrantClient.CreateCollectionAsync(collectionName, vectorParams, cancellationToken: ct);
+            }
+        }
+        else
+        {
+            await this.qdrantClient.CreateCollectionAsync(collectionName, vectorParams, cancellationToken: ct);
         }
     }
 
