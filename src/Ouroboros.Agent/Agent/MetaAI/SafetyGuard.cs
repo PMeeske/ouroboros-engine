@@ -468,12 +468,12 @@ public sealed class SafetyGuard : ISafetyGuard
 
                     // MeTTa returns atoms like Mark, Void, or empty results
                     if (trimmed.Contains("Mark", StringComparison.OrdinalIgnoreCase) ||
-                        trimmed.Contains("⌐", StringComparison.OrdinalIgnoreCase))
+                        trimmed.Contains("⌐", StringComparison.OrdinalIgnoreCase)) // '⌐' is the Laws of Form notation for Mark
                     {
                         return Form.Mark;
                     }
                     else if (trimmed.Contains("Void", StringComparison.OrdinalIgnoreCase) ||
-                             trimmed.Contains("∅", StringComparison.OrdinalIgnoreCase) ||
+                             trimmed.Contains("∅", StringComparison.OrdinalIgnoreCase) || // '∅' is the Unicode empty set symbol used by Laws of Form / MeTTa to denote Void
                              string.IsNullOrWhiteSpace(trimmed))
                     {
                         return Form.Void;
@@ -514,9 +514,9 @@ public sealed class SafetyGuard : ISafetyGuard
 
             // Rule: Actions are safe if the instance respects safety constraints
             // and the action doesn't match destructive patterns
-            string safetyRule = @"
+            string safetyRule = $@"
 (= (IsSafeAction $action)
-   (if (and (Respects (OuroborosInstance """ + escapedInstanceId + @""") NoSelfDestruction)
+   (if (and (Respects (OuroborosInstance ""{escapedInstanceId}"") NoSelfDestruction)
             (not (MatchesPattern $action ""destructive"")))
        Mark
        Void))

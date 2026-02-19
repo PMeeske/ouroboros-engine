@@ -284,7 +284,7 @@ public class SafetyGuardNeuroSymbolicTests
     /// </summary>
     private class MockMeTTaEngineCapturingRules : IMeTTaEngine
     {
-        public List<string> AppliedRules { get; } = [];
+        public List<string> AppliedRules { get; } = new List<string>();
 
         public Task<Result<string, string>> ExecuteQueryAsync(string query, CancellationToken ct = default)
             => Task.FromResult(Result<string, string>.Success("Mark"));
