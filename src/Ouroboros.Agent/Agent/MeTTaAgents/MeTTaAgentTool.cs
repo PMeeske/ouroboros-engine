@@ -153,17 +153,40 @@ public sealed class MeTTaAgentTool : ITool
                 : Result<string, string>.Failure(result.Error);
         }
 
-        // Need to look up the agent definition from MeTTa or require full params
+        // Try to get existing AgentDef from MeTTa first
         string? provider = GetOptionalString(root, "provider");
         string? model = GetOptionalString(root, "model");
-        string? role = GetOptionalString(root, "role");
 
         if (string.IsNullOrEmpty(provider) || string.IsNullOrEmpty(model))
         {
-            return Result<string, string>.Failure(
-                "Spawn with agent_id requires: provider, model (or omit agent_id to spawn all)");
+            // Query MeTTa for the existing definition (escape agentId to prevent injection)
+            string escapedAgentId = MeTTaParsingHelpers.EscapeMeTTaString(agentId);
+            var queryResult = await _engine.ExecuteQueryAsync(
+                $"!(match &self (AgentDef \"{escapedAgentId}\" $prov $model $role $prompt $tokens $temp) " +
+                $"(AgentDef \"{escapedAgentId}\" $prov $model $role $prompt $tokens $temp))", ct);
+
+            if (queryResult.IsFailure || string.IsNullOrWhiteSpace(queryResult.Value))
+            {
+                return Result<string, string>.Failure(
+                    $"Agent '{agentId}' not defined in MeTTa. Provide provider and model to spawn ad-hoc.");
+            }
+
+            // Parse the AgentDef from MeTTa response and spawn it
+            var defs = ParseAgentDefsFromMeTTa(queryResult.Value);
+            if (defs.Count == 0)
+            {
+                return Result<string, string>.Failure(
+                    $"Failed to parse AgentDef for '{agentId}' from MeTTa.");
+            }
+
+            var spawnResult = await _runtime.SpawnAgentAsync(defs[0], ct);
+            return spawnResult.IsSuccess
+                ? Result<string, string>.Success($"Agent '{agentId}' spawned from definition")
+                : Result<string, string>.Failure(spawnResult.Error);
         }
 
+        // Ad-hoc spawn with provided parameters
+        string? role = GetOptionalString(root, "role");
         int maxTokens = root.TryGetProperty("max_tokens", out var mt) ? mt.GetInt32() : 4096;
         float temperature = root.TryGetProperty("temperature", out var temp)
             ? (float)temp.GetDouble() : 0.5f;
@@ -185,10 +208,10 @@ public sealed class MeTTaAgentTool : ITool
             systemPrompt, maxTokens, temperature,
             Capabilities: capabilities);
 
-        var spawnResult = await _runtime.SpawnAgentAsync(def, ct);
-        return spawnResult.IsSuccess
+        var adhocSpawnResult = await _runtime.SpawnAgentAsync(def, ct);
+        return adhocSpawnResult.IsSuccess
             ? Result<string, string>.Success($"Agent '{agentId}' spawned successfully")
-            : Result<string, string>.Failure(spawnResult.Error);
+            : Result<string, string>.Failure(adhocSpawnResult.Error);
     }
 
     private async Task<Result<string, string>> HandleTaskAsync(JsonElement root, CancellationToken ct)
@@ -238,9 +261,10 @@ public sealed class MeTTaAgentTool : ITool
 
         if (agentIds == null || agentIds.Count == 0)
         {
-            // Try to get pipeline from MeTTa
+            // Try to get pipeline from MeTTa (escape prompt to prevent injection)
+            string escapedPrompt = MeTTaParsingHelpers.EscapeMeTTaString(prompt);
             var pipelineResult = await _engine.ExecuteQueryAsync(
-                $"!(code-pipeline \"{prompt}\")", ct);
+                $"!(code-pipeline \"{escapedPrompt}\")", ct);
 
             if (pipelineResult.IsSuccess && !string.IsNullOrWhiteSpace(pipelineResult.Value))
             {
@@ -301,5 +325,38 @@ public sealed class MeTTaAgentTool : ITool
             agents.Add(match.Groups[1].Value);
         }
         return agents;
+    }
+
+    private static List<MeTTaAgentDef> ParseAgentDefsFromMeTTa(string mettaOutput)
+    {
+        var defs = new List<MeTTaAgentDef>();
+        if (string.IsNullOrWhiteSpace(mettaOutput))
+            return defs;
+
+        // Use shared pattern from MeTTaParsingHelpers
+        var matches = System.Text.RegularExpressions.Regex.Matches(
+            mettaOutput, MeTTaParsingHelpers.AgentDefPattern);
+
+        foreach (System.Text.RegularExpressions.Match match in matches)
+        {
+            if (match.Groups.Count >= 8)
+            {
+                string agentId = match.Groups[1].Value;
+                string provider = match.Groups[2].Value;
+                string model = match.Groups[3].Value;
+                string role = match.Groups[4].Value;
+                string prompt = match.Groups[5].Value;
+
+                if (int.TryParse(match.Groups[6].Value, out int maxTokens) &&
+                    float.TryParse(match.Groups[7].Value, System.Globalization.CultureInfo.InvariantCulture, out float temperature))
+                {
+                    defs.Add(new MeTTaAgentDef(
+                        agentId, provider, model, role, prompt,
+                        maxTokens, temperature));
+                }
+            }
+        }
+
+        return defs;
     }
 }

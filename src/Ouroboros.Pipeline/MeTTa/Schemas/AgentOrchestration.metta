@@ -88,10 +88,12 @@
    (not (match &self (BlockedModel $model) True)))
 
 ; --- Ethics: Agents inherit Ouroboros safety constraints ---
+; Safety validation now checks provider/model allowlists rather than prompt scanning
 (= (agent-respects-safety $agent)
    (and
      (match &self (AgentDef $agent $prov $model $role $prompt $tok $temp) True)
-     (not (contains-unsafe-instruction $prompt))))
+     (provider-allowed $prov)
+     (model-allowed $model)))
 
 ; --- Revision Detection ---
 (= (needs-revision $task)

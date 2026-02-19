@@ -85,11 +85,12 @@
 
 ; --- Lifecycle Events (written by C# runtime) ---
 (: Spawned (-> AgentId AgentStatus String Type))
-(: AgentHealth (-> AgentId String Number Type))
+(: AgentHealth (-> AgentId AgentStatus Number Type))
 
 ; --- Task Assignment and Results ---
 (: AssignedTask (-> String AgentId String Type))
 ; (AgentResult <agent-id> <task-id> <status> <output>)
+(: AgentResult (-> AgentId String AgentStatus String Type))
 
 ; --- Agent Communication (inter-agent messages as atoms) ---
 (: AgentMessage (-> AgentId AgentId String String Type))
