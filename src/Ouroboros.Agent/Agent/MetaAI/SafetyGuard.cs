@@ -509,11 +509,14 @@ public sealed class SafetyGuard : ISafetyGuard
 
         try
         {
+            // Escape the instance ID to prevent injection attacks
+            string escapedInstanceId = EscapeMeTTaString(instanceId);
+
             // Rule: Actions are safe if the instance respects safety constraints
             // and the action doesn't match destructive patterns
             string safetyRule = @"
 (= (IsSafeAction $action)
-   (if (and (Respects (OuroborosInstance """ + instanceId + @""") NoSelfDestruction)
+   (if (and (Respects (OuroborosInstance """ + escapedInstanceId + @""") NoSelfDestruction)
             (not (MatchesPattern $action ""destructive"")))
        Mark
        Void))
