@@ -412,6 +412,9 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             // Apply quality threshold based on evolved strictness
             bool meetsQualityThreshold = qualityScore >= qualityThreshold;
 
+            // Apply quality threshold based on evolved strictness
+            bool meetsQualityThreshold = qualityScore >= qualityThreshold;
+
             // Use MeTTa for symbolic verification
             string planMetta = $"(plan (goal \"{EscapeMeTTa(goal)}\") (output \"{EscapeMeTTa(output.Substring(0, Math.Min(MeTTaOutputTruncationLength, output.Length)))}\"))";
             Result<bool, string> mettaResult = await _mettaEngine.VerifyPlanAsync(planMetta, ct);
@@ -423,6 +426,20 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                     _logger.LogWarning("[VERIFY] MeTTa verification failed: {Error}. Treating as unverified.", err);
                     return false;
                 });
+
+            // Overall success requires: LLM verification, quality threshold, and MeTTa verification
+            bool overallSuccess = verified && meetsQualityThreshold && mettaVerified;
+
+            // Build detailed error message if verification failed
+            string? errorMessage = null;
+            if (!overallSuccess)
+            {
+                List<string> failures = new List<string>();
+                if (!verified) failures.Add("LLM verification failed");
+                if (!meetsQualityThreshold) failures.Add($"quality {qualityScore:F2} below threshold {qualityThreshold:F2}");
+                if (!mettaVerified) failures.Add("MeTTa verification failed");
+                errorMessage = $"Verification failed: {string.Join(", ", failures)}";
+            }
 
             // Overall success requires: LLM verification, quality threshold, and MeTTa verification
             bool overallSuccess = verified && meetsQualityThreshold && mettaVerified;
@@ -566,6 +583,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     private async Task<Result<string, string>> ExecuteStepAsync(string step, CancellationToken ct)
     {
         // Get ToolVsLLMWeight strategy from atom capabilities (default 0.7 = prefer tools)
+        // ToolVsLLMWeight: 0.0 = prefer LLM, 1.0 = prefer tools
         double toolWeight = _atom.GetStrategyWeight("ToolVsLLMWeight", 0.7);
 
         // If weight < 0.3, skip tool selection and go straight to LLM
@@ -609,8 +627,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             }
         }
 
-        // Fallback: Try old Contains() matching for robustness when LLM-based selection fails
-        // This provides a simple string-matching fallback to ensure some tool execution capability
+        // Fallback: Try Contains() matching for robustness when LLM-based selection fails
         Option<ITool> toolOption = _tools.All
             .FirstOrDefault(t => step.Contains(t.Name, StringComparison.OrdinalIgnoreCase))
             .ToOption();
@@ -631,7 +648,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                 return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
             }
 
-            // Execute tool with raw step text (fallback behavior)
+            // Execute tool (fallback behavior with raw step text)
             return await tool.InvokeAsync(step, ct);
         }
 
