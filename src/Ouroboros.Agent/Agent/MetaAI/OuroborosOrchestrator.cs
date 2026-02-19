@@ -609,7 +609,8 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             }
         }
 
-        // Fallback: Try old Contains() matching for robustness
+        // Fallback: Try old Contains() matching for robustness when LLM-based selection fails
+        // This provides a simple string-matching fallback to ensure some tool execution capability
         Option<ITool> toolOption = _tools.All
             .FirstOrDefault(t => step.Contains(t.Name, StringComparison.OrdinalIgnoreCase))
             .ToOption();
