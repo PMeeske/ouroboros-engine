@@ -47,6 +47,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     private readonly OuroborosAtom _atom;
     private readonly ConcurrentDictionary<string, double> _performanceMetrics = new();
     private readonly Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? _strategyEvolver;
+    private readonly ToolSelector _toolSelector;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OuroborosOrchestrator"/> class.
@@ -77,6 +78,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         _mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
         _atom = atom ?? OuroborosAtom.CreateDefault();
         _strategyEvolver = strategyEvolver;
+        _toolSelector = new ToolSelector(_tools.All.ToList(), _llm);
     }
 
     /// <summary>
@@ -425,7 +427,54 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     /// </summary>
     private async Task<Result<string, string>> ExecuteStepAsync(string step, CancellationToken ct)
     {
-        // Try to match step to a tool
+        // Get ToolVsLLMWeight strategy from atom capabilities (default 0.7 = prefer tools)
+        double toolWeight = _atom.GetStrategyWeight("ToolVsLLMWeight", 0.7);
+
+        // If weight < 0.3, skip tool selection and go straight to LLM
+        if (toolWeight < 0.3)
+        {
+            string llmResponse = await _llm.GenerateTextAsync($"Process this step: {step}", ct);
+            return Result<string, string>.Success(llmResponse);
+        }
+
+        // Attempt LLM-based tool selection
+        ToolSelection? selection = null;
+        if (toolWeight > 0.7)
+        {
+            // Always attempt tool selection first when weight > 0.7
+            selection = await _toolSelector.SelectToolAsync(step, ct);
+        }
+        else
+        {
+            // Moderate weight: try tool selection but be ready to fall back
+            selection = await _toolSelector.SelectToolAsync(step, ct);
+        }
+
+        // If LLM-based selection succeeded, try to use the selected tool
+        if (selection != null)
+        {
+            ITool? tool = _tools.All.FirstOrDefault(t => t.Name.Equals(selection.ToolName, StringComparison.OrdinalIgnoreCase));
+            
+            if (tool != null)
+            {
+                // Check safety
+                SafetyCheckResult safetyCheck = await _safety.CheckActionSafetyAsync(
+                    tool.Name,
+                    new Dictionary<string, object> { ["step"] = step, ["arguments"] = selection.ArgumentsJson },
+                    context: null,
+                    ct);
+
+                if (!safetyCheck.IsAllowed)
+                {
+                    return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
+                }
+
+                // Execute tool with extracted arguments
+                return await tool.InvokeAsync(selection.ArgumentsJson, ct);
+            }
+        }
+
+        // Fallback: Try old Contains() matching for robustness
         Option<ITool> toolOption = _tools.All
             .FirstOrDefault(t => step.Contains(t.Name, StringComparison.OrdinalIgnoreCase))
             .ToOption();
@@ -446,7 +495,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                 return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
             }
 
-            // Execute tool
+            // Execute tool with raw step text (fallback behavior)
             return await tool.InvokeAsync(step, ct);
         }
 

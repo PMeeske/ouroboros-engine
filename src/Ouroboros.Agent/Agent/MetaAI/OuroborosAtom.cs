@@ -281,6 +281,28 @@ public sealed class OuroborosAtom
     }
 
     /// <summary>
+    /// Gets a strategy weight from capabilities, or returns a default value if not found.
+    /// Strategy weights are stored as capabilities with names like "Strategy_ToolVsLLMWeight".
+    /// </summary>
+    /// <param name="strategyName">The name of the strategy (e.g., "ToolVsLLMWeight").</param>
+    /// <param name="defaultValue">Default value to return if strategy not found.</param>
+    /// <returns>The strategy weight (ConfidenceLevel of the matching capability), or default value.</returns>
+    public double GetStrategyWeight(string strategyName, double defaultValue)
+    {
+        if (string.IsNullOrWhiteSpace(strategyName))
+        {
+            return defaultValue;
+        }
+
+        // Look for capability named "Strategy_{strategyName}"
+        string capabilityName = $"Strategy_{strategyName}";
+        OuroborosCapability? strategyCap = _capabilities
+            .FirstOrDefault(c => c.Name.Equals(capabilityName, StringComparison.OrdinalIgnoreCase));
+
+        return strategyCap?.ConfidenceLevel ?? defaultValue;
+    }
+
+    /// <summary>
     /// Checks if an action would violate safety constraints.
     /// </summary>
     /// <param name="action">The action to check.</param>
