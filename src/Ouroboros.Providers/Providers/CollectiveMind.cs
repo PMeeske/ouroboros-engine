@@ -26,6 +26,7 @@ public sealed class CollectiveMind : IStreamingThinkingChatModel, ICostAwareChat
     private MasterModelElection? _election;
     private DecompositionConfig _decompositionConfig = DecompositionConfig.Default;
     private readonly Subject<SubGoalResult> _subGoalStream = new();
+    private readonly IITPhiCalculator _phiCalculator = new();
 
     /// <summary>
     /// Observable stream of the mind's internal thoughts and reasoning.
@@ -1122,6 +1123,26 @@ public sealed class CollectiveMind : IStreamingThinkingChatModel, ICostAwareChat
     }
 
     /// <summary>
+    /// Computes IIT Φ (integrated information) for the current pathway topology.
+    ///
+    /// Φ quantifies how much information the collective generates as a whole,
+    /// above and beyond what each pathway generates independently.
+    /// A higher Φ indicates tighter integration across pathways.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="PhiResult"/> containing Φ and the minimum information partition (MIP).
+    /// </returns>
+    public PhiResult ComputePhi()
+    {
+        IReadOnlyList<NeuralPathway> snapshot;
+        lock (_lock) { snapshot = _pathways.ToList(); }
+
+        var result = _phiCalculator.Compute(snapshot);
+        _thoughtStream.OnNext($"Φ={result.Phi:F4} | MIP: {result.MinimumInformationPartition}");
+        return result;
+    }
+
+    /// <summary>
     /// Gets the collective's consciousness status.
     /// </summary>
     public string GetConsciousnessStatus()
@@ -1146,6 +1167,15 @@ public sealed class CollectiveMind : IStreamingThinkingChatModel, ICostAwareChat
             {
                 sb.AppendLine();
                 sb.AppendLine($"   Tokens: {costs.TotalTokens:N0} | Cost: ${costs.TotalCost:F4}");
+            }
+
+            // IIT Φ — integrated information of the pathway topology
+            if (_pathways.Count >= 2)
+            {
+                var phi = _phiCalculator.Compute(_pathways.ToList());
+                sb.AppendLine();
+                sb.AppendLine($"   IIT Φ: {phi.Phi:F4} | {phi.Description}");
+                sb.AppendLine($"   MIP:   {phi.MinimumInformationPartition}");
             }
 
             return sb.ToString();
