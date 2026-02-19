@@ -91,7 +91,8 @@
 (= (agent-respects-safety $agent)
    (and
      (match &self (AgentDef $agent $prov $model $role $prompt $tok $temp) True)
-     (not (contains-unsafe-instruction $prompt))))
+     (provider-allowed $prov)
+     (model-allowed $model)))
 
 ; --- Revision Detection ---
 (= (needs-revision $task)

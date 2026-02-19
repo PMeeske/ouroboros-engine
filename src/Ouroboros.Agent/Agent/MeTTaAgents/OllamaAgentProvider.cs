@@ -15,7 +15,7 @@ namespace Ouroboros.Agent.MeTTaAgents;
 public sealed class OllamaAgentProvider : IAgentProviderFactory
 {
     private readonly string _defaultEndpoint;
-    private OllamaProvider? _provider;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, OllamaProvider> _providers = new();
 
     /// <summary>
     /// Creates a new Ollama agent provider.
@@ -43,9 +43,9 @@ public sealed class OllamaAgentProvider : IAgentProviderFactory
                 return Task.FromResult(CreateCloudModel(agentDef, endpoint));
             }
 
-            // Local Ollama via LangChain adapter
-            _provider ??= new OllamaProvider(endpoint);
-            var langChainModel = new OllamaChatModel(_provider, agentDef.Model);
+            // Local Ollama via LangChain adapter - cache per endpoint
+            var provider = _providers.GetOrAdd(endpoint, ep => new OllamaProvider(ep));
+            var langChainModel = new OllamaChatModel(provider, agentDef.Model);
             var adapter = new OllamaChatAdapter(langChainModel);
             return Task.FromResult(
                 Result<Ouroboros.Abstractions.Core.IChatCompletionModel, string>.Success(adapter));

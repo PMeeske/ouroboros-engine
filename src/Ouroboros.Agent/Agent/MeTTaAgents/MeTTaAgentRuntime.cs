@@ -39,6 +39,11 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
         new Dictionary<string, SpawnedAgent>(_agents);
 
     /// <summary>
+    /// Gets the MeTTa engine used by this runtime.
+    /// </summary>
+    public IMeTTaEngine Engine => _engine;
+
+    /// <summary>
     /// Gets agents filtered by role.
     /// </summary>
     /// <param name="role">The role to filter by.</param>
@@ -49,15 +54,19 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
 
     /// <summary>
     /// Discovers all AgentDef atoms in the space and spawns agents
-    /// that pass the (safe-to-spawn) rule.
+    /// that pass the (safe-to-spawn) and (can-spawn-more) rules.
     /// </summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>The number of agents spawned.</returns>
     public async Task<Result<int, string>> SpawnAllAsync(CancellationToken ct = default)
     {
         var result = await _engine.ExecuteQueryAsync(
-            "!(match &self (AgentDef $id $prov $model $role $prompt $tokens $temp) " +
-            "(AgentDef $id $prov $model $role $prompt $tokens $temp))", ct);
+            "!(match &self " +
+            "  (and " +
+            "    (AgentDef $id $prov $model $role $prompt $tokens $temp) " +
+            "    (safe-to-spawn $id) " +
+            "    (can-spawn-more)) " +
+            "  (AgentDef $id $prov $model $role $prompt $tokens $temp))", ct);
 
         if (result.IsFailure)
             return Result<int, string>.Failure($"Failed to query agent defs: {result.Error}");
@@ -83,10 +92,6 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
     public async Task<Result<SpawnedAgent, string>> SpawnAgentAsync(
         MeTTaAgentDef def, CancellationToken ct = default)
     {
-        if (_agents.ContainsKey(def.AgentId))
-            return Result<SpawnedAgent, string>.Failure(
-                $"Agent '{def.AgentId}' is already spawned");
-
         var provider = _providers.FirstOrDefault(p => p.CanHandle(def.Provider));
         if (provider == null)
             return Result<SpawnedAgent, string>.Failure(
@@ -97,7 +102,11 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
             return Result<SpawnedAgent, string>.Failure(modelResult.Error);
 
         var agent = new SpawnedAgent(def, modelResult.Value, DateTime.UtcNow);
-        _agents[def.AgentId] = agent;
+        
+        // Use TryAdd to atomically check and add, preventing race conditions
+        if (!_agents.TryAdd(def.AgentId, agent))
+            return Result<SpawnedAgent, string>.Failure(
+                $"Agent '{def.AgentId}' is already spawned");
 
         // Write spawn fact to MeTTa
         await _engine.AddFactAsync(
@@ -129,8 +138,11 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
         {
             foreach (var cap in def.Capabilities)
             {
-                await _engine.AddFactAsync(
+                var capResult = await _engine.AddFactAsync(
                     $"(HasCapability \"{def.AgentId}\" {cap})", ct);
+                if (capResult.IsFailure)
+                    return Result<string, string>.Failure(
+                        $"Failed to add capability '{cap}' for agent '{def.AgentId}': {capResult.Error}");
             }
         }
 
@@ -202,6 +214,11 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
         string taskId, string capability, string prompt,
         CancellationToken ct = default)
     {
+        // Validate capability is a valid symbol (alphanumeric and underscores only)
+        if (!IsValidMeTTaSymbol(capability))
+            return Result<string, string>.Failure(
+                $"Invalid capability format: '{capability}'. Must be alphanumeric with underscores only.");
+
         // Ask MeTTa which agent should handle this
         var queryResult = await _engine.ExecuteQueryAsync(
             $"!(agent-for-capability {capability})", ct);
@@ -345,7 +362,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
                 string prompt = match.Groups[5].Value;
 
                 if (int.TryParse(match.Groups[6].Value, out int maxTokens) &&
-                    float.TryParse(match.Groups[7].Value, out float temperature))
+                    float.TryParse(match.Groups[7].Value, System.Globalization.CultureInfo.InvariantCulture, out float temperature))
                 {
                     defs.Add(new MeTTaAgentDef(
                         agentId, provider, model, role, prompt,
@@ -363,8 +380,12 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
     private static string Truncate(string text, int maxLength)
         => text.Length <= maxLength ? text : text[..maxLength] + "...";
 
+    private static bool IsValidMeTTaSymbol(string symbol)
+        => !string.IsNullOrWhiteSpace(symbol) && 
+           System.Text.RegularExpressions.Regex.IsMatch(symbol, @"^[a-zA-Z][a-zA-Z0-9_]*$");
+
     [GeneratedRegex(
-        @"\(AgentDef\s+""([^""]+)""\s+(\w+)\s+""([^""]+)""\s+(\w+)\s+""([^""]*)""\s+(\d+)\s+([\d.]+)\)",
+        @"\(AgentDef\s+""((?:[^""\\]|\\.)+)""\s+(\w+)\s+""((?:[^""\\]|\\.)+)""\s+(\w+)\s+""((?:[^""\\]|\\.)*)""\s+(\d+)\s+([\d.]+)\)",
         RegexOptions.Compiled)]
     private static partial Regex AgentDefRegex();
 }
