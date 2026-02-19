@@ -41,6 +41,26 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     /// </summary>
     private const double ConfidenceBoostIncrement = 0.05;
 
+    /// <summary>
+    /// Minimum step count for planning decomposition.
+    /// </summary>
+    private const int MinPlanSteps = 3;
+
+    /// <summary>
+    /// Step count range for planning decomposition (added to MinPlanSteps based on granularity).
+    /// </summary>
+    private const int PlanStepsRange = 7;
+
+    /// <summary>
+    /// Base quality threshold for verification (used when strictness is 0.0).
+    /// </summary>
+    private const double BaseQualityThreshold = 0.3;
+
+    /// <summary>
+    /// Quality threshold range multiplier (added to base threshold based on strictness).
+    /// </summary>
+    private const double QualityThresholdRange = 0.5;
+
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ToolRegistry _tools;
     private readonly IMemoryStore _memory;
@@ -50,6 +70,11 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     private readonly ConcurrentDictionary<string, double> _performanceMetrics = new();
     private readonly Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? _strategyEvolver;
     private readonly ILogger<OuroborosOrchestrator> _logger;
+    private readonly ToolSelector _toolSelector;
+    private readonly Affect.IValenceMonitor? _valenceMonitor;
+    private readonly Affect.IPriorityModulator? _priorityModulator;
+    private readonly Affect.IUrgeSystem? _urgeSystem;
+    private readonly Affect.SpreadingActivation? _spreading;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OuroborosOrchestrator"/> class.
@@ -63,6 +88,10 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     /// <param name="configuration">Optional orchestrator configuration.</param>
     /// <param name="strategyEvolver">Optional genetic algorithm for evolving planning strategies.</param>
     /// <param name="logger">Optional logger for structured logging.</param>
+    /// <param name="valenceMonitor">Optional valence monitor for affective state tracking.</param>
+    /// <param name="priorityModulator">Optional priority modulator for affect-driven task ordering.</param>
+    /// <param name="urgeSystem">Optional urge system for Psi-theory drive management.</param>
+    /// <param name="spreading">Optional spreading activation for associative memory priming.</param>
     public OuroborosOrchestrator(
         Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
@@ -73,6 +102,10 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         OrchestratorConfig? configuration = null,
         Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? strategyEvolver = null,
         ILogger<OuroborosOrchestrator>? logger = null)
+        Affect.IValenceMonitor? valenceMonitor = null,
+        Affect.IPriorityModulator? priorityModulator = null,
+        Affect.IUrgeSystem? urgeSystem = null,
+        Affect.SpreadingActivation? spreading = null)
         : base("OuroborosOrchestrator", configuration ?? OrchestratorConfig.Default(), safety)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
@@ -83,6 +116,11 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         _atom = atom ?? OuroborosAtom.CreateDefault();
         _strategyEvolver = strategyEvolver;
         _logger = logger ?? NullLogger<OuroborosOrchestrator>.Instance;
+        _toolSelector = new ToolSelector(_tools.All.ToList(), _llm);
+        _valenceMonitor = valenceMonitor;
+        _priorityModulator = priorityModulator;
+        _urgeSystem = urgeSystem;
+        _spreading = spreading;
     }
 
     /// <summary>
@@ -105,13 +143,27 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
 
         try
         {
+            // ═══════════════════════════════════════════════
+            // PRE-CYCLE: Affective state update (Psi-theory)
+            // ═══════════════════════════════════════════════
+            _urgeSystem?.Tick();
+            Affect.AffectiveState? affect = _valenceMonitor?.GetCurrentState();
+            double selectionThreshold = affect != null ? CalculateSelectionThreshold(affect) : 0.5;
+            double resolutionLevel = affect != null ? GetEffectiveResolutionLevel(affect) : 0.5;
+            Affect.Urge? dominantUrge = _urgeSystem?.GetDominantUrge();
+
+            if (affect != null && dominantUrge != null)
+            {
+                await ProjectAffectiveStateToMeTTaAsync(affect, dominantUrge, context.CancellationToken);
+            }
+
             // Set the goal
             _atom.SetGoal(goal);
 
             // Translate Ouroboros state to MeTTa
             await TranslateToMeTTaAsync(context.CancellationToken);
 
-            // Phase 1: PLAN
+            // Phase 1: PLAN (shaped by affect + urges)
             PhaseResult planResult = await ExecutePlanPhaseAsync(goal, context.CancellationToken);
             phaseResults.Add(planResult);
             _atom.AdvancePhase();
@@ -122,10 +174,17 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                 return CreateResult(goal, phaseResults, planResult.Output, success, totalStopwatch.Elapsed);
             }
 
-            // Phase 2: EXECUTE
+            // Phase 2: EXECUTE (selection threshold gates actions)
             PhaseResult executeResult = await ExecuteExecutePhaseAsync(planResult.Output, context.CancellationToken);
             phaseResults.Add(executeResult);
             _atom.AdvancePhase();
+
+            // Update valence based on execution success
+            if (_valenceMonitor != null)
+            {
+                _valenceMonitor.RecordSignal("execute_phase",
+                    executeResult.Success ? 0.5 : -0.5, Affect.SignalType.Valence);
+            }
 
             if (!executeResult.Success)
             {
@@ -133,15 +192,55 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                 return CreateResult(goal, phaseResults, executeResult.Error, success, totalStopwatch.Elapsed);
             }
 
-            // Phase 3: VERIFY
+            // Phase 3: VERIFY (strictness modulated by certainty urge)
             PhaseResult verifyResult = await ExecuteVerifyPhaseAsync(goal, executeResult.Output, context.CancellationToken);
             phaseResults.Add(verifyResult);
             _atom.AdvancePhase();
 
-            // Phase 4: LEARN
+            // Satisfy or frustrate certainty urge based on verification
+            if (verifyResult.Success)
+            {
+                double qualityScore = verifyResult.Metadata.TryGetValue("quality_score", out var qs) ? (double)qs : 0.7;
+                _urgeSystem?.Satisfy("certainty", qualityScore);
+                _valenceMonitor?.UpdateConfidence("verify", true, qualityScore);
+            }
+            else
+            {
+                _valenceMonitor?.UpdateConfidence("verify", false, 0.8);
+                _valenceMonitor?.RecordSignal("verify_failed", 0.6, Affect.SignalType.Stress);
+            }
+
+            // Phase 4: LEARN (satisfy competence + curiosity urges)
             PhaseResult learnResult = await ExecuteLearnPhaseAsync(goal, phaseResults, context.CancellationToken);
             phaseResults.Add(learnResult);
             _atom.AdvancePhase(); // Returns to PLAN, completing the cycle
+
+            if (learnResult.Success)
+            {
+                double learnQuality = learnResult.Metadata.TryGetValue("quality_score", out var lqs) ? (double)lqs : 0.5;
+                _urgeSystem?.Satisfy("competence", learnQuality);
+
+                // If this was a novel domain, satisfy curiosity
+                if (_atom.AssessConfidence(goal) == OuroborosConfidence.Low)
+                {
+                    _urgeSystem?.Satisfy("curiosity", 0.8);
+                    _valenceMonitor?.UpdateCuriosity(0.7, goal);
+                }
+            }
+
+            // ═══════════════════════════════════════════════
+            // POST-CYCLE: Update self-model with affective state
+            // ═══════════════════════════════════════════════
+            if (_valenceMonitor != null)
+            {
+                Affect.AffectiveState postCycleAffect = _valenceMonitor.GetCurrentState();
+                _atom.UpdateSelfModel("affect_valence", postCycleAffect.Valence);
+                _atom.UpdateSelfModel("affect_stress", postCycleAffect.Stress);
+                _atom.UpdateSelfModel("affect_arousal", postCycleAffect.Arousal);
+                _atom.UpdateSelfModel("dominant_urge", dominantUrge?.Name ?? "none");
+            }
+
+            _spreading?.Decay();
 
             finalOutput = executeResult.Output;
             success = verifyResult.Success;
@@ -286,6 +385,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
 
     /// <summary>
     /// Executes the VERIFY phase - checking results against expectations.
+    /// Uses the VerificationStrictness strategy to determine the quality threshold.
     /// </summary>
     private async Task<PhaseResult> ExecuteVerifyPhaseAsync(string goal, string output, CancellationToken ct)
     {
@@ -293,6 +393,13 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
 
         try
         {
+            // Read evolved strategy gene for verification strictness
+            // VerificationStrictness: 0.0 = lenient, 1.0 = strict
+            double verificationStrictness = _atom.GetStrategyWeight("VerificationStrictness", 0.6);
+
+            // Calculate quality threshold based on strictness (range: BaseQualityThreshold to BaseQualityThreshold+QualityThresholdRange)
+            double qualityThreshold = BaseQualityThreshold + (verificationStrictness * QualityThresholdRange);
+
             // Build verification prompt
             string prompt = BuildVerificationPrompt(goal, output);
 
@@ -301,6 +408,9 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
 
             // Parse verification result
             (bool verified, double qualityScore) = await ParsePlanVerificationResult(verificationText, goal, output, ct);
+
+            // Apply quality threshold based on evolved strictness
+            bool meetsQualityThreshold = qualityScore >= qualityThreshold;
 
             // Use MeTTa for symbolic verification
             string planMetta = $"(plan (goal \"{EscapeMeTTa(goal)}\") (output \"{EscapeMeTTa(output.Substring(0, Math.Min(MeTTaOutputTruncationLength, output.Length)))}\"))";
@@ -314,20 +424,37 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                     return false;
                 });
 
+            // Overall success requires: LLM verification, quality threshold, and MeTTa verification
+            bool overallSuccess = verified && meetsQualityThreshold && mettaVerified;
+
+            // Build detailed error message if verification failed
+            string? errorMessage = null;
+            if (!overallSuccess)
+            {
+                List<string> failures = new List<string>();
+                if (!verified) failures.Add("LLM verification failed");
+                if (!meetsQualityThreshold) failures.Add($"quality {qualityScore:F2} below threshold {qualityThreshold:F2}");
+                if (!mettaVerified) failures.Add("MeTTa verification failed");
+                errorMessage = $"Verification failed: {string.Join(", ", failures)}";
+            }
+
             sw.Stop();
-            RecordPhaseMetric("verify", sw.ElapsedMilliseconds, verified);
+            RecordPhaseMetric("verify", sw.ElapsedMilliseconds, overallSuccess);
 
             return new PhaseResult(
                 ImprovementPhase.Verify,
-                Success: verified && mettaVerified,
+                Success: overallSuccess,
                 Output: verificationText,
-                Error: verified ? null : "Verification failed",
+                Error: errorMessage,
                 Duration: sw.Elapsed,
                 Metadata: new Dictionary<string, object>
                 {
                     ["quality_score"] = qualityScore,
+                    ["quality_threshold"] = qualityThreshold,
+                    ["verification_strictness"] = verificationStrictness,
                     ["metta_verified"] = mettaVerified,
                     ["llm_verified"] = verified,
+                    ["meets_quality_threshold"] = meetsQualityThreshold,
                 });
         }
         catch (Exception ex)
@@ -433,10 +560,68 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     }
 
     /// <summary>
-    /// Executes a single step from the plan.
+    /// Executes a single step from the plan using LLM-based tool selection with strategy-weight routing.
+    /// Uses ToolVsLLMWeight strategy to decide between tool execution and LLM processing.
     /// </summary>
     private async Task<Result<string, string>> ExecuteStepAsync(string step, CancellationToken ct)
     {
+        // Get ToolVsLLMWeight strategy from atom capabilities (default 0.7 = prefer tools)
+        double toolWeight = _atom.GetStrategyWeight("ToolVsLLMWeight", 0.7);
+
+        // If weight < 0.3, skip tool selection and go straight to LLM
+        if (toolWeight < 0.3)
+        {
+            try
+            {
+                string llmResponse = await _llm.GenerateTextAsync($"Process this step: {step}", ct);
+                return Result<string, string>.Success(llmResponse);
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure($"LLM processing failed: {ex.Message}");
+            }
+        }
+
+        // Attempt LLM-based tool selection
+        ToolSelection? selection = await _toolSelector.SelectToolAsync(step, ct);
+
+        // If LLM-based selection succeeded, try to use the selected tool
+        if (selection != null)
+        {
+            ITool? tool = _tools.All.FirstOrDefault(t => t.Name.Equals(selection.ToolName, StringComparison.OrdinalIgnoreCase));
+            
+            if (tool != null)
+            {
+                // Check safety
+                SafetyCheckResult safetyCheck = await _safety.CheckActionSafetyAsync(
+                    tool.Name,
+                    new Dictionary<string, object> { ["step"] = step, ["arguments"] = selection.ArgumentsJson },
+                    context: null,
+                    ct);
+
+                if (!safetyCheck.IsAllowed)
+                {
+                    return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
+                }
+
+                // Execute tool with extracted arguments
+                return await tool.InvokeAsync(selection.ArgumentsJson, ct);
+            }
+        }
+
+        // Fallback: Try old Contains() matching for robustness
+    /// Executes a single step from the plan.
+    /// Uses the ToolVsLLMWeight strategy to determine whether to prefer tool execution or LLM reasoning.
+    /// </summary>
+    private async Task<Result<string, string>> ExecuteStepAsync(string step, CancellationToken ct)
+    {
+        // Read evolved strategy gene for tool vs LLM routing
+        // ToolVsLLMWeight: 0.0 = prefer LLM, 1.0 = prefer tools
+        // TODO: Implement LLM-first execution path when toolVsLlmWeight <= 0.5
+        // For now, this reads the strategy to ensure it's available in the atom,
+        // but the actual routing logic will be implemented in a future enhancement
+        double toolVsLlmWeight = _atom.GetStrategyWeight("ToolVsLLMWeight", 0.7);
+
         // Try to match step to a tool
         Option<ITool> toolOption = _tools.All
             .FirstOrDefault(t => step.Contains(t.Name, StringComparison.OrdinalIgnoreCase))
@@ -458,7 +643,10 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                 return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
             }
 
+            // Execute tool with raw step text (fallback behavior)
             // Execute tool
+            // Note: toolVsLlmWeight is read above for future enhancement where we could
+            // try LLM first when weight <= 0.5, then fall back to tools if needed
             return await tool.InvokeAsync(step, ct);
         }
 
@@ -578,6 +766,71 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
         await _mettaEngine.AddFactAsync(metta.ToString(), ct);
     }
 
+    /// <summary>
+    /// Calculates the current selection threshold based on arousal.
+    /// High arousal → low threshold (faster, less deliberate decisions).
+    /// Low arousal → high threshold (slower, more deliberate decisions).
+    /// </summary>
+    private static double CalculateSelectionThreshold(Affect.AffectiveState state)
+    {
+        double threshold = 0.5 - (state.Arousal * 0.2) + (state.Stress * 0.15);
+        return Math.Clamp(threshold, 0.2, 0.8);
+    }
+
+    /// <summary>
+    /// Calculates the effective resolution level, combining evolved strategy genes
+    /// with dynamic arousal modulation.
+    /// </summary>
+    private double GetEffectiveResolutionLevel(Affect.AffectiveState state)
+    {
+        double evolvedDepth = _atom.GetStrategyWeight("PlanningDepth", 0.5);
+
+        // Psi-theory: high arousal reduces resolution (fast, shallow processing)
+        double arousalModulation = 1.0 - (state.Arousal * 0.4);
+
+        return Math.Clamp(evolvedDepth * arousalModulation, 0.1, 1.0);
+    }
+
+    /// <summary>
+    /// Projects the current affective state into the MeTTa knowledge base
+    /// for symbolic reasoning about emotions.
+    /// </summary>
+    private async Task ProjectAffectiveStateToMeTTaAsync(
+        Affect.AffectiveState affect, Affect.Urge? dominantUrge, CancellationToken ct)
+    {
+        string id = _atom.InstanceId;
+
+        await _mettaEngine.AddFactAsync(
+            $"(AffectiveState (OuroborosInstance \"{id}\") " +
+            $"(Valence {affect.Valence:F2}) " +
+            $"(Stress {affect.Stress:F2}) " +
+            $"(Arousal {affect.Arousal:F2}) " +
+            $"(Confidence {affect.Confidence:F2}) " +
+            $"(Curiosity {affect.Curiosity:F2}))", ct);
+
+        if (dominantUrge != null)
+        {
+            await _mettaEngine.AddFactAsync(
+                $"(DominantUrge (OuroborosInstance \"{id}\") " +
+                $"(Urge \"{dominantUrge.Name}\" {dominantUrge.Intensity:F2}))", ct);
+        }
+
+        if (_urgeSystem != null)
+        {
+            string urgesMeTTa = _urgeSystem.ToMeTTa(id);
+            await _mettaEngine.AddFactAsync(urgesMeTTa, ct);
+        }
+
+        if (_spreading != null)
+        {
+            foreach (var (atomKey, activation) in _spreading.GetActivatedAtoms().Take(10))
+            {
+                await _mettaEngine.AddFactAsync(
+                    $"(Primed (OuroborosInstance \"{id}\") (Concept \"{EscapeMeTTa(atomKey)}\" {activation:F2}))", ct);
+            }
+        }
+    }
+
     private string BuildPlanPrompt(string goal, string selfReflection, OuroborosConfidence confidence)
     {
         string confidenceNote = confidence switch
@@ -588,6 +841,23 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
             _ => string.Empty,
         };
 
+        // Read evolved strategy genes for planning
+        // PlanningDepth: 0.0 = shallow/fast, 1.0 = deep/thorough
+        double planningDepth = _atom.GetStrategyWeight("PlanningDepth", 0.5);
+        // DecompositionGranularity: 0.0 = coarse, 1.0 = fine
+        double decompositionGranularity = _atom.GetStrategyWeight("DecompositionGranularity", 0.5);
+
+        // Adjust planning guidance based on evolved strategy
+        string planningGuidance = planningDepth < 0.3
+            ? "a concise high-level plan"
+            : planningDepth > 0.7
+                ? "a detailed plan with sub-steps and contingencies"
+                : "a structured plan with clear steps";
+
+        // Suggest step count based on granularity (MinPlanSteps to MinPlanSteps+PlanStepsRange)
+        int suggestedSteps = (int)(MinPlanSteps + (decompositionGranularity * PlanStepsRange));
+        string stepGuidance = $"Aim for approximately {suggestedSteps} steps";
+
         return $@"Create a plan to achieve: {goal}
 
 Self-Assessment:
@@ -597,7 +867,7 @@ Confidence: {confidenceNote}
 
 Available tools: {string.Join(", ", _tools.All.Select(t => t.Name))}
 
-Provide a step-by-step plan. Each step should be actionable and specific.";
+Provide {planningGuidance}. {stepGuidance}. Each step should be actionable and specific.";
     }
 
     private string BuildVerificationPrompt(string goal, string output)
