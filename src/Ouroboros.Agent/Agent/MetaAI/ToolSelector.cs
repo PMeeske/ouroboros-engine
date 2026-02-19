@@ -165,7 +165,7 @@ public sealed class ToolSelector
 
         if (startIndex >= 0 && endIndex > startIndex)
         {
-            return response.Substring(startIndex, endIndex - startIndex + 1);
+            return response[startIndex..(endIndex + 1)];
         }
 
         return response.Trim();

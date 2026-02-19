@@ -423,7 +423,8 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     }
 
     /// <summary>
-    /// Executes a single step from the plan.
+    /// Executes a single step from the plan using LLM-based tool selection with strategy-weight routing.
+    /// Uses ToolVsLLMWeight strategy to decide between tool execution and LLM processing.
     /// </summary>
     private async Task<Result<string, string>> ExecuteStepAsync(string step, CancellationToken ct)
     {
@@ -433,22 +434,19 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         // If weight < 0.3, skip tool selection and go straight to LLM
         if (toolWeight < 0.3)
         {
-            string llmResponse = await _llm.GenerateTextAsync($"Process this step: {step}", ct);
-            return Result<string, string>.Success(llmResponse);
+            try
+            {
+                string llmResponse = await _llm.GenerateTextAsync($"Process this step: {step}", ct);
+                return Result<string, string>.Success(llmResponse);
+            }
+            catch (Exception ex)
+            {
+                return Result<string, string>.Failure($"LLM processing failed: {ex.Message}");
+            }
         }
 
         // Attempt LLM-based tool selection
-        ToolSelection? selection = null;
-        if (toolWeight > 0.7)
-        {
-            // Always attempt tool selection first when weight > 0.7
-            selection = await _toolSelector.SelectToolAsync(step, ct);
-        }
-        else
-        {
-            // Moderate weight: try tool selection but be ready to fall back
-            selection = await _toolSelector.SelectToolAsync(step, ct);
-        }
+        ToolSelection? selection = await _toolSelector.SelectToolAsync(step, ct);
 
         // If LLM-based selection succeeded, try to use the selected tool
         if (selection != null)
