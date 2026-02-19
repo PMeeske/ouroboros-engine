@@ -39,6 +39,26 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     /// </summary>
     private const double ConfidenceBoostIncrement = 0.05;
 
+    /// <summary>
+    /// Minimum step count for planning decomposition.
+    /// </summary>
+    private const int MinPlanSteps = 3;
+
+    /// <summary>
+    /// Step count range for planning decomposition (added to MinPlanSteps based on granularity).
+    /// </summary>
+    private const int PlanStepsRange = 7;
+
+    /// <summary>
+    /// Base quality threshold for verification (used when strictness is 0.0).
+    /// </summary>
+    private const double BaseQualityThreshold = 0.3;
+
+    /// <summary>
+    /// Quality threshold range multiplier (added to base threshold based on strictness).
+    /// </summary>
+    private const double QualityThresholdRange = 0.5;
+
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ToolRegistry _tools;
     private readonly IMemoryStore _memory;
@@ -292,8 +312,8 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             // VerificationStrictness: 0.0 = lenient, 1.0 = strict
             double verificationStrictness = _atom.GetStrategyWeight("VerificationStrictness", 0.6);
 
-            // Calculate quality threshold based on strictness (range: 0.3-0.8)
-            double qualityThreshold = 0.3 + (verificationStrictness * 0.5);
+            // Calculate quality threshold based on strictness (range: BaseQualityThreshold to BaseQualityThreshold+QualityThresholdRange)
+            double qualityThreshold = BaseQualityThreshold + (verificationStrictness * QualityThresholdRange);
 
             // Build verification prompt
             string prompt = BuildVerificationPrompt(goal, output);
@@ -613,8 +633,8 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
                 ? "a detailed plan with sub-steps and contingencies"
                 : "a structured plan with clear steps";
 
-        // Suggest step count based on granularity (3-10 steps)
-        int suggestedSteps = (int)(3 + decompositionGranularity * 7);
+        // Suggest step count based on granularity (MinPlanSteps to MinPlanSteps+PlanStepsRange)
+        int suggestedSteps = (int)(MinPlanSteps + (decompositionGranularity * PlanStepsRange));
         string stepGuidance = $"Aim for approximately {suggestedSteps} steps";
 
         return $@"Create a plan to achieve: {goal}

@@ -17,6 +17,14 @@ namespace Ouroboros.Tests.MetaAI;
 public class StrategyGeneInfluenceTests
 {
     /// <summary>
+    /// Constants matching the OuroborosOrchestrator implementation.
+    /// </summary>
+    private const int MinPlanSteps = 3;
+    private const int PlanStepsRange = 7;
+    private const double BaseQualityThreshold = 0.3;
+    private const double QualityThresholdRange = 0.5;
+
+    /// <summary>
     /// Mock chat completion model that records the prompts it receives.
     /// </summary>
     private class PromptCapturingChatModel : IChatCompletionModel
@@ -289,7 +297,9 @@ public class StrategyGeneInfluenceTests
         var verifyPhase = result.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
         verifyPhase.Should().NotBeNull();
         verifyPhase!.Metadata.Should().ContainKey("quality_threshold");
-        ((double)verifyPhase.Metadata["quality_threshold"]).Should().BeApproximately(0.55, 0.01, "0.3 + (0.5 * 0.5) = 0.55");
+        // Calculate expected threshold using the same formula as production code
+        double calculatedThreshold = BaseQualityThreshold + (0.5 * QualityThresholdRange);
+        ((double)verifyPhase.Metadata["quality_threshold"]).Should().BeApproximately(calculatedThreshold, 0.01, "0.3 + (0.5 * 0.5) = 0.55");
     }
 
     [Fact]
@@ -322,11 +332,11 @@ public class StrategyGeneInfluenceTests
     }
 
     [Theory]
-    [InlineData(0.0, 0.3)]  // Lenient: 0.3 + (0.0 * 0.5) = 0.3
-    [InlineData(0.2, 0.4)]  // 0.3 + (0.2 * 0.5) = 0.4
-    [InlineData(0.5, 0.55)] // 0.3 + (0.5 * 0.5) = 0.55
-    [InlineData(0.8, 0.7)]  // 0.3 + (0.8 * 0.5) = 0.7
-    [InlineData(1.0, 0.8)]  // Strict: 0.3 + (1.0 * 0.5) = 0.8
+    [InlineData(0.0, 0.3)]  // BaseQualityThreshold + (0.0 * QualityThresholdRange) = 0.3
+    [InlineData(0.2, 0.4)]  // BaseQualityThreshold + (0.2 * QualityThresholdRange) = 0.4
+    [InlineData(0.5, 0.55)] // BaseQualityThreshold + (0.5 * QualityThresholdRange) = 0.55
+    [InlineData(0.8, 0.7)]  // BaseQualityThreshold + (0.8 * QualityThresholdRange) = 0.7
+    [InlineData(1.0, 0.8)]  // BaseQualityThreshold + (1.0 * QualityThresholdRange) = 0.8
     public async Task OuroborosOrchestrator_VerificationStrictness_CalculatesCorrectThreshold(double strictness, double expectedThreshold)
     {
         // Arrange
@@ -374,8 +384,9 @@ public class StrategyGeneInfluenceTests
         var planPrompt = promptCapture.CapturedPrompts.First();
         // Default PlanningDepth=0.5 (medium), should see "structured plan"
         planPrompt.Should().Contain("structured plan", "Default planning depth should use structured plan");
-        // Default DecompositionGranularity=0.5, should see ~6 steps (3 + 0.5*7 = 6.5 ≈ 6)
-        planPrompt.Should().MatchRegex(@"approximately (6|7) steps", "Default granularity should suggest 6-7 steps");
+        // Default DecompositionGranularity=0.5: MinPlanSteps + (0.5 * PlanStepsRange) = 3 + 3.5 = 6.5 ≈ 6
+        int expectedSteps = (int)(MinPlanSteps + (0.5 * PlanStepsRange));
+        planPrompt.Should().Contain($"approximately {expectedSteps} steps", "Default granularity should suggest calculated steps");
     }
 
     [Fact]
@@ -402,10 +413,12 @@ public class StrategyGeneInfluenceTests
         // Act
         var result = await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
-        // Assert - Check all strategies were applied
+        // Assert
         var planPrompt = promptCapture.CapturedPrompts.First();
         planPrompt.Should().Contain("detailed plan", "PlanningDepth=0.8 should request detailed plan");
-        planPrompt.Should().MatchRegex(@"approximately (9|10) steps", "DecompositionGranularity=0.9 should suggest 9-10 steps");
+        // DecompositionGranularity=0.9: MinPlanSteps + (0.9 * PlanStepsRange) = 3 + 6.3 = 9.3 ≈ 9
+        int expectedSteps = (int)(MinPlanSteps + (0.9 * PlanStepsRange));
+        planPrompt.Should().Contain($"approximately {expectedSteps} steps", "DecompositionGranularity=0.9 should suggest calculated steps");
 
         var verifyPhase = result.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
         verifyPhase.Should().NotBeNull();
