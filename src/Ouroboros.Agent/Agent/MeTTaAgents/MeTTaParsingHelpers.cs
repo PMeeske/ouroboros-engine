@@ -14,6 +14,11 @@ internal static class MeTTaParsingHelpers
     /// Regex pattern for matching AgentDef atoms in MeTTa output.
     /// Pattern handles escaped quotes and backslashes in string fields.
     /// Format: (AgentDef "id" Provider "model" Role "prompt" tokens temp)
+    /// 
+    /// String capture groups use '((?:[^"\\]|\\.)*)' which matches:
+    /// - [^"\\] = any character except quote or backslash
+    /// - \\. = backslash followed by any character (escaped sequence)
+    /// This allows proper parsing of prompts containing \" and \\ escapes.
     /// </summary>
     public const string AgentDefPattern = @"\(AgentDef\s+""((?:[^""\\]|\\.)+)""\s+(\w+)\s+""((?:[^""\\]|\\.)+)""\s+(\w+)\s+""((?:[^""\\]|\\.)*)""\s+(\d+)\s+([\d.]+)\)";
 

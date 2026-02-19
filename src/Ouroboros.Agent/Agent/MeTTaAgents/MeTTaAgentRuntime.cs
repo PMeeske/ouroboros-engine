@@ -60,6 +60,9 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
     /// <returns>The number of agents spawned.</returns>
     public async Task<Result<int, string>> SpawnAllAsync(CancellationToken ct = default)
     {
+        // Query pattern: (match &self <condition> <result>)
+        // Both condition and result use the same AgentDef pattern to ensure
+        // we extract all fields from agents that pass the safety checks
         var result = await _engine.ExecuteQueryAsync(
             "!(match &self " +
             "  (and " +
@@ -381,8 +384,9 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
         => text.Length <= maxLength ? text : text[..maxLength] + "...";
 
     private static bool IsValidMeTTaSymbol(string symbol)
-        => !string.IsNullOrWhiteSpace(symbol) && 
-           MeTTaSymbolRegex().IsMatch(symbol);
+    {
+        return !string.IsNullOrWhiteSpace(symbol) && MeTTaSymbolRegex().IsMatch(symbol);
+    }
 
     [GeneratedRegex(
         MeTTaParsingHelpers.AgentDefPattern,
