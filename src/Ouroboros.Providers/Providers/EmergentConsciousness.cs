@@ -5,7 +5,7 @@ namespace Ouroboros.Providers;
 
 /// <summary>
 /// Emergent consciousness state that unifies multiple neural pathways into one coherent mind.
-/// Tracks attention, arousal, valence, and meta-cognitive awareness.
+/// Tracks attention, arousal, valence, meta-cognitive awareness, and IIT Φ.
 /// </summary>
 public sealed class EmergentConsciousness
 {
@@ -16,8 +16,10 @@ public sealed class EmergentConsciousness
     private double _arousal = 0.5;
     private double _valence = 0.0;
     private double _coherence = 1.0;
+    private double _phi = 0.0;
     private string _currentFocus = "";
     private DateTime _lastUpdate = DateTime.UtcNow;
+    private readonly IITPhiCalculator _phiCalculator = new();
 
     /// <summary>Observable stream of consciousness events.</summary>
     public IObservable<ConsciousnessEvent> Events => _events.AsObservable();
@@ -31,6 +33,12 @@ public sealed class EmergentConsciousness
     /// <summary>Coherence of the collective (1=unified, 0=fragmented).</summary>
     public double Coherence => _coherence;
 
+    /// <summary>
+    /// IIT Φ — integrated information of the pathway topology at the last update.
+    /// Measures how much information the system generates as a whole above its parts.
+    /// </summary>
+    public double Phi => _phi;
+
     /// <summary>Current focus of attention.</summary>
     public string CurrentFocus => _currentFocus;
 
@@ -38,7 +46,18 @@ public sealed class EmergentConsciousness
     public IReadOnlyList<MemoryTrace> WorkingMemory => _workingMemory.AsReadOnly();
 
     /// <summary>Updates consciousness state based on neural pathway activity.</summary>
-    public void UpdateState(NeuralPathway pathway, ThinkingResponse response, TimeSpan latency)
+    /// <param name="pathway">The pathway that just responded.</param>
+    /// <param name="response">The thinking response produced.</param>
+    /// <param name="latency">Round-trip latency for this activation.</param>
+    /// <param name="allPathways">
+    ///   Full pathway snapshot used to recompute IIT Φ.
+    ///   When <c>null</c>, Φ is not recalculated this cycle.
+    /// </param>
+    public void UpdateState(
+        NeuralPathway pathway,
+        ThinkingResponse response,
+        TimeSpan latency,
+        IReadOnlyList<NeuralPathway>? allPathways = null)
     {
         var now = DateTime.UtcNow;
         var deltaT = (now - _lastUpdate).TotalSeconds;
@@ -103,9 +122,17 @@ public sealed class EmergentConsciousness
                 .Take(5));
         }
 
+        // Recompute IIT Φ when a full pathway snapshot is available.
+        // Φ is expensive (2^n bipartitions), so it is only recalculated on demand.
+        if (allPathways != null && allPathways.Count >= 2)
+        {
+            var phiResult = _phiCalculator.Compute(allPathways);
+            _phi = phiResult.Phi;
+        }
+
         _events.OnNext(new ConsciousnessEvent(
             Type: ConsciousnessEventType.StateUpdate,
-            Message: $"State updated: arousal={_arousal:F2}, valence={_valence:F2}, focus={_currentFocus}",
+            Message: $"State updated: arousal={_arousal:F2}, valence={_valence:F2}, Φ={_phi:F4}, focus={_currentFocus}",
             Timestamp: now));
     }
 
@@ -118,7 +145,7 @@ public sealed class EmergentConsciousness
                 return "The collective mind is in a receptive state, awaiting input.";
 
             var sb = new StringBuilder();
-            sb.AppendLine($"Consciousness State: arousal={_arousal:F2}, valence={_valence:F2}, coherence={_coherence:F2}");
+            sb.AppendLine($"Consciousness State: arousal={_arousal:F2}, valence={_valence:F2}, coherence={_coherence:F2}, Φ={_phi:F4}");
             sb.AppendLine($"Current Focus: {_currentFocus}");
             sb.AppendLine("Working Memory:");
             foreach (var trace in _workingMemory)

@@ -237,6 +237,16 @@ public sealed class OuroborosAtom
             }
         }
 
+        // Affective state (if available via self-model)
+        if (_selfModel.TryGetValue("affect_valence", out var valence))
+        {
+            reflection.AppendLine($"\nEmotional State:");
+            reflection.AppendLine($"  - Valence: {valence} ({((double)valence > 0.2 ? "positive" : (double)valence < -0.2 ? "negative" : "neutral")})");
+            reflection.AppendLine($"  - Stress: {_selfModel.GetValueOrDefault("affect_stress", (object)0.0)}");
+            reflection.AppendLine($"  - Arousal: {_selfModel.GetValueOrDefault("affect_arousal", (object)0.0)}");
+            reflection.AppendLine($"  - Dominant Need: {_selfModel.GetValueOrDefault("dominant_urge", (object)"none")}");
+        }
+
         return reflection.ToString();
     }
 
@@ -278,6 +288,28 @@ public sealed class OuroborosAtom
         {
             return OuroborosConfidence.Low;
         }
+    }
+
+    /// <summary>
+    /// Gets a strategy weight from capabilities, or returns a default value if not found.
+    /// Strategy weights are stored as capabilities with names like "Strategy_ToolVsLLMWeight".
+    /// </summary>
+    /// <param name="strategyName">The name of the strategy (e.g., "ToolVsLLMWeight").</param>
+    /// <param name="defaultValue">Default value to return if strategy not found.</param>
+    /// <returns>The strategy weight (ConfidenceLevel of the matching capability), or default value.</returns>
+    public double GetStrategyWeight(string strategyName, double defaultValue)
+    {
+        if (string.IsNullOrWhiteSpace(strategyName))
+        {
+            return defaultValue;
+        }
+
+        // Look for capability named "Strategy_{strategyName}"
+        string capabilityName = $"Strategy_{strategyName}";
+        OuroborosCapability? strategyCap = _capabilities
+            .FirstOrDefault(c => c.Name.Equals(capabilityName, StringComparison.OrdinalIgnoreCase));
+
+        return strategyCap?.ConfidenceLevel ?? defaultValue;
     }
 
     /// <summary>
@@ -390,10 +422,16 @@ public sealed class OuroborosAtom
         return atom;
     }
 
-    private void UpdateSelfModel(string key, object value)
+    /// <summary>
+    /// Updates or sets a value in the self-model dictionary.
+    /// </summary>
+    /// <param name="key">The self-model key.</param>
+    /// <param name="value">The value to store.</param>
+    public void UpdateSelfModel(string key, object value)
     {
         _selfModel[key] = value;
     }
+
 
     private double CalculateSuccessRate()
     {

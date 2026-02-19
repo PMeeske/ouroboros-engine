@@ -47,7 +47,8 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
         _config = config ?? new QdrantSkillConfig();
 
         // Parse connection string to extract host and port
-        var uri = new Uri(_config.ConnectionString);
+        var normalizedConnectionString = NormalizeConnectionString(_config.ConnectionString);
+        var uri = new Uri(normalizedConnectionString);
         var host = uri.Host;
         var port = uri.Port > 0 ? uri.Port : 6334; // Default to gRPC port
         var useHttps = uri.Scheme == "https";
@@ -490,24 +491,60 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
             {
                 try
                 {
-                    if (point.Payload.TryGetValue("skill_data", out var skillDataValue))
+                    if (point.Payload.TryGetValue("skill_data", out var skillDataValue) &&
+                        !string.IsNullOrWhiteSpace(skillDataValue.StringValue))
                     {
                         var skillData = JsonSerializer.Deserialize<SerializableSkillData>(
                             skillDataValue.StringValue, JsonOptions);
 
                         if (skillData != null)
                         {
+                            var skillId = string.IsNullOrWhiteSpace(skillData.Id)
+                                ? null
+                                : skillData.Id.Trim();
+                            if (string.IsNullOrWhiteSpace(skillId))
+                            {
+                                Console.Error.WriteLine("[WARN] Skipping Qdrant skill with missing id");
+                                continue;
+                            }
+
+                            var skillName = string.IsNullOrWhiteSpace(skillData.Name)
+                                ? skillId
+                                : skillData.Name.Trim();
+                            var description = skillData.Description?.Trim() ?? string.Empty;
+                            var category = string.IsNullOrWhiteSpace(skillData.Category)
+                                ? "general"
+                                : skillData.Category.Trim();
+
+                            var preconditions = skillData.Preconditions?
+                                .Where(v => !string.IsNullOrWhiteSpace(v))
+                                .Select(v => v.Trim())
+                                .ToList()
+                                ?? new List<string>();
+
+                            var effects = skillData.Effects?
+                                .Where(v => !string.IsNullOrWhiteSpace(v))
+                                .Select(v => v.Trim())
+                                .ToList()
+                                ?? new List<string>();
+
+                            var tags = skillData.Tags?
+                                .Where(v => !string.IsNullOrWhiteSpace(v))
+                                .Select(v => v.Trim())
+                                .ToList()
+                                ?? new List<string>();
+
                             var skill = new AgentSkill(
-                                skillData.Id,
-                                skillData.Name,
-                                skillData.Description,
-                                skillData.Category,
-                                skillData.Preconditions,
-                                skillData.Effects,
+                                skillId,
+                                skillName,
+                                description,
+                                category,
+                                preconditions,
+                                effects,
                                 skillData.SuccessRate,
                                 skillData.UsageCount,
                                 skillData.AverageExecutionTime,
-                                skillData.Tags);
+                                tags);
 
                             _skillsCache[skill.Id] = skill;
                         }
@@ -536,6 +573,44 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
         using var md5 = System.Security.Cryptography.MD5.Create();
         var hash = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes($"skill_{skillName}"));
         return new Guid(hash).ToString();
+    }
+
+    private static string NormalizeConnectionString(string? rawConnectionString)
+    {
+        var endpoint = (rawConnectionString ?? string.Empty).Trim().Trim('"');
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            return "http://localhost:6334";
+        }
+
+        var schemeSeparatorCount = endpoint.Split("://", StringSplitOptions.None).Length - 1;
+        if (schemeSeparatorCount > 1)
+        {
+            return "http://localhost:6334";
+        }
+
+        if (!endpoint.Contains("://", StringComparison.Ordinal))
+        {
+            endpoint = $"http://{endpoint}";
+        }
+
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+        {
+            return "http://localhost:6334";
+        }
+
+        if (!uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) &&
+            !uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
+        {
+            return "http://localhost:6334";
+        }
+
+        if (string.IsNullOrWhiteSpace(uri.Host) || uri.Host.Contains("://", StringComparison.Ordinal))
+        {
+            return "http://localhost:6334";
+        }
+
+        return uri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
     }
 
     private static float[] GenerateFallbackEmbedding(string text, int size)
