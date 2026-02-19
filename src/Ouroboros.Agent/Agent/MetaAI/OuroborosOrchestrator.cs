@@ -67,6 +67,10 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     private readonly OuroborosAtom _atom;
     private readonly ConcurrentDictionary<string, double> _performanceMetrics = new();
     private readonly Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? _strategyEvolver;
+    private readonly Affect.IValenceMonitor? _valenceMonitor;
+    private readonly Affect.IPriorityModulator? _priorityModulator;
+    private readonly Affect.IUrgeSystem? _urgeSystem;
+    private readonly Affect.SpreadingActivation? _spreading;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OuroborosOrchestrator"/> class.
@@ -79,6 +83,10 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     /// <param name="atom">Optional pre-configured OuroborosAtom.</param>
     /// <param name="configuration">Optional orchestrator configuration.</param>
     /// <param name="strategyEvolver">Optional genetic algorithm for evolving planning strategies.</param>
+    /// <param name="valenceMonitor">Optional valence monitor for affective state tracking.</param>
+    /// <param name="priorityModulator">Optional priority modulator for affect-driven task ordering.</param>
+    /// <param name="urgeSystem">Optional urge system for Psi-theory drive management.</param>
+    /// <param name="spreading">Optional spreading activation for associative memory priming.</param>
     public OuroborosOrchestrator(
         Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
@@ -87,7 +95,11 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         IMeTTaEngine mettaEngine,
         OuroborosAtom? atom = null,
         OrchestratorConfig? configuration = null,
-        Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? strategyEvolver = null)
+        Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? strategyEvolver = null,
+        Affect.IValenceMonitor? valenceMonitor = null,
+        Affect.IPriorityModulator? priorityModulator = null,
+        Affect.IUrgeSystem? urgeSystem = null,
+        Affect.SpreadingActivation? spreading = null)
         : base("OuroborosOrchestrator", configuration ?? OrchestratorConfig.Default(), safety)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
@@ -97,6 +109,10 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         _mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
         _atom = atom ?? OuroborosAtom.CreateDefault();
         _strategyEvolver = strategyEvolver;
+        _valenceMonitor = valenceMonitor;
+        _priorityModulator = priorityModulator;
+        _urgeSystem = urgeSystem;
+        _spreading = spreading;
     }
 
     /// <summary>
@@ -119,13 +135,27 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
 
         try
         {
+            // ═══════════════════════════════════════════════
+            // PRE-CYCLE: Affective state update (Psi-theory)
+            // ═══════════════════════════════════════════════
+            _urgeSystem?.Tick();
+            Affect.AffectiveState? affect = _valenceMonitor?.GetCurrentState();
+            double selectionThreshold = affect != null ? CalculateSelectionThreshold(affect) : 0.5;
+            double resolutionLevel = affect != null ? GetEffectiveResolutionLevel(affect) : 0.5;
+            Affect.Urge? dominantUrge = _urgeSystem?.GetDominantUrge();
+
+            if (affect != null && dominantUrge != null)
+            {
+                await ProjectAffectiveStateToMeTTaAsync(affect, dominantUrge, context.CancellationToken);
+            }
+
             // Set the goal
             _atom.SetGoal(goal);
 
             // Translate Ouroboros state to MeTTa
             await TranslateToMeTTaAsync(context.CancellationToken);
 
-            // Phase 1: PLAN
+            // Phase 1: PLAN (shaped by affect + urges)
             PhaseResult planResult = await ExecutePlanPhaseAsync(goal, context.CancellationToken);
             phaseResults.Add(planResult);
             _atom.AdvancePhase();
@@ -136,10 +166,17 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                 return CreateResult(goal, phaseResults, planResult.Output, success, totalStopwatch.Elapsed);
             }
 
-            // Phase 2: EXECUTE
+            // Phase 2: EXECUTE (selection threshold gates actions)
             PhaseResult executeResult = await ExecuteExecutePhaseAsync(planResult.Output, context.CancellationToken);
             phaseResults.Add(executeResult);
             _atom.AdvancePhase();
+
+            // Update valence based on execution success
+            if (_valenceMonitor != null)
+            {
+                _valenceMonitor.RecordSignal("execute_phase",
+                    executeResult.Success ? 0.5 : -0.5, Affect.SignalType.Valence);
+            }
 
             if (!executeResult.Success)
             {
@@ -147,15 +184,55 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                 return CreateResult(goal, phaseResults, executeResult.Error, success, totalStopwatch.Elapsed);
             }
 
-            // Phase 3: VERIFY
+            // Phase 3: VERIFY (strictness modulated by certainty urge)
             PhaseResult verifyResult = await ExecuteVerifyPhaseAsync(goal, executeResult.Output, context.CancellationToken);
             phaseResults.Add(verifyResult);
             _atom.AdvancePhase();
 
-            // Phase 4: LEARN
+            // Satisfy or frustrate certainty urge based on verification
+            if (verifyResult.Success)
+            {
+                double qualityScore = verifyResult.Metadata.TryGetValue("quality_score", out var qs) ? (double)qs : 0.7;
+                _urgeSystem?.Satisfy("certainty", qualityScore);
+                _valenceMonitor?.UpdateConfidence("verify", true, qualityScore);
+            }
+            else
+            {
+                _valenceMonitor?.UpdateConfidence("verify", false, 0.8);
+                _valenceMonitor?.RecordSignal("verify_failed", 0.6, Affect.SignalType.Stress);
+            }
+
+            // Phase 4: LEARN (satisfy competence + curiosity urges)
             PhaseResult learnResult = await ExecuteLearnPhaseAsync(goal, phaseResults, context.CancellationToken);
             phaseResults.Add(learnResult);
             _atom.AdvancePhase(); // Returns to PLAN, completing the cycle
+
+            if (learnResult.Success)
+            {
+                double learnQuality = learnResult.Metadata.TryGetValue("quality_score", out var lqs) ? (double)lqs : 0.5;
+                _urgeSystem?.Satisfy("competence", learnQuality);
+
+                // If this was a novel domain, satisfy curiosity
+                if (_atom.AssessConfidence(goal) == OuroborosConfidence.Low)
+                {
+                    _urgeSystem?.Satisfy("curiosity", 0.8);
+                    _valenceMonitor?.UpdateCuriosity(0.7, goal);
+                }
+            }
+
+            // ═══════════════════════════════════════════════
+            // POST-CYCLE: Update self-model with affective state
+            // ═══════════════════════════════════════════════
+            if (_valenceMonitor != null)
+            {
+                Affect.AffectiveState postCycleAffect = _valenceMonitor.GetCurrentState();
+                _atom.UpdateSelfModel("affect_valence", postCycleAffect.Valence);
+                _atom.UpdateSelfModel("affect_stress", postCycleAffect.Stress);
+                _atom.UpdateSelfModel("affect_arousal", postCycleAffect.Arousal);
+                _atom.UpdateSelfModel("dominant_urge", dominantUrge?.Name ?? "none");
+            }
+
+            _spreading?.Decay();
 
             finalOutput = executeResult.Output;
             success = verifyResult.Success;
@@ -622,6 +699,71 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
         }
 
         await _mettaEngine.AddFactAsync(metta.ToString(), ct);
+    }
+
+    /// <summary>
+    /// Calculates the current selection threshold based on arousal.
+    /// High arousal → low threshold (faster, less deliberate decisions).
+    /// Low arousal → high threshold (slower, more deliberate decisions).
+    /// </summary>
+    private static double CalculateSelectionThreshold(Affect.AffectiveState state)
+    {
+        double threshold = 0.5 - (state.Arousal * 0.2) + (state.Stress * 0.15);
+        return Math.Clamp(threshold, 0.2, 0.8);
+    }
+
+    /// <summary>
+    /// Calculates the effective resolution level, combining evolved strategy genes
+    /// with dynamic arousal modulation.
+    /// </summary>
+    private double GetEffectiveResolutionLevel(Affect.AffectiveState state)
+    {
+        double evolvedDepth = _atom.GetStrategyWeight("PlanningDepth", 0.5);
+
+        // Psi-theory: high arousal reduces resolution (fast, shallow processing)
+        double arousalModulation = 1.0 - (state.Arousal * 0.4);
+
+        return Math.Clamp(evolvedDepth * arousalModulation, 0.1, 1.0);
+    }
+
+    /// <summary>
+    /// Projects the current affective state into the MeTTa knowledge base
+    /// for symbolic reasoning about emotions.
+    /// </summary>
+    private async Task ProjectAffectiveStateToMeTTaAsync(
+        Affect.AffectiveState affect, Affect.Urge? dominantUrge, CancellationToken ct)
+    {
+        string id = _atom.InstanceId;
+
+        await _mettaEngine.AddFactAsync(
+            $"(AffectiveState (OuroborosInstance \"{id}\") " +
+            $"(Valence {affect.Valence:F2}) " +
+            $"(Stress {affect.Stress:F2}) " +
+            $"(Arousal {affect.Arousal:F2}) " +
+            $"(Confidence {affect.Confidence:F2}) " +
+            $"(Curiosity {affect.Curiosity:F2}))", ct);
+
+        if (dominantUrge != null)
+        {
+            await _mettaEngine.AddFactAsync(
+                $"(DominantUrge (OuroborosInstance \"{id}\") " +
+                $"(Urge \"{dominantUrge.Name}\" {dominantUrge.Intensity:F2}))", ct);
+        }
+
+        if (_urgeSystem != null)
+        {
+            string urgesMeTTa = _urgeSystem.ToMeTTa(id);
+            await _mettaEngine.AddFactAsync(urgesMeTTa, ct);
+        }
+
+        if (_spreading != null)
+        {
+            foreach (var (atomKey, activation) in _spreading.GetActivatedAtoms().Take(10))
+            {
+                await _mettaEngine.AddFactAsync(
+                    $"(Primed (OuroborosInstance \"{id}\") (Concept \"{EscapeMeTTa(atomKey)}\" {activation:F2}))", ct);
+            }
+        }
     }
 
     private string BuildPlanPrompt(string goal, string selfReflection, OuroborosConfidence confidence)
