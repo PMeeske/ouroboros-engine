@@ -300,7 +300,10 @@ public class StrategyGeneInfluenceTests
         verifyPhase!.Metadata.Should().ContainKey("quality_threshold");
         // Calculate expected threshold using the same formula as production code
         double calculatedThreshold = BaseQualityThreshold + (0.5 * QualityThresholdRange);
-        ((double)verifyPhase.Metadata["quality_threshold"]).Should().BeApproximately(calculatedThreshold, 0.01, "0.3 + (0.5 * 0.5) = 0.55");
+        ((double)verifyPhase.Metadata["quality_threshold"]).Should().BeApproximately(
+            calculatedThreshold, 
+            0.01, 
+            $"{BaseQualityThreshold} + (0.5 * {QualityThresholdRange}) = {calculatedThreshold}");
     }
 
     [Fact]
@@ -423,6 +426,11 @@ public class StrategyGeneInfluenceTests
 
         var verifyPhase = result.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
         verifyPhase.Should().NotBeNull();
-        ((double)verifyPhase!.Metadata["quality_threshold"]).Should().BeApproximately(0.5, 0.01, "VerificationStrictness=0.4 should set threshold to 0.5");
+        // Calculate expected threshold: BaseQualityThreshold + (0.4 * QualityThresholdRange)
+        double expectedThreshold = BaseQualityThreshold + (0.4 * QualityThresholdRange);
+        ((double)verifyPhase!.Metadata["quality_threshold"]).Should().BeApproximately(
+            expectedThreshold, 
+            0.01, 
+            $"VerificationStrictness=0.4 should set threshold to {BaseQualityThreshold} + (0.4 * {QualityThresholdRange}) = {expectedThreshold}");
     }
 }
