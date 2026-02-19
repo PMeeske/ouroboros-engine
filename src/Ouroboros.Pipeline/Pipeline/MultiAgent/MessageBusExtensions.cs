@@ -133,6 +133,7 @@ public static class MessageBusExtensions
     /// <param name="senderId">The unique identifier of the sending agent.</param>
     /// <param name="topic">The topic of the notification.</param>
     /// <param name="payload">The message payload.</param>
+    /// <param name="receiverId">The unique identifier of the receiving agent, or null for broadcast notifications.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     public static async Task NotifyAsync(
@@ -140,13 +141,14 @@ public static class MessageBusExtensions
         Guid senderId,
         string topic,
         object payload,
+        Guid? receiverId = null,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(bus);
         ArgumentNullException.ThrowIfNull(topic);
         ArgumentNullException.ThrowIfNull(payload);
 
-        AgentMessage notification = AgentMessage.CreateNotification(senderId, topic, payload);
+        AgentMessage notification = AgentMessage.CreateNotification(senderId, topic, payload, receiverId);
         await bus.PublishAsync(notification, ct).ConfigureAwait(false);
     }
 }

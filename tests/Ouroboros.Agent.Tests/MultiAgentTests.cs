@@ -444,6 +444,53 @@ public class MultiAgentTests
         message.CorrelationId.Should().BeNull();
     }
 
+    /// <summary>
+    /// Tests that CreateNotification without receiverId creates a broadcast notification.
+    /// </summary>
+    [Fact]
+    public void AgentMessage_CreateNotification_WithoutReceiverId_ShouldCreateBroadcast()
+    {
+        // Arrange
+        Guid senderId = Guid.NewGuid();
+        string topic = "system.update";
+        object payload = "System maintenance scheduled";
+
+        // Act
+        AgentMessage message = AgentMessage.CreateNotification(senderId, topic, payload);
+
+        // Assert
+        message.SenderId.Should().Be(senderId);
+        message.ReceiverId.Should().BeNull();
+        message.Type.Should().Be(MessageType.Notification);
+        message.Topic.Should().Be(topic);
+        message.Payload.Should().Be(payload);
+        message.CorrelationId.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Tests that CreateNotification with receiverId creates a user-specific notification.
+    /// </summary>
+    [Fact]
+    public void AgentMessage_CreateNotification_WithReceiverId_ShouldCreateUserNotification()
+    {
+        // Arrange
+        Guid senderId = Guid.NewGuid();
+        Guid receiverId = Guid.NewGuid();
+        string topic = "user.alert";
+        object payload = "Your task has been completed";
+
+        // Act
+        AgentMessage message = AgentMessage.CreateNotification(senderId, topic, payload, receiverId);
+
+        // Assert
+        message.SenderId.Should().Be(senderId);
+        message.ReceiverId.Should().Be(receiverId);
+        message.Type.Should().Be(MessageType.Notification);
+        message.Topic.Should().Be(topic);
+        message.Payload.Should().Be(payload);
+        message.CorrelationId.Should().BeNull();
+    }
+
     #endregion
 
     #region InMemoryMessageBus Tests
