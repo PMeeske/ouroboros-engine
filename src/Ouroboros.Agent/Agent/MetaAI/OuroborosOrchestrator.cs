@@ -101,7 +101,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         OuroborosAtom? atom = null,
         OrchestratorConfig? configuration = null,
         Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? strategyEvolver = null,
-        ILogger<OuroborosOrchestrator>? logger = null)
+        ILogger<OuroborosOrchestrator>? logger = null,
         Affect.IValenceMonitor? valenceMonitor = null,
         Affect.IPriorityModulator? priorityModulator = null,
         Affect.IUrgeSystem? urgeSystem = null,
@@ -610,19 +610,6 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         }
 
         // Fallback: Try old Contains() matching for robustness
-    /// Executes a single step from the plan.
-    /// Uses the ToolVsLLMWeight strategy to determine whether to prefer tool execution or LLM reasoning.
-    /// </summary>
-    private async Task<Result<string, string>> ExecuteStepAsync(string step, CancellationToken ct)
-    {
-        // Read evolved strategy gene for tool vs LLM routing
-        // ToolVsLLMWeight: 0.0 = prefer LLM, 1.0 = prefer tools
-        // TODO: Implement LLM-first execution path when toolVsLlmWeight <= 0.5
-        // For now, this reads the strategy to ensure it's available in the atom,
-        // but the actual routing logic will be implemented in a future enhancement
-        double toolVsLlmWeight = _atom.GetStrategyWeight("ToolVsLLMWeight", 0.7);
-
-        // Try to match step to a tool
         Option<ITool> toolOption = _tools.All
             .FirstOrDefault(t => step.Contains(t.Name, StringComparison.OrdinalIgnoreCase))
             .ToOption();
@@ -644,9 +631,6 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             }
 
             // Execute tool with raw step text (fallback behavior)
-            // Execute tool
-            // Note: toolVsLlmWeight is read above for future enhancement where we could
-            // try LLM first when weight <= 0.5, then fall back to tools if needed
             return await tool.InvokeAsync(step, ct);
         }
 
