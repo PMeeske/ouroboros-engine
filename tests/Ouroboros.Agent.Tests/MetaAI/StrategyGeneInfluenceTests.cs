@@ -335,12 +335,13 @@ public class StrategyGeneInfluenceTests
         ((bool)verifyPhase.Metadata["meets_quality_threshold"]).Should().BeTrue();
     }
 
+    // Verifies quality_threshold = BaseQualityThreshold + (strictness * QualityThresholdRange)
     [Theory]
-    [InlineData(0.0, 0.3)]  // BaseQualityThreshold + (0.0 * QualityThresholdRange) = 0.3
-    [InlineData(0.2, 0.4)]  // BaseQualityThreshold + (0.2 * QualityThresholdRange) = 0.4
-    [InlineData(0.5, 0.55)] // BaseQualityThreshold + (0.5 * QualityThresholdRange) = 0.55
-    [InlineData(0.8, 0.7)]  // BaseQualityThreshold + (0.8 * QualityThresholdRange) = 0.7
-    [InlineData(1.0, 0.8)]  // BaseQualityThreshold + (1.0 * QualityThresholdRange) = 0.8
+    [InlineData(0.0, 0.3)]
+    [InlineData(0.2, 0.4)]
+    [InlineData(0.5, 0.55)]
+    [InlineData(0.8, 0.7)]
+    [InlineData(1.0, 0.8)]
     public async Task OuroborosOrchestrator_VerificationStrictness_CalculatesCorrectThreshold(double strictness, double expectedThreshold)
     {
         // Arrange
