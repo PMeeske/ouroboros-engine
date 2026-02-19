@@ -375,7 +375,7 @@ public class StrategyGeneInfluenceTests
         // Default PlanningDepth=0.5 (medium), should see "structured plan"
         planPrompt.Should().Contain("structured plan", "Default planning depth should use structured plan");
         // Default DecompositionGranularity=0.5, should see ~6 steps (3 + 0.5*7 = 6.5 ≈ 6)
-        planPrompt.Should().MatchRegex(@"approximately [6-7] steps", "Default granularity should suggest 6-7 steps");
+        planPrompt.Should().MatchRegex(@"approximately (6|7) steps", "Default granularity should suggest 6-7 steps");
     }
 
     [Fact]

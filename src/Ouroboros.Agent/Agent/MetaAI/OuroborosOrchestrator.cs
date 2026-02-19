@@ -452,50 +452,26 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             .FirstOrDefault(t => step.Contains(t.Name, StringComparison.OrdinalIgnoreCase))
             .ToOption();
 
-        // Determine execution order based on strategy weight
-        bool preferTools = toolVsLlmWeight > 0.5;
-
         if (toolOption.HasValue && toolOption.Value != null)
         {
             ITool tool = toolOption.Value;
 
-            if (preferTools)
+            // Check safety
+            SafetyCheckResult safetyCheck = await _safety.CheckActionSafetyAsync(
+                tool.Name,
+                new Dictionary<string, object> { ["step"] = step },
+                context: null,
+                ct);
+
+            if (!safetyCheck.IsAllowed)
             {
-                // Try tool first when weight > 0.5
-                // Check safety
-                SafetyCheckResult safetyCheck = await _safety.CheckActionSafetyAsync(
-                    tool.Name,
-                    new Dictionary<string, object> { ["step"] = step },
-                    context: null,
-                    ct);
-
-                if (!safetyCheck.IsAllowed)
-                {
-                    return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
-                }
-
-                // Execute tool
-                return await tool.InvokeAsync(step, ct);
+                return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
             }
-            else
-            {
-                // Prefer LLM when weight <= 0.5, but tool is still available as fallback
-                // For now, still use tool since it's matched, but in future could try LLM first
-                // Check safety
-                SafetyCheckResult safetyCheck = await _safety.CheckActionSafetyAsync(
-                    tool.Name,
-                    new Dictionary<string, object> { ["step"] = step },
-                    context: null,
-                    ct);
 
-                if (!safetyCheck.IsAllowed)
-                {
-                    return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
-                }
-
-                // Execute tool
-                return await tool.InvokeAsync(step, ct);
-            }
+            // Execute tool
+            // Note: toolVsLlmWeight is read above for future enhancement where we could
+            // try LLM first when weight <= 0.5, then fall back to tools if needed
+            return await tool.InvokeAsync(step, ct);
         }
 
         // No matching tool, use LLM to process step
