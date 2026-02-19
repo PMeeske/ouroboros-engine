@@ -301,8 +301,8 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             Result<bool, string> mettaResult = await _mettaEngine.VerifyPlanAsync(planMetta, ct);
 
             bool mettaVerified = mettaResult.Match(
-                success: v => v,
-                failure: err =>
+                v => v,
+                err =>
                 {
                     Console.WriteLine($"[VERIFY] MeTTa verification failed: {err}, treating as unverified");
                     return false;
