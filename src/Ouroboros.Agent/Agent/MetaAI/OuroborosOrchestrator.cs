@@ -476,6 +476,9 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     {
         // Read evolved strategy gene for tool vs LLM routing
         // ToolVsLLMWeight: 0.0 = prefer LLM, 1.0 = prefer tools
+        // TODO: Implement LLM-first execution path when toolVsLlmWeight <= 0.5
+        // For now, this reads the strategy to ensure it's available in the atom,
+        // but the actual routing logic will be implemented in a future enhancement
         double toolVsLlmWeight = _atom.GetStrategyWeight("ToolVsLLMWeight", 0.7);
 
         // Try to match step to a tool
