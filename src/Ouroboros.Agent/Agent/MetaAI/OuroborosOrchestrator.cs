@@ -640,10 +640,52 @@ Provide verification in JSON format:
             double qualityScore = doc.RootElement.GetProperty("quality_score").GetDouble();
             return (verified, qualityScore);
         }
-        catch (Exception ex)
+        catch (System.Text.Json.JsonException jsonEx)
         {
             // Retry once with a more structured prompt
-            Console.WriteLine($"[VERIFY] Failed to parse verification result, attempting retry with structured prompt: {ex.Message}");
+            Console.WriteLine($"[VERIFY] Failed to parse verification result (JSON error), attempting retry with structured prompt: {jsonEx.Message}");
+            
+            try
+            {
+                string retryResponse = await RequestStructuredVerificationAsync(goal, output, ct);
+                using System.Text.Json.JsonDocument retryDoc = System.Text.Json.JsonDocument.Parse(retryResponse);
+                bool verified = retryDoc.RootElement.GetProperty("verified").GetBoolean();
+                double qualityScore = retryDoc.RootElement.GetProperty("quality_score").GetDouble();
+                Console.WriteLine($"[VERIFY] Retry successful: verified={verified}, quality={qualityScore}");
+                return (verified, qualityScore);
+            }
+            catch (System.Text.Json.JsonException retryJsonEx)
+            {
+                // Fail-closed: treat as verification failure
+                Console.WriteLine($"[VERIFY] Failed to parse verification result after retry (JSON error), treating as failed: {retryJsonEx.Message}");
+                return (false, 0.0);
+            }
+        }
+        catch (KeyNotFoundException keyEx)
+        {
+            // Missing required property (verified or quality_score)
+            Console.WriteLine($"[VERIFY] Missing required property in verification result: {keyEx.Message}");
+            
+            try
+            {
+                string retryResponse = await RequestStructuredVerificationAsync(goal, output, ct);
+                using System.Text.Json.JsonDocument retryDoc = System.Text.Json.JsonDocument.Parse(retryResponse);
+                bool verified = retryDoc.RootElement.GetProperty("verified").GetBoolean();
+                double qualityScore = retryDoc.RootElement.GetProperty("quality_score").GetDouble();
+                Console.WriteLine($"[VERIFY] Retry successful: verified={verified}, quality={qualityScore}");
+                return (verified, qualityScore);
+            }
+            catch (Exception retryEx)
+            {
+                // Fail-closed: treat as verification failure
+                Console.WriteLine($"[VERIFY] Failed to parse verification result after retry, treating as failed: {retryEx.Message}");
+                return (false, 0.0);
+            }
+        }
+        catch (InvalidOperationException invalidOpEx)
+        {
+            // Property exists but has wrong type
+            Console.WriteLine($"[VERIFY] Invalid property type in verification result: {invalidOpEx.Message}");
             
             try
             {
