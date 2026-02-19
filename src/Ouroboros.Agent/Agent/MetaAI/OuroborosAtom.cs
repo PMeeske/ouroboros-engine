@@ -237,6 +237,16 @@ public sealed class OuroborosAtom
             }
         }
 
+        // Affective state (if available via self-model)
+        if (_selfModel.TryGetValue("affect_valence", out var valence))
+        {
+            reflection.AppendLine($"\nEmotional State:");
+            reflection.AppendLine($"  - Valence: {valence} ({((double)valence > 0.2 ? "positive" : (double)valence < -0.2 ? "negative" : "neutral")})");
+            reflection.AppendLine($"  - Stress: {_selfModel.GetValueOrDefault("affect_stress", (object)0.0)}");
+            reflection.AppendLine($"  - Arousal: {_selfModel.GetValueOrDefault("affect_arousal", (object)0.0)}");
+            reflection.AppendLine($"  - Dominant Need: {_selfModel.GetValueOrDefault("dominant_urge", (object)"none")}");
+        }
+
         return reflection.ToString();
     }
 
@@ -390,9 +400,28 @@ public sealed class OuroborosAtom
         return atom;
     }
 
-    private void UpdateSelfModel(string key, object value)
+    /// <summary>
+    /// Updates or sets a value in the self-model dictionary.
+    /// </summary>
+    /// <param name="key">The self-model key.</param>
+    /// <param name="value">The value to store.</param>
+    public void UpdateSelfModel(string key, object value)
     {
         _selfModel[key] = value;
+    }
+
+    /// <summary>
+    /// Gets the weight of an evolved strategy gene stored as a capability.
+    /// Strategy genes are stored as capabilities with the "Strategy_" prefix.
+    /// </summary>
+    /// <param name="strategyName">The strategy name (without the "Strategy_" prefix).</param>
+    /// <param name="defaultValue">Default value if no matching strategy capability is found.</param>
+    /// <returns>The strategy weight (confidence level) or the default value.</returns>
+    public double GetStrategyWeight(string strategyName, double defaultValue = 0.0)
+    {
+        OuroborosCapability? cap = _capabilities.FirstOrDefault(c =>
+            string.Equals(c.Name, $"Strategy_{strategyName}", StringComparison.OrdinalIgnoreCase));
+        return cap?.ConfidenceLevel ?? defaultValue;
     }
 
     private double CalculateSuccessRate()
