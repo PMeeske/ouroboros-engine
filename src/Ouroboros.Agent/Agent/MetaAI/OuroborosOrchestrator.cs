@@ -11,6 +11,8 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -47,6 +49,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     private readonly OuroborosAtom _atom;
     private readonly ConcurrentDictionary<string, double> _performanceMetrics = new();
     private readonly Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? _strategyEvolver;
+    private readonly ILogger<OuroborosOrchestrator> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OuroborosOrchestrator"/> class.
@@ -59,6 +62,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
     /// <param name="atom">Optional pre-configured OuroborosAtom.</param>
     /// <param name="configuration">Optional orchestrator configuration.</param>
     /// <param name="strategyEvolver">Optional genetic algorithm for evolving planning strategies.</param>
+    /// <param name="logger">Optional logger for structured logging.</param>
     public OuroborosOrchestrator(
         Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
@@ -67,7 +71,8 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         IMeTTaEngine mettaEngine,
         OuroborosAtom? atom = null,
         OrchestratorConfig? configuration = null,
-        Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? strategyEvolver = null)
+        Genetic.Core.GeneticAlgorithm<Evolution.PlanStrategyGene>? strategyEvolver = null,
+        ILogger<OuroborosOrchestrator>? logger = null)
         : base("OuroborosOrchestrator", configuration ?? OrchestratorConfig.Default(), safety)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
@@ -77,6 +82,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
         _mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
         _atom = atom ?? OuroborosAtom.CreateDefault();
         _strategyEvolver = strategyEvolver;
+        _logger = logger ?? NullLogger<OuroborosOrchestrator>.Instance;
     }
 
     /// <summary>
@@ -304,7 +310,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                 v => v,
                 err =>
                 {
-                    Console.WriteLine($"[VERIFY] MeTTa verification failed: {err}, treating as unverified");
+                    _logger.LogWarning("[VERIFY] MeTTa verification failed: {Error}. Treating as unverified.", err);
                     return false;
                 });
 
@@ -643,19 +649,28 @@ Provide verification in JSON format:
         catch (System.Text.Json.JsonException jsonEx)
         {
             // Retry once with a more structured prompt
-            Console.WriteLine($"[VERIFY] Failed to parse verification result (JSON error), attempting retry with structured prompt: {jsonEx.Message}");
+            _logger.LogWarning(
+                jsonEx,
+                "[VERIFY] Failed to parse verification result (JSON error), attempting retry with structured prompt. ExceptionMessage: {ExceptionMessage}",
+                jsonEx.Message);
             return await RetryVerificationParsingAsync(goal, output, ct);
         }
         catch (KeyNotFoundException keyEx)
         {
             // Missing required property (verified or quality_score)
-            Console.WriteLine($"[VERIFY] Missing required property in verification result: {keyEx.Message}");
+            _logger.LogWarning(
+                keyEx,
+                "[VERIFY] Missing required property in verification result. ExceptionMessage: {ExceptionMessage}",
+                keyEx.Message);
             return await RetryVerificationParsingAsync(goal, output, ct);
         }
         catch (InvalidOperationException invalidOpEx)
         {
             // Property exists but has wrong type
-            Console.WriteLine($"[VERIFY] Invalid property type in verification result: {invalidOpEx.Message}");
+            _logger.LogWarning(
+                invalidOpEx,
+                "[VERIFY] Invalid property type in verification result. ExceptionMessage: {ExceptionMessage}",
+                invalidOpEx.Message);
             return await RetryVerificationParsingAsync(goal, output, ct);
         }
     }
@@ -668,25 +683,34 @@ Provide verification in JSON format:
             using System.Text.Json.JsonDocument retryDoc = System.Text.Json.JsonDocument.Parse(retryResponse);
             bool verified = retryDoc.RootElement.GetProperty("verified").GetBoolean();
             double qualityScore = retryDoc.RootElement.GetProperty("quality_score").GetDouble();
-            Console.WriteLine($"[VERIFY] Retry successful: verified={verified}, quality={qualityScore}");
+            _logger.LogInformation("[VERIFY] Retry successful: verified={Verified}, quality={QualityScore}", verified, qualityScore);
             return (verified, qualityScore);
         }
         catch (System.Text.Json.JsonException retryJsonEx)
         {
             // Fail-closed: treat as verification failure
-            Console.WriteLine($"[VERIFY] Failed to parse verification result after retry (JSON error), treating as failed: {retryJsonEx.Message}");
+            _logger.LogWarning(
+                retryJsonEx,
+                "[VERIFY] Failed to parse verification result after retry (JSON error), treating as failed. ExceptionMessage: {ExceptionMessage}",
+                retryJsonEx.Message);
             return (false, 0.0);
         }
         catch (KeyNotFoundException retryKeyEx)
         {
             // Missing required property on retry
-            Console.WriteLine($"[VERIFY] Missing required property after retry, treating as failed: {retryKeyEx.Message}");
+            _logger.LogWarning(
+                retryKeyEx,
+                "[VERIFY] Missing required property after retry, treating as failed. ExceptionMessage: {ExceptionMessage}",
+                retryKeyEx.Message);
             return (false, 0.0);
         }
         catch (InvalidOperationException retryInvalidOpEx)
         {
             // Invalid property type on retry
-            Console.WriteLine($"[VERIFY] Invalid property type after retry, treating as failed: {retryInvalidOpEx.Message}");
+            _logger.LogWarning(
+                retryInvalidOpEx,
+                "[VERIFY] Invalid property type after retry, treating as failed. ExceptionMessage: {ExceptionMessage}",
+                retryInvalidOpEx.Message);
             return (false, 0.0);
         }
     }
