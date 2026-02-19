@@ -261,7 +261,7 @@ public sealed class MeTTaAgentTool : ITool
         if (agentIds == null || agentIds.Count == 0)
         {
             // Try to get pipeline from MeTTa (escape prompt to prevent injection)
-            string escapedPrompt = prompt.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            string escapedPrompt = EscapeMeTTaString(prompt);
             var pipelineResult = await _engine.ExecuteQueryAsync(
                 $"!(code-pipeline \"{escapedPrompt}\")", ct);
 
@@ -333,7 +333,8 @@ public sealed class MeTTaAgentTool : ITool
             return defs;
 
         // Match patterns like: (AgentDef "id" Provider "model" Role "prompt" tokens temp)
-        var pattern = @"\(AgentDef\s+""([^""]+)""\s+(\w+)\s+""([^""]+)""\s+(\w+)\s+""([^""]*)""\s+(\d+)\s+([\d.]+)\)";
+        // Pattern handles escaped quotes in strings
+        var pattern = @"\(AgentDef\s+""((?:[^""\\]|\\.)+)""\s+(\w+)\s+""((?:[^""\\]|\\.)+)""\s+(\w+)\s+""((?:[^""\\]|\\.)*)""\s+(\d+)\s+([\d.]+)\)";
         var matches = System.Text.RegularExpressions.Regex.Matches(mettaOutput, pattern);
 
         foreach (System.Text.RegularExpressions.Match match in matches)
@@ -358,4 +359,7 @@ public sealed class MeTTaAgentTool : ITool
 
         return defs;
     }
+
+    private static string EscapeMeTTaString(string text)
+        => text.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }

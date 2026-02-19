@@ -382,10 +382,13 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
 
     private static bool IsValidMeTTaSymbol(string symbol)
         => !string.IsNullOrWhiteSpace(symbol) && 
-           System.Text.RegularExpressions.Regex.IsMatch(symbol, @"^[a-zA-Z][a-zA-Z0-9_]*$");
+           MeTTaSymbolRegex().IsMatch(symbol);
 
     [GeneratedRegex(
         @"\(AgentDef\s+""((?:[^""\\]|\\.)+)""\s+(\w+)\s+""((?:[^""\\]|\\.)+)""\s+(\w+)\s+""((?:[^""\\]|\\.)*)""\s+(\d+)\s+([\d.]+)\)",
         RegexOptions.Compiled)]
     private static partial Regex AgentDefRegex();
+
+    [GeneratedRegex(@"^[a-zA-Z][a-zA-Z0-9_]*$", RegexOptions.Compiled)]
+    private static partial Regex MeTTaSymbolRegex();
 }
