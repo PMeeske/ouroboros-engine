@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using Ouroboros.Agent.MetaAI;
 using Ouroboros.Agent.MetaAI.Evolution;
 using Ouroboros.Genetic.Abstractions;
 
@@ -244,5 +245,109 @@ public class PlanStrategyChromosomeTests
 
         // Act & Assert
         chromosome.Should().BeAssignableTo<IChromosome<PlanStrategyGene>>();
+    }
+
+    [Fact]
+    public void FromAtom_WithEvolvedCapabilities_ExtractsGeneWeights()
+    {
+        // Arrange
+        var atom = OuroborosAtom.CreateDefault();
+        
+        // Add evolved strategy capabilities to atom
+        atom.AddCapability(new OuroborosCapability("Strategy_PlanningDepth", "Evolved planning depth", 0.8));
+        atom.AddCapability(new OuroborosCapability("Strategy_ToolVsLLMWeight", "Evolved tool preference", 0.6));
+        atom.AddCapability(new OuroborosCapability("Strategy_VerificationStrictness", "Evolved verification level", 0.9));
+        atom.AddCapability(new OuroborosCapability("Strategy_DecompositionGranularity", "Evolved granularity", 0.4));
+
+        // Act
+        var chromosome = PlanStrategyChromosome.FromAtom(atom);
+
+        // Assert
+        chromosome.Genes.Should().HaveCount(4);
+        chromosome.GetGene("PlanningDepth")!.Weight.Should().Be(0.8);
+        chromosome.GetGene("ToolVsLLMWeight")!.Weight.Should().Be(0.6);
+        chromosome.GetGene("VerificationStrictness")!.Weight.Should().Be(0.9);
+        chromosome.GetGene("DecompositionGranularity")!.Weight.Should().Be(0.4);
+    }
+
+    [Fact]
+    public void FromAtom_WithNoStrategyCapabilities_ReturnsDefaults()
+    {
+        // Arrange
+        var atom = OuroborosAtom.CreateDefault(); // Only has default capabilities, no Strategy_ ones
+        var defaultChromosome = PlanStrategyChromosome.CreateDefault();
+
+        // Act
+        var chromosome = PlanStrategyChromosome.FromAtom(atom);
+
+        // Assert
+        chromosome.Genes.Should().HaveCount(4);
+        
+        // Should have same weights as CreateDefault()
+        for (int i = 0; i < chromosome.Genes.Count; i++)
+        {
+            chromosome.Genes[i].Weight.Should().Be(defaultChromosome.Genes[i].Weight);
+            chromosome.Genes[i].StrategyName.Should().Be(defaultChromosome.Genes[i].StrategyName);
+        }
+    }
+
+    [Fact]
+    public void FromAtom_WithPartialCapabilities_FallsBackForMissing()
+    {
+        // Arrange
+        var atom = OuroborosAtom.CreateDefault();
+        var defaultChromosome = PlanStrategyChromosome.CreateDefault();
+        
+        // Add only one evolved strategy capability
+        atom.AddCapability(new OuroborosCapability("Strategy_PlanningDepth", "Evolved planning depth", 0.8));
+
+        // Act
+        var chromosome = PlanStrategyChromosome.FromAtom(atom);
+
+        // Assert
+        chromosome.Genes.Should().HaveCount(4);
+        
+        // PlanningDepth should be extracted
+        chromosome.GetGene("PlanningDepth")!.Weight.Should().Be(0.8);
+        
+        // Others should fall back to defaults
+        chromosome.GetGene("ToolVsLLMWeight")!.Weight.Should().Be(defaultChromosome.GetGene("ToolVsLLMWeight")!.Weight);
+        chromosome.GetGene("VerificationStrictness")!.Weight.Should().Be(defaultChromosome.GetGene("VerificationStrictness")!.Weight);
+        chromosome.GetGene("DecompositionGranularity")!.Weight.Should().Be(defaultChromosome.GetGene("DecompositionGranularity")!.Weight);
+    }
+
+    [Fact]
+    public void FromAtom_WithNullAtom_ThrowsArgumentNullException()
+    {
+        // Act
+        Action act = () => PlanStrategyChromosome.FromAtom(null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void FromAtom_WithWeightsOutOfRange_ClampsToValidRange()
+    {
+        // Arrange
+        var atom = OuroborosAtom.CreateDefault();
+        
+        // Add capabilities with out-of-range confidence levels (shouldn't happen in practice, but defensive)
+        atom.AddCapability(new OuroborosCapability("Strategy_PlanningDepth", "Evolved planning depth", 1.5)); // Over max
+        atom.AddCapability(new OuroborosCapability("Strategy_ToolVsLLMWeight", "Evolved tool preference", -0.2)); // Under min
+
+        // Act
+        var chromosome = PlanStrategyChromosome.FromAtom(atom);
+
+        // Assert
+        // Weights should be clamped to [0.0, 1.0]
+        chromosome.GetGene("PlanningDepth")!.Weight.Should().Be(1.0);
+        chromosome.GetGene("ToolVsLLMWeight")!.Weight.Should().Be(0.0);
+        
+        // All genes should be valid
+        foreach (var gene in chromosome.Genes)
+        {
+            gene.IsValid().Should().BeTrue();
+        }
     }
 }

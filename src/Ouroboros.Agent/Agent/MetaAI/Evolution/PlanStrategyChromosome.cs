@@ -67,9 +67,40 @@ public sealed class PlanStrategyChromosome : IChromosome<PlanStrategyGene>
     /// <returns>A chromosome based on current atom capabilities.</returns>
     public static PlanStrategyChromosome FromAtom(OuroborosAtom atom)
     {
-        // Extract relevant capabilities and convert to genes
-        // For now, use default values - in future, could extract from atom metadata
-        return CreateDefault();
+        ArgumentNullException.ThrowIfNull(atom);
+
+        // Get default chromosome to extract gene names and default weights
+        var defaultChromosome = CreateDefault();
+        
+        // Extract evolved strategy capabilities from atom and create genes
+        var genes = new List<PlanStrategyGene>();
+        
+        foreach (var defaultGene in defaultChromosome.Genes)
+        {
+            // Look for capability with Strategy_ prefix
+            string capabilityName = $"Strategy_{defaultGene.StrategyName}";
+            var capability = atom.Capabilities.FirstOrDefault(c => c.Name == capabilityName);
+            
+            // Use capability's ConfidenceLevel as weight, or fall back to default
+            double weight = capability?.ConfidenceLevel ?? defaultGene.Weight;
+            
+            // Clamp weight to valid range [0.0, 1.0]
+            weight = Math.Clamp(weight, 0.0, 1.0);
+            
+            // Create gene using the appropriate factory method
+            PlanStrategyGene gene = defaultGene.StrategyName switch
+            {
+                "PlanningDepth" => PlanStrategyGene.Strategies.PlanningDepth(weight),
+                "ToolVsLLMWeight" => PlanStrategyGene.Strategies.ToolVsLLMWeight(weight),
+                "VerificationStrictness" => PlanStrategyGene.Strategies.VerificationStrictness(weight),
+                "DecompositionGranularity" => PlanStrategyGene.Strategies.DecompositionGranularity(weight),
+                _ => defaultGene with { Weight = weight },
+            };
+            
+            genes.Add(gene);
+        }
+        
+        return new PlanStrategyChromosome(genes);
     }
 
     /// <summary>
