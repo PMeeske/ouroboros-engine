@@ -116,8 +116,7 @@ public sealed class MeTTaOrchestratorBuilder
 
     /// <summary>
     /// Sets the MeTTa agent runtime for sub-agent spawning and orchestration.
-    /// When set, the builder will register the agent management tool and
-    /// auto-spawn all defined agents during Build().
+    /// When set, the builder will register the agent management tool for the runtime.
     /// </summary>
     /// <param name="runtime">The MeTTa agent runtime instance.</param>
     /// <returns>This builder for chaining.</returns>
@@ -194,6 +193,14 @@ public sealed class MeTTaOrchestratorBuilder
         // Add MeTTa agent management tool if runtime is available
         if (_agentRuntime != null)
         {
+            // Validate that runtime and builder use the same engine
+            if (_agentRuntime.Engine != mettaEngine)
+            {
+                throw new InvalidOperationException(
+                    "MeTTa agent runtime must use the same IMeTTaEngine instance as the orchestrator. " +
+                    "Create the runtime with the same engine passed to WithMeTTaEngine().");
+            }
+
             bool hasAgentTool = tools.All.Any(t => t.Name == "metta_agents");
             if (!hasAgentTool)
             {
