@@ -39,7 +39,7 @@ public static class MeTTaAgentExtensions
                 agent.Model,
                 $"{agent.Definition.Provider}/{agent.Definition.Model}",
                 agent.Definition.Capabilities?.ToArray() ?? Array.Empty<string>(),
-                priority: 5.0,
+                Priority: 5.0,
                 MaxTokens: agent.Definition.MaxTokens);
 
             mind.RegisterSpecialist(specialist);
