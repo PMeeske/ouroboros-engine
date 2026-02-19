@@ -644,72 +644,63 @@ Provide verification in JSON format:
         {
             // Retry once with a more structured prompt
             Console.WriteLine($"[VERIFY] Failed to parse verification result (JSON error), attempting retry with structured prompt: {jsonEx.Message}");
-            
-            try
-            {
-                string retryResponse = await RequestStructuredVerificationAsync(goal, output, ct);
-                using System.Text.Json.JsonDocument retryDoc = System.Text.Json.JsonDocument.Parse(retryResponse);
-                bool verified = retryDoc.RootElement.GetProperty("verified").GetBoolean();
-                double qualityScore = retryDoc.RootElement.GetProperty("quality_score").GetDouble();
-                Console.WriteLine($"[VERIFY] Retry successful: verified={verified}, quality={qualityScore}");
-                return (verified, qualityScore);
-            }
-            catch (System.Text.Json.JsonException retryJsonEx)
-            {
-                // Fail-closed: treat as verification failure
-                Console.WriteLine($"[VERIFY] Failed to parse verification result after retry (JSON error), treating as failed: {retryJsonEx.Message}");
-                return (false, 0.0);
-            }
+            return await RetryVerificationParsingAsync(goal, output, ct);
         }
         catch (KeyNotFoundException keyEx)
         {
             // Missing required property (verified or quality_score)
             Console.WriteLine($"[VERIFY] Missing required property in verification result: {keyEx.Message}");
-            
-            try
-            {
-                string retryResponse = await RequestStructuredVerificationAsync(goal, output, ct);
-                using System.Text.Json.JsonDocument retryDoc = System.Text.Json.JsonDocument.Parse(retryResponse);
-                bool verified = retryDoc.RootElement.GetProperty("verified").GetBoolean();
-                double qualityScore = retryDoc.RootElement.GetProperty("quality_score").GetDouble();
-                Console.WriteLine($"[VERIFY] Retry successful: verified={verified}, quality={qualityScore}");
-                return (verified, qualityScore);
-            }
-            catch (Exception retryEx)
-            {
-                // Fail-closed: treat as verification failure
-                Console.WriteLine($"[VERIFY] Failed to parse verification result after retry, treating as failed: {retryEx.Message}");
-                return (false, 0.0);
-            }
+            return await RetryVerificationParsingAsync(goal, output, ct);
         }
         catch (InvalidOperationException invalidOpEx)
         {
             // Property exists but has wrong type
             Console.WriteLine($"[VERIFY] Invalid property type in verification result: {invalidOpEx.Message}");
-            
-            try
-            {
-                string retryResponse = await RequestStructuredVerificationAsync(goal, output, ct);
-                using System.Text.Json.JsonDocument retryDoc = System.Text.Json.JsonDocument.Parse(retryResponse);
-                bool verified = retryDoc.RootElement.GetProperty("verified").GetBoolean();
-                double qualityScore = retryDoc.RootElement.GetProperty("quality_score").GetDouble();
-                Console.WriteLine($"[VERIFY] Retry successful: verified={verified}, quality={qualityScore}");
-                return (verified, qualityScore);
-            }
-            catch (Exception retryEx)
-            {
-                // Fail-closed: treat as verification failure
-                Console.WriteLine($"[VERIFY] Failed to parse verification result after retry, treating as failed: {retryEx.Message}");
-                return (false, 0.0);
-            }
+            return await RetryVerificationParsingAsync(goal, output, ct);
+        }
+    }
+
+    private async Task<(bool Verified, double QualityScore)> RetryVerificationParsingAsync(string goal, string output, CancellationToken ct)
+    {
+        try
+        {
+            string retryResponse = await RequestStructuredVerificationAsync(goal, output, ct);
+            using System.Text.Json.JsonDocument retryDoc = System.Text.Json.JsonDocument.Parse(retryResponse);
+            bool verified = retryDoc.RootElement.GetProperty("verified").GetBoolean();
+            double qualityScore = retryDoc.RootElement.GetProperty("quality_score").GetDouble();
+            Console.WriteLine($"[VERIFY] Retry successful: verified={verified}, quality={qualityScore}");
+            return (verified, qualityScore);
+        }
+        catch (System.Text.Json.JsonException retryJsonEx)
+        {
+            // Fail-closed: treat as verification failure
+            Console.WriteLine($"[VERIFY] Failed to parse verification result after retry (JSON error), treating as failed: {retryJsonEx.Message}");
+            return (false, 0.0);
+        }
+        catch (KeyNotFoundException retryKeyEx)
+        {
+            // Missing required property on retry
+            Console.WriteLine($"[VERIFY] Missing required property after retry, treating as failed: {retryKeyEx.Message}");
+            return (false, 0.0);
+        }
+        catch (InvalidOperationException retryInvalidOpEx)
+        {
+            // Invalid property type on retry
+            Console.WriteLine($"[VERIFY] Invalid property type after retry, treating as failed: {retryInvalidOpEx.Message}");
+            return (false, 0.0);
         }
     }
 
     private async Task<string> RequestStructuredVerificationAsync(string goal, string output, CancellationToken ct)
     {
+        // Truncate goal and output to prevent excessively long prompts
+        const int maxLength = 2000;
+        string truncatedGoal = goal.Length > maxLength ? goal.Substring(0, maxLength) + "..." : goal;
+        string truncatedOutput = output.Length > maxLength ? output.Substring(0, maxLength) + "..." : output;
+        
         string prompt = $"Verify if the output achieves the goal. " +
                         $"Respond ONLY with JSON: {{\"verified\": true/false, \"quality_score\": 0.0-1.0}}\n" +
-                        $"Goal: {goal}\nOutput: {output}";
+                        $"Goal: {truncatedGoal}\nOutput: {truncatedOutput}";
         return await _llm.GenerateTextAsync(prompt, ct);
     }
 
