@@ -123,8 +123,9 @@ public sealed record AgentMessage(
     /// <param name="senderId">The unique identifier of the sending agent.</param>
     /// <param name="topic">The topic or channel of the message.</param>
     /// <param name="payload">The message payload data.</param>
+    /// <param name="receiverId">The unique identifier of the receiving agent, or null for broadcast notifications.</param>
     /// <returns>A new notification message.</returns>
-    public static AgentMessage CreateNotification(Guid senderId, string topic, object payload)
+    public static AgentMessage CreateNotification(Guid senderId, string topic, object payload, Guid? receiverId = null)
     {
         ArgumentNullException.ThrowIfNull(topic);
         ArgumentNullException.ThrowIfNull(payload);
@@ -132,7 +133,7 @@ public sealed record AgentMessage(
         return new AgentMessage(
             Id: Guid.NewGuid(),
             SenderId: senderId,
-            ReceiverId: null,
+            ReceiverId: receiverId,
             Type: MessageType.Notification,
             Priority: MessagePriority.Normal,
             Topic: topic,
