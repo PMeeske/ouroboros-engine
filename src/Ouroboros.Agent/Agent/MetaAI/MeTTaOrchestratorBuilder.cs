@@ -5,6 +5,7 @@
 // Now with Laws of Form integration for distinction-gated reasoning
 // ==========================================================
 
+using Ouroboros.Agent.MeTTaAgents;
 using Ouroboros.Core.Hyperon;
 
 namespace Ouroboros.Agent.MetaAI;
@@ -24,6 +25,7 @@ public sealed class MeTTaOrchestratorBuilder
     private IMeTTaEngine? _mettaEngine;
     private FormMeTTaBridge? _formBridge;
     private bool _enableFormReasoning;
+    private MeTTaAgentRuntime? _agentRuntime;
 
     /// <summary>
     /// Sets the language model for the orchestrator.
@@ -113,6 +115,19 @@ public sealed class MeTTaOrchestratorBuilder
     }
 
     /// <summary>
+    /// Sets the MeTTa agent runtime for sub-agent spawning and orchestration.
+    /// When set, the builder will register the agent management tool and
+    /// auto-spawn all defined agents during Build().
+    /// </summary>
+    /// <param name="runtime">The MeTTa agent runtime instance.</param>
+    /// <returns>This builder for chaining.</returns>
+    public MeTTaOrchestratorBuilder WithAgentRuntime(MeTTaAgentRuntime runtime)
+    {
+        _agentRuntime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+        return this;
+    }
+
+    /// <summary>
     /// Gets whether Laws of Form reasoning is enabled.
     /// </summary>
     public bool FormReasoningEnabled => _enableFormReasoning;
@@ -173,6 +188,16 @@ public sealed class MeTTaOrchestratorBuilder
             if (!hasLofTools)
             {
                 tools = tools.WithFormReasoningTools(formBridge);
+            }
+        }
+
+        // Add MeTTa agent management tool if runtime is available
+        if (_agentRuntime != null)
+        {
+            bool hasAgentTool = tools.All.Any(t => t.Name == "metta_agents");
+            if (!hasAgentTool)
+            {
+                tools = tools.WithTool(new MeTTaAgentTool(_agentRuntime, mettaEngine));
             }
         }
 
