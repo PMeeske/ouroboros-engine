@@ -228,4 +228,52 @@ public static class MerkleDagExtensions
 
         return sb.ToString();
     }
+
+    /// <summary>
+    /// Computes the divergence map for all nodes in the DAG.
+    /// </summary>
+    /// <param name="dag">The DAG to analyze.</param>
+    /// <param name="getEmbedding">Function to retrieve embeddings for nodes.</param>
+    /// <returns>A dictionary mapping node IDs to divergence values.</returns>
+    public static IReadOnlyDictionary<Guid, float> ComputeDivergenceMap(
+        this MerkleDag dag,
+        Func<Guid, float[]> getEmbedding)
+    {
+        return VectorFieldOperations.ComputeAllDivergences(dag, getEmbedding);
+    }
+
+    /// <summary>
+    /// Computes the rotation map for all nodes in the DAG.
+    /// </summary>
+    /// <param name="dag">The DAG to analyze.</param>
+    /// <param name="getEmbedding">Function to retrieve embeddings for nodes.</param>
+    /// <returns>A dictionary mapping node IDs to rotation values.</returns>
+    public static IReadOnlyDictionary<Guid, float> ComputeRotationMap(
+        this MerkleDag dag,
+        Func<Guid, float[]> getEmbedding)
+    {
+        return VectorFieldOperations.ComputeAllRotations(dag, getEmbedding);
+    }
+
+    /// <summary>
+    /// Gets the IDs of all outgoing edges from a node.
+    /// </summary>
+    /// <param name="dag">The DAG to query.</param>
+    /// <param name="nodeId">The node ID.</param>
+    /// <returns>A collection of outgoing edge IDs.</returns>
+    public static IEnumerable<Guid> GetOutgoingEdgeIds(this MerkleDag dag, Guid nodeId)
+    {
+        return dag.GetOutgoingEdges(nodeId).Select(e => e.Id);
+    }
+
+    /// <summary>
+    /// Gets the IDs of all incoming edges to a node.
+    /// </summary>
+    /// <param name="dag">The DAG to query.</param>
+    /// <param name="nodeId">The node ID.</param>
+    /// <returns>A collection of incoming edge IDs.</returns>
+    public static IEnumerable<Guid> GetIncomingEdgeIds(this MerkleDag dag, Guid nodeId)
+    {
+        return dag.GetIncomingEdges(nodeId).Select(e => e.Id);
+    }
 }
