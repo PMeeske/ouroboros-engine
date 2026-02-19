@@ -88,6 +88,8 @@ public sealed class PlanStrategyChromosome : IChromosome<PlanStrategyGene>
             weight = Math.Clamp(weight, 0.0, 1.0);
             
             // Create gene using the appropriate factory method
+            // Note: This switch mirrors the genes in CreateDefault() and ensures correct descriptions
+            // The fallback case handles any new strategies gracefully using record syntax
             PlanStrategyGene gene = defaultGene.StrategyName switch
             {
                 "PlanningDepth" => PlanStrategyGene.Strategies.PlanningDepth(weight),
