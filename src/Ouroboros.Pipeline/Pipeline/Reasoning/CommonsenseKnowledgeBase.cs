@@ -8,6 +8,7 @@
 namespace Ouroboros.Pipeline.Reasoning;
 
 using Ouroboros.Core.Hyperon;
+using Ouroboros.Tools.MeTTa;
 
 /// <summary>
 /// Loads the curated Commonsense Knowledge Base (CommonsenseKB.metta) into

@@ -98,20 +98,13 @@ public class VectorGraphFeedbackLoopTests
 
     /// <summary>
     /// Mock Qdrant store that doesn't actually persist.
+    /// Uses a real QdrantDagStore but with a non-operational endpoint.
     /// </summary>
-    private class MockQdrantDagStore : QdrantDagStore
+    private static QdrantDagStore CreateMockQdrantDagStore()
     {
-        public MockQdrantDagStore()
-            : base(new QdrantDagConfig("http://localhost:6334", "test-nodes", "test-edges", 384), null)
-        {
-        }
-
-        public new async Task<Result<MonadNode>> SaveNodeAsync(MonadNode node, CancellationToken ct = default)
-        {
-            // Just return success without actually saving
-            await Task.CompletedTask;
-            return Result<MonadNode>.Success(node);
-        }
+        // Create a store with a fake endpoint - it won't actually connect
+        var config = new QdrantDagConfig("http://localhost:16334", "test-nodes", "test-edges", 384);
+        return new QdrantDagStore(config, null);
     }
 
     [Fact]
@@ -119,7 +112,7 @@ public class VectorGraphFeedbackLoopTests
     {
         // Arrange
         var dag = new MerkleDag();
-        var store = new MockQdrantDagStore();
+        var store = CreateMockQdrantDagStore();
         var metta = new MockMeTTaEngine();
         var embedding = new MockEmbeddingModel();
         var loop = new VectorGraphFeedbackLoop(store, metta, embedding);
@@ -144,7 +137,7 @@ public class VectorGraphFeedbackLoopTests
         var node = MonadNode.FromReasoningState(new Draft("Test node"));
         dag.AddNode(node);
 
-        var store = new MockQdrantDagStore();
+        var store = CreateMockQdrantDagStore();
         var metta = new MockMeTTaEngine();
         var embedding = new MockEmbeddingModel();
         var loop = new VectorGraphFeedbackLoop(store, metta, embedding);
@@ -174,7 +167,7 @@ public class VectorGraphFeedbackLoopTests
         dag.AddEdge(TransitionEdge.CreateSimple(node1.Id, node2.Id, "Forward", new { }));
         dag.AddEdge(TransitionEdge.CreateSimple(node2.Id, node3.Id, "Forward", new { }));
 
-        var store = new MockQdrantDagStore();
+        var store = CreateMockQdrantDagStore();
         var metta = new MockMeTTaEngine();
         var embedding = new MockEmbeddingModel();
 
@@ -217,7 +210,7 @@ public class VectorGraphFeedbackLoopTests
             dag.AddNode(node);
         }
 
-        var store = new MockQdrantDagStore();
+        var store = CreateMockQdrantDagStore();
         var metta = new MockMeTTaEngine();
         var embedding = new MockEmbeddingModel();
 
@@ -241,7 +234,7 @@ public class VectorGraphFeedbackLoopTests
     public async Task ExecuteCycleAsync_NullDag_ReturnsFailure()
     {
         // Arrange
-        var store = new MockQdrantDagStore();
+        var store = CreateMockQdrantDagStore();
         var metta = new MockMeTTaEngine();
         var embedding = new MockEmbeddingModel();
         var loop = new VectorGraphFeedbackLoop(store, metta, embedding);
@@ -274,7 +267,7 @@ public class VectorGraphFeedbackLoopTests
         dag.AddEdge(TransitionEdge.CreateSimple(nodes[1].Id, nodes[3].Id, "Forward", new { }));
         dag.AddEdge(TransitionEdge.CreateSimple(nodes[2].Id, nodes[3].Id, "Forward", new { }));
 
-        var store = new MockQdrantDagStore();
+        var store = CreateMockQdrantDagStore();
         var metta = new MockMeTTaEngine();
         var embedding = new MockEmbeddingModel();
 
@@ -308,7 +301,7 @@ public class VectorGraphFeedbackLoopTests
         var node = MonadNode.FromReasoningState(new Draft("Test"));
         dag.AddNode(node);
 
-        var store = new MockQdrantDagStore();
+        var store = CreateMockQdrantDagStore();
         var metta = new MockMeTTaEngine();
         var embedding = new MockEmbeddingModel();
         var loop = new VectorGraphFeedbackLoop(store, metta, embedding);
@@ -350,7 +343,7 @@ public class VectorGraphFeedbackLoopTests
     public void VectorGraphFeedbackLoop_Constructor_ThrowsOnNullMeTTaEngine()
     {
         // Arrange
-        var store = new MockQdrantDagStore();
+        var store = CreateMockQdrantDagStore();
         var embedding = new MockEmbeddingModel();
 
         // Act & Assert
@@ -362,7 +355,7 @@ public class VectorGraphFeedbackLoopTests
     public void VectorGraphFeedbackLoop_Constructor_ThrowsOnNullEmbeddingModel()
     {
         // Arrange
-        var store = new MockQdrantDagStore();
+        var store = CreateMockQdrantDagStore();
         var metta = new MockMeTTaEngine();
 
         // Act & Assert
@@ -390,7 +383,7 @@ public class VectorGraphFeedbackLoopTests
         dag.AddNode(node4);
         dag.AddEdge(TransitionEdge.CreateSimple(node3.Id, node4.Id, "Forward", new { }));
 
-        var store = new MockQdrantDagStore();
+        var store = CreateMockQdrantDagStore();
         var metta = new MockMeTTaEngine();
         var embedding = new MockEmbeddingModel();
         var loop = new VectorGraphFeedbackLoop(store, metta, embedding);
