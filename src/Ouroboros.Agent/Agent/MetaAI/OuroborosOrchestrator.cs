@@ -336,6 +336,17 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             // Overall success requires: LLM verification, quality threshold, and MeTTa verification
             bool overallSuccess = verified && meetsQualityThreshold && mettaVerified;
 
+            // Build detailed error message if verification failed
+            string? errorMessage = null;
+            if (!overallSuccess)
+            {
+                List<string> failures = new List<string>();
+                if (!verified) failures.Add("LLM verification failed");
+                if (!meetsQualityThreshold) failures.Add($"quality {qualityScore:F2} below threshold {qualityThreshold:F2}");
+                if (!mettaVerified) failures.Add("MeTTa verification failed");
+                errorMessage = $"Verification failed: {string.Join(", ", failures)}";
+            }
+
             sw.Stop();
             RecordPhaseMetric("verify", sw.ElapsedMilliseconds, overallSuccess);
 
@@ -343,7 +354,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                 ImprovementPhase.Verify,
                 Success: overallSuccess,
                 Output: verificationText,
-                Error: overallSuccess ? null : $"Verification failed (quality: {qualityScore:F2}, threshold: {qualityThreshold:F2})",
+                Error: errorMessage,
                 Duration: sw.Elapsed,
                 Metadata: new Dictionary<string, object>
                 {
@@ -628,7 +639,7 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
 
         // Adjust planning guidance based on evolved strategy
         string planningGuidance = planningDepth < 0.3
-            ? "a concise high-level plan with 3-5 steps"
+            ? "a concise high-level plan"
             : planningDepth > 0.7
                 ? "a detailed plan with sub-steps and contingencies"
                 : "a structured plan with clear steps";
