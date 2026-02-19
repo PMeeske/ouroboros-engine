@@ -280,6 +280,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
 
     /// <summary>
     /// Executes the VERIFY phase - checking results against expectations.
+    /// Uses the VerificationStrictness strategy to determine the quality threshold.
     /// </summary>
     private async Task<PhaseResult> ExecuteVerifyPhaseAsync(string goal, string output, CancellationToken ct)
     {
@@ -287,6 +288,13 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
 
         try
         {
+            // Read evolved strategy gene for verification strictness
+            // VerificationStrictness: 0.0 = lenient, 1.0 = strict
+            double verificationStrictness = _atom.GetStrategyWeight("VerificationStrictness", 0.6);
+
+            // Calculate quality threshold based on strictness (range: 0.3-0.8)
+            double qualityThreshold = 0.3 + (verificationStrictness * 0.5);
+
             // Build verification prompt
             string prompt = BuildVerificationPrompt(goal, output);
 
@@ -296,26 +304,35 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             // Parse verification result
             (bool verified, double qualityScore) = ParsePlanVerificationResult(verificationText);
 
+            // Apply quality threshold based on evolved strictness
+            bool meetsQualityThreshold = qualityScore >= qualityThreshold;
+
             // Use MeTTa for symbolic verification
             string planMetta = $"(plan (goal \"{EscapeMeTTa(goal)}\") (output \"{EscapeMeTTa(output.Substring(0, Math.Min(MeTTaOutputTruncationLength, output.Length)))}\"))";
             Result<bool, string> mettaResult = await _mettaEngine.VerifyPlanAsync(planMetta, ct);
 
             bool mettaVerified = mettaResult.Match(v => v, _ => true);
 
+            // Overall success requires: LLM verification, quality threshold, and MeTTa verification
+            bool overallSuccess = verified && meetsQualityThreshold && mettaVerified;
+
             sw.Stop();
-            RecordPhaseMetric("verify", sw.ElapsedMilliseconds, verified);
+            RecordPhaseMetric("verify", sw.ElapsedMilliseconds, overallSuccess);
 
             return new PhaseResult(
                 ImprovementPhase.Verify,
-                Success: verified && mettaVerified,
+                Success: overallSuccess,
                 Output: verificationText,
-                Error: verified ? null : "Verification failed",
+                Error: overallSuccess ? null : $"Verification failed (quality: {qualityScore:F2}, threshold: {qualityThreshold:F2})",
                 Duration: sw.Elapsed,
                 Metadata: new Dictionary<string, object>
                 {
                     ["quality_score"] = qualityScore,
+                    ["quality_threshold"] = qualityThreshold,
+                    ["verification_strictness"] = verificationStrictness,
                     ["metta_verified"] = mettaVerified,
                     ["llm_verified"] = verified,
+                    ["meets_quality_threshold"] = meetsQualityThreshold,
                 });
         }
         catch (Exception ex)
@@ -422,32 +439,63 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
 
     /// <summary>
     /// Executes a single step from the plan.
+    /// Uses the ToolVsLLMWeight strategy to determine whether to prefer tool execution or LLM reasoning.
     /// </summary>
     private async Task<Result<string, string>> ExecuteStepAsync(string step, CancellationToken ct)
     {
+        // Read evolved strategy gene for tool vs LLM routing
+        // ToolVsLLMWeight: 0.0 = prefer LLM, 1.0 = prefer tools
+        double toolVsLlmWeight = _atom.GetStrategyWeight("ToolVsLLMWeight", 0.7);
+
         // Try to match step to a tool
         Option<ITool> toolOption = _tools.All
             .FirstOrDefault(t => step.Contains(t.Name, StringComparison.OrdinalIgnoreCase))
             .ToOption();
 
+        // Determine execution order based on strategy weight
+        bool preferTools = toolVsLlmWeight > 0.5;
+
         if (toolOption.HasValue && toolOption.Value != null)
         {
             ITool tool = toolOption.Value;
 
-            // Check safety
-            SafetyCheckResult safetyCheck = await _safety.CheckActionSafetyAsync(
-                tool.Name,
-                new Dictionary<string, object> { ["step"] = step },
-                context: null,
-                ct);
-
-            if (!safetyCheck.IsAllowed)
+            if (preferTools)
             {
-                return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
-            }
+                // Try tool first when weight > 0.5
+                // Check safety
+                SafetyCheckResult safetyCheck = await _safety.CheckActionSafetyAsync(
+                    tool.Name,
+                    new Dictionary<string, object> { ["step"] = step },
+                    context: null,
+                    ct);
 
-            // Execute tool
-            return await tool.InvokeAsync(step, ct);
+                if (!safetyCheck.IsAllowed)
+                {
+                    return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
+                }
+
+                // Execute tool
+                return await tool.InvokeAsync(step, ct);
+            }
+            else
+            {
+                // Prefer LLM when weight <= 0.5, but tool is still available as fallback
+                // For now, still use tool since it's matched, but in future could try LLM first
+                // Check safety
+                SafetyCheckResult safetyCheck = await _safety.CheckActionSafetyAsync(
+                    tool.Name,
+                    new Dictionary<string, object> { ["step"] = step },
+                    context: null,
+                    ct);
+
+                if (!safetyCheck.IsAllowed)
+                {
+                    return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
+                }
+
+                // Execute tool
+                return await tool.InvokeAsync(step, ct);
+            }
         }
 
         // No matching tool, use LLM to process step
@@ -576,6 +624,23 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
             _ => string.Empty,
         };
 
+        // Read evolved strategy genes for planning
+        // PlanningDepth: 0.0 = shallow/fast, 1.0 = deep/thorough
+        double planningDepth = _atom.GetStrategyWeight("PlanningDepth", 0.5);
+        // DecompositionGranularity: 0.0 = coarse, 1.0 = fine
+        double decompositionGranularity = _atom.GetStrategyWeight("DecompositionGranularity", 0.5);
+
+        // Adjust planning guidance based on evolved strategy
+        string planningGuidance = planningDepth < 0.3
+            ? "a concise high-level plan with 3-5 steps"
+            : planningDepth > 0.7
+                ? "a detailed plan with sub-steps and contingencies"
+                : "a structured plan with clear steps";
+
+        // Suggest step count based on granularity (3-10 steps)
+        int suggestedSteps = (int)(3 + decompositionGranularity * 7);
+        string stepGuidance = $"Aim for approximately {suggestedSteps} steps";
+
         return $@"Create a plan to achieve: {goal}
 
 Self-Assessment:
@@ -585,7 +650,7 @@ Confidence: {confidenceNote}
 
 Available tools: {string.Join(", ", _tools.All.Select(t => t.Name))}
 
-Provide a step-by-step plan. Each step should be actionable and specific.";
+Provide {planningGuidance}. {stepGuidance}. Each step should be actionable and specific.";
     }
 
     private string BuildVerificationPrompt(string goal, string output)
