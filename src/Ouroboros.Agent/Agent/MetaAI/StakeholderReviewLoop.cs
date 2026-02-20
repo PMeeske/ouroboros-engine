@@ -33,7 +33,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
             ReviewTimeout: TimeSpan.FromHours(24),
             PollingInterval: TimeSpan.FromMinutes(5));
 
-        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        Stopwatch sw = Stopwatch.StartNew();
 
         try
         {

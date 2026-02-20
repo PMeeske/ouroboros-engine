@@ -24,7 +24,7 @@ public class PlanStrategyFitnessTests
         var chromosome = PlanStrategyChromosome.CreateDefault();
 
         // Act
-        double result = await fitness.EvaluateAsync(chromosome);
+        double result = await fitness.EvaluateAsync(chromosome, cancellationToken: CancellationToken.None);
 
         // Assert
         result.Should().Be(0.5); // Baseline fitness
@@ -54,7 +54,7 @@ public class PlanStrategyFitnessTests
         var chromosome = PlanStrategyChromosome.CreateDefault();
 
         // Act
-        double result = await fitness.EvaluateAsync(chromosome);
+        double result = await fitness.EvaluateAsync(chromosome, cancellationToken: CancellationToken.None);
 
         // Assert
         result.Should().BeGreaterThan(0.7); // High fitness for all successful
@@ -85,7 +85,7 @@ public class PlanStrategyFitnessTests
         var chromosome = PlanStrategyChromosome.CreateDefault();
 
         // Act
-        double result = await fitness.EvaluateAsync(chromosome);
+        double result = await fitness.EvaluateAsync(chromosome, cancellationToken: CancellationToken.None);
 
         // Assert
         result.Should().BeLessThan(0.4); // Low fitness for all failed
@@ -129,7 +129,7 @@ public class PlanStrategyFitnessTests
         var chromosome = PlanStrategyChromosome.CreateDefault();
 
         // Act
-        double result = await fitness.EvaluateAsync(chromosome);
+        double result = await fitness.EvaluateAsync(chromosome, cancellationToken: CancellationToken.None);
 
         // Assert
         result.Should().BeInRange(0.3, 0.8); // Proportional fitness (60% success rate)
@@ -165,7 +165,7 @@ public class PlanStrategyFitnessTests
         var chromosome = PlanStrategyChromosome.CreateDefault();
 
         // Act
-        double result = await fitness.EvaluateAsync(chromosome);
+        double result = await fitness.EvaluateAsync(chromosome, cancellationToken: CancellationToken.None);
 
         // Assert
         // Result should reflect the average quality of 0.575
@@ -198,8 +198,8 @@ public class PlanStrategyFitnessTests
         var chromosome = PlanStrategyChromosome.CreateDefault();
 
         // Act
-        double resultDefault = await fitnessDefault.EvaluateAsync(chromosome);
-        double resultCustom = await fitnessCustom.EvaluateAsync(chromosome);
+        double resultDefault = await fitnessDefault.EvaluateAsync(chromosome, cancellationToken: CancellationToken.None);
+        double resultCustom = await fitnessCustom.EvaluateAsync(chromosome, cancellationToken: CancellationToken.None);
 
         // Assert
         // Different weight distributions should produce different results
@@ -217,7 +217,7 @@ public class PlanStrategyFitnessTests
         var chromosome = PlanStrategyChromosome.CreateDefault();
 
         // Act
-        double result = await fitness.EvaluateAsync(chromosome);
+        double result = await fitness.EvaluateAsync(chromosome, cancellationToken: CancellationToken.None);
 
         // Assert
         // Should return neutral fitness on any internal error
@@ -274,8 +274,8 @@ public class PlanStrategyFitnessTests
         var lowDepthChromosome = new PlanStrategyChromosome(lowDepthGenes);
 
         // Act
-        double highDepthFitness = await fitness.EvaluateAsync(highDepthChromosome);
-        double lowDepthFitness = await fitness.EvaluateAsync(lowDepthChromosome);
+        double highDepthFitness = await fitness.EvaluateAsync(highDepthChromosome, cancellationToken: CancellationToken.None);
+        double lowDepthFitness = await fitness.EvaluateAsync(lowDepthChromosome, cancellationToken: CancellationToken.None);
 
         // Assert
         // Different strategy parameters should produce different fitness values
@@ -297,7 +297,7 @@ public class PlanStrategyFitnessTests
         // Verify it can be used polymorphically
         IFitnessFunction<PlanStrategyGene> fitnessInterface = fitness;
         var chromosome = PlanStrategyChromosome.CreateDefault();
-        double result = await fitnessInterface.EvaluateAsync(chromosome);
+        double result = await fitnessInterface.EvaluateAsync(chromosome, cancellationToken: CancellationToken.None);
         result.Should().BeInRange(0.0, 1.0);
     }
 }

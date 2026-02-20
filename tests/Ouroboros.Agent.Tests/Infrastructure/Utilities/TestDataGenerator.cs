@@ -3,6 +3,7 @@
 // </copyright>
 
 using Bogus;
+using Ouroboros.ApiHost.Models;
 
 namespace Ouroboros.Tests.Infrastructure.Utilities;
 

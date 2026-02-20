@@ -40,7 +40,7 @@ public sealed class ConsoleFeedbackProvider : IHumanFeedbackProvider
     {
         Console.WriteLine($"\n=== Approval Required ===");
         Console.WriteLine($"Action: {request.Action}");
-        Console.WriteLine($"Parameters: {System.Text.Json.JsonSerializer.Serialize(request.Parameters)}");
+        Console.WriteLine($"Parameters: {JsonSerializer.Serialize(request.Parameters)}");
         Console.WriteLine($"Rationale: {request.Rationale}");
         Console.Write("Approve? (y/n): ");
 

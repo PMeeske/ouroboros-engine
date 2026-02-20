@@ -48,7 +48,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
         config ??= new HierarchicalPlanningConfig();
 
         using var activity = OrchestrationTracing.StartPlanCreation(goal, config.MaxDepth);
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var stopwatch = Stopwatch.StartNew();
 
         if (string.IsNullOrWhiteSpace(goal))
         {
@@ -125,7 +125,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
 
         int totalSteps = plan.TopLevelPlan.Steps.Count + plan.SubPlans.Values.Sum(p => p.Steps.Count);
         using var activity = OrchestrationTracing.StartPlanExecution(Guid.NewGuid(), totalSteps);
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var stopwatch = Stopwatch.StartNew();
 
         try
         {
@@ -180,7 +180,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
             // Check if step is complex enough to decompose
             if (IsComplexStep(step, config))
             {
-                string subGoal = $"Execute: {step.Action} with {System.Text.Json.JsonSerializer.Serialize(step.Parameters)}";
+                string subGoal = $"Execute: {step.Action} with {JsonSerializer.Serialize(step.Parameters)}";
 
                 Result<Plan, string> subPlanResult = await _orchestrator.PlanAsync(subGoal, context ?? new Dictionary<string, object>(), ct);
 
@@ -832,7 +832,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
 
     private Task<string> GenerateDetailedExplanationAsync(Plan plan, CancellationToken ct)
     {
-        var explanation = new System.Text.StringBuilder();
+        var explanation = new StringBuilder();
         explanation.AppendLine($"Goal: {plan.Goal}");
         explanation.AppendLine($"Total Steps: {plan.Steps.Count}");
         explanation.AppendLine();
@@ -853,7 +853,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
 
     private Task<string> GenerateCausalExplanationAsync(Plan plan, CancellationToken ct)
     {
-        var explanation = new System.Text.StringBuilder();
+        var explanation = new StringBuilder();
         explanation.AppendLine($"Causal Explanation for: {plan.Goal}");
         explanation.AppendLine();
 
@@ -882,7 +882,7 @@ public sealed class HierarchicalPlanner : IHierarchicalPlanner
 
     private Task<string> GenerateCounterfactualExplanationAsync(Plan plan, CancellationToken ct)
     {
-        var explanation = new System.Text.StringBuilder();
+        var explanation = new StringBuilder();
         explanation.AppendLine($"Counterfactual Analysis for: {plan.Goal}");
         explanation.AppendLine();
 

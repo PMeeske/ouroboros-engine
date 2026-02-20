@@ -4,7 +4,7 @@
 
 namespace Ouroboros.Agent.MetaAI.WorldModel;
 
-using Ouroboros.Core.Monads;
+using Core.Monads;
 
 /// <summary>
 /// Implementation of world model learning and imagination-based planning.
@@ -21,7 +21,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
     /// <param name="seed">Random seed for reproducibility.</param>
     public WorldModelEngine(int seed = 42)
     {
-        this.random = new Random(seed);
+        random = new Random(seed);
     }
 
     /// <inheritdoc/>
@@ -48,7 +48,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
             // Create predictors based on architecture
             var (statePredictor, rewardPredictor, terminalPredictor) = architecture switch
             {
-                ModelArchitecture.MLP => await this.CreateMlpPredictorsAsync(transitions, embeddingSize, ct),
+                ModelArchitecture.MLP => await CreateMlpPredictorsAsync(transitions, embeddingSize, ct),
                 ModelArchitecture.Transformer => throw new NotImplementedException("Transformer architecture not yet implemented"),
                 ModelArchitecture.GNN => throw new NotImplementedException("GNN architecture not yet implemented"),
                 ModelArchitecture.Hybrid => throw new NotImplementedException("Hybrid architecture not yet implemented"),
@@ -143,7 +143,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
             }
 
             // Simple greedy planning - in practice would use MCTS or similar
-            var plan = await this.GreedyPlanningAsync(initialState, goal, model, lookaheadDepth, ct);
+            var plan = await GreedyPlanningAsync(initialState, goal, model, lookaheadDepth, ct);
             return Result<Plan, string>.Success(plan);
         }
         catch (Exception ex)
@@ -181,7 +181,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
                     transition.PreviousState,
                     transition.ActionTaken,
                     ct);
-                totalPredictionError += this.ComputeStateDistance(predictedState, transition.NextState);
+                totalPredictionError += ComputeStateDistance(predictedState, transition.NextState);
 
                 // Evaluate reward prediction
                 var predictedReward = await model.RewardModel.PredictAsync(
@@ -253,7 +253,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
             for (int step = 0; step < trajectoryLength; step++)
             {
                 // Sample random action - in practice would use a policy
-                var action = this.SampleRandomAction();
+                var action = SampleRandomAction();
 
                 // Predict next state using model
                 var nextState = await model.TransitionModel.PredictAsync(currentState, action, ct);
@@ -303,15 +303,15 @@ public sealed class WorldModelEngine : IWorldModelEngine
             embeddingSize,
             actionEmbeddingSize,
             hiddenSize,
-            this.random.Next());
+            random.Next());
 
         var rewardPredictor = SimpleRewardPredictor.CreateRandom(
             embeddingSize * 2 + actionEmbeddingSize,
-            this.random.Next());
+            random.Next());
 
         var terminalPredictor = SimpleTerminalPredictor.CreateRandom(
             embeddingSize,
-            this.random.Next());
+            random.Next());
 
         await Task.CompletedTask; // For async signature
         return (statePredictor, rewardPredictor, terminalPredictor);
@@ -338,7 +338,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
 
             for (int sample = 0; sample < 5; sample++)
             {
-                var candidateAction = this.SampleRandomAction();
+                var candidateAction = SampleRandomAction();
                 var nextState = await model.TransitionModel.PredictAsync(currentState, candidateAction, ct);
                 var reward = await model.RewardModel.PredictAsync(currentState, candidateAction, nextState, ct);
 
@@ -377,7 +377,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
     private Action SampleRandomAction()
     {
         var actionNames = new[] { "move_forward", "move_backward", "turn_left", "turn_right", "wait" };
-        var name = actionNames[this.random.Next(actionNames.Length)];
+        var name = actionNames[random.Next(actionNames.Length)];
         return new Action(name, new Dictionary<string, object>());
     }
 

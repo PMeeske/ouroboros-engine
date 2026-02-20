@@ -380,7 +380,7 @@ ALTERNATIVES: [other possibilities]";
         Dictionary<string, object>? context)
     {
         string contextText = context != null && context.Any()
-            ? $"\nContext: {System.Text.Json.JsonSerializer.Serialize(context)}"
+            ? $"\nContext: {JsonSerializer.Serialize(context)}"
             : "";
 
         string experienceText = experiences.Any()

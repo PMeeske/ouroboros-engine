@@ -243,7 +243,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
     {
         // Simple token estimation
         int actionLength = step.Action.Length;
-        int paramsLength = System.Text.Json.JsonSerializer.Serialize(step.Parameters).Length;
+        int paramsLength = JsonSerializer.Serialize(step.Parameters).Length;
         int outcomeLength = step.ExpectedOutcome.Length;
 
         return (actionLength + paramsLength + outcomeLength) / 4;

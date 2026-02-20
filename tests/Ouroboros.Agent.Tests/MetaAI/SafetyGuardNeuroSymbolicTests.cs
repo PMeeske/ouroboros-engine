@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Abstractions;
+
 namespace Ouroboros.Tests.MetaAI;
 
 /// <summary>
@@ -17,7 +19,7 @@ public class SafetyGuardNeuroSymbolicTests
     public async Task CheckActionSafetyAsync_AtomRejects_ReturnsDenied()
     {
         // Arrange
-        var atom = new OuroborosAtom(TestInstanceId, SafetyConstraints.NoSelfDestruction);
+        var atom = new OuroborosAtom(TestInstanceId,  SafetyConstraints.NoSelfDestruction);
         var safetyGuard = new SafetyGuard();
         var parameters = new Dictionary<string, object>();
 
@@ -39,7 +41,7 @@ public class SafetyGuardNeuroSymbolicTests
     {
         // Arrange
         var mettaEngine = new MockMeTTaEngineReturningMark();
-        var atom = new OuroborosAtom(TestInstanceId, SafetyConstraints.NoSelfDestruction);
+        var atom = new OuroborosAtom(TestInstanceId, safetyConstraints: SafetyConstraints.NoSelfDestruction);
         var safetyGuard = new SafetyGuard(mettaEngine: mettaEngine);
         var parameters = new Dictionary<string, object>();
 
@@ -60,7 +62,7 @@ public class SafetyGuardNeuroSymbolicTests
     {
         // Arrange
         var mettaEngine = new MockMeTTaEngineReturningVoid();
-        var atom = new OuroborosAtom(TestInstanceId, SafetyConstraints.NoSelfDestruction);
+        var atom = new OuroborosAtom(TestInstanceId, safetyConstraints: SafetyConstraints.NoSelfDestruction);
         var safetyGuard = new SafetyGuard(mettaEngine: mettaEngine);
         var parameters = new Dictionary<string, object>();
 
@@ -74,7 +76,7 @@ public class SafetyGuardNeuroSymbolicTests
         result.IsAllowed.Should().BeFalse("MeTTa returned Void (unsafe)");
         result.Reason.Should().Contain("symbolic safety rules");
         result.Violations.Should().Contain(v => v.Contains("MeTTa symbolic reasoning"));
-        result.RiskScore.Should().BeGreaterOrEqualTo(0.9);
+        result.RiskScore.Should().BeGreaterThanOrEqualTo(0.9);
     }
 
     [Fact]
@@ -82,7 +84,7 @@ public class SafetyGuardNeuroSymbolicTests
     {
         // Arrange
         var mettaEngine = new MockMeTTaEngineReturningImaginary();
-        var atom = new OuroborosAtom(TestInstanceId, SafetyConstraints.NoSelfDestruction);
+        var atom = new OuroborosAtom(TestInstanceId, safetyConstraints: SafetyConstraints.NoSelfDestruction);
         var safetyGuard = new SafetyGuard(mettaEngine: mettaEngine);
         var parameters = new Dictionary<string, object>();
 
@@ -96,14 +98,14 @@ public class SafetyGuardNeuroSymbolicTests
         result.IsAllowed.Should().BeFalse("MeTTa returned Imaginary (uncertain, requires review)");
         result.Reason.Should().Contain("requires human review");
         result.Violations.Should().Contain(v => v.Contains("uncertain"));
-        result.RiskScore.Should().BeGreaterOrEqualTo(0.6);
+        result.RiskScore.Should().BeGreaterThanOrEqualTo(0.6);
     }
 
     [Fact]
     public async Task CheckActionSafetyAsync_MeTTaUnavailable_FallbackToAtomOnly()
     {
         // Arrange - No MeTTa engine provided
-        var atom = new OuroborosAtom(TestInstanceId, SafetyConstraints.NoSelfDestruction);
+        var atom = new OuroborosAtom(TestInstanceId, safetyConstraints: SafetyConstraints.NoSelfDestruction);
         var safetyGuard = new SafetyGuard();
         var parameters = new Dictionary<string, object>();
 
@@ -172,7 +174,7 @@ public class SafetyGuardNeuroSymbolicTests
     {
         // Arrange - MeTTa engine that returns errors
         var mettaEngine = new MockMeTTaEngineReturningError();
-        var atom = new OuroborosAtom(TestInstanceId, SafetyConstraints.NoSelfDestruction);
+        var atom = new OuroborosAtom(TestInstanceId, safetyConstraints: SafetyConstraints.NoSelfDestruction);
         var safetyGuard = new SafetyGuard(mettaEngine: mettaEngine);
         var parameters = new Dictionary<string, object>();
 

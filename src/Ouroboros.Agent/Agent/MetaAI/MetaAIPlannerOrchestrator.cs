@@ -356,7 +356,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             ITool? tool = _tools.Get(step.Action);
             if (tool != null)
             {
-                string args = System.Text.Json.JsonSerializer.Serialize(step.Parameters);
+                string args = JsonSerializer.Serialize(step.Parameters);
                 Result<string, string> toolResult = await tool.InvokeAsync(args);
 
                 stopwatch.Stop();
@@ -387,7 +387,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
             }
 
             // If not a tool, try to execute as LLM task
-            string prompt = $"Execute the following task: {step.Action}\nParameters: {System.Text.Json.JsonSerializer.Serialize(step.Parameters)}";
+            string prompt = $"Execute the following task: {step.Action}\nParameters: {JsonSerializer.Serialize(step.Parameters)}";
             string output = await _llm.GenerateTextAsync(prompt, ct);
 
             stopwatch.Stop();
@@ -433,7 +433,7 @@ GOAL: {goal}
 
         if (context != null && context.Any())
         {
-            prompt += $"CONTEXT: {System.Text.Json.JsonSerializer.Serialize(context)}\n\n";
+            prompt += $"CONTEXT: {JsonSerializer.Serialize(context)}\n\n";
         }
 
         if (matchingSkills.Any())
@@ -519,7 +519,7 @@ STEP 2: ...
                 string paramsJson = trimmed.Substring("PARAMETERS:".Length).Trim();
                 try
                 {
-                    currentParams = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(paramsJson) ?? new();
+                    currentParams = JsonSerializer.Deserialize<Dictionary<string, object>>(paramsJson) ?? new();
                 }
                 catch
                 {
@@ -596,7 +596,7 @@ Provide:
 
         // Extract quality score
         double qualityScore = 0.7;
-        System.Text.RegularExpressions.Match qualityMatch = System.Text.RegularExpressions.Regex.Match(
+        Match qualityMatch = Regex.Match(
             verificationText,
             @"QUALITY_SCORE:\s*([0-9.]+)");
         if (qualityMatch.Success && double.TryParse(qualityMatch.Groups[1].Value, out double score))

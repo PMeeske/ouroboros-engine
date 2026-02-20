@@ -28,13 +28,13 @@ public sealed class SimpleRewardPredictor : IRewardPredictor
     public Task<double> PredictAsync(State current, Action action, State next, CancellationToken ct = default)
     {
         // Combine embeddings for feature vector
-        var features = this.CombineFeatures(current.Embedding, action, next.Embedding);
+        var features = CombineFeatures(current.Embedding, action, next.Embedding);
 
         // Linear prediction
-        float prediction = this.bias;
-        for (int i = 0; i < Math.Min(features.Length, this.weights.Length); i++)
+        float prediction = bias;
+        for (int i = 0; i < Math.Min(features.Length, weights.Length); i++)
         {
-            prediction += features[i] * this.weights[i];
+            prediction += features[i] * weights[i];
         }
 
         return Task.FromResult((double)prediction);

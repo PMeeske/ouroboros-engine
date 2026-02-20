@@ -57,7 +57,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
         if (plan == null)
             return Result<PlanExecutionResult, string>.Failure("Plan cannot be null");
 
-        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        Stopwatch sw = Stopwatch.StartNew();
         List<StepResult> stepResults = new List<StepResult>();
         bool overallSuccess = true;
 
@@ -208,7 +208,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
 
     private async Task<StepResult> ExecuteStepOnAgentAsync(TaskAssignment assignment, CancellationToken ct)
     {
-        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        Stopwatch sw = Stopwatch.StartNew();
 
         try
         {

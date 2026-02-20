@@ -49,12 +49,6 @@ public class StrategyGeneInfluenceTests
     /// </summary>
     private class MockMeTTaEngine : IMeTTaEngine
     {
-        public Task<string> ExecuteAsync(string mettaCode, CancellationToken ct = default)
-            => Task.FromResult("(verified)");
-
-        public Task LoadFileAsync(string path, CancellationToken ct = default)
-            => Task.CompletedTask;
-
         public Task<Result<string, string>> ExecuteQueryAsync(string query, CancellationToken ct = default)
             => Task.FromResult(Result<string, string>.Success("(verified)"));
 
@@ -78,10 +72,7 @@ public class StrategyGeneInfluenceTests
     /// </summary>
     private class MockEmbeddingModel : IEmbeddingModel
     {
-        public Task<float[]> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
-            => Task.FromResult(new float[384]);
-
-        public Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
+        public Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken _ = default)
             => Task.FromResult(new float[384]);
     }
 
@@ -238,9 +229,10 @@ public class StrategyGeneInfluenceTests
         var result = await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert
-        var verifyPhase = result.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
+        result.Output.Should().NotBeNull();
+        var verifyPhase = result.Output.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
         verifyPhase.Should().NotBeNull();
-        verifyPhase!.Success.Should().BeTrue("Quality score 0.4 should pass with lenient threshold 0.3");
+        verifyPhase.Success.Should().BeTrue("Quality score 0.4 should pass with lenient threshold 0.3");
         verifyPhase.Metadata.Should().ContainKey("quality_threshold");
         ((double)verifyPhase.Metadata["quality_threshold"]).Should().BeApproximately(0.3, 0.01);
     }
@@ -267,9 +259,10 @@ public class StrategyGeneInfluenceTests
         var result = await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert
-        var verifyPhase = result.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
+        result.Output.Should().NotBeNull();
+        var verifyPhase = result.Output.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
         verifyPhase.Should().NotBeNull();
-        verifyPhase!.Success.Should().BeFalse("Quality score 0.5 should fail with strict threshold 0.8");
+        verifyPhase.Success.Should().BeFalse("Quality score 0.5 should fail with strict threshold 0.8");
         verifyPhase.Metadata.Should().ContainKey("quality_threshold");
         ((double)verifyPhase.Metadata["quality_threshold"]).Should().BeApproximately(0.8, 0.01);
     }
@@ -295,9 +288,10 @@ public class StrategyGeneInfluenceTests
         var result = await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert
-        var verifyPhase = result.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
+        result.Output.Should().NotBeNull();
+        var verifyPhase =  result.Output.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
         verifyPhase.Should().NotBeNull();
-        verifyPhase!.Metadata.Should().ContainKey("quality_threshold");
+        verifyPhase.Metadata.Should().ContainKey("quality_threshold");
         // Calculate expected threshold using the same formula as production code
         double calculatedThreshold = BaseQualityThreshold + (0.5 * QualityThresholdRange);
         ((double)verifyPhase.Metadata["quality_threshold"]).Should().BeApproximately(
@@ -326,9 +320,10 @@ public class StrategyGeneInfluenceTests
         var result = await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert
-        var verifyPhase = result.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
+        result.Output.Should().NotBeNull();
+        var verifyPhase =  result.Output.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
         verifyPhase.Should().NotBeNull();
-        verifyPhase!.Metadata.Should().ContainKey("verification_strictness");
+        verifyPhase.Metadata.Should().ContainKey("verification_strictness");
         verifyPhase.Metadata.Should().ContainKey("quality_threshold");
         verifyPhase.Metadata.Should().ContainKey("meets_quality_threshold");
         ((double)verifyPhase.Metadata["verification_strictness"]).Should().Be(0.7);
@@ -361,9 +356,10 @@ public class StrategyGeneInfluenceTests
         var result = await orchestrator.ExecuteAsync("Test goal", OrchestratorContext.Create(ct: CancellationToken.None));
 
         // Assert
-        var verifyPhase = result.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
+        result.Output.Should().NotBeNull();
+        var verifyPhase =  result.Output.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
         verifyPhase.Should().NotBeNull();
-        ((double)verifyPhase!.Metadata["quality_threshold"]).Should().BeApproximately(expectedThreshold, 0.01);
+        ((double)verifyPhase.Metadata["quality_threshold"]).Should().BeApproximately(expectedThreshold, 0.01);
     }
 
     [Fact]
@@ -425,11 +421,12 @@ public class StrategyGeneInfluenceTests
         int expectedSteps = (int)(MinPlanSteps + (0.9 * PlanStepsRange));
         planPrompt.Should().Contain($"approximately {expectedSteps} steps", "DecompositionGranularity=0.9 should suggest calculated steps");
 
-        var verifyPhase = result.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
+        result.Output.Should().NotBeNull();
+        var verifyPhase = result.Output.PhaseResults.FirstOrDefault(p => p.Phase == ImprovementPhase.Verify);
         verifyPhase.Should().NotBeNull();
         // Calculate expected threshold: BaseQualityThreshold + (0.4 * QualityThresholdRange)
         double expectedThreshold = BaseQualityThreshold + (0.4 * QualityThresholdRange);
-        ((double)verifyPhase!.Metadata["quality_threshold"]).Should().BeApproximately(
+        ((double)verifyPhase.Metadata["quality_threshold"]).Should().BeApproximately(
             expectedThreshold, 
             0.01, 
             $"VerificationStrictness=0.4 should set threshold to {BaseQualityThreshold} + (0.4 * {QualityThresholdRange}) = {expectedThreshold}");

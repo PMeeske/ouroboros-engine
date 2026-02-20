@@ -571,7 +571,7 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
     {
         // Create a deterministic UUID from the skill name
         using var md5 = System.Security.Cryptography.MD5.Create();
-        var hash = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes($"skill_{skillName}"));
+        var hash = md5.ComputeHash(Encoding.UTF8.GetBytes($"skill_{skillName}"));
         return new Guid(hash).ToString();
     }
 

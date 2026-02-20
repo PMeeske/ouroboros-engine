@@ -29,7 +29,7 @@ public sealed class EvaluationHarness
         ArgumentNullException.ThrowIfNull(testCase);
 
         DateTime startTime = DateTime.UtcNow;
-        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        Stopwatch stopwatch = Stopwatch.StartNew();
 
         try
         {

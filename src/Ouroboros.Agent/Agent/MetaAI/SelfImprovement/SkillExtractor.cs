@@ -354,10 +354,10 @@ Write a 1-2 sentence description of this skill's capability:";
         name = name.ToLowerInvariant();
 
         // Replace spaces and special chars with underscores
-        name = System.Text.RegularExpressions.Regex.Replace(name, @"[^a-z0-9_]", "_");
+        name = Regex.Replace(name, @"[^a-z0-9_]", "_");
 
         // Remove duplicate underscores
-        name = System.Text.RegularExpressions.Regex.Replace(name, @"_+", "_");
+        name = Regex.Replace(name, @"_+", "_");
 
         // Remove leading/trailing underscores
         name = name.Trim('_');

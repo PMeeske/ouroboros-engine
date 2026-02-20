@@ -45,15 +45,16 @@ public sealed class OuroborosAtom
     /// Initializes a new instance of the <see cref="OuroborosAtom"/> class.
     /// </summary>
     /// <param name="instanceId">Unique identifier for this Ouroboros instance.</param>
+    /// <param name="safetyConstraints">The atoms inner safety constraints.</param>
     /// <param name="name">Human-readable name for this instance.</param>
-    public OuroborosAtom(string instanceId, string name = "Ouroboros")
+    public OuroborosAtom(string instanceId, SafetyConstraints safetyConstraints, string name = "Ouroboros")
     {
         InstanceId = instanceId ?? throw new ArgumentNullException(nameof(instanceId));
         Name = name ?? throw new ArgumentNullException(nameof(name));
         CreatedAt = DateTime.UtcNow;
         CurrentPhase = ImprovementPhase.Plan;
         CycleCount = 0;
-        SafetyConstraints = SafetyConstraints.All;
+        SafetyConstraints = safetyConstraints;
     }
 
     /// <summary>
@@ -111,18 +112,6 @@ public sealed class OuroborosAtom
     /// </summary>
     public IReadOnlyDictionary<string, object> SelfModel => _selfModel;
 
-    /// <summary>
-    /// Gets the current value of a strategy parameter, or the default if not yet evolved.
-    /// Strategy parameters are stored as capabilities with the name prefix "Strategy_".
-    /// </summary>
-    /// <param name="strategyName">The name of the strategy parameter (e.g., "PlanningDepth", "ToolVsLLMWeight").</param>
-    /// <param name="defaultValue">The default value to return if the strategy hasn't been evolved yet.</param>
-    /// <returns>The strategy weight (0.0-1.0), or the default value if not found.</returns>
-    public double GetStrategyWeight(string strategyName, double defaultValue)
-    {
-        OuroborosCapability? cap = _capabilities.FirstOrDefault(c => c.Name == $"Strategy_{strategyName}");
-        return cap != null ? cap.ConfidenceLevel : defaultValue;
-    }
 
     /// <summary>
     /// Advances to the next phase in the improvement cycle.
@@ -420,7 +409,7 @@ public sealed class OuroborosAtom
     /// <returns>A new OuroborosAtom with default capabilities.</returns>
     public static OuroborosAtom CreateDefault(string name = "Ouroboros")
     {
-        OuroborosAtom atom = new OuroborosAtom(Guid.NewGuid().ToString("N"), name);
+        OuroborosAtom atom = new OuroborosAtom(Guid.NewGuid().ToString("N"), name: name, safetyConstraints: SafetyConstraints.All);
 
         // Add default capabilities
         atom.AddCapability(new OuroborosCapability("planning", "Create and decompose complex goals into executable steps", 0.8));

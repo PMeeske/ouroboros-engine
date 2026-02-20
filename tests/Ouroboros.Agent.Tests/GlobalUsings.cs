@@ -24,9 +24,6 @@ global using Ouroboros.Pipeline.Council.Agents;
 global using Ouroboros.Pipeline.MultiAgent;
 global using Ouroboros.Pipeline.Planning;
 
-// WebApi models (used by Infrastructure/ builders and assertions)
-global using Ouroboros.WebApi.Models;
-
 // Third-party test libraries
 global using Moq;
 global using Microsoft.Extensions.Logging;

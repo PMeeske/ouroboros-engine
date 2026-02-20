@@ -311,7 +311,7 @@ public sealed class MeTTaRepresentation
         string[] lines = mettaOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         foreach (string line in lines)
         {
-            System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(
+            Match match = Regex.Match(
                 line,
                 @"\(cons\s+(\S+)\s+""?([^""]+)""?\)"
             );
