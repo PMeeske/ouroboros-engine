@@ -31,16 +31,16 @@ public sealed class SimpleTerminalPredictor : ITerminalPredictor
     public Task<bool> PredictAsync(State state, CancellationToken ct = default)
     {
         // Logistic regression
-        float logit = this.bias;
-        for (int i = 0; i < Math.Min(state.Embedding.Length, this.weights.Length); i++)
+        float logit = bias;
+        for (int i = 0; i < Math.Min(state.Embedding.Length, weights.Length); i++)
         {
-            logit += state.Embedding[i] * this.weights[i];
+            logit += state.Embedding[i] * weights[i];
         }
 
         // Sigmoid activation
         float probability = 1.0f / (1.0f + (float)Math.Exp(-logit));
 
-        bool isTerminal = probability >= this.threshold;
+        bool isTerminal = probability >= threshold;
         return Task.FromResult(isTerminal);
     }
 

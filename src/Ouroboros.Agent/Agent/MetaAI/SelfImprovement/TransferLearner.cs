@@ -147,7 +147,7 @@ Respond with just the number.";
             string response = await _llm.GenerateTextAsync(prompt, ct);
 
             // Extract numeric score
-            System.Text.RegularExpressions.Match scoreMatch = System.Text.RegularExpressions.Regex.Match(response, @"0?\.\d+|1\.0");
+            Match scoreMatch = Regex.Match(response, @"0?\.\d+|1\.0");
             if (scoreMatch.Success && double.TryParse(scoreMatch.Value, out double score))
             {
                 return Math.Clamp(score, 0.0, 1.0);
@@ -212,7 +212,7 @@ database_query -> library_search (confidence: 0.8)
 
             foreach (string line in lines)
             {
-                System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(
+                Match match = Regex.Match(
                     line,
                     @"(.+?)\s*->\s*(.+?)\s*\(confidence:\s*(0?\.\d+|1\.0)\)");
 

@@ -51,12 +51,12 @@ public sealed class MlpStatePredictor : IStatePredictor
     public Task<State> PredictAsync(State current, Action action, CancellationToken ct = default)
     {
         // Concatenate state embedding with action embedding
-        var actionEmbedding = this.EncodeAction(action);
-        var input = this.ConcatenateEmbeddings(current.Embedding, actionEmbedding);
+        var actionEmbedding = EncodeAction(action);
+        var input = ConcatenateEmbeddings(current.Embedding, actionEmbedding);
 
         // Forward pass through network
-        var hidden = this.ForwardLayer(input, this.weightsInputHidden, this.biasHidden, relu: true);
-        var output = this.ForwardLayer(hidden, this.weightsHiddenOutput, this.biasOutput, relu: false);
+        var hidden = ForwardLayer(input, weightsInputHidden, biasHidden, relu: true);
+        var output = ForwardLayer(hidden, weightsHiddenOutput, biasOutput, relu: false);
 
         // Create new state with predicted embedding
         var predictedState = new State(

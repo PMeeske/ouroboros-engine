@@ -4,7 +4,7 @@
 
 namespace Ouroboros.Agent.MetaAI;
 
-using Ouroboros.Providers;
+using Providers;
 
 // Use alias to distinguish from Agent's Goal type
 using PipelineGoal = Ouroboros.Pipeline.Planning.Goal;
@@ -160,7 +160,7 @@ public sealed class CollectiveMindGoalIntegration
         {
             var tasks = subGoals.Select(async sg =>
             {
-                var sw = System.Diagnostics.Stopwatch.StartNew();
+                var sw = Stopwatch.StartNew();
                 try
                 {
                     var response = await _mind.GenerateWithThinkingAsync(sg.Description, ct);
@@ -184,7 +184,7 @@ public sealed class CollectiveMindGoalIntegration
         {
             foreach (var sg in subGoals)
             {
-                var sw = System.Diagnostics.Stopwatch.StartNew();
+                var sw = Stopwatch.StartNew();
                 try
                 {
                     var response = await _mind.GenerateWithThinkingAsync(sg.Description, ct);

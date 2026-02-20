@@ -347,7 +347,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             }
 
             ITool tool = toolOption.Value!;
-            string toolInput = System.Text.Json.JsonSerializer.Serialize(step.Parameters);
+            string toolInput = JsonSerializer.Serialize(step.Parameters);
             Result<string, string> result = await tool.InvokeAsync(toolInput, ct);
 
             return result.Match(
@@ -419,23 +419,23 @@ CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ourobor
 
         try
         {
-            using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(planText);
-            System.Text.Json.JsonElement array = doc.RootElement;
+            using JsonDocument doc = JsonDocument.Parse(planText);
+            JsonElement array = doc.RootElement;
 
-            if (array.ValueKind == System.Text.Json.JsonValueKind.Array)
+            if (array.ValueKind == JsonValueKind.Array)
             {
-                foreach (System.Text.Json.JsonElement element in array.EnumerateArray())
+                foreach (JsonElement element in array.EnumerateArray())
                 {
                     string action = element.GetProperty("action").GetString() ?? "";
                     string expected = element.GetProperty("expected_outcome").GetString() ?? "";
-                    double confidence = element.TryGetProperty("confidence", out System.Text.Json.JsonElement conf)
+                    double confidence = element.TryGetProperty("confidence", out JsonElement conf)
                         ? conf.GetDouble()
                         : 0.5;
 
                     Dictionary<string, object> parameters = new Dictionary<string, object>();
-                    if (element.TryGetProperty("parameters", out System.Text.Json.JsonElement paramsElement))
+                    if (element.TryGetProperty("parameters", out JsonElement paramsElement))
                     {
-                        foreach (System.Text.Json.JsonProperty prop in paramsElement.EnumerateObject())
+                        foreach (JsonProperty prop in paramsElement.EnumerateObject())
                         {
                             parameters[prop.Name] = prop.Value.ToString();
                         }
@@ -486,25 +486,25 @@ CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ourobor
     {
         try
         {
-            using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(verificationText);
-            System.Text.Json.JsonElement root = doc.RootElement;
+            using JsonDocument doc = JsonDocument.Parse(verificationText);
+            JsonElement root = doc.RootElement;
 
             bool verified = root.GetProperty("verified").GetBoolean();
             double qualityScore = root.GetProperty("quality_score").GetDouble();
 
             List<string> issues = new List<string>();
-            if (root.TryGetProperty("issues", out System.Text.Json.JsonElement issuesArray))
+            if (root.TryGetProperty("issues", out JsonElement issuesArray))
             {
-                foreach (System.Text.Json.JsonElement issue in issuesArray.EnumerateArray())
+                foreach (JsonElement issue in issuesArray.EnumerateArray())
                 {
                     issues.Add(issue.GetString() ?? "");
                 }
             }
 
             List<string> improvements = new List<string>();
-            if (root.TryGetProperty("improvements", out System.Text.Json.JsonElement improvArray))
+            if (root.TryGetProperty("improvements", out JsonElement improvArray))
             {
-                foreach (System.Text.Json.JsonElement improvement in improvArray.EnumerateArray())
+                foreach (JsonElement improvement in improvArray.EnumerateArray())
                 {
                     improvements.Add(improvement.GetString() ?? "");
                 }

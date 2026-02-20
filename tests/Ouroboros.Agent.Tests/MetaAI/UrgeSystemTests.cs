@@ -60,7 +60,7 @@ public class UrgeSystemTests
         double beforeSatisfy = system.Urges.First(u => u.Name == "curiosity").Intensity;
 
         // Act
-        system.Satisfy("curiosity", 1.0);
+        system.Satisfy("curiosity");
 
         // Assert — intensity reduced by satisfactionRate × amount
         double curiosity = system.Urges.First(u => u.Name == "curiosity").Intensity;
@@ -77,11 +77,11 @@ public class UrgeSystemTests
         // Act — satisfy multiple times to try to go below 0
         for (int i = 0; i < 20; i++)
         {
-            system.Satisfy("affiliation", 1.0);
+            system.Satisfy("affiliation");
         }
 
         // Assert
-        system.Urges.First(u => u.Name == "affiliation").Intensity.Should().BeGreaterOrEqualTo(0.0);
+        system.Urges.First(u => u.Name == "affiliation").Intensity.Should().BeGreaterThanOrEqualTo(0.0);
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class UrgeSystemTests
         var before = system.Urges.Select(u => u.Intensity).ToList();
 
         // Act
-        system.Satisfy("nonexistent", 1.0);
+        system.Satisfy("nonexistent");
 
         // Assert — intensities unchanged
         for (int i = 0; i < system.Urges.Count; i++)
@@ -115,7 +115,7 @@ public class UrgeSystemTests
         // The urgency formula: intensity × priority × (1 + stress × 0.3)
         // With stress=0: competence=0.3*1.0=0.30, certainty=0.3*0.9=0.27,
         // affiliation=0.2*0.7=0.14, curiosity=0.4*0.8=0.32, integrity=0.2*0.95=0.19
-        dominant!.Name.Should().Be("curiosity");
+        dominant.Name.Should().Be("curiosity");
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class UrgeSystemTests
         // Assert — all intensities should be clamped to 1.0
         foreach (var urge in system.Urges)
         {
-            urge.Intensity.Should().BeLessOrEqualTo(1.0);
+            urge.Intensity.Should().BeLessThanOrEqualTo(1.0);
         }
     }
 
@@ -199,7 +199,7 @@ public class UrgeSystemTests
         double before = system.Urges.First(u => u.Name == "curiosity").Intensity;
 
         // Act
-        system.Satisfy("CURIOSITY", 1.0);
+        system.Satisfy("CURIOSITY");
 
         // Assert
         double after = system.Urges.First(u => u.Name == "curiosity").Intensity;

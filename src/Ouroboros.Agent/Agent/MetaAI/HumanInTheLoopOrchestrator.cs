@@ -41,7 +41,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
             DefaultTimeout: TimeSpan.FromMinutes(5),
             CriticalActionPatterns: new List<string> { "delete", "remove", "drop", "terminate" });
 
-        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        Stopwatch sw = Stopwatch.StartNew();
         List<StepResult> stepResults = new List<StepResult>();
         List<string> approvalHistory = new List<string>();
 

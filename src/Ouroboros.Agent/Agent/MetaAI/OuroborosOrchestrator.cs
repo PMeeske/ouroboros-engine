@@ -411,10 +411,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
 
             // Apply quality threshold based on evolved strictness
             bool meetsQualityThreshold = qualityScore >= qualityThreshold;
-
-            // Apply quality threshold based on evolved strictness
-            bool meetsQualityThreshold = qualityScore >= qualityThreshold;
-
+            
             // Use MeTTa for symbolic verification
             string planMetta = $"(plan (goal \"{EscapeMeTTa(goal)}\") (output \"{EscapeMeTTa(output.Substring(0, Math.Min(MeTTaOutputTruncationLength, output.Length)))}\"))";
             Result<bool, string> mettaResult = await _mettaEngine.VerifyPlanAsync(planMetta, ct);
@@ -440,21 +437,7 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
                 if (!mettaVerified) failures.Add("MeTTa verification failed");
                 errorMessage = $"Verification failed: {string.Join(", ", failures)}";
             }
-
-            // Overall success requires: LLM verification, quality threshold, and MeTTa verification
-            bool overallSuccess = verified && meetsQualityThreshold && mettaVerified;
-
-            // Build detailed error message if verification failed
-            string? errorMessage = null;
-            if (!overallSuccess)
-            {
-                List<string> failures = new List<string>();
-                if (!verified) failures.Add("LLM verification failed");
-                if (!meetsQualityThreshold) failures.Add($"quality {qualityScore:F2} below threshold {qualityThreshold:F2}");
-                if (!mettaVerified) failures.Add("MeTTa verification failed");
-                errorMessage = $"Verification failed: {string.Join(", ", failures)}";
-            }
-
+            
             sw.Stop();
             RecordPhaseMetric("verify", sw.ElapsedMilliseconds, overallSuccess);
 
@@ -735,7 +718,7 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
             ouroborosExp.Id.ToString(),
             ouroborosExp.Timestamp,
             Context: ouroborosExp.Goal,
-            Action: System.Text.Json.JsonSerializer.Serialize(plan),
+            Action: JsonSerializer.Serialize(plan),
             Outcome: execution.Success ? "Success" : "Failed",
             Success: execution.Success,
             Tags: new List<string> { "ouroboros", "orchestrator" },
@@ -913,12 +896,12 @@ Provide verification in JSON format:
     {
         try
         {
-            using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(verificationText);
+            using JsonDocument doc = JsonDocument.Parse(verificationText);
             bool verified = doc.RootElement.GetProperty("verified").GetBoolean();
             double qualityScore = doc.RootElement.GetProperty("quality_score").GetDouble();
             return (verified, qualityScore);
         }
-        catch (System.Text.Json.JsonException jsonEx)
+        catch (JsonException jsonEx)
         {
             // Retry once with a more structured prompt
             _logger.LogWarning(
@@ -952,13 +935,13 @@ Provide verification in JSON format:
         try
         {
             string retryResponse = await RequestStructuredVerificationAsync(goal, output, ct);
-            using System.Text.Json.JsonDocument retryDoc = System.Text.Json.JsonDocument.Parse(retryResponse);
+            using JsonDocument retryDoc = JsonDocument.Parse(retryResponse);
             bool verified = retryDoc.RootElement.GetProperty("verified").GetBoolean();
             double qualityScore = retryDoc.RootElement.GetProperty("quality_score").GetDouble();
             _logger.LogInformation("[VERIFY] Retry successful: verified={Verified}, quality={QualityScore}", verified, qualityScore);
             return (verified, qualityScore);
         }
-        catch (System.Text.Json.JsonException retryJsonEx)
+        catch (JsonException retryJsonEx)
         {
             // Fail-closed: treat as verification failure
             _logger.LogWarning(
@@ -1053,7 +1036,7 @@ Provide verification in JSON format:
 
             // Run evolution for 3-5 generations (start with 3 for speed)
             Result<Genetic.Abstractions.IChromosome<Evolution.PlanStrategyGene>, string> evolutionResult =
-                await _strategyEvolver.EvolveAsync(initialPopulation, generations: 3);
+                await _strategyEvolver.EvolveAsync(initialPopulation, generations: 3, cancellationToken: ct);
 
             if (evolutionResult.IsSuccess)
             {

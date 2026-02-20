@@ -446,13 +446,13 @@ What patterns do you observe? Provide one concise insight.";
                 string durationStr = trimmed.Substring("DURATION:".Length).Trim().ToLowerInvariant();
                 if (durationStr.Contains("day"))
                 {
-                    System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(durationStr, @"(\d+)");
+                    Match match = Regex.Match(durationStr, @"(\d+)");
                     if (match.Success && int.TryParse(match.Groups[1].Value, out int days))
                         duration = TimeSpan.FromDays(days);
                 }
                 else if (durationStr.Contains("week"))
                 {
-                    System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(durationStr, @"(\d+)");
+                    Match match = Regex.Match(durationStr, @"(\d+)");
                     if (match.Success && int.TryParse(match.Groups[1].Value, out int weeks))
                         duration = TimeSpan.FromDays(weeks * 7);
                 }

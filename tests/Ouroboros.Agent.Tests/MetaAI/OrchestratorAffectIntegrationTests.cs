@@ -318,7 +318,7 @@ public class OrchestratorAffectIntegrationTests
         double thresholdLow = (double)method!.Invoke(null, new object[] { extremeLow })!;
 
         // Assert — should be within [0.2, 0.8]
-        thresholdHigh.Should().BeGreaterOrEqualTo(0.2).And.BeLessOrEqualTo(0.8);
-        thresholdLow.Should().BeGreaterOrEqualTo(0.2).And.BeLessOrEqualTo(0.8);
+        thresholdHigh.Should().BeGreaterThanOrEqualTo(0.2).And.BeLessThanOrEqualTo(0.8);
+        thresholdLow.Should().BeGreaterThanOrEqualTo(0.2).And.BeLessThanOrEqualTo(0.8);
     }
 }

@@ -35,7 +35,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
     {
         config ??= new AdaptivePlanningConfig();
 
-        System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+        Stopwatch sw = Stopwatch.StartNew();
         Plan currentPlan = plan;
         List<StepResult> allStepResults = new List<StepResult>();
         List<string> adaptationHistory = new List<string>();
@@ -195,7 +195,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
             attempts++;
 
             // Execute step (simplified - in real implementation would use orchestrator)
-            System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+            Stopwatch sw = Stopwatch.StartNew();
 
             try
             {
@@ -267,7 +267,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
             case AdaptationStrategy.ReplaceStep:
                 // Generate replacement step using LLM
                 string prompt = $@"The following step failed: {context.CurrentStep.Action}
-Parameters: {System.Text.Json.JsonSerializer.Serialize(context.CurrentStep.Parameters)}
+Parameters: {JsonSerializer.Serialize(context.CurrentStep.Parameters)}
 Expected: {context.CurrentStep.ExpectedOutcome}
 
 Suggest an alternative approach to achieve the same outcome.";

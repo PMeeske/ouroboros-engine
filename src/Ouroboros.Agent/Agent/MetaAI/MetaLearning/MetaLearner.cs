@@ -527,7 +527,7 @@ APPLICABLE_TO: [task types, comma-separated]";
         }
 
         // Create skill from extracted information
-        string sanitizedTaskName = System.Text.RegularExpressions.Regex.Replace(
+        string sanitizedTaskName = Regex.Replace(
             taskDescription.ToLowerInvariant(),
             @"[^a-z0-9]",
             "_");

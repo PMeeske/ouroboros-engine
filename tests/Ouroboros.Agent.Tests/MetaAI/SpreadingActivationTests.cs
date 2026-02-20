@@ -137,7 +137,7 @@ public class SpreadingActivationTests
         // High arousal narrows spread factor and depth, so deeper neighbors should have less activation
         double lowTotalActivation = lowActivated.Sum(a => a.Activation);
         double highTotalActivation = highActivated.Sum(a => a.Activation);
-        highTotalActivation.Should().BeLessOrEqualTo(lowTotalActivation);
+        highTotalActivation.Should().BeLessThanOrEqualTo(lowTotalActivation);
     }
 
     [Fact]

@@ -42,7 +42,7 @@ public sealed class PlanStrategyFitness : IFitnessFunction<PlanStrategyGene>
     }
 
     /// <inheritdoc/>
-    public Task<double> EvaluateAsync(IChromosome<PlanStrategyGene> chromosome)
+    public Task<double> EvaluateAsync(IChromosome<PlanStrategyGene> chromosome, CancellationToken cancellationToken)
     {
         try
         {

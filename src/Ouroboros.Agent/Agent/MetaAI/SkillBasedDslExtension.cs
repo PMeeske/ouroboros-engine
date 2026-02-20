@@ -103,7 +103,7 @@ public sealed class SkillBasedDslExtension
             return "No learned skills available yet. Skills are extracted from successful research analysis.";
         }
 
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         sb.AppendLine("=== Learned Skill Tokens (Dynamically Generated) ===\n");
 
         foreach (var (tokenName, skillToken) in _skillTokens.OrderBy(x => x.Key))
