@@ -25,7 +25,9 @@ public static class AudioPlayer
         CancellationToken ct = default)
     {
         // Create a temporary file for playback
-        string tempFile = Path.Combine(Path.GetTempPath(), $"tts_playback_{Guid.NewGuid()}.{format}");
+        // Sanitize MIME-type format strings like "audio/wav" → "wav"
+        string ext = format.Contains('/') ? format[(format.LastIndexOf('/') + 1)..] : format;
+        string tempFile = Path.Combine(Path.GetTempPath(), $"tts_playback_{Guid.NewGuid()}.{ext}");
 
         try
         {
