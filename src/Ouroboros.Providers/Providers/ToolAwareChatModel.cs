@@ -97,6 +97,23 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
         }
     }
 
+    // ── Crush-inspired hooks ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Optional pre-execution gate called before every LLM-driven tool call.
+    /// Return <c>false</c> to skip the tool (treated as denied).
+    /// Signature: (toolName, args, cancellationToken) => Task&lt;bool&gt;
+    /// </summary>
+    public Func<string, string, CancellationToken, Task<bool>>? BeforeInvoke { get; set; }
+
+    /// <summary>
+    /// Optional post-execution callback for metrics, UI updates, and event publishing.
+    /// Signature: (toolName, args, output, elapsed, success)
+    /// </summary>
+    public Action<string, string, string, TimeSpan, bool>? AfterInvoke { get; set; }
+
+    // ── Internal execution ───────────────────────────────────────────────────────
+
     private async Task<(string Text, List<ToolExecution> Tools)> ProcessToolCallsAsync(string result, CancellationToken ct)
     {
         List<ToolExecution> toolCalls = [];
@@ -128,7 +145,19 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
                 continue;
             }
 
+            // ── Permission gate (Crush: [a]/[s]/[d] before every tool call) ──
+            if (BeforeInvoke != null)
+            {
+                var allowed = await BeforeInvoke(name, args, ct);
+                if (!allowed)
+                {
+                    modifiedResult = modifiedResult.Replace(fullMatch, $"[TOOL-RESULT:{name}] denied by user");
+                    continue;
+                }
+            }
+
             string output;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 Result<string, string> toolResult = await tool.InvokeAsync(args, ct);
@@ -140,6 +169,13 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
             {
                 output = $"error: {ex.Message}";
             }
+            finally
+            {
+                sw.Stop();
+            }
+
+            // ── Post-execution hook (metrics, UI, event bus) ──
+            AfterInvoke?.Invoke(name, args, output, sw.Elapsed, !output.StartsWith("error:"));
 
             toolCalls.Add(new ToolExecution(name, args, output, DateTime.UtcNow));
 
