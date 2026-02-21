@@ -113,12 +113,14 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 }
             };
 
-            HttpResponseMessage response = await _resiliencePolicy.ExecuteAsync(async () =>
+            HttpResponseMessage response = await _resiliencePolicy.ExecuteAsync(async (innerCt) =>
             {
-                // Create fresh JsonContent for each retry attempt (content can only be used once)
+                // Create fresh JsonContent for each retry attempt (content can only be used once).
+                // innerCt is checked by Polly before each retry — so a Racing-mode cancellation
+                // causes immediate abort instead of 5x exponential-backoff spam.
                 using JsonContent payload = JsonContent.Create(payloadObject);
-                return await _client.PostAsync("/api/generate", payload, ct).ConfigureAwait(false);
-            }).ConfigureAwait(false);
+                return await _client.PostAsync("/api/generate", payload, innerCt).ConfigureAwait(false);
+            }, ct).ConfigureAwait(false);
 
             string rawContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
@@ -147,11 +149,13 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
         catch (BrokenCircuitException)
         {
             // Circuit is open - service is down, fail fast without spamming logs
-            // The circuit will auto-reset after 30s and try again
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Deliberate cancellation (e.g. Racing mode found a winner) — not an error, don't log
         }
         catch (Exception ex)
         {
-            // Log other errors for debugging (but not BrokenCircuitException)
             Console.WriteLine($"[OllamaCloudChatModel] Error: {ex.GetType().Name}: {ex.Message}");
         }
         finally
@@ -188,10 +192,9 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                     }
                 });
 
-                HttpResponseMessage response = await _resiliencePolicy.ExecuteAsync(async () =>
-                {
-                    return await _client.PostAsync("/api/generate", payload, token).ConfigureAwait(false);
-                }).ConfigureAwait(false);
+                HttpResponseMessage response = await _resiliencePolicy.ExecuteAsync(
+                    (innerToken) => _client.PostAsync("/api/generate", payload, innerToken),
+                    token).ConfigureAwait(false);
 
                 response.EnsureSuccessStatusCode();
 
@@ -304,10 +307,9 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                     }
                 });
 
-                HttpResponseMessage response = await _resiliencePolicy.ExecuteAsync(async () =>
-                {
-                    return await _client.PostAsync("/api/generate", payload, token).ConfigureAwait(false);
-                }).ConfigureAwait(false);
+                HttpResponseMessage response = await _resiliencePolicy.ExecuteAsync(
+                    (innerToken) => _client.PostAsync("/api/generate", payload, innerToken),
+                    token).ConfigureAwait(false);
 
                 response.EnsureSuccessStatusCode();
 
