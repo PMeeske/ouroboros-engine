@@ -53,7 +53,10 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 (int)r.StatusCode == 503 ||    // Service Unavailable (explicitly)
                 (int)r.StatusCode >= 500)      // All server errors
             .Or<HttpRequestException>()        // Network failures
-            .Or<TaskCanceledException>()       // Timeouts
+            .Or<TaskCanceledException>(ex =>   // Only genuine HttpClient timeouts, NOT external cancellation.
+                // HttpClient.Timeout fires as TaskCanceledException with InnerException=TimeoutException.
+                // Deliberate cancellation (Racing mode, user Ctrl+C) produces a bare TCE without a TimeoutException.
+                ex.InnerException is TimeoutException)
             .WaitAndRetryAsync(
                 retryCount: 5,  // Increased from 3 for cloud instability
                 sleepDurationProvider: retryAttempt =>
