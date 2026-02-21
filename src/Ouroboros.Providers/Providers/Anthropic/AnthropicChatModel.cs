@@ -142,6 +142,10 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
 
             return new ThinkingResponse(null, content);
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Deliberate cancellation (e.g. Racing mode) — not an error
+        }
         catch (Exception ex)
         {
             Console.WriteLine($"[AnthropicChatModel] Error: {ex.GetType().Name}: {ex.Message}");
@@ -195,6 +199,11 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
                     }
                 }
 
+                observer.OnCompleted();
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // Deliberate cancellation — complete cleanly
                 observer.OnCompleted();
             }
             catch (Exception ex)
