@@ -213,6 +213,10 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
 
                 return result;
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw; // deliberate cancellation — don't retry
+            }
             catch (Exception ex)
             {
                 stats.FailedRequests++;
@@ -298,6 +302,11 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                     }
 
                     throw new InvalidOperationException($"Provider {config.Name} returned empty or fallback response");
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    observer.OnCompleted(); // deliberate cancellation — don't retry
+                    return;
                 }
                 catch (Exception ex)
                 {

@@ -144,7 +144,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            // Deliberate cancellation (e.g. Racing mode) — not an error
+            throw; // propagate cleanly — let callers handle, don't return fallback
         }
         catch (Exception ex)
         {
