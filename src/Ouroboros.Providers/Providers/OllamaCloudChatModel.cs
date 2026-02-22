@@ -63,7 +63,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 {
                     // Exponential backoff with jitter to avoid thundering herd
                     var baseDelay = TimeSpan.FromSeconds(Math.Pow(2, retryAttempt));
-                    var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000));
+                    var jitter = TimeSpan.FromMilliseconds(System.Random.Shared.Next(0, 1000));
                     return baseDelay + jitter;
                 },
                 onRetry: (outcome, timespan, retryCount, context) =>
