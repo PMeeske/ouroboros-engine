@@ -190,7 +190,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
             // Apply exponential backoff for repeated rate limits
             TimeSpan cooldown = CalculateCooldownDuration(currentHealth);
             newCooldownUntil = DateTime.UtcNow.Add(cooldown);
-            Console.WriteLine($"[ProviderLoadBalancer] Provider '{providerId}' rate limited. Cooldown until {newCooldownUntil:HH:mm:ss}");
+            System.Diagnostics.Trace.TraceWarning("[ProviderLoadBalancer] Provider '{0}' rate limited. Cooldown until {1:HH:mm:ss}", providerId, newCooldownUntil);
         }
 
         // Circuit breaker: mark unhealthy after consecutive failures
@@ -199,7 +199,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
         {
             newIsHealthy = false;
             newCooldownUntil = DateTime.UtcNow.Add(DefaultCooldownDuration);
-            Console.WriteLine($"[ProviderLoadBalancer] Provider '{providerId}' marked unhealthy after {newConsecutiveFailures} failures");
+            System.Diagnostics.Trace.TraceWarning("[ProviderLoadBalancer] Provider '{0}' marked unhealthy after {1} failures", providerId, newConsecutiveFailures);
         }
 
         ProviderHealthStatus updatedHealth = new(
@@ -232,7 +232,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
         };
 
         _healthStatus[providerId] = updatedHealth;
-        Console.WriteLine($"[ProviderLoadBalancer] Provider '{providerId}' manually marked unhealthy");
+        System.Diagnostics.Trace.TraceWarning("[ProviderLoadBalancer] Provider '{0}' manually marked unhealthy", providerId);
     }
 
     /// <inheritdoc/>
@@ -250,7 +250,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
         };
 
         _healthStatus[providerId] = updatedHealth;
-        Console.WriteLine($"[ProviderLoadBalancer] Provider '{providerId}' marked healthy");
+        System.Diagnostics.Trace.TraceInformation("[ProviderLoadBalancer] Provider '{0}' marked healthy", providerId);
     }
 
     private TimeSpan CalculateCooldownDuration(ProviderHealthStatus health)

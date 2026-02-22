@@ -13,7 +13,7 @@ using Core.Monads;
 /// </summary>
 public sealed class WorldModelEngine : IWorldModelEngine
 {
-    private readonly Random random;
+    private readonly Random _random;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorldModelEngine"/> class.
@@ -21,7 +21,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
     /// <param name="seed">Random seed for reproducibility.</param>
     public WorldModelEngine(int seed = 42)
     {
-        random = new Random(seed);
+        _random = new Random(seed);
     }
 
     /// <inheritdoc/>
@@ -303,15 +303,15 @@ public sealed class WorldModelEngine : IWorldModelEngine
             embeddingSize,
             actionEmbeddingSize,
             hiddenSize,
-            random.Next());
+            _random.Next());
 
         var rewardPredictor = SimpleRewardPredictor.CreateRandom(
             embeddingSize * 2 + actionEmbeddingSize,
-            random.Next());
+            _random.Next());
 
         var terminalPredictor = SimpleTerminalPredictor.CreateRandom(
             embeddingSize,
-            random.Next());
+            _random.Next());
 
         await Task.CompletedTask; // For async signature
         return (statePredictor, rewardPredictor, terminalPredictor);
@@ -377,7 +377,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
     private Action SampleRandomAction()
     {
         var actionNames = new[] { "move_forward", "move_backward", "turn_left", "turn_right", "wait" };
-        var name = actionNames[random.Next(actionNames.Length)];
+        var name = actionNames[_random.Next(actionNames.Length)];
         return new Action(name, new Dictionary<string, object>());
     }
 

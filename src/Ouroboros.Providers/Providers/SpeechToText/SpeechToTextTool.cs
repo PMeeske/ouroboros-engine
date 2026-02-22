@@ -13,7 +13,7 @@ namespace Ouroboros.Providers;
 /// </summary>
 public sealed class SpeechToTextTool : ITool
 {
-    private readonly ISpeechToTextService service;
+    private readonly ISpeechToTextService _service;
 
     /// <inheritdoc />
     public string Name => "transcribe_audio";
@@ -49,7 +49,7 @@ public sealed class SpeechToTextTool : ITool
     /// <param name="service">The speech-to-text service to use.</param>
     public SpeechToTextTool(ISpeechToTextService service)
     {
-        this.service = service ?? throw new ArgumentNullException(nameof(service));
+        _service = service ?? throw new ArgumentNullException(nameof(service));
     }
 
     /// <summary>
@@ -95,11 +95,11 @@ public sealed class SpeechToTextTool : ITool
 
             if (args.TranslateToEnglish)
             {
-                result = await this.service.TranslateToEnglishAsync(args.FilePath, options, ct);
+                result = await _service.TranslateToEnglishAsync(args.FilePath, options, ct);
             }
             else
             {
-                result = await this.service.TranscribeFileAsync(args.FilePath, options, ct);
+                result = await _service.TranscribeFileAsync(args.FilePath, options, ct);
             }
 
             return result.Match(

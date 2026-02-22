@@ -9,8 +9,8 @@ namespace Ouroboros.Pipeline.MultiAgent;
 /// </summary>
 public sealed class ConsensusProtocol : IConsensusProtocol
 {
-    private readonly ConsensusStrategy strategy;
-    private readonly double customThreshold;
+    private readonly ConsensusStrategy _strategy;
+    private readonly double _customThreshold;
 
     private const double MajorityThreshold = 0.5;
     private const double SuperMajorityThreshold = 0.666666666666667;
@@ -44,12 +44,12 @@ public sealed class ConsensusProtocol : IConsensusProtocol
     /// <summary>
     /// Gets the consensus strategy used by this protocol.
     /// </summary>
-    public ConsensusStrategy Strategy => strategy;
+    public ConsensusStrategy Strategy => _strategy;
 
     /// <summary>
     /// Gets the threshold used for consensus determination.
     /// </summary>
-    public double Threshold => customThreshold;
+    public double Threshold => _customThreshold;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConsensusProtocol"/> class.
@@ -64,8 +64,8 @@ public sealed class ConsensusProtocol : IConsensusProtocol
             throw new ArgumentOutOfRangeException(nameof(threshold), threshold, "Threshold must be between 0.0 and 1.0.");
         }
 
-        this.strategy = strategy;
-        this.customThreshold = threshold;
+        _strategy = strategy;
+        _customThreshold = threshold;
     }
 
     /// <summary>
@@ -80,10 +80,10 @@ public sealed class ConsensusProtocol : IConsensusProtocol
 
         if (votes.Count == 0)
         {
-            return ConsensusResult.NoConsensus(votes, strategy.ToString());
+            return ConsensusResult.NoConsensus(votes, _strategy.ToString());
         }
 
-        return strategy switch
+        return _strategy switch
         {
             ConsensusStrategy.Majority => EvaluateMajority(votes),
             ConsensusStrategy.SuperMajority => EvaluateSuperMajority(votes),
@@ -91,7 +91,7 @@ public sealed class ConsensusProtocol : IConsensusProtocol
             ConsensusStrategy.WeightedByConfidence => EvaluateWeightedByConfidence(votes),
             ConsensusStrategy.HighestConfidence => EvaluateHighestConfidence(votes),
             ConsensusStrategy.RankedChoice => EvaluateRankedChoice(votes),
-            _ => ConsensusResult.NoConsensus(votes, strategy.ToString()),
+            _ => ConsensusResult.NoConsensus(votes, _strategy.ToString()),
         };
     }
 
@@ -189,7 +189,7 @@ public sealed class ConsensusProtocol : IConsensusProtocol
             }
         }
 
-        if (winningOption == null || maxWeightedConfidence <= customThreshold)
+        if (winningOption == null || maxWeightedConfidence <= _customThreshold)
         {
             return ConsensusResult.NoConsensus(votes, nameof(ConsensusStrategy.WeightedByConfidence));
         }

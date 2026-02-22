@@ -1,5 +1,7 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-// Core abstractions
+// <copyright file="GlobalUsings.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 // System imports
 global using System;
 global using System.Collections.Concurrent;
@@ -15,7 +17,7 @@ global using System.Text.Json;
 global using System.Text.RegularExpressions;
 global using System.Threading;
 global using System.Threading.Tasks;
-// Agent
+// Core abstractions
 global using Ouroboros.Abstractions.Monads;
 global using Ouroboros.Core.Monads;
 // Domain models

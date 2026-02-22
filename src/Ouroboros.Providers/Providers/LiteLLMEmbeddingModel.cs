@@ -44,7 +44,7 @@ public sealed class LiteLLMEmbeddingModel : IEmbeddingModel
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 onRetry: (outcome, timespan, retryCount, context) =>
                 {
-                    Console.WriteLine($"[LiteLLMEmbeddingModel] Retry {retryCount} after {timespan.TotalSeconds}s due to {outcome.Result?.StatusCode}");
+                    System.Diagnostics.Trace.TraceInformation("[LiteLLMEmbeddingModel] Retry {0} after {1}s due to {2}", retryCount, timespan.TotalSeconds, outcome.Result?.StatusCode);
                 });
     }
 

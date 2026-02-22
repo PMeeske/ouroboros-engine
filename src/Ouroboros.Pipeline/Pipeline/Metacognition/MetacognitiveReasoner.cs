@@ -9,7 +9,7 @@ public sealed class MetacognitiveReasoner : IReflectiveReasoner
     private readonly ConcurrentDictionary<Guid, ReasoningTrace> activeTraces = new();
     private readonly ConcurrentQueue<ReasoningTrace> completedTraces = new();
     private readonly object traceLock = new();
-    private Guid? currentTraceId;
+    private Guid? _currentTraceId;
 
     /// <summary>
     /// Known logical fallacies and their detection patterns.
@@ -43,7 +43,7 @@ public sealed class MetacognitiveReasoner : IReflectiveReasoner
 
         lock (traceLock)
         {
-            currentTraceId = trace.Id;
+            _currentTraceId = trace.Id;
         }
 
         return trace.Id;
@@ -54,7 +54,7 @@ public sealed class MetacognitiveReasoner : IReflectiveReasoner
     {
         lock (traceLock)
         {
-            if (!currentTraceId.HasValue || !activeTraces.TryGetValue(currentTraceId.Value, out var trace))
+            if (!_currentTraceId.HasValue || !activeTraces.TryGetValue(_currentTraceId.Value, out var trace))
             {
                 return Result<int, string>.Failure("No active reasoning trace. Call StartTrace() first.");
             }
@@ -74,7 +74,7 @@ public sealed class MetacognitiveReasoner : IReflectiveReasoner
             }
 
             var updatedTrace = trace.WithStep(step);
-            activeTraces[currentTraceId.Value] = updatedTrace;
+            activeTraces[_currentTraceId.Value] = updatedTrace;
 
             return Result<int, string>.Success(stepNumber);
         }
@@ -85,7 +85,7 @@ public sealed class MetacognitiveReasoner : IReflectiveReasoner
     {
         lock (traceLock)
         {
-            if (!currentTraceId.HasValue || !activeTraces.TryRemove(currentTraceId.Value, out var trace))
+            if (!_currentTraceId.HasValue || !activeTraces.TryRemove(_currentTraceId.Value, out var trace))
             {
                 return Result<ReasoningTrace, string>.Failure("No active reasoning trace to complete.");
             }
@@ -94,7 +94,7 @@ public sealed class MetacognitiveReasoner : IReflectiveReasoner
             var completedTrace = trace.Complete(conclusion, confidence, success);
 
             completedTraces.Enqueue(completedTrace);
-            currentTraceId = null;
+            _currentTraceId = null;
 
             return Result<ReasoningTrace, string>.Success(completedTrace);
         }
@@ -263,7 +263,7 @@ public sealed class MetacognitiveReasoner : IReflectiveReasoner
     {
         lock (traceLock)
         {
-            if (currentTraceId.HasValue && activeTraces.TryGetValue(currentTraceId.Value, out var trace))
+            if (_currentTraceId.HasValue && activeTraces.TryGetValue(_currentTraceId.Value, out var trace))
             {
                 return Option<ReasoningTrace>.Some(trace);
             }

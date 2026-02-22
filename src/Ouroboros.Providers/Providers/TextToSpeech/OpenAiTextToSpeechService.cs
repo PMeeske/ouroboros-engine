@@ -14,11 +14,11 @@ namespace Ouroboros.Providers.TextToSpeech;
 /// </summary>
 public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposable
 {
-    private readonly HttpClient httpClient;
-    private readonly string apiKey;
-    private readonly string endpoint;
-    private readonly string defaultModel;
-    private readonly bool ownsClient;
+    private readonly HttpClient _httpClient;
+    private readonly string _apiKey;
+    private readonly string _endpoint;
+    private readonly string _defaultModel;
+    private readonly bool _ownsClient;
 
     private static readonly string[] Voices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
     private static readonly string[] Formats = ["mp3", "opus", "aac", "flac", "wav", "pcm"];
@@ -48,11 +48,11 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
         string model = "tts-1",
         HttpClient? httpClient = null)
     {
-        this.apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
-        this.endpoint = endpoint ?? "https://api.openai.com/v1";
-        this.defaultModel = model;
-        this.ownsClient = httpClient == null;
-        this.httpClient = httpClient ?? new HttpClient();
+        _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+        _endpoint = endpoint ?? "https://api.openai.com/v1";
+        _defaultModel = model;
+        _ownsClient = httpClient == null;
+        _httpClient = httpClient ?? new HttpClient();
     }
 
     /// <inheritdoc/>
@@ -66,10 +66,10 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
             return Result<SpeechResult, string>.Failure("Text cannot be empty");
         }
 
-        if (text.Length > this.MaxInputLength)
+        if (text.Length > MaxInputLength)
         {
             return Result<SpeechResult, string>.Failure(
-                $"Text too long: {text.Length} characters. Maximum: {this.MaxInputLength}");
+                $"Text too long: {text.Length} characters. Maximum: {MaxInputLength}");
         }
 
         options ??= new TextToSpeechOptions();
@@ -78,7 +78,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
         {
             string voiceName = options.Voice.ToString().ToLowerInvariant();
             string format = options.Format.ToLowerInvariant();
-            string model = options.Model ?? this.defaultModel;
+            string model = options.Model ?? _defaultModel;
 
             // Validate speed
             double speed = Math.Clamp(options.Speed, 0.25, 4.0);
@@ -95,11 +95,11 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
             string jsonBody = JsonSerializer.Serialize(requestBody);
             using StringContent content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
 
-            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"{this.endpoint}/audio/speech");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", this.apiKey);
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, $"{_endpoint}/audio/speech");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
             request.Content = content;
 
-            HttpResponseMessage response = await this.httpClient.SendAsync(request, ct);
+            HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -136,7 +136,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
             }
         }
 
-        Result<SpeechResult, string> result = await this.SynthesizeAsync(text, options, ct);
+        Result<SpeechResult, string> result = await SynthesizeAsync(text, options, ct);
 
         return result.Match(
             speech =>
@@ -167,7 +167,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
         TextToSpeechOptions? options = null,
         CancellationToken ct = default)
     {
-        Result<SpeechResult, string> result = await this.SynthesizeAsync(text, options, ct);
+        Result<SpeechResult, string> result = await SynthesizeAsync(text, options, ct);
 
         return result.Match(
             speech =>
@@ -188,17 +188,17 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
     /// <inheritdoc/>
     public async Task<bool> IsAvailableAsync(CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(this.apiKey))
+        if (string.IsNullOrWhiteSpace(_apiKey))
         {
             return false;
         }
 
         try
         {
-            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"{this.endpoint}/models");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", this.apiKey);
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"{_endpoint}/models");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
-            HttpResponseMessage response = await this.httpClient.SendAsync(request, ct);
+            HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
             return response.IsSuccessStatusCode;
         }
         catch
@@ -212,9 +212,9 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
     /// </summary>
     public void Dispose()
     {
-        if (this.ownsClient)
+        if (_ownsClient)
         {
-            this.httpClient.Dispose();
+            _httpClient.Dispose();
         }
     }
 }

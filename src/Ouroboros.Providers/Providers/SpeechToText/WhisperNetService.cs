@@ -13,14 +13,14 @@ namespace Ouroboros.Providers.SpeechToText;
 /// </summary>
 public sealed class WhisperNetService : ISpeechToTextService, IDisposable
 {
-    private readonly GgmlType modelType;
-    private readonly string modelDirectory;
-    private readonly bool lazyLoad;
-    private WhisperProcessor? processor;
-    private WhisperFactory? factory;
-    private readonly SemaphoreSlim initLock = new(1, 1);
-    private bool isInitialized;
-    private bool isDisposed;
+    private readonly GgmlType _modelType;
+    private readonly string _modelDirectory;
+    private readonly bool _lazyLoad;
+    private WhisperProcessor? _processor;
+    private WhisperFactory? _factory;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private bool _isInitialized;
+    private bool _isDisposed;
 
     /// <summary>
     /// Supported audio formats for Whisper.net (requires 16kHz mono WAV).
@@ -47,9 +47,9 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
         string? modelDirectory = null,
         bool lazyLoad = true)
     {
-        this.modelType = modelType;
-        this.modelDirectory = modelDirectory ?? GetDefaultModelDirectory();
-        this.lazyLoad = lazyLoad;
+        _modelType = modelType;
+        _modelDirectory = modelDirectory ?? GetDefaultModelDirectory();
+        _lazyLoad = lazyLoad;
 
         if (!lazyLoad)
         {
@@ -127,7 +127,7 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
             var segments = new List<TranscriptionSegment>();
             var fullText = new System.Text.StringBuilder();
 
-            await foreach (var segment in processor!.ProcessAsync(samples, ct))
+            await foreach (var segment in _processor!.ProcessAsync(samples, ct))
             {
                 string text = segment.Text?.Trim() ?? "";
                 if (!string.IsNullOrEmpty(text))
@@ -227,40 +227,40 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
 
     private async Task<Result<bool, string>> EnsureInitializedAsync(CancellationToken ct)
     {
-        if (isInitialized && processor != null)
+        if (_isInitialized && _processor != null)
         {
             return Result<bool, string>.Success(true);
         }
 
-        await initLock.WaitAsync(ct);
+        await _initLock.WaitAsync(ct);
         try
         {
-            if (isInitialized && processor != null)
+            if (_isInitialized && _processor != null)
             {
                 return Result<bool, string>.Success(true);
             }
 
             // Ensure model directory exists
-            if (!Directory.Exists(modelDirectory))
+            if (!Directory.Exists(_modelDirectory))
             {
-                Directory.CreateDirectory(modelDirectory);
+                Directory.CreateDirectory(_modelDirectory);
             }
 
-            string modelFileName = GetModelFileName(modelType);
-            string modelPath = Path.Combine(modelDirectory, modelFileName);
+            string modelFileName = GetModelFileName(_modelType);
+            string modelPath = Path.Combine(_modelDirectory, modelFileName);
 
             // Download model if not present
             if (!File.Exists(modelPath))
             {
-                Console.WriteLine($"  [whisper.net] Downloading {modelType} model...");
+                System.Diagnostics.Trace.TraceInformation("[whisper.net] Downloading {0} model...", _modelType);
                 try
                 {
                     using var httpClient = new System.Net.Http.HttpClient();
                     var downloader = new WhisperGgmlDownloader(httpClient);
-                    await using var modelStream = await downloader.GetGgmlModelAsync(modelType);
+                    await using var modelStream = await downloader.GetGgmlModelAsync(_modelType);
                     await using var fileStream = File.Create(modelPath);
                     await modelStream.CopyToAsync(fileStream, ct);
-                    Console.WriteLine($"  [whisper.net] Model downloaded to {modelPath}");
+                    System.Diagnostics.Trace.TraceInformation("[whisper.net] Model downloaded to {0}", modelPath);
                 }
                 catch (Exception ex)
                 {
@@ -269,14 +269,14 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
             }
 
             // Create factory and processor
-            factory = WhisperFactory.FromPath(modelPath);
-            processor = factory.CreateBuilder()
+            _factory = WhisperFactory.FromPath(modelPath);
+            _processor = _factory.CreateBuilder()
                 .WithLanguage("auto")
                 .WithThreads(Environment.ProcessorCount)
                 .Build();
 
-            isInitialized = true;
-            Console.WriteLine($"  [whisper.net] Initialized with {modelType} model");
+            _isInitialized = true;
+            System.Diagnostics.Trace.TraceInformation("[whisper.net] Initialized with {0} model", _modelType);
 
             return Result<bool, string>.Success(true);
         }
@@ -286,7 +286,7 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
         }
         finally
         {
-            initLock.Release();
+            _initLock.Release();
         }
     }
 
@@ -482,11 +482,11 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (isDisposed) return;
-        isDisposed = true;
+        if (_isDisposed) return;
+        _isDisposed = true;
 
-        processor?.Dispose();
-        factory?.Dispose();
-        initLock.Dispose();
+        _processor?.Dispose();
+        _factory?.Dispose();
+        _initLock.Dispose();
     }
 }

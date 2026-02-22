@@ -305,19 +305,19 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
                             skill =>
                             {
                                 RecordMetric("skill_extraction_success", 1.0, true);
-                                Console.WriteLine($"✓ Extracted skill: {skill.Name} (Quality: {skill.SuccessRate:P0})");
+                                Trace.TraceInformation("Extracted skill: {0} (Quality: {1})", skill.Name, skill.SuccessRate.ToString("P0"));
                             },
                             error =>
                             {
                                 RecordMetric("skill_extraction_failure", 1.0, false);
-                                Console.WriteLine($"✗ Skill extraction failed: {error}");
+                                Trace.TraceWarning("Skill extraction failed: {0}", error);
                             });
                     }
                 }
                 catch (Exception ex)
                 {
                     RecordMetric("skill_extraction_error", 1.0, false);
-                    Console.WriteLine($"✗ Skill extraction error: {ex.Message}");
+                    Trace.TraceWarning("Skill extraction error: {0}", ex.Message);
                 }
             });
         }

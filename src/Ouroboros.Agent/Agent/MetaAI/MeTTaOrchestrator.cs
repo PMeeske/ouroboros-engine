@@ -135,14 +135,14 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             Result<Unit, string> translationResult = await _representation.TranslatePlanAsync(plan, ct);
             if (translationResult.IsFailure)
             {
-                Console.WriteLine($"Warning: Failed to translate plan to MeTTa: {translationResult.Error}");
+                Trace.TraceWarning("Failed to translate plan to MeTTa: {0}", translationResult.Error);
             }
 
             // Translate tools to MeTTa
             Result<Unit, string> toolTranslation = await _representation.TranslateToolsAsync(_tools, ct);
             if (toolTranslation.IsFailure)
             {
-                Console.WriteLine($"Warning: Failed to translate tools to MeTTa: {toolTranslation.Error}");
+                Trace.TraceWarning("Failed to translate tools to MeTTa: {0}", toolTranslation.Error);
             }
 
             // Validate plan safety

@@ -13,10 +13,10 @@ using Ouroboros.Core.Monads;
 /// </summary>
 public sealed class CausalGraph
 {
-    private readonly ImmutableDictionary<Guid, CausalNode> nodes;
-    private readonly ImmutableList<CausalEdge> edges;
-    private readonly ImmutableDictionary<Guid, ImmutableList<CausalEdge>> outgoingEdges;
-    private readonly ImmutableDictionary<Guid, ImmutableList<CausalEdge>> incomingEdges;
+    private readonly ImmutableDictionary<Guid, CausalNode> _nodes;
+    private readonly ImmutableList<CausalEdge> _edges;
+    private readonly ImmutableDictionary<Guid, ImmutableList<CausalEdge>> _outgoingEdges;
+    private readonly ImmutableDictionary<Guid, ImmutableList<CausalEdge>> _incomingEdges;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CausalGraph"/> class.
@@ -27,31 +27,31 @@ public sealed class CausalGraph
         ImmutableDictionary<Guid, ImmutableList<CausalEdge>> outgoingEdges,
         ImmutableDictionary<Guid, ImmutableList<CausalEdge>> incomingEdges)
     {
-        this.nodes = nodes;
-        this.edges = edges;
-        this.outgoingEdges = outgoingEdges;
-        this.incomingEdges = incomingEdges;
+        _nodes = nodes;
+        _edges = edges;
+        _outgoingEdges = outgoingEdges;
+        _incomingEdges = incomingEdges;
     }
 
     /// <summary>
     /// Gets all nodes in the graph.
     /// </summary>
-    public IReadOnlyCollection<CausalNode> Nodes => this.nodes.Values.ToImmutableList();
+    public IReadOnlyCollection<CausalNode> Nodes => _nodes.Values.ToImmutableList();
 
     /// <summary>
     /// Gets all edges in the graph.
     /// </summary>
-    public IReadOnlyCollection<CausalEdge> Edges => this.edges;
+    public IReadOnlyCollection<CausalEdge> Edges => _edges;
 
     /// <summary>
     /// Gets the number of nodes in the graph.
     /// </summary>
-    public int NodeCount => this.nodes.Count;
+    public int NodeCount => _nodes.Count;
 
     /// <summary>
     /// Gets the number of edges in the graph.
     /// </summary>
-    public int EdgeCount => this.edges.Count;
+    public int EdgeCount => _edges.Count;
 
     /// <summary>
     /// Creates an empty causal graph.
@@ -115,15 +115,15 @@ public sealed class CausalGraph
     {
         ArgumentNullException.ThrowIfNull(node);
 
-        if (this.nodes.ContainsKey(node.Id))
+        if (_nodes.ContainsKey(node.Id))
         {
             return Result<CausalGraph, string>.Failure($"Node with ID {node.Id} already exists in the graph.");
         }
 
-        ImmutableDictionary<Guid, CausalNode> newNodes = this.nodes.Add(node.Id, node);
+        ImmutableDictionary<Guid, CausalNode> newNodes = _nodes.Add(node.Id, node);
 
         return Result<CausalGraph, string>.Success(
-            new CausalGraph(newNodes, this.edges, this.outgoingEdges, this.incomingEdges));
+            new CausalGraph(newNodes, _edges, _outgoingEdges, _incomingEdges));
     }
 
     /// <summary>
@@ -135,32 +135,32 @@ public sealed class CausalGraph
     {
         ArgumentNullException.ThrowIfNull(edge);
 
-        if (!this.nodes.ContainsKey(edge.SourceId))
+        if (!_nodes.ContainsKey(edge.SourceId))
         {
             return Result<CausalGraph, string>.Failure($"Source node with ID {edge.SourceId} does not exist in the graph.");
         }
 
-        if (!this.nodes.ContainsKey(edge.TargetId))
+        if (!_nodes.ContainsKey(edge.TargetId))
         {
             return Result<CausalGraph, string>.Failure($"Target node with ID {edge.TargetId} does not exist in the graph.");
         }
 
-        ImmutableList<CausalEdge> newEdges = this.edges.Add(edge);
+        ImmutableList<CausalEdge> newEdges = _edges.Add(edge);
 
-        ImmutableList<CausalEdge> existingOutgoing = this.outgoingEdges.GetValueOrDefault(
+        ImmutableList<CausalEdge> existingOutgoing = _outgoingEdges.GetValueOrDefault(
             edge.SourceId,
             ImmutableList<CausalEdge>.Empty);
         ImmutableDictionary<Guid, ImmutableList<CausalEdge>> newOutgoing =
-            this.outgoingEdges.SetItem(edge.SourceId, existingOutgoing.Add(edge));
+            _outgoingEdges.SetItem(edge.SourceId, existingOutgoing.Add(edge));
 
-        ImmutableList<CausalEdge> existingIncoming = this.incomingEdges.GetValueOrDefault(
+        ImmutableList<CausalEdge> existingIncoming = _incomingEdges.GetValueOrDefault(
             edge.TargetId,
             ImmutableList<CausalEdge>.Empty);
         ImmutableDictionary<Guid, ImmutableList<CausalEdge>> newIncoming =
-            this.incomingEdges.SetItem(edge.TargetId, existingIncoming.Add(edge));
+            _incomingEdges.SetItem(edge.TargetId, existingIncoming.Add(edge));
 
         return Result<CausalGraph, string>.Success(
-            new CausalGraph(this.nodes, newEdges, newOutgoing, newIncoming));
+            new CausalGraph(_nodes, newEdges, newOutgoing, newIncoming));
     }
 
     /// <summary>
@@ -170,18 +170,18 @@ public sealed class CausalGraph
     /// <returns>A Result containing a new graph with the node removed, or an error.</returns>
     public Result<CausalGraph, string> RemoveNode(Guid nodeId)
     {
-        if (!this.nodes.ContainsKey(nodeId))
+        if (!_nodes.ContainsKey(nodeId))
         {
             return Result<CausalGraph, string>.Failure($"Node with ID {nodeId} does not exist in the graph.");
         }
 
-        ImmutableDictionary<Guid, CausalNode> newNodes = this.nodes.Remove(nodeId);
-        ImmutableList<CausalEdge> newEdges = this.edges
+        ImmutableDictionary<Guid, CausalNode> newNodes = _nodes.Remove(nodeId);
+        ImmutableList<CausalEdge> newEdges = _edges
             .Where(e => e.SourceId != nodeId && e.TargetId != nodeId)
             .ToImmutableList();
 
-        ImmutableDictionary<Guid, ImmutableList<CausalEdge>> newOutgoing = this.outgoingEdges.Remove(nodeId);
-        ImmutableDictionary<Guid, ImmutableList<CausalEdge>> newIncoming = this.incomingEdges.Remove(nodeId);
+        ImmutableDictionary<Guid, ImmutableList<CausalEdge>> newOutgoing = _outgoingEdges.Remove(nodeId);
+        ImmutableDictionary<Guid, ImmutableList<CausalEdge>> newIncoming = _incomingEdges.Remove(nodeId);
 
         // Remove references to this node from other nodes' edge lists
         foreach (Guid key in newOutgoing.Keys.ToList())
@@ -211,7 +211,7 @@ public sealed class CausalGraph
     /// <returns>An Option containing the node if found.</returns>
     public Option<CausalNode> GetNode(Guid id)
     {
-        return this.nodes.TryGetValue(id, out CausalNode? node)
+        return _nodes.TryGetValue(id, out CausalNode? node)
             ? Option<CausalNode>.Some(node)
             : Option<CausalNode>.None();
     }
@@ -225,7 +225,7 @@ public sealed class CausalGraph
     {
         ArgumentNullException.ThrowIfNull(name);
 
-        CausalNode? node = this.nodes.Values
+        CausalNode? node = _nodes.Values
             .FirstOrDefault(n => n.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
         return node is not null
@@ -240,13 +240,13 @@ public sealed class CausalGraph
     /// <returns>A list of nodes that have causal edges pointing to the specified node.</returns>
     public IReadOnlyList<CausalNode> GetCauses(Guid nodeId)
     {
-        if (!this.incomingEdges.TryGetValue(nodeId, out ImmutableList<CausalEdge>? incoming))
+        if (!_incomingEdges.TryGetValue(nodeId, out ImmutableList<CausalEdge>? incoming))
         {
             return ImmutableList<CausalNode>.Empty;
         }
 
         return incoming
-            .Select(e => this.nodes.GetValueOrDefault(e.SourceId))
+            .Select(e => _nodes.GetValueOrDefault(e.SourceId))
             .Where(n => n is not null)
             .Cast<CausalNode>()
             .ToImmutableList();
@@ -259,13 +259,13 @@ public sealed class CausalGraph
     /// <returns>A list of nodes that the specified node has causal edges pointing to.</returns>
     public IReadOnlyList<CausalNode> GetEffects(Guid nodeId)
     {
-        if (!this.outgoingEdges.TryGetValue(nodeId, out ImmutableList<CausalEdge>? outgoing))
+        if (!_outgoingEdges.TryGetValue(nodeId, out ImmutableList<CausalEdge>? outgoing))
         {
             return ImmutableList<CausalNode>.Empty;
         }
 
         return outgoing
-            .Select(e => this.nodes.GetValueOrDefault(e.TargetId))
+            .Select(e => _nodes.GetValueOrDefault(e.TargetId))
             .Where(n => n is not null)
             .Cast<CausalNode>()
             .ToImmutableList();
@@ -279,7 +279,7 @@ public sealed class CausalGraph
     /// <returns>A list of edges connecting the source to the target.</returns>
     public IReadOnlyList<CausalEdge> GetEdgesBetween(Guid sourceId, Guid targetId)
     {
-        if (!this.outgoingEdges.TryGetValue(sourceId, out ImmutableList<CausalEdge>? outgoing))
+        if (!_outgoingEdges.TryGetValue(sourceId, out ImmutableList<CausalEdge>? outgoing))
         {
             return ImmutableList<CausalEdge>.Empty;
         }
@@ -302,7 +302,7 @@ public sealed class CausalGraph
         int maxDepth = 5,
         double minProbability = 0.01)
     {
-        if (!this.nodes.TryGetValue(actionNodeId, out CausalNode? actionNode))
+        if (!_nodes.TryGetValue(actionNodeId, out CausalNode? actionNode))
         {
             return Result<IReadOnlyList<PredictedEffect>, string>.Failure(
                 $"Node with ID {actionNodeId} does not exist in the graph.");
@@ -312,7 +312,7 @@ public sealed class CausalGraph
         Queue<(Guid NodeId, double CumulativeProbability, int Depth)> queue = new();
 
         // Initialize with direct effects
-        if (this.outgoingEdges.TryGetValue(actionNodeId, out ImmutableList<CausalEdge>? directEdges))
+        if (_outgoingEdges.TryGetValue(actionNodeId, out ImmutableList<CausalEdge>? directEdges))
         {
             foreach (CausalEdge edge in directEdges)
             {
@@ -329,7 +329,7 @@ public sealed class CausalGraph
                 continue;
             }
 
-            if (!this.nodes.TryGetValue(nodeId, out CausalNode? node))
+            if (!_nodes.TryGetValue(nodeId, out CausalNode? node))
             {
                 continue;
             }
@@ -342,7 +342,7 @@ public sealed class CausalGraph
             }
 
             // Continue to downstream effects
-            if (this.outgoingEdges.TryGetValue(nodeId, out ImmutableList<CausalEdge>? outgoing))
+            if (_outgoingEdges.TryGetValue(nodeId, out ImmutableList<CausalEdge>? outgoing))
             {
                 foreach (CausalEdge edge in outgoing)
                 {
@@ -370,8 +370,8 @@ public sealed class CausalGraph
     /// <returns>An Option containing the path if one exists.</returns>
     public Option<CausalPath> FindPath(Guid fromId, Guid toId)
     {
-        if (!this.nodes.TryGetValue(fromId, out CausalNode? fromNode) ||
-            !this.nodes.TryGetValue(toId, out CausalNode? _))
+        if (!_nodes.TryGetValue(fromId, out CausalNode? fromNode) ||
+            !_nodes.TryGetValue(toId, out CausalNode? _))
         {
             return Option<CausalPath>.None();
         }
@@ -391,7 +391,7 @@ public sealed class CausalGraph
             CausalPath currentPath = queue.Dequeue();
             CausalNode lastNode = currentPath.Nodes[^1];
 
-            if (!this.outgoingEdges.TryGetValue(lastNode.Id, out ImmutableList<CausalEdge>? outgoing))
+            if (!_outgoingEdges.TryGetValue(lastNode.Id, out ImmutableList<CausalEdge>? outgoing))
             {
                 continue;
             }
@@ -403,7 +403,7 @@ public sealed class CausalGraph
                     continue;
                 }
 
-                if (!this.nodes.TryGetValue(edge.TargetId, out CausalNode? targetNode))
+                if (!_nodes.TryGetValue(edge.TargetId, out CausalNode? targetNode))
                 {
                     continue;
                 }
@@ -434,8 +434,8 @@ public sealed class CausalGraph
     {
         List<CausalPath> results = new();
 
-        if (!this.nodes.TryGetValue(fromId, out CausalNode? fromNode) ||
-            !this.nodes.TryGetValue(toId, out CausalNode? _))
+        if (!_nodes.TryGetValue(fromId, out CausalNode? fromNode) ||
+            !_nodes.TryGetValue(toId, out CausalNode? _))
         {
             return results;
         }
@@ -461,7 +461,7 @@ public sealed class CausalGraph
 
             CausalNode lastNode = currentPath.Nodes[^1];
 
-            if (!this.outgoingEdges.TryGetValue(lastNode.Id, out ImmutableList<CausalEdge>? outgoing))
+            if (!_outgoingEdges.TryGetValue(lastNode.Id, out ImmutableList<CausalEdge>? outgoing))
             {
                 continue;
             }
@@ -473,7 +473,7 @@ public sealed class CausalGraph
                     continue;
                 }
 
-                if (!this.nodes.TryGetValue(edge.TargetId, out CausalNode? targetNode))
+                if (!_nodes.TryGetValue(edge.TargetId, out CausalNode? targetNode))
                 {
                     continue;
                 }
@@ -500,9 +500,9 @@ public sealed class CausalGraph
     /// <returns>A list of root nodes.</returns>
     public IReadOnlyList<CausalNode> GetRootNodes()
     {
-        return this.nodes.Values
-            .Where(n => !this.incomingEdges.ContainsKey(n.Id) ||
-                        this.incomingEdges[n.Id].IsEmpty)
+        return _nodes.Values
+            .Where(n => !_incomingEdges.ContainsKey(n.Id) ||
+                        _incomingEdges[n.Id].IsEmpty)
             .ToImmutableList();
     }
 
@@ -512,9 +512,9 @@ public sealed class CausalGraph
     /// <returns>A list of leaf nodes.</returns>
     public IReadOnlyList<CausalNode> GetLeafNodes()
     {
-        return this.nodes.Values
-            .Where(n => !this.outgoingEdges.ContainsKey(n.Id) ||
-                        this.outgoingEdges[n.Id].IsEmpty)
+        return _nodes.Values
+            .Where(n => !_outgoingEdges.ContainsKey(n.Id) ||
+                        _outgoingEdges[n.Id].IsEmpty)
             .ToImmutableList();
     }
 
@@ -527,7 +527,7 @@ public sealed class CausalGraph
         HashSet<Guid> visited = new();
         HashSet<Guid> recursionStack = new();
 
-        foreach (Guid nodeId in this.nodes.Keys)
+        foreach (Guid nodeId in _nodes.Keys)
         {
             if (HasCycleUtil(nodeId, visited, recursionStack))
             {
@@ -545,7 +545,7 @@ public sealed class CausalGraph
     /// <returns>A list of nodes of the specified type.</returns>
     public IReadOnlyList<CausalNode> GetNodesByType(CausalNodeType nodeType)
     {
-        return this.nodes.Values
+        return _nodes.Values
             .Where(n => n.NodeType == nodeType)
             .ToImmutableList();
     }
@@ -593,7 +593,7 @@ public sealed class CausalGraph
 
         foreach (Guid nodeId in nodeIdSet)
         {
-            if (this.nodes.TryGetValue(nodeId, out CausalNode? node))
+            if (_nodes.TryGetValue(nodeId, out CausalNode? node))
             {
                 subgraphNodes.Add(node);
             }
@@ -603,7 +603,7 @@ public sealed class CausalGraph
             }
         }
 
-        foreach (CausalEdge edge in this.edges)
+        foreach (CausalEdge edge in _edges)
         {
             if (nodeIdSet.Contains(edge.SourceId) && nodeIdSet.Contains(edge.TargetId))
             {
@@ -632,7 +632,7 @@ public sealed class CausalGraph
         visited.Add(nodeId);
         recursionStack.Add(nodeId);
 
-        if (this.outgoingEdges.TryGetValue(nodeId, out ImmutableList<CausalEdge>? outgoing))
+        if (_outgoingEdges.TryGetValue(nodeId, out ImmutableList<CausalEdge>? outgoing))
         {
             foreach (CausalEdge edge in outgoing)
             {

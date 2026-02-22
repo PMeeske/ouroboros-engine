@@ -16,12 +16,12 @@ using Ouroboros.Domain.Embodied;
 /// </summary>
 public sealed class WorldModel : IWorldModel
 {
-    private readonly ILogger<WorldModel>? logger;
-    private readonly List<StateTransition> transitionMemory;
-    private readonly int maxMemorySize;
-    private readonly int kNeighbors;
-    private readonly Dictionary<string, (int predictions, int correct)> accuracyTracker;
-    private readonly object lockObject = new();
+    private readonly ILogger<WorldModel>? _logger;
+    private readonly List<StateTransition> _transitionMemory;
+    private readonly int _maxMemorySize;
+    private readonly int _kNeighbors;
+    private readonly Dictionary<string, (int predictions, int correct)> _accuracyTracker;
+    private readonly object _lockObject = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorldModel"/> class.
@@ -44,11 +44,11 @@ public sealed class WorldModel : IWorldModel
             throw new ArgumentOutOfRangeException(nameof(kNeighbors), "Must be positive");
         }
 
-        this.maxMemorySize = maxMemorySize;
-        this.kNeighbors = kNeighbors;
-        this.logger = logger;
-        this.transitionMemory = new List<StateTransition>();
-        this.accuracyTracker = new Dictionary<string, (int, int)>();
+        _maxMemorySize = maxMemorySize;
+        _kNeighbors = kNeighbors;
+        _logger = logger;
+        _transitionMemory = new List<StateTransition>();
+        _accuracyTracker = new Dictionary<string, (int, int)>();
     }
 
     /// <inheritdoc/>
@@ -67,15 +67,15 @@ public sealed class WorldModel : IWorldModel
             return Task.FromResult(Result<PredictedState, string>.Failure("Action cannot be null"));
         }
 
-        lock (this.lockObject)
+        lock (_lockObject)
         {
-            if (this.transitionMemory.Count == 0)
+            if (_transitionMemory.Count == 0)
             {
                 return Task.FromResult(Result<PredictedState, string>.Failure("No experience available for prediction"));
             }
 
             // Find k-nearest neighbors based on state-action similarity
-            var neighbors = this.FindNearestNeighbors(currentState, action);
+            var neighbors = FindNearestNeighbors(currentState, action);
 
             if (neighbors.Count == 0)
             {
@@ -83,9 +83,9 @@ public sealed class WorldModel : IWorldModel
             }
 
             // Aggregate predictions from neighbors
-            var predictedState = this.AggregatePredictions(neighbors, currentState, action);
+            var predictedState = AggregatePredictions(neighbors, currentState, action);
 
-            var confidence = this.CalculateConfidence(neighbors);
+            var confidence = CalculateConfidence(neighbors);
             var metadata = new Dictionary<string, object>
             {
                 ["neighbors_count"] = neighbors.Count,
@@ -115,7 +115,7 @@ public sealed class WorldModel : IWorldModel
 
         try
         {
-            lock (this.lockObject)
+            lock (_lockObject)
             {
                 foreach (var transition in transitions)
                 {
@@ -132,29 +132,29 @@ public sealed class WorldModel : IWorldModel
                         transition.Terminal,
                         DateTime.UtcNow);
 
-                    this.transitionMemory.Add(stateTransition);
+                    _transitionMemory.Add(stateTransition);
 
                     // Update accuracy tracking
-                    this.UpdateAccuracyMetrics(transition);
+                    UpdateAccuracyMetrics(transition);
                 }
 
                 // Maintain memory size limit (FIFO)
-                while (this.transitionMemory.Count > this.maxMemorySize)
+                while (_transitionMemory.Count > _maxMemorySize)
                 {
-                    this.transitionMemory.RemoveAt(0);
+                    _transitionMemory.RemoveAt(0);
                 }
 
-                this.logger?.LogInformation(
+                _logger?.LogInformation(
                     "Updated world model with {Count} transitions. Total memory: {Total}",
                     transitions.Count,
-                    this.transitionMemory.Count);
+                    _transitionMemory.Count);
             }
 
             return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
         }
         catch (Exception ex)
         {
-            this.logger?.LogError(ex, "Failed to update world model from experience");
+            _logger?.LogError(ex, "Failed to update world model from experience");
             return Task.FromResult(Result<Unit, string>.Failure($"Update failed: {ex.Message}"));
         }
     }
@@ -181,9 +181,9 @@ public sealed class WorldModel : IWorldModel
             return Result<List<EmbodiedAction>, string>.Failure("Horizon must be positive");
         }
 
-        lock (this.lockObject)
+        lock (_lockObject)
         {
-            if (this.transitionMemory.Count == 0)
+            if (_transitionMemory.Count == 0)
             {
                 return Result<List<EmbodiedAction>, string>.Failure("No experience available for planning");
             }
@@ -192,9 +192,9 @@ public sealed class WorldModel : IWorldModel
         try
         {
             // Beam search with greedy action selection
-            var plan = await this.BeamSearchAsync(current, goal, horizon, ct);
+            var plan = await BeamSearchAsync(current, goal, horizon, ct);
 
-            this.logger?.LogInformation(
+            _logger?.LogInformation(
                 "Generated plan with {Count} actions for goal: {Goal}",
                 plan.Count,
                 goal);
@@ -207,7 +207,7 @@ public sealed class WorldModel : IWorldModel
         }
         catch (Exception ex)
         {
-            this.logger?.LogError(ex, "Planning failed for goal: {Goal}", goal);
+            _logger?.LogError(ex, "Planning failed for goal: {Goal}", goal);
             return Result<List<EmbodiedAction>, string>.Failure($"Planning failed: {ex.Message}");
         }
     }
@@ -220,14 +220,14 @@ public sealed class WorldModel : IWorldModel
             return Task.FromResult(1.0); // Maximum uncertainty
         }
 
-        lock (this.lockObject)
+        lock (_lockObject)
         {
-            if (this.transitionMemory.Count == 0)
+            if (_transitionMemory.Count == 0)
             {
                 return Task.FromResult(1.0); // No data = high uncertainty
             }
 
-            var neighbors = this.FindNearestNeighbors(state, action);
+            var neighbors = FindNearestNeighbors(state, action);
 
             if (neighbors.Count == 0)
             {
@@ -240,11 +240,11 @@ public sealed class WorldModel : IWorldModel
             // 3. Variance in predicted outcomes (higher = more uncertain)
 
             var avgSimilarity = neighbors.Average(n => n.similarity);
-            var neighborRatio = Math.Min(1.0, neighbors.Count / (double)this.kNeighbors);
+            var neighborRatio = Math.Min(1.0, neighbors.Count / (double)_kNeighbors);
 
             // Calculate outcome variance
             var rewards = neighbors.Select(n => n.transition.Reward).ToList();
-            var rewardVariance = rewards.Count > 1 ? this.CalculateVariance(rewards) : 0.0;
+            var rewardVariance = rewards.Count > 1 ? CalculateVariance(rewards) : 0.0;
             var normalizedVariance = Math.Min(1.0, rewardVariance / 10.0); // Normalize to 0-1
 
             // Combine factors: lower similarity, fewer neighbors, higher variance = more uncertainty
@@ -279,7 +279,7 @@ public sealed class WorldModel : IWorldModel
             {
                 ct.ThrowIfCancellationRequested();
 
-                var predictionResult = await this.PredictAsync(currentState, action, ct);
+                var predictionResult = await PredictAsync(currentState, action, ct);
 
                 if (predictionResult.IsFailure)
                 {
@@ -293,7 +293,7 @@ public sealed class WorldModel : IWorldModel
                 // Stop if terminal state reached
                 if (predicted.Terminal)
                 {
-                    this.logger?.LogInformation(
+                    _logger?.LogInformation(
                         "Trajectory simulation terminated early at step {Step} (terminal state)",
                         trajectory.Count);
                     break;
@@ -310,7 +310,7 @@ public sealed class WorldModel : IWorldModel
         }
         catch (Exception ex)
         {
-            this.logger?.LogError(ex, "Trajectory simulation failed");
+            _logger?.LogError(ex, "Trajectory simulation failed");
             return Result<List<PredictedState>, string>.Failure($"Simulation failed: {ex.Message}");
         }
     }
@@ -321,16 +321,16 @@ public sealed class WorldModel : IWorldModel
     {
         var similarities = new List<(StateTransition transition, double similarity)>();
 
-        foreach (var transition in this.transitionMemory)
+        foreach (var transition in _transitionMemory)
         {
-            var similarity = this.CalculateSimilarity(state, action, transition);
+            var similarity = CalculateSimilarity(state, action, transition);
             similarities.Add((transition, similarity));
         }
 
         // Return k nearest neighbors sorted by similarity (descending)
         return similarities
             .OrderByDescending(s => s.similarity)
-            .Take(this.kNeighbors)
+            .Take(_kNeighbors)
             .ToList();
     }
 
@@ -340,10 +340,10 @@ public sealed class WorldModel : IWorldModel
         StateTransition transition)
     {
         // Weighted similarity based on multiple factors
-        var positionSim = this.PositionSimilarity(state.Position, transition.FromState.Position);
-        var velocitySim = this.VelocitySimilarity(state.Velocity, transition.FromState.Velocity);
-        var actionSim = this.ActionSimilarity(action, transition.Action);
-        var visualSim = this.VisualSimilarity(state.VisualObservation, transition.FromState.VisualObservation);
+        var positionSim = PositionSimilarity(state.Position, transition.FromState.Position);
+        var velocitySim = VelocitySimilarity(state.Velocity, transition.FromState.Velocity);
+        var actionSim = ActionSimilarity(action, transition.Action);
+        var visualSim = VisualSimilarity(state.VisualObservation, transition.FromState.VisualObservation);
 
         // Weighted combination (position and action are most important)
         return (0.4 * positionSim) + (0.3 * actionSim) + (0.2 * velocitySim) + (0.1 * visualSim);
@@ -402,7 +402,7 @@ public sealed class WorldModel : IWorldModel
         if (totalWeight == 0)
         {
             // Fallback: simple forward projection
-            return (this.ProjectForward(currentState, action), 0.0, false);
+            return (ProjectForward(currentState, action), 0.0, false);
         }
 
         // Weighted position
@@ -466,7 +466,7 @@ public sealed class WorldModel : IWorldModel
 
         // Confidence based on average similarity and number of neighbors
         var avgSimilarity = neighbors.Average(n => n.similarity);
-        var neighborRatio = Math.Min(1.0, neighbors.Count / (double)this.kNeighbors);
+        var neighborRatio = Math.Min(1.0, neighbors.Count / (double)_kNeighbors);
 
         return avgSimilarity * neighborRatio;
     }
@@ -482,7 +482,7 @@ public sealed class WorldModel : IWorldModel
         var bestScore = double.NegativeInfinity;
 
         // Generate candidate actions
-        var candidateActions = this.GenerateCandidateActions();
+        var candidateActions = GenerateCandidateActions();
 
         // Greedy beam search
         for (var depth = 0; depth < horizon; depth++)
@@ -494,7 +494,7 @@ public sealed class WorldModel : IWorldModel
             // For each action at this depth
             foreach (var action in candidateActions.Take(beamWidth))
             {
-                var predictResult = await this.PredictAsync(currentState, action, ct);
+                var predictResult = await PredictAsync(currentState, action, ct);
 
                 if (predictResult.IsSuccess)
                 {
@@ -532,9 +532,9 @@ public sealed class WorldModel : IWorldModel
 
     private List<EmbodiedAction> GenerateCandidateActions()
     {
-        lock (this.lockObject)
+        lock (_lockObject)
         {
-            if (this.transitionMemory.Count == 0)
+            if (_transitionMemory.Count == 0)
             {
                 // Default actions if no experience
                 return new List<EmbodiedAction>
@@ -547,8 +547,8 @@ public sealed class WorldModel : IWorldModel
             }
 
             // Sample diverse actions from experience
-            var actionClusters = this.transitionMemory
-                .GroupBy(t => this.QuantizeAction(t.Action))
+            var actionClusters = _transitionMemory
+                .GroupBy(t => QuantizeAction(t.Action))
                 .OrderByDescending(g => g.Average(t => t.Reward))
                 .Take(10)
                 .Select(g => g.First().Action)
@@ -572,13 +572,13 @@ public sealed class WorldModel : IWorldModel
         // Track prediction accuracy for future uncertainty estimation
         var key = "global";
 
-        if (!this.accuracyTracker.ContainsKey(key))
+        if (!_accuracyTracker.ContainsKey(key))
         {
-            this.accuracyTracker[key] = (0, 0);
+            _accuracyTracker[key] = (0, 0);
         }
 
-        var (predictions, correct) = this.accuracyTracker[key];
-        this.accuracyTracker[key] = (predictions + 1, correct + 1);
+        var (predictions, correct) = _accuracyTracker[key];
+        _accuracyTracker[key] = (predictions + 1, correct + 1);
     }
 
     private double CalculateVariance(List<double> values)

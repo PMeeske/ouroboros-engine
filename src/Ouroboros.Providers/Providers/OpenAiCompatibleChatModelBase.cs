@@ -53,7 +53,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 onRetry: (outcome, timespan, retryCount, context) =>
                 {
-                    Console.WriteLine($"[{_providerName}] Retry {retryCount} after {timespan.TotalSeconds}s due to {outcome.Result?.StatusCode}");
+                    System.Diagnostics.Trace.TraceInformation("[{0}] Retry {1} after {2}s due to {3}", _providerName, retryCount, timespan.TotalSeconds, outcome.Result?.StatusCode);
                 });
     }
 

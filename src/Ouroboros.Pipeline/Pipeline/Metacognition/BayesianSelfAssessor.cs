@@ -9,23 +9,23 @@ namespace Ouroboros.Pipeline.Metacognition;
 /// </summary>
 public sealed class BayesianSelfAssessor : ISelfAssessor
 {
-    private readonly ConcurrentDictionary<string, CapabilityBelief> capabilityBeliefs;
-    private readonly ConcurrentDictionary<PerformanceDimension, DimensionScore> dimensionScores;
-    private double confidenceCalibrationFactor;
+    private readonly ConcurrentDictionary<string, CapabilityBelief> _capabilityBeliefs;
+    private readonly ConcurrentDictionary<PerformanceDimension, DimensionScore> _dimensionScores;
+    private double _confidenceCalibrationFactor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BayesianSelfAssessor"/> class.
     /// </summary>
     public BayesianSelfAssessor()
     {
-        this.capabilityBeliefs = new ConcurrentDictionary<string, CapabilityBelief>();
-        this.dimensionScores = new ConcurrentDictionary<PerformanceDimension, DimensionScore>();
-        this.confidenceCalibrationFactor = 1.0;
+        _capabilityBeliefs = new ConcurrentDictionary<string, CapabilityBelief>();
+        _dimensionScores = new ConcurrentDictionary<PerformanceDimension, DimensionScore>();
+        _confidenceCalibrationFactor = 1.0;
 
         // Initialize dimension scores with uninformative priors
         foreach (var dimension in Enum.GetValues<PerformanceDimension>())
         {
-            this.dimensionScores[dimension] = DimensionScore.Unknown(dimension);
+            _dimensionScores[dimension] = DimensionScore.Unknown(dimension);
         }
     }
 
@@ -41,12 +41,12 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
     {
         foreach (var belief in initialBeliefs)
         {
-            this.capabilityBeliefs[belief.CapabilityName] = belief;
+            _capabilityBeliefs[belief.CapabilityName] = belief;
         }
 
         foreach (var score in initialScores)
         {
-            this.dimensionScores[score.Dimension] = score;
+            _dimensionScores[score.Dimension] = score;
         }
     }
 
@@ -84,14 +84,14 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
     {
         try
         {
-            var currentScore = this.dimensionScores.GetOrAdd(
+            var currentScore = _dimensionScores.GetOrAdd(
                 dimension,
                 d => DimensionScore.Unknown(d));
 
             // Apply confidence calibration
             var calibratedScore = currentScore with
             {
-                Confidence = Math.Min(1.0, currentScore.Confidence * this.confidenceCalibrationFactor),
+                Confidence = Math.Min(1.0, currentScore.Confidence * _confidenceCalibrationFactor),
             };
 
             return Task.FromResult(Result<DimensionScore, string>.Success(calibratedScore));
@@ -111,7 +111,7 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
             return Option<CapabilityBelief>.None();
         }
 
-        return this.capabilityBeliefs.TryGetValue(capability, out var belief)
+        return _capabilityBeliefs.TryGetValue(capability, out var belief)
             ? Option<CapabilityBelief>.Some(belief)
             : Option<CapabilityBelief>.None();
     }
@@ -131,7 +131,7 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
 
         try
         {
-            var updatedBelief = this.capabilityBeliefs.AddOrUpdate(
+            var updatedBelief = _capabilityBeliefs.AddOrUpdate(
                 capability,
                 _ => CapabilityBelief.Uninformative(capability).WithBayesianUpdate(evidence),
                 (_, existing) => existing.WithBayesianUpdate(evidence));
@@ -146,7 +146,7 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
 
     /// <inheritdoc/>
     public ImmutableDictionary<string, CapabilityBelief> GetAllBeliefs()
-        => this.capabilityBeliefs.ToImmutableDictionary();
+        => _capabilityBeliefs.ToImmutableDictionary();
 
     /// <inheritdoc/>
     public Result<Unit, string> CalibrateConfidence(IEnumerable<(double Predicted, double Actual)> samples)
@@ -180,8 +180,8 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
             // Adjust calibration factor based on bias
             // Overconfident → reduce factor, Underconfident → increase factor
             var adjustment = 1.0 - (meanBias * 0.5); // Gradual adjustment
-            this.confidenceCalibrationFactor = Math.Clamp(
-                this.confidenceCalibrationFactor * adjustment,
+            _confidenceCalibrationFactor = Math.Clamp(
+                _confidenceCalibrationFactor * adjustment,
                 0.1,
                 2.0);
 
@@ -209,7 +209,7 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
     {
         try
         {
-            var updatedScore = this.dimensionScores.AddOrUpdate(
+            var updatedScore = _dimensionScores.AddOrUpdate(
                 dimension,
                 d => DimensionScore.Unknown(d).WithBayesianUpdate(observedScore, weight, evidence),
                 (_, existing) => existing.WithBayesianUpdate(observedScore, weight, evidence));
@@ -227,5 +227,5 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
     /// </summary>
     /// <returns>The calibration factor applied to confidence values.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public double GetCalibrationFactor() => this.confidenceCalibrationFactor;
+    public double GetCalibrationFactor() => _confidenceCalibrationFactor;
 }

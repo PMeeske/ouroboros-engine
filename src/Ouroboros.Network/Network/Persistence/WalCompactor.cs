@@ -101,9 +101,9 @@ public static class WalCompactor
                     {
                         File.Delete(tempWalPath);
                     }
-                    catch
+                    catch (IOException)
                     {
-                        // Ignore cleanup errors
+                        // Best-effort cleanup - file may be locked by another process
                     }
                 }
 

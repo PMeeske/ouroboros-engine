@@ -16,15 +16,17 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
 {
     private const string SnapshotCollectionName = "network_state_snapshots";
     private const string LearningsCollectionName = "network_learnings";
+    private const float DefaultScoreThreshold = 0.6f;
+    private const int DefaultScrollLimit = 100;
 
-    private readonly MerkleDag dag;
-    private readonly QdrantClient qdrantClient;
-    private readonly Func<string, Task<float[]>> embeddingFunc;
-    private readonly List<GlobalNetworkState> snapshots;
-    private readonly List<Learning> recentLearnings;
-    private long currentEpoch;
-    private bool initialized;
-    private int detectedVectorDimension;
+    private readonly MerkleDag _dag;
+    private readonly QdrantClient _qdrantClient;
+    private readonly Func<string, Task<float[]>> _embeddingFunc;
+    private readonly List<GlobalNetworkState> _snapshots;
+    private readonly List<Learning> _recentLearnings;
+    private long _currentEpoch;
+    private bool _initialized;
+    private int _detectedVectorDimension;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PersistentNetworkStateProjector"/> class.
@@ -37,18 +39,18 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         string qdrantEndpoint,
         Func<string, Task<float[]>> embeddingFunc)
     {
-        this.dag = dag ?? throw new ArgumentNullException(nameof(dag));
-        this.embeddingFunc = embeddingFunc ?? throw new ArgumentNullException(nameof(embeddingFunc));
+        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
+        _embeddingFunc = embeddingFunc ?? throw new ArgumentNullException(nameof(embeddingFunc));
         var normalizedEndpoint = NormalizeEndpoint(qdrantEndpoint, "http://localhost:6334");
         var endpointUri = new Uri(normalizedEndpoint, UriKind.Absolute);
         var host = endpointUri.Host;
         var port = endpointUri.Port > 0 ? endpointUri.Port : 6334;
         var useHttps = endpointUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
-        this.qdrantClient = new QdrantClient(host, port, useHttps);
-        this.snapshots = new List<GlobalNetworkState>();
-        this.recentLearnings = new List<Learning>();
-        this.currentEpoch = 0;
-        this.initialized = false;
+        _qdrantClient = new QdrantClient(host, port, useHttps);
+        _snapshots = new List<GlobalNetworkState>();
+        _recentLearnings = new List<Learning>();
+        _currentEpoch = 0;
+        _initialized = false;
     }
 
     private static string NormalizeEndpoint(string? rawEndpoint, string fallbackEndpoint)
@@ -92,17 +94,17 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
     /// <summary>
     /// Gets all loaded snapshots.
     /// </summary>
-    public IReadOnlyList<GlobalNetworkState> Snapshots => this.snapshots;
+    public IReadOnlyList<GlobalNetworkState> Snapshots => _snapshots;
 
     /// <summary>
     /// Gets the current epoch number.
     /// </summary>
-    public long CurrentEpoch => this.currentEpoch;
+    public long CurrentEpoch => _currentEpoch;
 
     /// <summary>
     /// Gets recent learnings (from current session + loaded from Qdrant).
     /// </summary>
-    public IReadOnlyList<Learning> RecentLearnings => this.recentLearnings;
+    public IReadOnlyList<Learning> RecentLearnings => _recentLearnings;
 
     /// <summary>
     /// Initializes the persistent projector by loading previous state from Qdrant.
@@ -110,18 +112,18 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
     /// <param name="ct">Cancellation token.</param>
     public async Task InitializeAsync(CancellationToken ct = default)
     {
-        if (this.initialized)
+        if (_initialized)
         {
             return;
         }
 
         // Detect embedding dimension from the actual model
-        var probe = await this.embeddingFunc("dimension probe");
-        this.detectedVectorDimension = probe.Length;
+        var probe = await _embeddingFunc("dimension probe");
+        _detectedVectorDimension = probe.Length;
 
         await EnsureCollectionsExistAsync(ct);
         await LoadPreviousStateAsync(ct);
-        this.initialized = true;
+        _initialized = true;
     }
 
     /// <summary>
@@ -135,27 +137,23 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         ImmutableDictionary<string, string>? metadata = null,
         CancellationToken ct = default)
     {
-        if (!this.initialized)
+        if (!_initialized)
         {
             await InitializeAsync(ct);
         }
 
-        // Count nodes by type
-        var nodeCountByType = this.dag.Nodes.Values
+        var nodeCountByType = _dag.Nodes.Values
             .GroupBy(n => n.TypeName)
             .ToImmutableDictionary(g => g.Key, g => g.Count());
 
-        // Count transitions by operation
-        var transitionCountByOperation = this.dag.Edges.Values
+        var transitionCountByOperation = _dag.Edges.Values
             .GroupBy(e => e.OperationName)
             .ToImmutableDictionary(g => g.Key, g => g.Count());
 
-        // Get root and leaf nodes
-        var rootNodeIds = this.dag.GetRootNodes().Select(n => n.Id).ToImmutableArray();
-        var leafNodeIds = this.dag.GetLeafNodes().Select(n => n.Id).ToImmutableArray();
+        var rootNodeIds = _dag.GetRootNodes().Select(n => n.Id).ToImmutableArray();
+        var leafNodeIds = _dag.GetLeafNodes().Select(n => n.Id).ToImmutableArray();
 
-        // Calculate average confidence
-        var transitionsWithConfidence = this.dag.Edges.Values
+        var transitionsWithConfidence = _dag.Edges.Values
             .Where(e => e.Confidence.HasValue)
             .ToList();
 
@@ -163,18 +161,17 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
             ? transitionsWithConfidence.Average(e => e.Confidence!.Value)
             : (double?)null;
 
-        // Calculate total processing time
-        var totalProcessingTimeMs = this.dag.Edges.Values
+        var totalProcessingTimeMs = _dag.Edges.Values
             .Where(e => e.DurationMs.HasValue)
             .Sum(e => e.DurationMs!.Value);
 
         var totalProcessingTime = totalProcessingTimeMs > 0 ? (long?)totalProcessingTimeMs : null;
 
         var state = new GlobalNetworkState(
-            this.currentEpoch,
+            _currentEpoch,
             DateTimeOffset.UtcNow,
-            this.dag.NodeCount,
-            this.dag.EdgeCount,
+            _dag.NodeCount,
+            _dag.EdgeCount,
             nodeCountByType,
             transitionCountByOperation,
             rootNodeIds,
@@ -183,13 +180,11 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
             totalProcessingTime,
             metadata);
 
-        // Add to local cache
-        this.snapshots.Add(state);
+        _snapshots.Add(state);
 
-        // Persist to Qdrant
         await PersistSnapshotAsync(state, ct);
 
-        this.currentEpoch++;
+        _currentEpoch++;
         return state;
     }
 
@@ -208,7 +203,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         double confidence = 1.0,
         CancellationToken ct = default)
     {
-        if (!this.initialized)
+        if (!_initialized)
         {
             await InitializeAsync(ct);
         }
@@ -219,12 +214,11 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
             Content: content,
             Context: context,
             Confidence: confidence,
-            Epoch: this.currentEpoch,
+            Epoch: _currentEpoch,
             Timestamp: DateTimeOffset.UtcNow);
 
-        this.recentLearnings.Add(learning);
+        _recentLearnings.Add(learning);
 
-        // Persist to Qdrant with embedding for semantic retrieval
         await PersistLearningAsync(learning, ct);
     }
 
@@ -240,20 +234,20 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         int limit = 5,
         CancellationToken ct = default)
     {
-        if (!this.initialized)
+        if (!_initialized)
         {
             await InitializeAsync(ct);
         }
 
         try
         {
-            var embedding = await this.embeddingFunc(context);
+            var embedding = await _embeddingFunc(context);
 
-            var results = await this.qdrantClient.SearchAsync(
+            var results = await _qdrantClient.SearchAsync(
                 LearningsCollectionName,
                 embedding,
                 limit: (ulong)limit,
-                scoreThreshold: 0.6f,
+                scoreThreshold: DefaultScoreThreshold,
                 cancellationToken: ct);
 
             var learnings = new List<Learning>();
@@ -273,7 +267,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[WARN] Failed to retrieve learnings: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning($"[NetworkState] Failed to retrieve learnings: {ex.Message}");
             return new List<Learning>();
         }
     }
@@ -288,7 +282,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         string category,
         CancellationToken ct = default)
     {
-        if (!this.initialized)
+        if (!_initialized)
         {
             await InitializeAsync(ct);
         }
@@ -310,10 +304,10 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
                 },
             };
 
-            var results = await this.qdrantClient.ScrollAsync(
+            var results = await _qdrantClient.ScrollAsync(
                 LearningsCollectionName,
                 filter: filter,
-                limit: 100,
+                limit: DefaultScrollLimit,
                 cancellationToken: ct);
 
             var learnings = new List<Learning>();
@@ -333,7 +327,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[WARN] Failed to retrieve learnings by category: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning($"[NetworkState] Failed to retrieve learnings by category: {ex.Message}");
             return new List<Learning>();
         }
     }
@@ -347,29 +341,28 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[WARN] Failed to create Qdrant collections: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning($"[NetworkState] Failed to create Qdrant collections: {ex.Message}");
         }
     }
 
     private async Task EnsureCollectionWithDimensionAsync(string collectionName, CancellationToken ct)
     {
-        var vectorParams = new VectorParams { Size = (ulong)this.detectedVectorDimension, Distance = Distance.Cosine };
+        var vectorParams = new VectorParams { Size = (ulong)_detectedVectorDimension, Distance = Distance.Cosine };
 
-        if (await this.qdrantClient.CollectionExistsAsync(collectionName, ct))
+        if (await _qdrantClient.CollectionExistsAsync(collectionName, ct))
         {
-            // Check if existing collection dimension matches
-            var info = await this.qdrantClient.GetCollectionInfoAsync(collectionName, ct);
+            var info = await _qdrantClient.GetCollectionInfoAsync(collectionName, ct);
             var currentDim = info.Config?.Params?.VectorsConfig?.Params?.Size;
-            if (currentDim.HasValue && currentDim.Value != (ulong)this.detectedVectorDimension)
+            if (currentDim.HasValue && currentDim.Value != (ulong)_detectedVectorDimension)
             {
-                Console.WriteLine($"  [NetworkState] Dimension mismatch in {collectionName} ({currentDim} vs {this.detectedVectorDimension}), recreating...");
-                await this.qdrantClient.DeleteCollectionAsync(collectionName, cancellationToken: ct);
-                await this.qdrantClient.CreateCollectionAsync(collectionName, vectorParams, cancellationToken: ct);
+                System.Diagnostics.Trace.TraceInformation($"[NetworkState] Dimension mismatch in {collectionName} ({currentDim} vs {_detectedVectorDimension}), recreating...");
+                await _qdrantClient.DeleteCollectionAsync(collectionName, cancellationToken: ct);
+                await _qdrantClient.CreateCollectionAsync(collectionName, vectorParams, cancellationToken: ct);
             }
         }
         else
         {
-            await this.qdrantClient.CreateCollectionAsync(collectionName, vectorParams, cancellationToken: ct);
+            await _qdrantClient.CreateCollectionAsync(collectionName, vectorParams, cancellationToken: ct);
         }
     }
 
@@ -377,10 +370,9 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
     {
         try
         {
-            // Load the most recent snapshot to resume from
-            var scrollResult = await this.qdrantClient.ScrollAsync(
+            var scrollResult = await _qdrantClient.ScrollAsync(
                 SnapshotCollectionName,
-                limit: 100,
+                limit: DefaultScrollLimit,
                 cancellationToken: ct);
 
             GlobalNetworkState? latestSnapshot = null;
@@ -393,7 +385,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
                     var snapshot = JsonSerializer.Deserialize<GlobalNetworkState>(jsonValue.StringValue);
                     if (snapshot != null)
                     {
-                        this.snapshots.Add(snapshot);
+                        _snapshots.Add(snapshot);
                         if (snapshot.Epoch > maxEpoch)
                         {
                             maxEpoch = snapshot.Epoch;
@@ -405,14 +397,13 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
 
             if (latestSnapshot != null)
             {
-                this.currentEpoch = latestSnapshot.Epoch + 1;
-                Console.WriteLine($"[NetworkState] Resumed from epoch {latestSnapshot.Epoch} ({this.snapshots.Count} snapshots loaded)");
+                _currentEpoch = latestSnapshot.Epoch + 1;
+                System.Diagnostics.Trace.TraceInformation($"[NetworkState] Resumed from epoch {latestSnapshot.Epoch} ({_snapshots.Count} snapshots loaded)");
             }
 
-            // Load recent learnings (last 100)
-            var learningsResult = await this.qdrantClient.ScrollAsync(
+            var learningsResult = await _qdrantClient.ScrollAsync(
                 LearningsCollectionName,
-                limit: 100,
+                limit: DefaultScrollLimit,
                 cancellationToken: ct);
 
             foreach (var point in learningsResult.Result)
@@ -422,19 +413,19 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
                     var learning = JsonSerializer.Deserialize<Learning>(jsonValue.StringValue);
                     if (learning != null)
                     {
-                        this.recentLearnings.Add(learning);
+                        _recentLearnings.Add(learning);
                     }
                 }
             }
 
-            if (this.recentLearnings.Count > 0)
+            if (_recentLearnings.Count > 0)
             {
-                Console.WriteLine($"[NetworkState] Loaded {this.recentLearnings.Count} previous learnings");
+                System.Diagnostics.Trace.TraceInformation($"[NetworkState] Loaded {_recentLearnings.Count} previous learnings");
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[WARN] Failed to load previous state: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning($"[NetworkState] Failed to load previous state: {ex.Message}");
         }
     }
 
@@ -443,7 +434,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         try
         {
             var json = JsonSerializer.Serialize(state);
-            var embedding = await this.embeddingFunc($"network state epoch {state.Epoch} nodes {state.TotalNodes} transitions {state.TotalTransitions}");
+            var embedding = await _embeddingFunc($"network state epoch {state.Epoch} nodes {state.TotalNodes} transitions {state.TotalTransitions}");
 
             var point = new PointStruct
             {
@@ -459,11 +450,11 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
                 },
             };
 
-            await this.qdrantClient.UpsertAsync(SnapshotCollectionName, new[] { point }, cancellationToken: ct);
+            await _qdrantClient.UpsertAsync(SnapshotCollectionName, new[] { point }, cancellationToken: ct);
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[WARN] Failed to persist snapshot: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning($"[NetworkState] Failed to persist snapshot: {ex.Message}");
         }
     }
 
@@ -472,7 +463,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         try
         {
             var json = JsonSerializer.Serialize(learning);
-            var embedding = await this.embeddingFunc($"{learning.Category}: {learning.Content}");
+            var embedding = await _embeddingFunc($"{learning.Category}: {learning.Content}");
 
             var point = new PointStruct
             {
@@ -490,19 +481,18 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
                 },
             };
 
-            await this.qdrantClient.UpsertAsync(LearningsCollectionName, new[] { point }, cancellationToken: ct);
+            await _qdrantClient.UpsertAsync(LearningsCollectionName, new[] { point }, cancellationToken: ct);
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[WARN] Failed to persist learning: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning($"[NetworkState] Failed to persist learning: {ex.Message}");
         }
     }
 
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        // Final snapshot before shutdown
-        if (this.initialized && this.dag.NodeCount > 0)
+        if (_initialized && _dag.NodeCount > 0)
         {
             try
             {
@@ -515,6 +505,6 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
             }
         }
 
-        this.qdrantClient.Dispose();
+        _qdrantClient.Dispose();
     }
 }

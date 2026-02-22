@@ -1057,14 +1057,14 @@ Provide verification in JSON format:
                         _atom.AddCapability(capability);
                     }
 
-                    Console.WriteLine($"[GA] Evolved planning strategy with fitness {bestChromosome.Fitness:F3}: {bestChromosome}");
+                    Trace.TraceInformation("[GA] Evolved planning strategy with fitness {0}: {1}", bestChromosome.Fitness.ToString("F3"), bestChromosome);
                 }
             }
         }
         catch (Exception ex)
         {
             // Graceful degradation - log but don't fail
-            Console.WriteLine($"[GA] Strategy evolution failed (non-fatal): {ex.Message}");
+            Trace.TraceWarning("[GA] Strategy evolution failed (non-fatal): {0}", ex.Message);
         }
     }
 

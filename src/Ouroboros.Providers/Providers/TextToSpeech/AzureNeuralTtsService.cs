@@ -40,18 +40,18 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
             OnOpened = args =>
             {
                 IsCircuitOpen = true;
-                Console.WriteLine($"  [TTS] Circuit OPEN - Azure TTS disabled for 60s due to rate limiting");
+                System.Diagnostics.Trace.TraceWarning("[TTS] Circuit OPEN - Azure TTS disabled for 60s due to rate limiting");
                 return default;
             },
             OnClosed = args =>
             {
                 IsCircuitOpen = false;
-                Console.WriteLine($"  [TTS] Circuit CLOSED - Azure TTS re-enabled");
+                System.Diagnostics.Trace.TraceInformation("[TTS] Circuit CLOSED - Azure TTS re-enabled");
                 return default;
             },
             OnHalfOpened = args =>
             {
-                Console.WriteLine($"  [TTS] Circuit HALF-OPEN - Testing Azure TTS...");
+                System.Diagnostics.Trace.TraceInformation("[TTS] Circuit HALF-OPEN - Testing Azure TTS...");
                 return default;
             },
         })
@@ -67,7 +67,7 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
             UseJitter = true,
             OnRetry = args =>
             {
-                Console.WriteLine($"  [TTS] Rate limited, retrying in {args.RetryDelay.TotalSeconds:F1}s (attempt {args.AttemptNumber + 1}/3)...");
+                System.Diagnostics.Trace.TraceWarning("[TTS] Rate limited, retrying in {0:F1}s (attempt {1}/3)...", args.RetryDelay.TotalSeconds, args.AttemptNumber + 1);
                 return default;
             },
         })
@@ -331,7 +331,7 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
                         string errorDetails = cancellation.ErrorDetails ?? string.Empty;
                         if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
                             throw new HttpRequestException($"Rate limited: {errorDetails}");
-                        Console.WriteLine($"  [!] Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
+                        System.Diagnostics.Trace.TraceWarning("[Azure TTS] Canceled: {0} - {1}", cancellation.Reason, errorDetails);
                     }
                     else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
                     {
@@ -342,17 +342,17 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
         }
         catch (BrokenCircuitException)
         {
-            Console.WriteLine($"  [!] Azure TTS circuit open - using fallback");
+            System.Diagnostics.Trace.TraceWarning("[Azure TTS] Circuit open - using fallback");
             throw;
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("Rate limited"))
         {
-            Console.WriteLine($"  [!] Azure TTS rate limit exceeded after retries");
+            System.Diagnostics.Trace.TraceWarning("[Azure TTS] Rate limit exceeded after retries");
             throw;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"  [!] Azure TTS exception: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning("[Azure TTS] Exception: {0}", ex.Message);
             throw;
         }
         finally

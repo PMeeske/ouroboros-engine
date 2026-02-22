@@ -13,10 +13,10 @@ namespace Ouroboros.Network.Persistence;
 /// </summary>
 public sealed class FileWalPersistence : IGraphPersistence
 {
-    private readonly string walFilePath;
-    private readonly SemaphoreSlim writeLock;
-    private readonly StreamWriter? writer;
-    private bool disposed;
+    private readonly string _walFilePath;
+    private readonly SemaphoreSlim _writeLock;
+    private readonly StreamWriter? _writer;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FileWalPersistence"/> class.
@@ -24,8 +24,8 @@ public sealed class FileWalPersistence : IGraphPersistence
     /// <param name="walFilePath">The path to the WAL file.</param>
     public FileWalPersistence(string walFilePath)
     {
-        this.walFilePath = walFilePath ?? throw new ArgumentNullException(nameof(walFilePath));
-        this.writeLock = new SemaphoreSlim(1, 1);
+        _walFilePath = walFilePath ?? throw new ArgumentNullException(nameof(walFilePath));
+        _writeLock = new SemaphoreSlim(1, 1);
 
         // Ensure directory exists
         var directory = Path.GetDirectoryName(walFilePath);
@@ -35,7 +35,7 @@ public sealed class FileWalPersistence : IGraphPersistence
         }
 
         // Open file in append mode
-        this.writer = new StreamWriter(
+        _writer = new StreamWriter(
             new FileStream(walFilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite),
             System.Text.Encoding.UTF8)
         {
@@ -62,7 +62,7 @@ public sealed class FileWalPersistence : IGraphPersistence
         });
 
         var entry = new WalEntry(WalEntryType.AddNode, DateTimeOffset.UtcNow, nodeJson);
-        await this.AppendEntryAsync(entry, ct).ConfigureAwait(false);
+        await AppendEntryAsync(entry, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ public sealed class FileWalPersistence : IGraphPersistence
         });
 
         var entry = new WalEntry(WalEntryType.AddEdge, DateTimeOffset.UtcNow, edgeJson);
-        await this.AppendEntryAsync(entry, ct).ConfigureAwait(false);
+        await AppendEntryAsync(entry, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -94,19 +94,19 @@ public sealed class FileWalPersistence : IGraphPersistence
     /// <returns>A task representing the asynchronous flush operation.</returns>
     public async Task FlushAsync(CancellationToken ct = default)
     {
-        this.ThrowIfDisposed();
+        ThrowIfDisposed();
 
-        await this.writeLock.WaitAsync(ct).ConfigureAwait(false);
+        await _writeLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (this.writer != null)
+            if (_writer != null)
             {
-                await this.writer.FlushAsync().ConfigureAwait(false);
+                await _writer.FlushAsync().ConfigureAwait(false);
             }
         }
         finally
         {
-            this.writeLock.Release();
+            _writeLock.Release();
         }
     }
 
@@ -117,13 +117,13 @@ public sealed class FileWalPersistence : IGraphPersistence
     /// <returns>An async enumerable of WAL entries.</returns>
     public async IAsyncEnumerable<WalEntry> ReplayAsync([EnumeratorCancellation] CancellationToken ct = default)
     {
-        if (!File.Exists(this.walFilePath))
+        if (!File.Exists(_walFilePath))
         {
             yield break; // Empty WAL - nothing to replay
         }
 
         using var reader = new StreamReader(
-            new FileStream(this.walFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite),
+            new FileStream(_walFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite),
             System.Text.Encoding.UTF8);
 
         while (!reader.EndOfStream)
@@ -141,9 +141,10 @@ public sealed class FileWalPersistence : IGraphPersistence
             {
                 entry = JsonSerializer.Deserialize<WalEntry>(line);
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
-                // Skip corrupted entries - log in production
+                System.Diagnostics.Trace.TraceWarning(
+                    $"[WAL] Skipping corrupted entry: {ex.Message}");
                 continue;
             }
 
@@ -160,55 +161,55 @@ public sealed class FileWalPersistence : IGraphPersistence
     /// <returns>A task representing the asynchronous disposal.</returns>
     public async ValueTask DisposeAsync()
     {
-        if (this.disposed)
+        if (_disposed)
         {
             return;
         }
 
-        await this.writeLock.WaitAsync().ConfigureAwait(false);
+        await _writeLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            if (this.writer != null)
+            if (_writer != null)
             {
-                await this.writer.FlushAsync().ConfigureAwait(false);
-                await this.writer.DisposeAsync().ConfigureAwait(false);
+                await _writer.FlushAsync().ConfigureAwait(false);
+                await _writer.DisposeAsync().ConfigureAwait(false);
             }
 
-            this.disposed = true;
+            _disposed = true;
         }
         finally
         {
-            this.writeLock.Release();
-            this.writeLock.Dispose();
+            _writeLock.Release();
+            _writeLock.Dispose();
         }
     }
 
     private async Task AppendEntryAsync(WalEntry entry, CancellationToken ct)
     {
-        this.ThrowIfDisposed();
+        ThrowIfDisposed();
 
         var entryJson = JsonSerializer.Serialize(entry, new JsonSerializerOptions
         {
             WriteIndented = false,
         });
 
-        await this.writeLock.WaitAsync(ct).ConfigureAwait(false);
+        await _writeLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (this.writer != null)
+            if (_writer != null)
             {
-                await this.writer.WriteLineAsync(entryJson.AsMemory(), ct).ConfigureAwait(false);
+                await _writer.WriteLineAsync(entryJson.AsMemory(), ct).ConfigureAwait(false);
             }
         }
         finally
         {
-            this.writeLock.Release();
+            _writeLock.Release();
         }
     }
 
     private void ThrowIfDisposed()
     {
-        if (this.disposed)
+        if (_disposed)
         {
             throw new ObjectDisposedException(nameof(FileWalPersistence));
         }
@@ -234,7 +235,7 @@ public sealed class FileWalPersistence : IGraphPersistence
             node.CreatedAt,
             node.ParentIds);
 
-        await this.AppendNodeAsync(networkNode, ct).ConfigureAwait(false);
+        await AppendNodeAsync(networkNode, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -258,7 +259,7 @@ public sealed class FileWalPersistence : IGraphPersistence
             metadataJson,
             edge.CreatedAt);
 
-        await this.AppendEdgeAsync(networkEdge, ct).ConfigureAwait(false);
+        await AppendEdgeAsync(networkEdge, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -267,7 +268,7 @@ public sealed class FileWalPersistence : IGraphPersistence
     {
         // Convert from Network.Persistence.WalEntry to Abstractions.Network.WalEntry
         long sequenceNumber = 0;
-        await foreach (var entry in this.ReplayAsync(ct))
+        await foreach (var entry in ReplayAsync(ct))
         {
             yield return new Ouroboros.Abstractions.Network.WalEntry(
                 Guid.NewGuid(),

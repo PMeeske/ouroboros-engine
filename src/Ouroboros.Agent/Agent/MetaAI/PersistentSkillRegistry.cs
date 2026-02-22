@@ -5,6 +5,7 @@
 // ==========================================================
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using LangChain.Databases;
@@ -402,7 +403,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
         catch (JsonException ex)
         {
             // Log but continue - corrupted file shouldn't crash the app
-            Console.Error.WriteLine($"[WARN] Failed to load skills from {fullPath}: {ex.Message}");
+            Trace.TraceWarning("[WARN] Failed to load skills from {0}: {1}", fullPath, ex.Message);
         }
     }
 
@@ -467,7 +468,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[WARN] Failed to add skill '{skill.Name}' to vector store: {ex.Message}");
+            Trace.TraceWarning("[WARN] Failed to add skill '{0}' to vector store: {1}", skill.Name, ex.Message);
         }
     }
 

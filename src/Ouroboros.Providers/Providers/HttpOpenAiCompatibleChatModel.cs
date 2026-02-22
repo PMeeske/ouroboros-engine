@@ -44,7 +44,7 @@ public sealed class HttpOpenAiCompatibleChatModel : Ouroboros.Abstractions.Core.
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 onRetry: (outcome, timespan, retryCount, context) =>
                 {
-                    Console.WriteLine($"[HttpOpenAiCompatibleChatModel] Retry {retryCount} after {timespan.TotalSeconds}s due to {outcome.Result?.StatusCode}");
+                    System.Diagnostics.Trace.TraceInformation("[HttpOpenAiCompatibleChatModel] Retry {0} after {1}s due to {2}", retryCount, timespan.TotalSeconds, outcome.Result?.StatusCode);
                 });
     }
 

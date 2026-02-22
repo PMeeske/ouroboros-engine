@@ -35,7 +35,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             OnOpened = args =>
             {
                 IsCircuitOpen = true;
-                Console.WriteLine($"  [TTS] Edge TTS circuit OPEN - disabled for 5 minutes (likely blocked by Microsoft)");
+                System.Diagnostics.Trace.TraceWarning("[TTS] Edge TTS circuit OPEN - disabled for 5 minutes (likely blocked by Microsoft)");
                 return default;
             },
             OnClosed = args =>

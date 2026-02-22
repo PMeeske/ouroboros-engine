@@ -17,10 +17,10 @@ using Ouroboros.Tools;
 /// </summary>
 public sealed class SmartToolSelector
 {
-    private readonly WorldState worldState;
-    private readonly ToolRegistry toolRegistry;
-    private readonly ToolCapabilityMatcher capabilityMatcher;
-    private readonly SelectionConfig config;
+    private readonly WorldState _worldState;
+    private readonly ToolRegistry _toolRegistry;
+    private readonly ToolCapabilityMatcher _capabilityMatcher;
+    private readonly SelectionConfig _config;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmartToolSelector"/> class.
@@ -55,16 +55,16 @@ public sealed class SmartToolSelector
         ArgumentNullException.ThrowIfNull(capabilityMatcher);
         ArgumentNullException.ThrowIfNull(config);
 
-        this.worldState = worldState;
-        this.toolRegistry = toolRegistry;
-        this.capabilityMatcher = capabilityMatcher;
-        this.config = config;
+        _worldState = worldState;
+        _toolRegistry = toolRegistry;
+        _capabilityMatcher = capabilityMatcher;
+        _config = config;
     }
 
     /// <summary>
     /// Gets the current configuration.
     /// </summary>
-    public SelectionConfig Configuration => config;
+    public SelectionConfig Configuration => _config;
 
     /// <summary>
     /// Creates a new selector with updated world state.
@@ -75,7 +75,7 @@ public sealed class SmartToolSelector
     {
         ArgumentNullException.ThrowIfNull(newWorldState);
 
-        return new SmartToolSelector(newWorldState, toolRegistry, capabilityMatcher, config);
+        return new SmartToolSelector(newWorldState, _toolRegistry, _capabilityMatcher, _config);
     }
 
     /// <summary>
@@ -87,7 +87,7 @@ public sealed class SmartToolSelector
     {
         ArgumentNullException.ThrowIfNull(newConfig);
 
-        return new SmartToolSelector(worldState, toolRegistry, capabilityMatcher, newConfig);
+        return new SmartToolSelector(_worldState, _toolRegistry, _capabilityMatcher, newConfig);
     }
 
     /// <summary>
@@ -119,7 +119,7 @@ public sealed class SmartToolSelector
 
         // Match tools using capability matcher
         Result<IReadOnlyList<ToolMatch>, string> matchResult =
-            capabilityMatcher.MatchToolsForGoal(goal, config.MinConfidence);
+            _capabilityMatcher.MatchToolsForGoal(goal, _config.MinConfidence);
 
         if (matchResult.IsFailure)
         {
@@ -131,33 +131,33 @@ public sealed class SmartToolSelector
         if (matches.Count == 0)
         {
             return Task.FromResult(Result<ToolSelection, string>.Success(
-                ToolSelection.Failed($"No tools found matching goal '{goal.Description}' with minimum confidence {config.MinConfidence}.")));
+                ToolSelection.Failed($"No tools found matching goal '{goal.Description}' with minimum confidence {_config.MinConfidence}.")));
         }
 
         // Convert matches to candidates with full scoring
         List<ToolCandidate> candidates = new();
         foreach (ToolMatch match in matches)
         {
-            Option<ITool> toolOption = toolRegistry.GetTool(match.ToolName);
+            Option<ITool> toolOption = _toolRegistry.GetTool(match.ToolName);
             if (toolOption.HasValue && toolOption.Value is ITool tool)
             {
-                ToolCandidate candidate = EvaluateToolFit(tool, goal, worldState, match);
+                ToolCandidate candidate = EvaluateToolFit(tool, goal, _worldState, match);
                 candidates.Add(candidate);
             }
         }
 
         // Apply world state constraints
-        IReadOnlyList<Constraint> activeConstraints = worldState.Constraints;
+        IReadOnlyList<Constraint> activeConstraints = _worldState.Constraints;
         List<ToolCandidate> filteredCandidates = ApplyConstraints(candidates, activeConstraints);
 
         // Rank by optimization strategy
         List<ToolCandidate> rankedCandidates = filteredCandidates
-            .OrderByDescending(c => c.GetWeightedScore(config.OptimizeFor))
+            .OrderByDescending(c => c.GetWeightedScore(_config.OptimizeFor))
             .ToList();
 
         // Select top tools up to max
         IReadOnlyList<ToolCandidate> selectedCandidates = rankedCandidates
-            .Take(config.MaxTools)
+            .Take(_config.MaxTools)
             .ToList();
 
         IReadOnlyList<ITool> selectedTools = selectedCandidates
@@ -277,7 +277,7 @@ public sealed class SmartToolSelector
         ArgumentNullException.ThrowIfNull(currentWorldState);
 
         // Get match from capability matcher
-        Option<ToolMatch> matchOption = capabilityMatcher.GetBestMatch(goal, 0.0);
+        Option<ToolMatch> matchOption = _capabilityMatcher.GetBestMatch(goal, 0.0);
 
         if (matchOption.HasValue && matchOption.Value is ToolMatch match && match.ToolName.Equals(tool.Name, StringComparison.OrdinalIgnoreCase))
         {
@@ -285,7 +285,7 @@ public sealed class SmartToolSelector
         }
 
         // Fallback: compute basic fit score
-        double fitScore = capabilityMatcher.ScoreToolRelevance(tool, goal.Description);
+        double fitScore = _capabilityMatcher.ScoreToolRelevance(tool, goal.Description);
 
         return new ToolCandidate(
             Tool: tool,
@@ -386,7 +386,7 @@ public sealed class SmartToolSelector
     /// <returns>List of all tools as candidates with default scores.</returns>
     public IReadOnlyList<ToolCandidate> GetAllCandidates()
     {
-        return toolRegistry.All
+        return _toolRegistry.All
             .Select(tool => new ToolCandidate(
                 Tool: tool,
                 FitScore: 0.5,
@@ -406,7 +406,7 @@ public sealed class SmartToolSelector
     {
         ArgumentNullException.ThrowIfNull(toolName);
 
-        Option<ITool> toolOption = toolRegistry.GetTool(toolName);
+        Option<ITool> toolOption = _toolRegistry.GetTool(toolName);
 
         if (!toolOption.HasValue || toolOption.Value is not ITool tool)
         {
@@ -414,7 +414,7 @@ public sealed class SmartToolSelector
         }
 
         // Check if tool is blocked by any constraint
-        foreach (Constraint constraint in worldState.Constraints)
+        foreach (Constraint constraint in _worldState.Constraints)
         {
             if (IsToolBlockedByConstraint(tool, constraint))
             {

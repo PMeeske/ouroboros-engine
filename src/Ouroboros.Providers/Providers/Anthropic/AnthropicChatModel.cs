@@ -148,7 +148,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[AnthropicChatModel] Error: {ex.GetType().Name}: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning("[AnthropicChatModel] Error: {0}: {1}", ex.GetType().Name, ex.Message);
         }
 
         return new ThinkingResponse(null, $"[anthropic-fallback:{_model}] {prompt}");

@@ -224,7 +224,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 stats.LastFailure = DateTime.UtcNow;
                 lastException = ex;
 
-                Console.WriteLine($"  ⚠ Provider '{config.Name}' failed: {ex.Message}");
+                System.Diagnostics.Trace.TraceWarning("[RoundRobinChatModel] Provider '{0}' failed: {1}", config.Name, ex.Message);
 
                 if (!_failoverEnabled)
                     throw;
@@ -314,7 +314,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                     stats.ConsecutiveFailures++;
                     stats.LastFailure = DateTime.UtcNow;
 
-                    Console.WriteLine($"  ⚠ Provider '{config.Name}' streaming failed: {ex.Message}");
+                    System.Diagnostics.Trace.TraceWarning("[RoundRobinChatModel] Provider '{0}' streaming failed: {1}", config.Name, ex.Message);
 
                     if (!_failoverEnabled)
                     {

@@ -13,7 +13,7 @@ namespace Ouroboros.Providers;
 /// </summary>
 public sealed class TextToSpeechTool : ITool
 {
-    private readonly ITextToSpeechService service;
+    private readonly ITextToSpeechService _service;
 
     /// <inheritdoc />
     public string Name => "text_to_speech";
@@ -53,7 +53,7 @@ public sealed class TextToSpeechTool : ITool
     /// <param name="service">The text-to-speech service to use.</param>
     public TextToSpeechTool(ITextToSpeechService service)
     {
-        this.service = service ?? throw new ArgumentNullException(nameof(service));
+        _service = service ?? throw new ArgumentNullException(nameof(service));
     }
 
     /// <summary>
@@ -89,7 +89,7 @@ public sealed class TextToSpeechTool : ITool
                 Voice: voice,
                 Speed: args.Speed ?? 1.0);
 
-            Result<string, string> result = await this.service.SynthesizeToFileAsync(
+            Result<string, string> result = await _service.SynthesizeToFileAsync(
                 args.Text,
                 args.OutputPath,
                 options,
