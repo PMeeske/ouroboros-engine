@@ -3,6 +3,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using System.Security.Cryptography;
+
 namespace Ouroboros.Providers.LoadBalancing.Strategies;
 
 /// <summary>
@@ -11,8 +13,6 @@ namespace Ouroboros.Providers.LoadBalancing.Strategies;
 /// </summary>
 public sealed class WeightedRandomStrategy : IProviderSelectionStrategy
 {
-    private readonly Random _random = new();
-
     /// <inheritdoc/>
     public string Name => "WeightedRandom";
 
@@ -29,9 +29,9 @@ public sealed class WeightedRandomStrategy : IProviderSelectionStrategy
 
         double totalWeight = weights.Sum(w => w.Item1);
         if (totalWeight <= 0)
-            return healthyProviders[_random.Next(healthyProviders.Count)];
+            return healthyProviders[RandomNumberGenerator.GetInt32(healthyProviders.Count)];
 
-        double randomValue = _random.NextDouble() * totalWeight;
+        double randomValue = RandomNumberGenerator.GetInt32(256) * totalWeight;
         double cumulative = 0;
 
         foreach (var (weight, id) in weights)
