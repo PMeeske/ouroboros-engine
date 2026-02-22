@@ -161,6 +161,7 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     {
         _config = SpeechConfig.FromSubscription(_subscriptionKey, _region);
         _config.SpeechSynthesisVoiceName = _voiceName;
+        _config.SpeechSynthesisLanguage = _culture;  // Reinforce target language alongside SSML xml:lang
         _synthesizer = new SpeechSynthesizer(_config);
     }
 
