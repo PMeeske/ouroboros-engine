@@ -207,9 +207,9 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 bool inThinking = false;
                 StringBuilder buffer = new();
 
-                while (!reader.EndOfStream && !token.IsCancellationRequested)
+                string? line;
+                while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null && !token.IsCancellationRequested)
                 {
-                    string? line = await reader.ReadLineAsync().ConfigureAwait(false);
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
                     try
@@ -319,9 +319,9 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 using Stream responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
                 using StreamReader reader = new StreamReader(responseStream);
 
-                while (!reader.EndOfStream && !token.IsCancellationRequested)
+                string? line;
+                while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null && !token.IsCancellationRequested)
                 {
-                    string? line = await reader.ReadLineAsync().ConfigureAwait(false);
                     if (string.IsNullOrWhiteSpace(line)) continue;
 
                     try

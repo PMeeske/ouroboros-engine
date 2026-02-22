@@ -2,8 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using Ouroboros.Domain.MetaLearning;
-
 namespace Ouroboros.Agent.MetaLearning;
 
 /// <summary>
@@ -13,7 +11,7 @@ namespace Ouroboros.Agent.MetaLearning;
 public class MetaLearningEngine : IMetaLearningEngine
 {
     private readonly IEmbeddingModel _embeddingModel;
-    private readonly Random _random;
+    private readonly IRandomProvider? _random;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MetaLearningEngine"/> class.
