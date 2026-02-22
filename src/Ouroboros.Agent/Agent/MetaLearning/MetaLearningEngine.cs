@@ -2,6 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Core.Randomness;
+using Ouroboros.Domain;
+using Ouroboros.Domain.MetaLearning;
+using Ouroboros.Providers.Random;
+
 namespace Ouroboros.Agent.MetaLearning;
 
 /// <summary>
@@ -21,7 +26,7 @@ public class MetaLearningEngine : IMetaLearningEngine
     public MetaLearningEngine(IEmbeddingModel embeddingModel, int? seed = null)
     {
         _embeddingModel = embeddingModel ?? throw new ArgumentNullException(nameof(embeddingModel));
-        _random = seed.HasValue ? new Random(seed.Value) : new Random();
+        _random = seed.HasValue ? new SeededRandomProvider(seed.Value) : new SeededRandomProvider();
     }
 
     /// <inheritdoc/>
