@@ -5,28 +5,28 @@
 /// </summary>
 public sealed class VotingSession
 {
-    private readonly Guid sessionId;
-    private readonly string topic;
-    private readonly IReadOnlyList<string> options;
-    private readonly IConsensusProtocol protocol;
-    private readonly List<AgentVote> votes;
-    private readonly HashSet<Guid> votedAgents;
+    private readonly Guid _sessionId;
+    private readonly string _topic;
+    private readonly IReadOnlyList<string> _options;
+    private readonly IConsensusProtocol _protocol;
+    private readonly List<AgentVote> _votes;
+    private readonly HashSet<Guid> _votedAgents;
     private readonly object syncLock = new object();
 
     /// <summary>
     /// Gets the unique identifier for this voting session.
     /// </summary>
-    public Guid SessionId => sessionId;
+    public Guid SessionId => _sessionId;
 
     /// <summary>
     /// Gets the topic being voted on.
     /// </summary>
-    public string Topic => topic;
+    public string Topic => _topic;
 
     /// <summary>
     /// Gets the available options for voting.
     /// </summary>
-    public IReadOnlyList<string> Options => options;
+    public IReadOnlyList<string> Options => _options;
 
     /// <summary>
     /// Gets the number of votes cast so far.
@@ -37,7 +37,7 @@ public sealed class VotingSession
         {
             lock (syncLock)
             {
-                return votes.Count;
+                return _votes.Count;
             }
         }
     }
@@ -51,12 +51,12 @@ public sealed class VotingSession
     /// <param name="protocol">The consensus protocol to use.</param>
     private VotingSession(Guid sessionId, string topic, IReadOnlyList<string> options, IConsensusProtocol protocol)
     {
-        this.sessionId = sessionId;
-        this.topic = topic;
-        this.options = options;
-        this.protocol = protocol;
-        this.votes = new List<AgentVote>();
-        this.votedAgents = new HashSet<Guid>();
+        _sessionId = sessionId;
+        _topic = topic;
+        _options = options;
+        _protocol = protocol;
+        _votes = new List<AgentVote>();
+        _votedAgents = new HashSet<Guid>();
     }
 
     /// <summary>
@@ -94,13 +94,13 @@ public sealed class VotingSession
 
         lock (syncLock)
         {
-            if (votedAgents.Contains(vote.AgentId))
+            if (_votedAgents.Contains(vote.AgentId))
             {
                 throw new InvalidOperationException($"Agent {vote.AgentId} has already voted in this session.");
             }
 
             bool isValidOption = false;
-            foreach (string option in options)
+            foreach (string option in _options)
             {
                 if (string.Equals(option, vote.Option, StringComparison.Ordinal))
                 {
@@ -114,8 +114,8 @@ public sealed class VotingSession
                 throw new InvalidOperationException($"Option '{vote.Option}' is not a valid option for this session.");
             }
 
-            votes.Add(vote);
-            votedAgents.Add(vote.AgentId);
+            _votes.Add(vote);
+            _votedAgents.Add(vote.AgentId);
         }
     }
 
@@ -128,7 +128,7 @@ public sealed class VotingSession
     {
         lock (syncLock)
         {
-            return votedAgents.Contains(agentId);
+            return _votedAgents.Contains(agentId);
         }
     }
 
@@ -158,10 +158,10 @@ public sealed class VotingSession
 
         lock (syncLock)
         {
-            currentVotes = votes.ToImmutableList();
+            currentVotes = _votes.ToImmutableList();
         }
 
-        return protocol.Evaluate(currentVotes);
+        return _protocol.Evaluate(currentVotes);
     }
 
     /// <summary>
@@ -172,7 +172,7 @@ public sealed class VotingSession
     {
         lock (syncLock)
         {
-            return votes.ToImmutableList();
+            return _votes.ToImmutableList();
         }
     }
 }

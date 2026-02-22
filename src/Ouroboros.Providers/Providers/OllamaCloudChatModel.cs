@@ -69,7 +69,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 onRetry: (outcome, timespan, retryCount, context) =>
                 {
                     var reason = outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString() ?? "Unknown";
-                    Console.WriteLine($"[OllamaCloudChatModel] Retry {retryCount}/5 after {timespan.TotalSeconds:F1}s due to {reason}");
+                    System.Diagnostics.Trace.TraceInformation("[OllamaCloudChatModel] Retry {0}/5 after {1:F1}s due to {2}", retryCount, timespan.TotalSeconds, reason);
                 });
 
         // 2. Circuit breaker - fail fast if service is consistently down
@@ -81,15 +81,15 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 durationOfBreak: TimeSpan.FromSeconds(30),  // Stay open for 30s before trying again
                 onBreak: (outcome, breakDelay) =>
                 {
-                    Console.WriteLine($"[OllamaCloudChatModel] ⚡ Circuit OPEN for {breakDelay.TotalSeconds}s - service appears down");
+                    System.Diagnostics.Trace.TraceWarning("[OllamaCloudChatModel] Circuit OPEN for {0}s - service appears down", breakDelay.TotalSeconds);
                 },
                 onReset: () =>
                 {
-                    Console.WriteLine($"[OllamaCloudChatModel] ✓ Circuit CLOSED - service recovered");
+                    System.Diagnostics.Trace.TraceInformation("[OllamaCloudChatModel] Circuit CLOSED - service recovered");
                 },
                 onHalfOpen: () =>
                 {
-                    Console.WriteLine($"[OllamaCloudChatModel] ○ Circuit HALF-OPEN - testing service...");
+                    System.Diagnostics.Trace.TraceInformation("[OllamaCloudChatModel] Circuit HALF-OPEN - testing service...");
                 });
 
         // Combine: Retry wraps Circuit Breaker (retry outside, circuit breaker inside)
@@ -129,7 +129,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
 
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[OllamaCloudChatModel] HTTP {(int)response.StatusCode}: {rawContent}");
+                System.Diagnostics.Trace.TraceWarning("[OllamaCloudChatModel] HTTP {0}: {1}", (int)response.StatusCode, rawContent);
                 return $"[ollama-cloud-fallback:{_model}] {prompt}";
             }
 
@@ -147,7 +147,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 return responseElement.GetString() ?? "";
             }
 
-            Console.WriteLine($"[OllamaCloudChatModel] No 'response' field in: {rawContent}");
+            System.Diagnostics.Trace.TraceWarning("[OllamaCloudChatModel] No 'response' field in: {0}", rawContent);
         }
         catch (BrokenCircuitException)
         {
@@ -159,7 +159,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[OllamaCloudChatModel] Error: {ex.GetType().Name}: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning("[OllamaCloudChatModel] Error: {0}: {1}", ex.GetType().Name, ex.Message);
         }
         finally
         {

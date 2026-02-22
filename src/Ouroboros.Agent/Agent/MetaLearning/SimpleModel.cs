@@ -12,8 +12,8 @@ namespace Ouroboros.Agent.MetaLearning;
 /// </summary>
 public class SimpleModel : IModel
 {
-    private Dictionary<string, object> parameters;
-    private readonly Func<string, Dictionary<string, object>, string> predictionFunc;
+    private Dictionary<string, object> _parameters;
+    private readonly Func<string, Dictionary<string, object>, string> _predictionFunc;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SimpleModel"/> class.
@@ -24,15 +24,15 @@ public class SimpleModel : IModel
         Func<string, Dictionary<string, object>, string> predictionFunc,
         Dictionary<string, object>? initialParameters = null)
     {
-        this.predictionFunc = predictionFunc ?? throw new ArgumentNullException(nameof(predictionFunc));
-        this.parameters = initialParameters ?? new Dictionary<string, object>();
+        _predictionFunc = predictionFunc ?? throw new ArgumentNullException(nameof(predictionFunc));
+        _parameters = initialParameters ?? new Dictionary<string, object>();
     }
 
     /// <inheritdoc/>
     public Task<string> PredictAsync(string input, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        var result = this.predictionFunc(input, this.parameters);
+        var result = _predictionFunc(input, _parameters);
         return Task.FromResult(result);
     }
 
@@ -40,8 +40,8 @@ public class SimpleModel : IModel
     public Task<IModel> CloneAsync(CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        var clonedParams = new Dictionary<string, object>(this.parameters);
-        IModel cloned = new SimpleModel(this.predictionFunc, clonedParams);
+        var clonedParams = new Dictionary<string, object>(_parameters);
+        IModel cloned = new SimpleModel(_predictionFunc, clonedParams);
         return Task.FromResult(cloned);
     }
 
@@ -55,14 +55,14 @@ public class SimpleModel : IModel
 
         foreach (var (key, gradient) in gradients)
         {
-            if (this.parameters.ContainsKey(key))
+            if (_parameters.ContainsKey(key))
             {
                 // Simple gradient descent: param = param - learningRate * gradient
-                if (this.parameters[key] is double paramValue && gradient is double gradValue)
+                if (_parameters[key] is double paramValue && gradient is double gradValue)
                 {
-                    this.parameters[key] = paramValue - (learningRate * gradValue);
+                    _parameters[key] = paramValue - (learningRate * gradValue);
                 }
-                else if (this.parameters[key] is double[] paramArray && gradient is double[] gradArray)
+                else if (_parameters[key] is double[] paramArray && gradient is double[] gradArray)
                 {
                     var updated = new double[paramArray.Length];
                     for (var i = 0; i < paramArray.Length; i++)
@@ -70,12 +70,12 @@ public class SimpleModel : IModel
                         updated[i] = paramArray[i] - (learningRate * gradArray[i]);
                     }
 
-                    this.parameters[key] = updated;
+                    _parameters[key] = updated;
                 }
             }
             else
             {
-                this.parameters[key] = gradient;
+                _parameters[key] = gradient;
             }
         }
 
@@ -86,14 +86,14 @@ public class SimpleModel : IModel
     public Task<Dictionary<string, object>> GetParametersAsync(CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        return Task.FromResult(new Dictionary<string, object>(this.parameters));
+        return Task.FromResult(new Dictionary<string, object>(_parameters));
     }
 
     /// <inheritdoc/>
     public Task SetParametersAsync(Dictionary<string, object> parameters, CancellationToken ct = default)
     {
         ct.ThrowIfCancellationRequested();
-        this.parameters = new Dictionary<string, object>(parameters);
+        _parameters = new Dictionary<string, object>(parameters);
         return Task.CompletedTask;
     }
 
@@ -108,7 +108,7 @@ public class SimpleModel : IModel
         // In a real implementation, this would compute actual gradients via backpropagation
         var gradients = new Dictionary<string, object>();
 
-        foreach (var (key, value) in this.parameters)
+        foreach (var (key, value) in _parameters)
         {
             if (value is double doubleValue)
             {

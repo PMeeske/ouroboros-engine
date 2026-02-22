@@ -14,11 +14,11 @@ namespace Ouroboros.Providers.SpeechToText;
 /// </summary>
 public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposable
 {
-    private readonly HttpClient httpClient;
-    private readonly string apiKey;
-    private readonly string endpoint;
-    private readonly string model;
-    private readonly bool ownsClient;
+    private readonly HttpClient _httpClient;
+    private readonly string _apiKey;
+    private readonly string _endpoint;
+    private readonly string _model;
+    private readonly bool _ownsClient;
 
     /// <summary>
     /// Supported audio formats for Whisper API.
@@ -50,11 +50,11 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
         string model = "whisper-1",
         HttpClient? httpClient = null)
     {
-        this.apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
-        this.endpoint = endpoint ?? "https://api.openai.com/v1";
-        this.model = model;
-        this.ownsClient = httpClient == null;
-        this.httpClient = httpClient ?? new HttpClient();
+        _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+        _endpoint = endpoint ?? "https://api.openai.com/v1";
+        _model = model;
+        _ownsClient = httpClient == null;
+        _httpClient = httpClient ?? new HttpClient();
     }
 
     /// <inheritdoc/>
@@ -76,16 +76,16 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
         }
 
         FileInfo fileInfo = new FileInfo(filePath);
-        if (fileInfo.Length > this.MaxFileSizeBytes)
+        if (fileInfo.Length > MaxFileSizeBytes)
         {
             return Result<TranscriptionResult, string>.Failure(
-                $"File too large: {fileInfo.Length / (1024 * 1024):F2} MB. Maximum size: {this.MaxFileSizeBytes / (1024 * 1024)} MB");
+                $"File too large: {fileInfo.Length / (1024 * 1024):F2} MB. Maximum size: {MaxFileSizeBytes / (1024 * 1024)} MB");
         }
 
         try
         {
             await using FileStream stream = File.OpenRead(filePath);
-            return await this.TranscribeStreamAsync(stream, Path.GetFileName(filePath), options, ct);
+            return await TranscribeStreamAsync(stream, Path.GetFileName(filePath), options, ct);
         }
         catch (Exception ex)
         {
@@ -100,8 +100,8 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
         TranscriptionOptions? options = null,
         CancellationToken ct = default)
     {
-        return await this.SendTranscriptionRequestAsync(
-            $"{this.endpoint}/audio/transcriptions",
+        return await SendTranscriptionRequestAsync(
+            $"{_endpoint}/audio/transcriptions",
             audioStream,
             fileName,
             options,
@@ -116,7 +116,7 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
         CancellationToken ct = default)
     {
         await using MemoryStream stream = new MemoryStream(audioData);
-        return await this.TranscribeStreamAsync(stream, fileName, options, ct);
+        return await TranscribeStreamAsync(stream, fileName, options, ct);
     }
 
     /// <inheritdoc/>
@@ -133,8 +133,8 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
         try
         {
             await using FileStream stream = File.OpenRead(filePath);
-            return await this.SendTranscriptionRequestAsync(
-                $"{this.endpoint}/audio/translations",
+            return await SendTranscriptionRequestAsync(
+                $"{_endpoint}/audio/translations",
                 stream,
                 Path.GetFileName(filePath),
                 options,
@@ -149,17 +149,17 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
     /// <inheritdoc/>
     public async Task<bool> IsAvailableAsync(CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(this.apiKey))
+        if (string.IsNullOrWhiteSpace(_apiKey))
         {
             return false;
         }
 
         try
         {
-            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"{this.endpoint}/models");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", this.apiKey);
+            using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"{_endpoint}/models");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
-            HttpResponseMessage response = await this.httpClient.SendAsync(request, ct);
+            HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
             return response.IsSuccessStatusCode;
         }
         catch
@@ -173,9 +173,9 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
     /// </summary>
     public void Dispose()
     {
-        if (this.ownsClient)
+        if (_ownsClient)
         {
-            this.httpClient.Dispose();
+            _httpClient.Dispose();
         }
     }
 
@@ -243,7 +243,7 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
             content.Add(streamContent, "file", fileName);
 
             // Add model
-            content.Add(new StringContent(this.model), "model");
+            content.Add(new StringContent(_model), "model");
 
             // Add optional parameters
             options ??= new TranscriptionOptions();
@@ -274,10 +274,10 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
 
             // Send request
             using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", this.apiKey);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
             request.Content = content;
 
-            HttpResponseMessage response = await this.httpClient.SendAsync(request, ct);
+            HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
             string responseText = await response.Content.ReadAsStringAsync(ct);
 
             if (!response.IsSuccessStatusCode)

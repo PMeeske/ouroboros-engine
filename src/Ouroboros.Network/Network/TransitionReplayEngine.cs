@@ -10,7 +10,7 @@ namespace Ouroboros.Network;
 /// </summary>
 public sealed class TransitionReplayEngine
 {
-    private readonly MerkleDag dag;
+    private readonly MerkleDag _dag;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TransitionReplayEngine"/> class.
@@ -18,7 +18,7 @@ public sealed class TransitionReplayEngine
     /// <param name="dag">The Merkle-DAG to replay from.</param>
     public TransitionReplayEngine(MerkleDag dag)
     {
-        this.dag = dag ?? throw new ArgumentNullException(nameof(dag));
+        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
     }
 
     /// <summary>
@@ -28,7 +28,7 @@ public sealed class TransitionReplayEngine
     /// <returns>A Result containing the ordered list of transitions or an error.</returns>
     public Result<ImmutableArray<TransitionEdge>> ReplayPathToNode(Guid targetNodeId)
     {
-        var nodeOption = this.dag.GetNode(targetNodeId);
+        var nodeOption = _dag.GetNode(targetNodeId);
         if (!nodeOption.HasValue)
         {
             return Result<ImmutableArray<TransitionEdge>>.Failure($"Target node {targetNodeId} not found");
@@ -37,7 +37,7 @@ public sealed class TransitionReplayEngine
         var path = new List<TransitionEdge>();
         var visited = new HashSet<Guid>();
         
-        if (!this.BuildPathRecursive(targetNodeId, path, visited))
+        if (!BuildPathRecursive(targetNodeId, path, visited))
         {
             return Result<ImmutableArray<TransitionEdge>>.Failure("Failed to build complete path (possible cycle)");
         }
@@ -53,13 +53,13 @@ public sealed class TransitionReplayEngine
     /// <returns>A collection of transition chains.</returns>
     public IEnumerable<ImmutableArray<TransitionEdge>> GetTransitionChainsByOperation(string operationName)
     {
-        var matchingEdges = this.dag.GetTransitionsByOperation(operationName).ToList();
+        var matchingEdges = _dag.GetTransitionsByOperation(operationName).ToList();
         var chains = new List<ImmutableArray<TransitionEdge>>();
 
         foreach (var edge in matchingEdges)
         {
             var chain = new List<TransitionEdge> { edge };
-            this.ExtendChain(chain, edge.OutputId);
+            ExtendChain(chain, edge.OutputId);
             chains.Add(chain.ToImmutableArray());
         }
 
@@ -73,7 +73,7 @@ public sealed class TransitionReplayEngine
     /// <returns>An ordered list of transitions leading to the node.</returns>
     public ImmutableArray<TransitionEdge> GetNodeHistory(Guid nodeId)
     {
-        var result = this.ReplayPathToNode(nodeId);
+        var result = ReplayPathToNode(nodeId);
         return result.IsSuccess ? result.Value : ImmutableArray<TransitionEdge>.Empty;
     }
 
@@ -84,7 +84,7 @@ public sealed class TransitionReplayEngine
     /// <returns>A collection of matching transitions.</returns>
     public IEnumerable<TransitionEdge> QueryTransitions(Func<TransitionEdge, bool> predicate)
     {
-        return this.dag.Edges.Values.Where(predicate);
+        return _dag.Edges.Values.Where(predicate);
     }
 
     /// <summary>
@@ -94,7 +94,7 @@ public sealed class TransitionReplayEngine
     /// <returns>A collection of matching nodes.</returns>
     public IEnumerable<MonadNode> QueryNodes(Func<MonadNode, bool> predicate)
     {
-        return this.dag.Nodes.Values.Where(predicate);
+        return _dag.Nodes.Values.Where(predicate);
     }
 
     /// <summary>
@@ -105,7 +105,7 @@ public sealed class TransitionReplayEngine
     /// <returns>A collection of transitions within the time range.</returns>
     public IEnumerable<TransitionEdge> GetTransitionsInTimeRange(DateTimeOffset startTime, DateTimeOffset endTime)
     {
-        return this.QueryTransitions(e => e.CreatedAt >= startTime && e.CreatedAt <= endTime);
+        return QueryTransitions(e => e.CreatedAt >= startTime && e.CreatedAt <= endTime);
     }
 
     /// <summary>
@@ -116,7 +116,7 @@ public sealed class TransitionReplayEngine
     /// <returns>A collection of nodes within the time range.</returns>
     public IEnumerable<MonadNode> GetNodesInTimeRange(DateTimeOffset startTime, DateTimeOffset endTime)
     {
-        return this.QueryNodes(n => n.CreatedAt >= startTime && n.CreatedAt <= endTime);
+        return QueryNodes(n => n.CreatedAt >= startTime && n.CreatedAt <= endTime);
     }
 
     /// <summary>
@@ -131,7 +131,7 @@ public sealed class TransitionReplayEngine
 
         visited.Add(nodeId);
 
-        var incomingEdges = this.dag.GetIncomingEdges(nodeId).ToList();
+        var incomingEdges = _dag.GetIncomingEdges(nodeId).ToList();
         if (incomingEdges.Count == 0)
         {
             return true; // Reached a root node
@@ -143,7 +143,7 @@ public sealed class TransitionReplayEngine
         path.Add(edge);
 
         // Continue from the first input node
-        return this.BuildPathRecursive(edge.InputIds[0], path, visited);
+        return BuildPathRecursive(edge.InputIds[0], path, visited);
     }
 
     /// <summary>
@@ -151,12 +151,12 @@ public sealed class TransitionReplayEngine
     /// </summary>
     private void ExtendChain(List<TransitionEdge> chain, Guid nodeId)
     {
-        var outgoingEdges = this.dag.GetOutgoingEdges(nodeId).ToList();
+        var outgoingEdges = _dag.GetOutgoingEdges(nodeId).ToList();
         if (outgoingEdges.Count > 0)
         {
             var edge = outgoingEdges.First();
             chain.Add(edge);
-            this.ExtendChain(chain, edge.OutputId);
+            ExtendChain(chain, edge.OutputId);
         }
     }
 }

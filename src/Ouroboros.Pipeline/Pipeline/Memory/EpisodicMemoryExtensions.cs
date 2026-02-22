@@ -67,7 +67,7 @@ public static class EpisodicMemoryExtensions
             if (!storeResult.IsSuccess)
             {
                 // Log but don't fail - memory is enhancement, not requirement
-                Console.WriteLine($"Warning: Failed to store episode: {storeResult.Error}");
+                Trace.TraceWarning("Failed to store episode: {0}", storeResult.Error);
             }
 
             return result;
@@ -99,7 +99,7 @@ public static class EpisodicMemoryExtensions
             if (result.IsSuccess)
             {
                 // Could attach episodes to branch via custom event
-                Console.WriteLine($"Retrieved {result.Value.Count} similar episodes");
+                Trace.TraceInformation("Retrieved {0} similar episodes", result.Value.Count);
             }
 
             return branch;
@@ -127,7 +127,7 @@ public static class EpisodicMemoryExtensions
 
             if (!result.IsSuccess)
             {
-                Console.WriteLine($"Warning: Memory consolidation failed: {result.Error}");
+                Trace.TraceWarning("Memory consolidation failed: {0}", result.Error);
             }
 
             return branch;

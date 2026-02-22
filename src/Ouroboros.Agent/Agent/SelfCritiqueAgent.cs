@@ -21,10 +21,10 @@ public sealed class SelfCritiqueAgent
     /// </summary>
     private static readonly TimeSpan DefaultIterationTimeout = TimeSpan.FromSeconds(30);
 
-    private readonly ToolAwareChatModel llm;
-    private readonly ToolRegistry tools;
-    private readonly IEmbeddingModel embed;
-    private readonly TimeSpan iterationTimeout;
+    private readonly ToolAwareChatModel _llm;
+    private readonly ToolRegistry _tools;
+    private readonly IEmbeddingModel _embed;
+    private readonly TimeSpan _iterationTimeout;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SelfCritiqueAgent"/> class.
@@ -39,10 +39,10 @@ public sealed class SelfCritiqueAgent
         IEmbeddingModel embed,
         TimeSpan? iterationTimeout = null)
     {
-        this.llm = llm;
-        this.tools = tools;
-        this.embed = embed;
-        this.iterationTimeout = iterationTimeout ?? DefaultIterationTimeout;
+        _llm = llm;
+        _tools = tools;
+        _embed = embed;
+        _iterationTimeout = iterationTimeout ?? DefaultIterationTimeout;
     }
 
     /// <summary>
@@ -70,8 +70,8 @@ public sealed class SelfCritiqueAgent
 
             // Generate initial draft
             Result<PipelineBranch, string> draftResult = await ExecuteWithTimeoutAsync(
-                () => ReasoningArrows.SafeDraftArrow(this.llm, this.tools, this.embed, topic, query, k)(branch),
-                this.iterationTimeout,
+                () => ReasoningArrows.SafeDraftArrow(_llm, _tools, _embed, topic, query, k)(branch),
+                _iterationTimeout,
                 ct);
 
             if (!draftResult.IsSuccess)
@@ -98,8 +98,8 @@ public sealed class SelfCritiqueAgent
             {
                 // Generate critique
                 Result<PipelineBranch, string> critiqueResult = await ExecuteWithTimeoutAsync(
-                    () => ReasoningArrows.SafeCritiqueArrow(this.llm, this.tools, this.embed, topic, query, k)(currentBranch),
-                    this.iterationTimeout,
+                    () => ReasoningArrows.SafeCritiqueArrow(_llm, _tools, _embed, topic, query, k)(currentBranch),
+                    _iterationTimeout,
                     ct);
 
                 if (!critiqueResult.IsSuccess)
@@ -122,8 +122,8 @@ public sealed class SelfCritiqueAgent
 
                 // Generate improvement
                 Result<PipelineBranch, string> improveResult = await ExecuteWithTimeoutAsync(
-                    () => ReasoningArrows.SafeImproveArrow(this.llm, this.tools, this.embed, topic, query, k)(currentBranch),
-                    this.iterationTimeout,
+                    () => ReasoningArrows.SafeImproveArrow(_llm, _tools, _embed, topic, query, k)(currentBranch),
+                    _iterationTimeout,
                     ct);
 
                 if (!improveResult.IsSuccess)

@@ -11,9 +11,9 @@ namespace Ouroboros.Network.Persistence;
 /// </summary>
 public sealed class PersistentMerkleDag : IAsyncDisposable
 {
-    private readonly MerkleDag dag;
-    private readonly IGraphPersistence persistence;
-    private bool disposed;
+    private readonly MerkleDag _dag;
+    private readonly IGraphPersistence _persistence;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PersistentMerkleDag"/> class.
@@ -22,29 +22,29 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
     /// <param name="persistence">The persistence layer.</param>
     private PersistentMerkleDag(MerkleDag dag, IGraphPersistence persistence)
     {
-        this.dag = dag ?? throw new ArgumentNullException(nameof(dag));
-        this.persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
+        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
+        _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
     }
 
     /// <summary>
     /// Gets all nodes in the DAG.
     /// </summary>
-    public IReadOnlyDictionary<Guid, MonadNode> Nodes => this.dag.Nodes;
+    public IReadOnlyDictionary<Guid, MonadNode> Nodes => _dag.Nodes;
 
     /// <summary>
     /// Gets all edges in the DAG.
     /// </summary>
-    public IReadOnlyDictionary<Guid, TransitionEdge> Edges => this.dag.Edges;
+    public IReadOnlyDictionary<Guid, TransitionEdge> Edges => _dag.Edges;
 
     /// <summary>
     /// Gets the count of nodes in the DAG.
     /// </summary>
-    public int NodeCount => this.dag.NodeCount;
+    public int NodeCount => _dag.NodeCount;
 
     /// <summary>
     /// Gets the count of edges in the DAG.
     /// </summary>
-    public int EdgeCount => this.dag.EdgeCount;
+    public int EdgeCount => _dag.EdgeCount;
 
     /// <summary>
     /// Restores a PersistentMerkleDag from a Write-Ahead Log.
@@ -150,10 +150,10 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
     /// </remarks>
     public async Task<Result<MonadNode>> AddNodeAsync(MonadNode node, CancellationToken ct = default)
     {
-        this.ThrowIfDisposed();
+        ThrowIfDisposed();
 
         // Add to in-memory DAG first
-        var result = this.dag.AddNode(node);
+        var result = _dag.AddNode(node);
         if (result.IsFailure)
         {
             return result;
@@ -164,7 +164,7 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
         // Future enhancement: Implement rollback or two-phase commit.
         try
         {
-            await this.persistence.AppendNodeAsync(ToAbstractionsNode(node), ct).ConfigureAwait(false);
+            await _persistence.AppendNodeAsync(ToAbstractionsNode(node), ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -189,10 +189,10 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
     /// </remarks>
     public async Task<Result<TransitionEdge>> AddEdgeAsync(TransitionEdge edge, CancellationToken ct = default)
     {
-        this.ThrowIfDisposed();
+        ThrowIfDisposed();
 
         // Add to in-memory DAG first
-        var result = this.dag.AddEdge(edge);
+        var result = _dag.AddEdge(edge);
         if (result.IsFailure)
         {
             return result;
@@ -203,7 +203,7 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
         // Future enhancement: Implement rollback or two-phase commit.
         try
         {
-            await this.persistence.AppendEdgeAsync(ToAbstractionsEdge(edge), ct).ConfigureAwait(false);
+            await _persistence.AppendEdgeAsync(ToAbstractionsEdge(edge), ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -221,8 +221,8 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
     /// <returns>A task representing the asynchronous flush operation.</returns>
     public async Task FlushAsync(CancellationToken ct = default)
     {
-        this.ThrowIfDisposed();
-        await this.persistence.FlushAsync(ct).ConfigureAwait(false);
+        ThrowIfDisposed();
+        await _persistence.FlushAsync(ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -230,53 +230,53 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
     /// </summary>
     /// <param name="nodeId">The node ID.</param>
     /// <returns>An Option containing the node if found.</returns>
-    public Option<MonadNode> GetNode(Guid nodeId) => this.dag.GetNode(nodeId);
+    public Option<MonadNode> GetNode(Guid nodeId) => _dag.GetNode(nodeId);
 
     /// <summary>
     /// Gets an edge by its ID.
     /// </summary>
     /// <param name="edgeId">The edge ID.</param>
     /// <returns>An Option containing the edge if found.</returns>
-    public Option<TransitionEdge> GetEdge(Guid edgeId) => this.dag.GetEdge(edgeId);
+    public Option<TransitionEdge> GetEdge(Guid edgeId) => _dag.GetEdge(edgeId);
 
     /// <summary>
     /// Gets all incoming edges for a node.
     /// </summary>
     /// <param name="nodeId">The node ID.</param>
     /// <returns>A collection of incoming edges.</returns>
-    public IEnumerable<TransitionEdge> GetIncomingEdges(Guid nodeId) => this.dag.GetIncomingEdges(nodeId);
+    public IEnumerable<TransitionEdge> GetIncomingEdges(Guid nodeId) => _dag.GetIncomingEdges(nodeId);
 
     /// <summary>
     /// Gets all outgoing edges for a node.
     /// </summary>
     /// <param name="nodeId">The node ID.</param>
     /// <returns>A collection of outgoing edges.</returns>
-    public IEnumerable<TransitionEdge> GetOutgoingEdges(Guid nodeId) => this.dag.GetOutgoingEdges(nodeId);
+    public IEnumerable<TransitionEdge> GetOutgoingEdges(Guid nodeId) => _dag.GetOutgoingEdges(nodeId);
 
     /// <summary>
     /// Gets all root nodes (nodes with no parents).
     /// </summary>
     /// <returns>A collection of root nodes.</returns>
-    public IEnumerable<MonadNode> GetRootNodes() => this.dag.GetRootNodes();
+    public IEnumerable<MonadNode> GetRootNodes() => _dag.GetRootNodes();
 
     /// <summary>
     /// Gets all leaf nodes (nodes with no outgoing edges).
     /// </summary>
     /// <returns>A collection of leaf nodes.</returns>
-    public IEnumerable<MonadNode> GetLeafNodes() => this.dag.GetLeafNodes();
+    public IEnumerable<MonadNode> GetLeafNodes() => _dag.GetLeafNodes();
 
     /// <summary>
     /// Performs a topological sort of the DAG.
     /// </summary>
     /// <returns>A Result containing the sorted nodes or an error if the graph has cycles.</returns>
-    public Result<ImmutableArray<MonadNode>> TopologicalSort() => this.dag.TopologicalSort();
+    public Result<ImmutableArray<MonadNode>> TopologicalSort() => _dag.TopologicalSort();
 
     /// <summary>
     /// Gets all nodes of a specific type.
     /// </summary>
     /// <param name="typeName">The type name to filter by.</param>
     /// <returns>A collection of nodes with the specified type.</returns>
-    public IEnumerable<MonadNode> GetNodesByType(string typeName) => this.dag.GetNodesByType(typeName);
+    public IEnumerable<MonadNode> GetNodesByType(string typeName) => _dag.GetNodesByType(typeName);
 
     /// <summary>
     /// Gets all transitions with a specific operation name.
@@ -284,13 +284,13 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
     /// <param name="operationName">The operation name to filter by.</param>
     /// <returns>A collection of edges with the specified operation.</returns>
     public IEnumerable<TransitionEdge> GetTransitionsByOperation(string operationName) =>
-        this.dag.GetTransitionsByOperation(operationName);
+        _dag.GetTransitionsByOperation(operationName);
 
     /// <summary>
     /// Verifies the integrity of the entire DAG.
     /// </summary>
     /// <returns>A Result indicating whether the DAG is valid.</returns>
-    public Result<bool> VerifyIntegrity() => this.dag.VerifyIntegrity();
+    public Result<bool> VerifyIntegrity() => _dag.VerifyIntegrity();
 
     /// <summary>
     /// Disposes the persistent DAG and closes the persistence layer.
@@ -298,13 +298,13 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
     /// <returns>A task representing the asynchronous disposal.</returns>
     public async ValueTask DisposeAsync()
     {
-        if (this.disposed)
+        if (_disposed)
         {
             return;
         }
 
-        await this.persistence.DisposeAsync().ConfigureAwait(false);
-        this.disposed = true;
+        await _persistence.DisposeAsync().ConfigureAwait(false);
+        _disposed = true;
     }
 
     private static Ouroboros.Abstractions.Network.MonadNode ToAbstractionsNode(MonadNode node) =>
@@ -321,7 +321,7 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
 
     private void ThrowIfDisposed()
     {
-        if (this.disposed)
+        if (_disposed)
         {
             throw new ObjectDisposedException(nameof(PersistentMerkleDag));
         }

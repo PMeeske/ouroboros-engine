@@ -55,7 +55,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt - 1)),
                 onRetry: (exception, timespan, retryCount, context) =>
                 {
-                    Console.WriteLine($"[LoadBalancedChatModel] Retry {retryCount} after {timespan.TotalSeconds}s due to {exception.GetType().Name}: {exception.Message}");
+                    Trace.TraceInformation("[LoadBalancedChatModel] Retry {0} after {1}s due to {2}: {3}", retryCount, timespan.TotalSeconds, exception.GetType().Name, exception.Message);
                 });
     }
 
@@ -116,7 +116,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
                 {
                     // No healthy providers available
                     string error = selectionResult.Match(_ => string.Empty, err => err);
-                    Console.WriteLine($"[LoadBalancedChatModel] Provider selection failed: {error}");
+                    Trace.TraceWarning("[LoadBalancedChatModel] Provider selection failed: {0}", error);
                     
                     // Throw to trigger Polly retry
                     throw new InvalidOperationException($"No healthy providers available: {error}");
@@ -141,8 +141,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
                         success: true,
                         wasRateLimited: false);
 
-                    Console.WriteLine($"[LoadBalancedChatModel] Success with provider '{selection.ProviderId}' " +
-                                    $"in {sw.Elapsed.TotalMilliseconds:F0}ms");
+                    Trace.TraceInformation("[LoadBalancedChatModel] Success with provider '{0}' in {1:F0}ms", selection.ProviderId, sw.Elapsed.TotalMilliseconds);
 
                     return result;
                 }
@@ -157,8 +156,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
                         success: false,
                         wasRateLimited: true);
 
-                    Console.WriteLine($"[LoadBalancedChatModel] Provider '{selection.ProviderId}' rate limited (429). " +
-                                    $"Attempting with another provider...");
+                    Trace.TraceWarning("[LoadBalancedChatModel] Provider '{0}' rate limited (429). Attempting with another provider...", selection.ProviderId);
 
                     // Re-throw to trigger Polly retry with exponential backoff
                     throw;
@@ -174,7 +172,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
                         success: false,
                         wasRateLimited: false);
 
-                    Console.WriteLine($"[LoadBalancedChatModel] Provider '{selection.ProviderId}' failed: {ex.Message}");
+                    Trace.TraceWarning("[LoadBalancedChatModel] Provider '{0}' failed: {1}", selection.ProviderId, ex.Message);
 
                     // Re-throw to trigger Polly retry
                     throw;
@@ -184,7 +182,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
         catch (Exception ex)
         {
             // All retries exhausted - return error message for graceful degradation
-            Console.WriteLine($"[LoadBalancedChatModel] All retries exhausted: {ex.Message}");
+            Trace.TraceWarning("[LoadBalancedChatModel] All retries exhausted: {0}", ex.Message);
             
             string providersAttempted = attemptedProviders.Count > 0 
                 ? $"Attempted: {string.Join(", ", attemptedProviders)}" 

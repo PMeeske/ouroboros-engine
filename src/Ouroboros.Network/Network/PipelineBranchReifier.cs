@@ -10,9 +10,9 @@ namespace Ouroboros.Network;
 /// </summary>
 public sealed class PipelineBranchReifier
 {
-    private readonly MerkleDag dag;
-    private readonly NetworkStateProjector projector;
-    private readonly Dictionary<Guid, Guid> eventToNodeMapping;
+    private readonly MerkleDag _dag;
+    private readonly NetworkStateProjector _projector;
+    private readonly Dictionary<Guid, Guid> _eventToNodeMapping;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PipelineBranchReifier"/> class.
@@ -21,9 +21,9 @@ public sealed class PipelineBranchReifier
     /// <param name="projector">The network state projector.</param>
     public PipelineBranchReifier(MerkleDag dag, NetworkStateProjector projector)
     {
-        this.dag = dag ?? throw new ArgumentNullException(nameof(dag));
-        this.projector = projector ?? throw new ArgumentNullException(nameof(projector));
-        this.eventToNodeMapping = new Dictionary<Guid, Guid>();
+        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
+        _projector = projector ?? throw new ArgumentNullException(nameof(projector));
+        _eventToNodeMapping = new Dictionary<Guid, Guid>();
     }
 
     /// <summary>
@@ -35,24 +35,24 @@ public sealed class PipelineBranchReifier
         // Re-initialize with shared DAG
         var sharedDag = new MerkleDag();
         var sharedProjector = new NetworkStateProjector(sharedDag);
-        this.dag = sharedDag;
-        this.projector = sharedProjector;
+        _dag = sharedDag;
+        _projector = sharedProjector;
     }
 
     /// <summary>
     /// Gets the underlying MerkleDag.
     /// </summary>
-    public MerkleDag Dag => this.dag;
+    public MerkleDag Dag => _dag;
 
     /// <summary>
     /// Gets the network state projector.
     /// </summary>
-    public NetworkStateProjector Projector => this.projector;
+    public NetworkStateProjector Projector => _projector;
 
     /// <summary>
     /// Gets the mapping from PipelineEvent IDs to MonadNode IDs.
     /// </summary>
-    public IReadOnlyDictionary<Guid, Guid> EventToNodeMapping => this.eventToNodeMapping;
+    public IReadOnlyDictionary<Guid, Guid> EventToNodeMapping => _eventToNodeMapping;
 
     /// <summary>
     /// Reifies an entire PipelineBranch into the MerkleDag.
@@ -79,7 +79,7 @@ public sealed class PipelineBranchReifier
             // Determine parent node - prefer step execution chain, fall back to reasoning chain
             var parentNodeId = previousStepNode?.Id ?? previousReasoningNode?.Id;
 
-            var nodeResult = this.ReifyEvent(evt, parentNodeId);
+            var nodeResult = ReifyEvent(evt, parentNodeId);
             if (!nodeResult.IsSuccess)
             {
                 return Result<ReificationResult>.Failure($"Failed to reify event {evt.Id}: {nodeResult.Error}");
@@ -91,7 +91,7 @@ public sealed class PipelineBranchReifier
             // Create transition for sequential step executions
             if (evt is StepExecutionEvent currentStepExec && previousStepNode != null && previousStepExec != null)
             {
-                var transitionResult = this.CreateStepTransition(
+                var transitionResult = CreateStepTransition(
                     previousStepNode,
                     currentNode,
                     previousStepExec,
@@ -106,7 +106,7 @@ public sealed class PipelineBranchReifier
             // Create transition for sequential reasoning steps
             if (evt is ReasoningStep currentReasoning && previousReasoningNode != null && previousReasoningStep != null)
             {
-                var transitionResult = this.CreateTransition(
+                var transitionResult = CreateTransition(
                     previousReasoningNode,
                     currentNode,
                     previousReasoningStep,
@@ -137,8 +137,8 @@ public sealed class PipelineBranchReifier
             branch.Name,
             nodesCreated,
             transitionsCreated,
-            this.dag.NodeCount,
-            this.dag.EdgeCount));
+            _dag.NodeCount,
+            _dag.EdgeCount));
     }
 
     /// <summary>
@@ -155,10 +155,10 @@ public sealed class PipelineBranchReifier
         }
 
         // Check if already reified
-        if (this.eventToNodeMapping.ContainsKey(evt.Id))
+        if (_eventToNodeMapping.ContainsKey(evt.Id))
         {
-            var existingNodeId = this.eventToNodeMapping[evt.Id];
-            var existingNode = this.dag.GetNode(existingNodeId);
+            var existingNodeId = _eventToNodeMapping[evt.Id];
+            var existingNode = _dag.GetNode(existingNodeId);
             if (existingNode.HasValue)
             {
                 return Result<MonadNode>.Success(existingNode.Value!);
@@ -167,19 +167,19 @@ public sealed class PipelineBranchReifier
 
         MonadNode node = evt switch
         {
-            StepExecutionEvent stepExec => this.CreateStepExecutionNode(stepExec, parentNodeId),
-            ReasoningStep reasoning => this.CreateReasoningNode(reasoning, parentNodeId),
-            IngestBatch ingest => this.CreateIngestNode(ingest, parentNodeId),
-            _ => this.CreateGenericEventNode(evt, parentNodeId),
+            StepExecutionEvent stepExec => CreateStepExecutionNode(stepExec, parentNodeId),
+            ReasoningStep reasoning => CreateReasoningNode(reasoning, parentNodeId),
+            IngestBatch ingest => CreateIngestNode(ingest, parentNodeId),
+            _ => CreateGenericEventNode(evt, parentNodeId),
         };
 
-        var addResult = this.dag.AddNode(node);
+        var addResult = _dag.AddNode(node);
         if (!addResult.IsSuccess)
         {
             return Result<MonadNode>.Failure($"Failed to add node to DAG: {addResult.Error}");
         }
 
-        this.eventToNodeMapping[evt.Id] = node.Id;
+        _eventToNodeMapping[evt.Id] = node.Id;
         return Result<MonadNode>.Success(node);
     }
 
@@ -202,9 +202,9 @@ public sealed class PipelineBranchReifier
         // Find the last known node
         foreach (var evt in branch.Events)
         {
-            if (this.eventToNodeMapping.TryGetValue(evt.Id, out var nodeId))
+            if (_eventToNodeMapping.TryGetValue(evt.Id, out var nodeId))
             {
-                var node = this.dag.GetNode(nodeId);
+                var node = _dag.GetNode(nodeId);
                 if (node.HasValue && evt is ReasoningStep reasoning)
                 {
                     lastKnownNode = node.Value;
@@ -216,12 +216,12 @@ public sealed class PipelineBranchReifier
         // Reify only new events
         foreach (var evt in branch.Events)
         {
-            if (this.eventToNodeMapping.ContainsKey(evt.Id))
+            if (_eventToNodeMapping.ContainsKey(evt.Id))
             {
                 continue; // Already reified
             }
 
-            var nodeResult = this.ReifyEvent(evt, lastKnownNode?.Id);
+            var nodeResult = ReifyEvent(evt, lastKnownNode?.Id);
             if (!nodeResult.IsSuccess)
             {
                 return Result<int>.Failure($"Failed to reify event: {nodeResult.Error}");
@@ -232,7 +232,7 @@ public sealed class PipelineBranchReifier
             // Create transition if applicable
             if (evt is ReasoningStep currentReasoning && lastKnownNode != null && lastKnownReasoningStep != null)
             {
-                this.CreateTransition(lastKnownNode, nodeResult.Value, lastKnownReasoningStep, currentReasoning);
+                CreateTransition(lastKnownNode, nodeResult.Value, lastKnownReasoningStep, currentReasoning);
             }
 
             if (evt is ReasoningStep reasoning)
@@ -256,7 +256,7 @@ public sealed class PipelineBranchReifier
             ? ImmutableDictionary<string, string>.Empty.Add("branch", branchName)
             : null;
 
-        return this.projector.CreateSnapshot(metadata);
+        return _projector.CreateSnapshot(metadata);
     }
 
     private MonadNode CreateReasoningNode(ReasoningStep reasoning, Guid? parentNodeId)
@@ -356,7 +356,7 @@ public sealed class PipelineBranchReifier
             confidence: null, // Could be extracted from state if available
             durationMs: durationMs > 0 ? durationMs : null);
 
-        return this.dag.AddEdge(edge);
+        return _dag.AddEdge(edge);
     }
 
     private Result<TransitionEdge> CreateStepTransition(
@@ -381,6 +381,6 @@ public sealed class PipelineBranchReifier
             confidence: toStep.Success ? 1.0 : 0.0,
             durationMs: toStep.DurationMs);
 
-        return this.dag.AddEdge(edge);
+        return _dag.AddEdge(edge);
     }
 }

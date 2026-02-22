@@ -10,8 +10,8 @@ namespace Ouroboros.Agent.MetaAI.WorldModel;
 /// </summary>
 public sealed class SimpleRewardPredictor : IRewardPredictor
 {
-    private readonly float[] weights;
-    private readonly float bias;
+    private readonly float[] _weights;
+    private readonly float _bias;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SimpleRewardPredictor"/> class.
@@ -20,8 +20,8 @@ public sealed class SimpleRewardPredictor : IRewardPredictor
     /// <param name="bias">Bias term.</param>
     public SimpleRewardPredictor(float[] weights, float bias)
     {
-        this.weights = weights;
-        this.bias = bias;
+        _weights = weights;
+        _bias = bias;
     }
 
     /// <inheritdoc/>
@@ -31,10 +31,10 @@ public sealed class SimpleRewardPredictor : IRewardPredictor
         var features = CombineFeatures(current.Embedding, action, next.Embedding);
 
         // Linear prediction
-        float prediction = bias;
-        for (int i = 0; i < Math.Min(features.Length, weights.Length); i++)
+        float prediction = _bias;
+        for (int i = 0; i < Math.Min(features.Length, _weights.Length); i++)
         {
-            prediction += features[i] * weights[i];
+            prediction += features[i] * _weights[i];
         }
 
         return Task.FromResult((double)prediction);

@@ -1,5 +1,7 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-// Core abstractions
+// <copyright file="GlobalUsings.cs" company="PlaceholderCompany">
+// Copyright (c) PlaceholderCompany. All rights reserved.
+// </copyright>
+
 // System imports
 global using System;
 global using System.Collections.Concurrent;

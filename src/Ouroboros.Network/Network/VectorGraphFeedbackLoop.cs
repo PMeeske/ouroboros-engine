@@ -45,6 +45,8 @@ public sealed record FeedbackResult(
 /// </summary>
 public sealed class VectorGraphFeedbackLoop
 {
+    private const int DefaultEmbeddingDimension = 384;
+
     private readonly QdrantDagStore _store;
     private readonly IMeTTaEngine _mettaEngine;
     private readonly IEmbeddingModel _embeddingModel;
@@ -154,10 +156,11 @@ public sealed class VectorGraphFeedbackLoop
                 var embedding = await _embeddingModel.CreateEmbeddingsAsync(semanticText, ct);
                 _embeddingCache[node.Id] = embedding;
             }
-            catch
+            catch (Exception ex)
             {
-                // If embedding fails, use zero vector
-                _embeddingCache[node.Id] = new float[384]; // Default dimension
+                System.Diagnostics.Trace.TraceWarning(
+                    $"[FeedbackLoop] Embedding failed for node {node.Id}: {ex.Message}. Using zero vector.");
+                _embeddingCache[node.Id] = new float[DefaultEmbeddingDimension];
             }
         }
     }
@@ -166,7 +169,7 @@ public sealed class VectorGraphFeedbackLoop
     {
         return _embeddingCache.TryGetValue(nodeId, out var embedding)
             ? embedding
-            : new float[384]; // Default zero vector
+            : new float[DefaultEmbeddingDimension];
     }
 
     private NodeClassification ClassifyNodes(

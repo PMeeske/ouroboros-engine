@@ -10,9 +10,9 @@ namespace Ouroboros.Network;
 /// </summary>
 public sealed class NetworkStateProjector
 {
-    private readonly MerkleDag dag;
-    private long currentEpoch;
-    private readonly List<GlobalNetworkState> snapshots;
+    private readonly MerkleDag _dag;
+    private long _currentEpoch;
+    private readonly List<GlobalNetworkState> _snapshots;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NetworkStateProjector"/> class.
@@ -20,20 +20,20 @@ public sealed class NetworkStateProjector
     /// <param name="dag">The Merkle-DAG to project from.</param>
     public NetworkStateProjector(MerkleDag dag)
     {
-        this.dag = dag ?? throw new ArgumentNullException(nameof(dag));
-        this.currentEpoch = 0;
-        this.snapshots = new List<GlobalNetworkState>();
+        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
+        _currentEpoch = 0;
+        _snapshots = new List<GlobalNetworkState>();
     }
 
     /// <summary>
     /// Gets all historical snapshots.
     /// </summary>
-    public IReadOnlyList<GlobalNetworkState> Snapshots => this.snapshots;
+    public IReadOnlyList<GlobalNetworkState> Snapshots => _snapshots;
 
     /// <summary>
     /// Gets the current epoch number.
     /// </summary>
-    public long CurrentEpoch => this.currentEpoch;
+    public long CurrentEpoch => _currentEpoch;
 
     /// <summary>
     /// Projects the current global network state from the DAG.
@@ -43,40 +43,40 @@ public sealed class NetworkStateProjector
     public GlobalNetworkState ProjectCurrentState(ImmutableDictionary<string, string>? metadata = null)
     {
         // Count nodes by type
-        var nodeCountByType = this.dag.Nodes.Values
+        var nodeCountByType = _dag.Nodes.Values
             .GroupBy(n => n.TypeName)
             .ToImmutableDictionary(g => g.Key, g => g.Count());
 
         // Count transitions by operation
-        var transitionCountByOperation = this.dag.Edges.Values
+        var transitionCountByOperation = _dag.Edges.Values
             .GroupBy(e => e.OperationName)
             .ToImmutableDictionary(g => g.Key, g => g.Count());
 
         // Get root and leaf nodes
-        var rootNodeIds = this.dag.GetRootNodes().Select(n => n.Id).ToImmutableArray();
-        var leafNodeIds = this.dag.GetLeafNodes().Select(n => n.Id).ToImmutableArray();
+        var rootNodeIds = _dag.GetRootNodes().Select(n => n.Id).ToImmutableArray();
+        var leafNodeIds = _dag.GetLeafNodes().Select(n => n.Id).ToImmutableArray();
 
         // Calculate average confidence
-        var transitionsWithConfidence = this.dag.Edges.Values
+        var transitionsWithConfidence = _dag.Edges.Values
             .Where(e => e.Confidence.HasValue)
             .ToList();
-        
+
         var averageConfidence = transitionsWithConfidence.Any()
             ? transitionsWithConfidence.Average(e => e.Confidence!.Value)
             : (double?)null;
 
         // Calculate total processing time
-        var totalProcessingTimeMs = this.dag.Edges.Values
+        var totalProcessingTimeMs = _dag.Edges.Values
             .Where(e => e.DurationMs.HasValue)
             .Sum(e => e.DurationMs!.Value);
 
         var totalProcessingTime = totalProcessingTimeMs > 0 ? (long?)totalProcessingTimeMs : null;
 
         var state = new GlobalNetworkState(
-            this.currentEpoch,
+            _currentEpoch,
             DateTimeOffset.UtcNow,
-            this.dag.NodeCount,
-            this.dag.EdgeCount,
+            _dag.NodeCount,
+            _dag.EdgeCount,
             nodeCountByType,
             transitionCountByOperation,
             rootNodeIds,
@@ -95,9 +95,9 @@ public sealed class NetworkStateProjector
     /// <returns>The created snapshot.</returns>
     public GlobalNetworkState CreateSnapshot(ImmutableDictionary<string, string>? metadata = null)
     {
-        var state = this.ProjectCurrentState(metadata);
-        this.snapshots.Add(state);
-        this.currentEpoch++;
+        var state = ProjectCurrentState(metadata);
+        _snapshots.Add(state);
+        _currentEpoch++;
         return state;
     }
 
@@ -108,7 +108,7 @@ public sealed class NetworkStateProjector
     /// <returns>An Option containing the snapshot if found.</returns>
     public Option<GlobalNetworkState> GetSnapshot(long epoch)
     {
-        var snapshot = this.snapshots.FirstOrDefault(s => s.Epoch == epoch);
+        var snapshot = _snapshots.FirstOrDefault(s => s.Epoch == epoch);
         return snapshot is not null ? Option<GlobalNetworkState>.Some(snapshot) : Option<GlobalNetworkState>.None();
     }
 
@@ -118,7 +118,7 @@ public sealed class NetworkStateProjector
     /// <returns>An Option containing the most recent snapshot if any exist.</returns>
     public Option<GlobalNetworkState> GetLatestSnapshot()
     {
-        var snapshot = this.snapshots.LastOrDefault();
+        var snapshot = _snapshots.LastOrDefault();
         return snapshot is not null ? Option<GlobalNetworkState>.Some(snapshot) : Option<GlobalNetworkState>.None();
     }
 
@@ -130,8 +130,8 @@ public sealed class NetworkStateProjector
     /// <returns>A Result containing the state delta or an error.</returns>
     public Result<GlobalNetworkStateDelta> ComputeDelta(long fromEpoch, long toEpoch)
     {
-        var fromSnapshot = this.GetSnapshot(fromEpoch);
-        var toSnapshot = this.GetSnapshot(toEpoch);
+        var fromSnapshot = GetSnapshot(fromEpoch);
+        var toSnapshot = GetSnapshot(toEpoch);
 
         if (!fromSnapshot.HasValue)
         {

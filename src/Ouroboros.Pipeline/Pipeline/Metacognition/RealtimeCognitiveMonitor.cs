@@ -8,21 +8,21 @@ namespace Ouroboros.Pipeline.Metacognition;
 /// </summary>
 public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
 {
-    private readonly ConcurrentQueue<CognitiveEvent> eventBuffer;
-    private readonly ConcurrentDictionary<Guid, MonitoringAlert> activeAlerts;
-    private readonly ConcurrentDictionary<string, double> thresholds;
-    private readonly ConcurrentBag<Action<MonitoringAlert>> subscribers;
-    private readonly object metricsLock = new();
+    private readonly ConcurrentQueue<CognitiveEvent> _eventBuffer;
+    private readonly ConcurrentDictionary<Guid, MonitoringAlert> _activeAlerts;
+    private readonly ConcurrentDictionary<string, double> _thresholds;
+    private readonly ConcurrentBag<Action<MonitoringAlert>> _subscribers;
+    private readonly object _metricsLock = new();
 
-    private readonly int maxBufferSize;
-    private readonly TimeSpan slidingWindowDuration;
+    private readonly int _maxBufferSize;
+    private readonly TimeSpan _slidingWindowDuration;
 
-    private int totalEventsRecorded;
-    private int errorCount;
-    private long totalLatencyTicks;
-    private int latencyMeasurements;
-    private DateTime lastHealthCheck;
-    private bool disposed;
+    private int _totalEventsRecorded;
+    private int _errorCount;
+    private long _totalLatencyTicks;
+    private int _latencyMeasurements;
+    private DateTime _lastHealthCheck;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RealtimeCognitiveMonitor"/> class.
@@ -31,13 +31,13 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
     /// <param name="slidingWindowDuration">Duration of the sliding window for metrics.</param>
     public RealtimeCognitiveMonitor(int maxBufferSize = 1000, TimeSpan? slidingWindowDuration = null)
     {
-        this.maxBufferSize = maxBufferSize;
-        this.slidingWindowDuration = slidingWindowDuration ?? TimeSpan.FromMinutes(5);
-        this.eventBuffer = new ConcurrentQueue<CognitiveEvent>();
-        this.activeAlerts = new ConcurrentDictionary<Guid, MonitoringAlert>();
-        this.thresholds = new ConcurrentDictionary<string, double>();
-        this.subscribers = new ConcurrentBag<Action<MonitoringAlert>>();
-        this.lastHealthCheck = DateTime.UtcNow;
+        _maxBufferSize = maxBufferSize;
+        _slidingWindowDuration = slidingWindowDuration ?? TimeSpan.FromMinutes(5);
+        _eventBuffer = new ConcurrentQueue<CognitiveEvent>();
+        _activeAlerts = new ConcurrentDictionary<Guid, MonitoringAlert>();
+        _thresholds = new ConcurrentDictionary<string, double>();
+        _subscribers = new ConcurrentBag<Action<MonitoringAlert>>();
+        _lastHealthCheck = DateTime.UtcNow;
 
         InitializeDefaultThresholds();
     }
@@ -45,7 +45,7 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
     /// <inheritdoc/>
     public Result<Unit, string> RecordEvent(CognitiveEvent cognitiveEvent)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (cognitiveEvent is null)
         {
@@ -55,8 +55,8 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
         try
         {
             // Add event to buffer
-            eventBuffer.Enqueue(cognitiveEvent);
-            Interlocked.Increment(ref totalEventsRecorded);
+            _eventBuffer.Enqueue(cognitiveEvent);
+            Interlocked.Increment(ref _totalEventsRecorded);
 
             // Trim buffer if needed
             TrimBuffer();
@@ -78,9 +78,9 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
     /// <inheritdoc/>
     public CognitiveHealth GetHealth()
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
-        lock (metricsLock)
+        lock (_metricsLock)
         {
             var recentEvents = GetEventsInWindow();
             var errorEvents = recentEvents.Count(e => e.EventType == CognitiveEventType.ErrorDetected);
@@ -89,27 +89,27 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
             var errorRate = totalInWindow > 0 ? (double)errorEvents / totalInWindow : 0.0;
             var efficiency = CalculateEfficiency(recentEvents);
             var healthScore = CalculateHealthScore(errorRate, efficiency);
-            var avgLatency = latencyMeasurements > 0
-                ? TimeSpan.FromTicks(totalLatencyTicks / latencyMeasurements)
+            var avgLatency = _latencyMeasurements > 0
+                ? TimeSpan.FromTicks(_totalLatencyTicks / _latencyMeasurements)
                 : TimeSpan.Zero;
 
-            lastHealthCheck = DateTime.UtcNow;
+            _lastHealthCheck = DateTime.UtcNow;
 
             return CognitiveHealth.FromMetrics(
                 healthScore,
                 efficiency,
                 errorRate,
                 avgLatency,
-                activeAlerts.Values.ToImmutableList());
+                _activeAlerts.Values.ToImmutableList());
         }
     }
 
     /// <inheritdoc/>
     public ImmutableList<CognitiveEvent> GetRecentEvents(int count)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
-        return eventBuffer
+        return _eventBuffer
             .OrderByDescending(e => e.Timestamp)
             .Take(Math.Max(0, count))
             .ToImmutableList();
@@ -118,9 +118,9 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
     /// <inheritdoc/>
     public ImmutableList<MonitoringAlert> GetAlerts()
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
-        return activeAlerts.Values
+        return _activeAlerts.Values
             .OrderByDescending(a => a.Priority)
             .ThenByDescending(a => a.Timestamp)
             .ToImmutableList();
@@ -129,9 +129,9 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
     /// <inheritdoc/>
     public Result<Unit, string> AcknowledgeAlert(Guid alertId)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
-        if (activeAlerts.TryRemove(alertId, out _))
+        if (_activeAlerts.TryRemove(alertId, out _))
         {
             return Result<Unit, string>.Success(Unit.Value);
         }
@@ -142,7 +142,7 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
     /// <inheritdoc/>
     public Result<Unit, string> SetThreshold(string metric, double threshold)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (string.IsNullOrWhiteSpace(metric))
         {
@@ -154,21 +154,21 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
             return Result<Unit, string>.Failure($"Threshold must be non-negative, got {threshold}.");
         }
 
-        thresholds[metric] = threshold;
+        _thresholds[metric] = threshold;
         return Result<Unit, string>.Success(Unit.Value);
     }
 
     /// <inheritdoc/>
     public IDisposable Subscribe(Action<MonitoringAlert> handler)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (handler is null)
         {
             throw new ArgumentNullException(nameof(handler));
         }
 
-        subscribers.Add(handler);
+        _subscribers.Add(handler);
         return new AlertSubscription(this, handler);
     }
 
@@ -179,9 +179,9 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
     /// <returns>An Option containing the threshold if set.</returns>
     public Option<double> GetThreshold(string metric)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
-        return thresholds.TryGetValue(metric, out var threshold)
+        return _thresholds.TryGetValue(metric, out var threshold)
             ? Option<double>.Some(threshold)
             : Option<double>.None();
     }
@@ -191,20 +191,20 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
     /// </summary>
     public void Reset()
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
-        while (eventBuffer.TryDequeue(out _))
+        while (_eventBuffer.TryDequeue(out _))
         {
         }
 
-        activeAlerts.Clear();
+        _activeAlerts.Clear();
 
-        lock (metricsLock)
+        lock (_metricsLock)
         {
-            totalEventsRecorded = 0;
-            errorCount = 0;
-            totalLatencyTicks = 0;
-            latencyMeasurements = 0;
+            _totalEventsRecorded = 0;
+            _errorCount = 0;
+            _totalLatencyTicks = 0;
+            _latencyMeasurements = 0;
         }
     }
 
@@ -213,52 +213,52 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (disposed)
+        if (_disposed)
         {
             return;
         }
 
         // Clear buffers before marking as disposed
-        while (eventBuffer.TryDequeue(out _))
+        while (_eventBuffer.TryDequeue(out _))
         {
         }
 
-        activeAlerts.Clear();
+        _activeAlerts.Clear();
 
-        disposed = true;
+        _disposed = true;
     }
 
     private void InitializeDefaultThresholds()
     {
-        thresholds["error_rate"] = 0.1;
-        thresholds["consecutive_errors"] = 3;
-        thresholds["confusion_rate"] = 0.2;
-        thresholds["contradiction_limit"] = 2;
-        thresholds["latency_ms"] = 1000;
+        _thresholds["error_rate"] = 0.1;
+        _thresholds["consecutive_errors"] = 3;
+        _thresholds["confusion_rate"] = 0.2;
+        _thresholds["contradiction_limit"] = 2;
+        _thresholds["latency_ms"] = 1000;
     }
 
     private void TrimBuffer()
     {
-        while (eventBuffer.Count > maxBufferSize && eventBuffer.TryDequeue(out _))
+        while (_eventBuffer.Count > _maxBufferSize && _eventBuffer.TryDequeue(out _))
         {
         }
     }
 
     private void UpdateMetrics(CognitiveEvent cognitiveEvent)
     {
-        lock (metricsLock)
+        lock (_metricsLock)
         {
             if (cognitiveEvent.EventType == CognitiveEventType.ErrorDetected)
             {
-                Interlocked.Increment(ref errorCount);
+                Interlocked.Increment(ref _errorCount);
             }
 
             // Track latency if present in context
             if (cognitiveEvent.Context.TryGetValue("latency_ms", out var latencyObj) &&
                 latencyObj is double latencyMs)
             {
-                totalLatencyTicks += TimeSpan.FromMilliseconds(latencyMs).Ticks;
-                Interlocked.Increment(ref latencyMeasurements);
+                _totalLatencyTicks += TimeSpan.FromMilliseconds(latencyMs).Ticks;
+                Interlocked.Increment(ref _latencyMeasurements);
             }
         }
     }
@@ -268,7 +268,7 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
         var recentEvents = GetEventsInWindow();
 
         // Check for consecutive errors
-        if (thresholds.TryGetValue("consecutive_errors", out var consecutiveErrorThreshold))
+        if (_thresholds.TryGetValue("consecutive_errors", out var consecutiveErrorThreshold))
         {
             var consecutiveErrors = CountConsecutiveErrors(recentEvents);
             if (consecutiveErrors >= (int)consecutiveErrorThreshold)
@@ -284,7 +284,7 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
 
         // Check for contradiction detection
         if (cognitiveEvent.EventType == CognitiveEventType.Contradiction &&
-            thresholds.TryGetValue("contradiction_limit", out var contradictionLimit))
+            _thresholds.TryGetValue("contradiction_limit", out var contradictionLimit))
         {
             var recentContradictions = recentEvents.Count(e => e.EventType == CognitiveEventType.Contradiction);
             if (recentContradictions >= (int)contradictionLimit)
@@ -300,7 +300,7 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
 
         // Check for high confusion rate
         if (cognitiveEvent.EventType == CognitiveEventType.ConfusionSensed &&
-            thresholds.TryGetValue("confusion_rate", out var confusionRateThreshold))
+            _thresholds.TryGetValue("confusion_rate", out var confusionRateThreshold))
         {
             var confusionRate = recentEvents.Count > 0
                 ? (double)recentEvents.Count(e => e.EventType == CognitiveEventType.ConfusionSensed) / recentEvents.Count
@@ -331,8 +331,8 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
 
     private ImmutableList<CognitiveEvent> GetEventsInWindow()
     {
-        var windowStart = DateTime.UtcNow - slidingWindowDuration;
-        return eventBuffer
+        var windowStart = DateTime.UtcNow - _slidingWindowDuration;
+        return _eventBuffer
             .Where(e => e.Timestamp >= windowStart)
             .OrderBy(e => e.Timestamp)
             .ToImmutableList();
@@ -393,16 +393,16 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
     private void RaiseAlert(MonitoringAlert alert)
     {
         // Add to active alerts (avoid duplicates by alert type in short window)
-        var recentSameType = activeAlerts.Values
+        var recentSameType = _activeAlerts.Values
             .Any(a => a.AlertType == alert.AlertType &&
                       (DateTime.UtcNow - a.Timestamp) < TimeSpan.FromSeconds(30));
 
         if (!recentSameType)
         {
-            activeAlerts[alert.Id] = alert;
+            _activeAlerts[alert.Id] = alert;
 
             // Notify subscribers
-            foreach (var subscriber in subscribers)
+            foreach (var subscriber in _subscribers)
             {
                 try
                 {
@@ -421,24 +421,24 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
     /// </summary>
     private sealed class AlertSubscription : IDisposable
     {
-        private readonly RealtimeCognitiveMonitor monitor;
-        private readonly Action<MonitoringAlert> handler;
-        private bool disposed;
+        private readonly RealtimeCognitiveMonitor _monitor;
+        private readonly Action<MonitoringAlert> _handler;
+        private bool _disposed;
 
         public AlertSubscription(RealtimeCognitiveMonitor monitor, Action<MonitoringAlert> handler)
         {
-            this.monitor = monitor;
-            this.handler = handler;
+            _monitor = monitor;
+            _handler = handler;
         }
 
         public void Dispose()
         {
-            if (disposed)
+            if (_disposed)
             {
                 return;
             }
 
-            disposed = true;
+            _disposed = true;
 
             // Note: ConcurrentBag doesn't support removal, so we rely on checking disposed state
             // In production, consider using a different collection type

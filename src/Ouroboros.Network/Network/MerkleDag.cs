@@ -10,10 +10,10 @@ namespace Ouroboros.Network;
 /// </summary>
 public sealed class MerkleDag
 {
-    private readonly Dictionary<Guid, MonadNode> nodes;
-    private readonly Dictionary<Guid, TransitionEdge> edges;
-    private readonly Dictionary<Guid, List<Guid>> nodeToIncomingEdges;
-    private readonly Dictionary<Guid, List<Guid>> nodeToOutgoingEdges;
+    private readonly Dictionary<Guid, MonadNode> _nodes;
+    private readonly Dictionary<Guid, TransitionEdge> _edges;
+    private readonly Dictionary<Guid, List<Guid>> _nodeToIncomingEdges;
+    private readonly Dictionary<Guid, List<Guid>> _nodeToOutgoingEdges;
     private readonly object _syncLock = new();
 
     /// <summary>
@@ -21,31 +21,31 @@ public sealed class MerkleDag
     /// </summary>
     public MerkleDag()
     {
-        this.nodes = new Dictionary<Guid, MonadNode>();
-        this.edges = new Dictionary<Guid, TransitionEdge>();
-        this.nodeToIncomingEdges = new Dictionary<Guid, List<Guid>>();
-        this.nodeToOutgoingEdges = new Dictionary<Guid, List<Guid>>();
+        _nodes = new Dictionary<Guid, MonadNode>();
+        _edges = new Dictionary<Guid, TransitionEdge>();
+        _nodeToIncomingEdges = new Dictionary<Guid, List<Guid>>();
+        _nodeToOutgoingEdges = new Dictionary<Guid, List<Guid>>();
     }
 
     /// <summary>
     /// Gets all nodes in the DAG.
     /// </summary>
-    public IReadOnlyDictionary<Guid, MonadNode> Nodes => this.nodes;
+    public IReadOnlyDictionary<Guid, MonadNode> Nodes => _nodes;
 
     /// <summary>
     /// Gets all edges in the DAG.
     /// </summary>
-    public IReadOnlyDictionary<Guid, TransitionEdge> Edges => this.edges;
+    public IReadOnlyDictionary<Guid, TransitionEdge> Edges => _edges;
 
     /// <summary>
     /// Gets the count of nodes in the DAG.
     /// </summary>
-    public int NodeCount => this.nodes.Count;
+    public int NodeCount => _nodes.Count;
 
     /// <summary>
     /// Gets the count of edges in the DAG.
     /// </summary>
-    public int EdgeCount => this.edges.Count;
+    public int EdgeCount => _edges.Count;
 
     /// <summary>
     /// Adds a node to the DAG.
@@ -64,9 +64,9 @@ public sealed class MerkleDag
             return Result<MonadNode>.Failure("Node hash verification failed");
         }
 
-        lock (this._syncLock)
+        lock (_syncLock)
         {
-            if (this.nodes.ContainsKey(node.Id))
+            if (_nodes.ContainsKey(node.Id))
             {
                 return Result<MonadNode>.Failure($"Node with ID {node.Id} already exists");
             }
@@ -74,15 +74,15 @@ public sealed class MerkleDag
             // Verify parent nodes exist
             foreach (var parentId in node.ParentIds)
             {
-                if (!this.nodes.ContainsKey(parentId))
+                if (!_nodes.ContainsKey(parentId))
                 {
                     return Result<MonadNode>.Failure($"Parent node {parentId} does not exist");
                 }
             }
 
-            this.nodes[node.Id] = node;
-            this.nodeToIncomingEdges[node.Id] = new List<Guid>();
-            this.nodeToOutgoingEdges[node.Id] = new List<Guid>();
+            _nodes[node.Id] = node;
+            _nodeToIncomingEdges[node.Id] = new List<Guid>();
+            _nodeToOutgoingEdges[node.Id] = new List<Guid>();
 
             return Result<MonadNode>.Success(node);
         }
@@ -105,9 +105,9 @@ public sealed class MerkleDag
             return Result<TransitionEdge>.Failure("Edge hash verification failed");
         }
 
-        lock (this._syncLock)
+        lock (_syncLock)
         {
-            if (this.edges.ContainsKey(edge.Id))
+            if (_edges.ContainsKey(edge.Id))
             {
                 return Result<TransitionEdge>.Failure($"Edge with ID {edge.Id} already exists");
             }
@@ -115,26 +115,26 @@ public sealed class MerkleDag
             // Verify all input and output nodes exist
             foreach (var inputId in edge.InputIds)
             {
-                if (!this.nodes.ContainsKey(inputId))
+                if (!_nodes.ContainsKey(inputId))
                 {
                     return Result<TransitionEdge>.Failure($"Input node {inputId} does not exist");
                 }
             }
 
-            if (!this.nodes.ContainsKey(edge.OutputId))
+            if (!_nodes.ContainsKey(edge.OutputId))
             {
                 return Result<TransitionEdge>.Failure($"Output node {edge.OutputId} does not exist");
             }
 
-            this.edges[edge.Id] = edge;
+            _edges[edge.Id] = edge;
 
             // Update adjacency information
             foreach (var inputId in edge.InputIds)
             {
-                this.nodeToOutgoingEdges[inputId].Add(edge.Id);
+                _nodeToOutgoingEdges[inputId].Add(edge.Id);
             }
 
-            this.nodeToIncomingEdges[edge.OutputId].Add(edge.Id);
+            _nodeToIncomingEdges[edge.OutputId].Add(edge.Id);
 
             return Result<TransitionEdge>.Success(edge);
         }
@@ -147,7 +147,7 @@ public sealed class MerkleDag
     /// <returns>An Option containing the node if found.</returns>
     public Option<MonadNode> GetNode(Guid nodeId)
     {
-        return this.nodes.TryGetValue(nodeId, out var node)
+        return _nodes.TryGetValue(nodeId, out var node)
             ? Option<MonadNode>.Some(node)
             : Option<MonadNode>.None();
     }
@@ -159,7 +159,7 @@ public sealed class MerkleDag
     /// <returns>An Option containing the edge if found.</returns>
     public Option<TransitionEdge> GetEdge(Guid edgeId)
     {
-        return this.edges.TryGetValue(edgeId, out var edge)
+        return _edges.TryGetValue(edgeId, out var edge)
             ? Option<TransitionEdge>.Some(edge)
             : Option<TransitionEdge>.None();
     }
@@ -171,12 +171,12 @@ public sealed class MerkleDag
     /// <returns>A collection of incoming edges.</returns>
     public IEnumerable<TransitionEdge> GetIncomingEdges(Guid nodeId)
     {
-        if (!this.nodeToIncomingEdges.TryGetValue(nodeId, out var edgeIds))
+        if (!_nodeToIncomingEdges.TryGetValue(nodeId, out var edgeIds))
         {
             return Enumerable.Empty<TransitionEdge>();
         }
 
-        return edgeIds.Select(id => this.edges[id]);
+        return edgeIds.Select(id => _edges[id]);
     }
 
     /// <summary>
@@ -186,12 +186,12 @@ public sealed class MerkleDag
     /// <returns>A collection of outgoing edges.</returns>
     public IEnumerable<TransitionEdge> GetOutgoingEdges(Guid nodeId)
     {
-        if (!this.nodeToOutgoingEdges.TryGetValue(nodeId, out var edgeIds))
+        if (!_nodeToOutgoingEdges.TryGetValue(nodeId, out var edgeIds))
         {
             return Enumerable.Empty<TransitionEdge>();
         }
 
-        return edgeIds.Select(id => this.edges[id]);
+        return edgeIds.Select(id => _edges[id]);
     }
 
     /// <summary>
@@ -200,7 +200,7 @@ public sealed class MerkleDag
     /// <returns>A collection of root nodes.</returns>
     public IEnumerable<MonadNode> GetRootNodes()
     {
-        return this.nodes.Values.Where(n => n.ParentIds.IsEmpty);
+        return _nodes.Values.Where(n => n.ParentIds.IsEmpty);
     }
 
     /// <summary>
@@ -209,8 +209,8 @@ public sealed class MerkleDag
     /// <returns>A collection of leaf nodes.</returns>
     public IEnumerable<MonadNode> GetLeafNodes()
     {
-        return this.nodes.Values.Where(n =>
-            !this.nodeToOutgoingEdges.TryGetValue(n.Id, out var edges) || edges.Count == 0);
+        return _nodes.Values.Where(n =>
+            !_nodeToOutgoingEdges.TryGetValue(n.Id, out var edges) || edges.Count == 0);
     }
 
     /// <summary>
@@ -224,9 +224,9 @@ public sealed class MerkleDag
         var sorted = new List<MonadNode>();
 
         // Initialize in-degrees based on incoming edges
-        foreach (var node in this.nodes.Values)
+        foreach (var node in _nodes.Values)
         {
-            inDegree[node.Id] = this.GetIncomingEdges(node.Id).Count();
+            inDegree[node.Id] = GetIncomingEdges(node.Id).Count();
             if (inDegree[node.Id] == 0)
             {
                 queue.Enqueue(node.Id);
@@ -237,10 +237,10 @@ public sealed class MerkleDag
         while (queue.Count > 0)
         {
             var nodeId = queue.Dequeue();
-            sorted.Add(this.nodes[nodeId]);
+            sorted.Add(_nodes[nodeId]);
 
             // Reduce in-degree for children
-            foreach (var edge in this.GetOutgoingEdges(nodeId))
+            foreach (var edge in GetOutgoingEdges(nodeId))
             {
                 inDegree[edge.OutputId]--;
                 if (inDegree[edge.OutputId] == 0)
@@ -250,7 +250,7 @@ public sealed class MerkleDag
             }
         }
 
-        if (sorted.Count != this.nodes.Count)
+        if (sorted.Count != _nodes.Count)
         {
             return Result<ImmutableArray<MonadNode>>.Failure("Graph contains cycles");
         }
@@ -265,7 +265,7 @@ public sealed class MerkleDag
     /// <returns>A collection of nodes with the specified type.</returns>
     public IEnumerable<MonadNode> GetNodesByType(string typeName)
     {
-        return this.nodes.Values.Where(n => n.TypeName == typeName);
+        return _nodes.Values.Where(n => n.TypeName == typeName);
     }
 
     /// <summary>
@@ -275,7 +275,7 @@ public sealed class MerkleDag
     /// <returns>A collection of edges with the specified operation.</returns>
     public IEnumerable<TransitionEdge> GetTransitionsByOperation(string operationName)
     {
-        return this.edges.Values.Where(e => e.OperationName == operationName);
+        return _edges.Values.Where(e => e.OperationName == operationName);
     }
 
     /// <summary>
@@ -285,7 +285,7 @@ public sealed class MerkleDag
     public Result<bool> VerifyIntegrity()
     {
         // Verify all node hashes
-        foreach (var node in this.nodes.Values)
+        foreach (var node in _nodes.Values)
         {
             if (!node.VerifyHash())
             {
@@ -294,7 +294,7 @@ public sealed class MerkleDag
         }
 
         // Verify all edge hashes
-        foreach (var edge in this.edges.Values)
+        foreach (var edge in _edges.Values)
         {
             if (!edge.VerifyHash())
             {
@@ -303,7 +303,7 @@ public sealed class MerkleDag
         }
 
         // Verify no cycles
-        var sortResult = this.TopologicalSort();
+        var sortResult = TopologicalSort();
         if (sortResult.IsFailure)
         {
             return Result<bool>.Failure(sortResult.Error);

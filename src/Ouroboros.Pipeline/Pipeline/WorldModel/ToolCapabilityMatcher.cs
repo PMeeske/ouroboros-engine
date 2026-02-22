@@ -28,7 +28,7 @@ public sealed class ToolCapabilityMatcher
         "some", "no", "not", "only", "just", "also", "very", "too", "so", "then"
     };
 
-    private readonly ToolRegistry toolRegistry;
+    private readonly ToolRegistry _toolRegistry;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ToolCapabilityMatcher"/> class.
@@ -39,7 +39,7 @@ public sealed class ToolCapabilityMatcher
     {
         ArgumentNullException.ThrowIfNull(toolRegistry);
 
-        this.toolRegistry = toolRegistry;
+        _toolRegistry = toolRegistry;
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ public sealed class ToolCapabilityMatcher
                 $"Minimum score must be between 0.0 and 1.0, got {minScore}");
         }
 
-        return this.MatchToolsForGoalDescription(goal.Description, minScore);
+        return MatchToolsForGoalDescription(goal.Description, minScore);
     }
 
     /// <summary>
@@ -83,12 +83,12 @@ public sealed class ToolCapabilityMatcher
                 $"Minimum score must be between 0.0 and 1.0, got {minScore}");
         }
 
-        IReadOnlyList<string> requiredCapabilities = this.GetRequiredCapabilities(goalDescription);
+        IReadOnlyList<string> requiredCapabilities = GetRequiredCapabilities(goalDescription);
         List<ToolMatch> matches = new();
 
-        foreach (ITool tool in this.toolRegistry.All)
+        foreach (ITool tool in _toolRegistry.All)
         {
-            ToolMatch match = this.ScoreAndMatchTool(tool, goalDescription, requiredCapabilities);
+            ToolMatch match = ScoreAndMatchTool(tool, goalDescription, requiredCapabilities);
 
             if (match.RelevanceScore >= minScore)
             {
@@ -116,8 +116,8 @@ public sealed class ToolCapabilityMatcher
         ArgumentNullException.ThrowIfNull(tool);
         ArgumentNullException.ThrowIfNull(goalDescription);
 
-        IReadOnlyList<string> requiredCapabilities = this.GetRequiredCapabilities(goalDescription);
-        return this.ScoreAndMatchTool(tool, goalDescription, requiredCapabilities).RelevanceScore;
+        IReadOnlyList<string> requiredCapabilities = GetRequiredCapabilities(goalDescription);
+        return ScoreAndMatchTool(tool, goalDescription, requiredCapabilities).RelevanceScore;
     }
 
     /// <summary>
@@ -145,7 +145,7 @@ public sealed class ToolCapabilityMatcher
     /// <returns>A step that transforms a goal into matching tools.</returns>
     public Step<Goal, Result<IReadOnlyList<ToolMatch>, string>> CreateMatchingStep(double minScore = 0.0)
     {
-        return goal => Task.FromResult(this.MatchToolsForGoal(goal, minScore));
+        return goal => Task.FromResult(MatchToolsForGoal(goal, minScore));
     }
 
     /// <summary>
@@ -155,7 +155,7 @@ public sealed class ToolCapabilityMatcher
     /// <returns>A step that transforms a goal description into matching tools.</returns>
     public Step<string, Result<IReadOnlyList<ToolMatch>, string>> CreateDescriptionMatchingStep(double minScore = 0.0)
     {
-        return description => Task.FromResult(this.MatchToolsForGoalDescription(description, minScore));
+        return description => Task.FromResult(MatchToolsForGoalDescription(description, minScore));
     }
 
     /// <summary>
@@ -168,7 +168,7 @@ public sealed class ToolCapabilityMatcher
     {
         ArgumentNullException.ThrowIfNull(goal);
 
-        Result<IReadOnlyList<ToolMatch>, string> result = this.MatchToolsForGoal(goal, minScore);
+        Result<IReadOnlyList<ToolMatch>, string> result = MatchToolsForGoal(goal, minScore);
 
         if (result.IsSuccess && result.Value.Count > 0)
         {
@@ -188,7 +188,7 @@ public sealed class ToolCapabilityMatcher
     {
         ArgumentNullException.ThrowIfNull(goalDescription);
 
-        Result<IReadOnlyList<ToolMatch>, string> result = this.MatchToolsForGoalDescription(goalDescription, minScore);
+        Result<IReadOnlyList<ToolMatch>, string> result = MatchToolsForGoalDescription(goalDescription, minScore);
 
         if (result.IsSuccess && result.Value.Count > 0)
         {

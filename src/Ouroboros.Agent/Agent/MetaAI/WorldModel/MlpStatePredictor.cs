@@ -11,13 +11,13 @@ namespace Ouroboros.Agent.MetaAI.WorldModel;
 /// </summary>
 public sealed class MlpStatePredictor : IStatePredictor
 {
-    private readonly int inputSize;
-    private readonly int hiddenSize;
-    private readonly int outputSize;
-    private readonly float[][] weightsInputHidden;
-    private readonly float[] biasHidden;
-    private readonly float[][] weightsHiddenOutput;
-    private readonly float[] biasOutput;
+    private readonly int _inputSize;
+    private readonly int _hiddenSize;
+    private readonly int _outputSize;
+    private readonly float[][] _weightsInputHidden;
+    private readonly float[] _biasHidden;
+    private readonly float[][] _weightsHiddenOutput;
+    private readonly float[] _biasOutput;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MlpStatePredictor"/> class.
@@ -38,13 +38,13 @@ public sealed class MlpStatePredictor : IStatePredictor
         float[][] weightsHiddenOutput,
         float[] biasOutput)
     {
-        this.inputSize = inputSize;
-        this.hiddenSize = hiddenSize;
-        this.outputSize = outputSize;
-        this.weightsInputHidden = weightsInputHidden;
-        this.biasHidden = biasHidden;
-        this.weightsHiddenOutput = weightsHiddenOutput;
-        this.biasOutput = biasOutput;
+        _inputSize = inputSize;
+        _hiddenSize = hiddenSize;
+        _outputSize = outputSize;
+        _weightsInputHidden = weightsInputHidden;
+        _biasHidden = biasHidden;
+        _weightsHiddenOutput = weightsHiddenOutput;
+        _biasOutput = biasOutput;
     }
 
     /// <inheritdoc/>
@@ -55,8 +55,8 @@ public sealed class MlpStatePredictor : IStatePredictor
         var input = ConcatenateEmbeddings(current.Embedding, actionEmbedding);
 
         // Forward pass through network
-        var hidden = ForwardLayer(input, weightsInputHidden, biasHidden, relu: true);
-        var output = ForwardLayer(hidden, weightsHiddenOutput, biasOutput, relu: false);
+        var hidden = ForwardLayer(input, _weightsInputHidden, _biasHidden, relu: true);
+        var output = ForwardLayer(hidden, _weightsHiddenOutput, _biasOutput, relu: false);
 
         // Create new state with predicted embedding
         var predictedState = new State(

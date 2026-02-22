@@ -14,9 +14,9 @@ namespace Ouroboros.Providers.SpeechToText;
 /// </summary>
 public sealed class LocalWhisperService : ISpeechToTextService
 {
-    private readonly string whisperPath;
-    private readonly string modelPath;
-    private readonly string modelSize;
+    private readonly string _whisperPath;
+    private readonly string _modelPath;
+    private readonly string _modelSize;
 
     /// <summary>
     /// Supported audio formats for local Whisper.
@@ -46,9 +46,9 @@ public sealed class LocalWhisperService : ISpeechToTextService
         string? modelPath = null,
         string modelSize = "small")
     {
-        this.whisperPath = whisperPath ?? FindWhisperExecutable();
-        this.modelPath = modelPath ?? string.Empty;
-        this.modelSize = modelSize;
+        _whisperPath = whisperPath ?? FindWhisperExecutable();
+        _modelPath = modelPath ?? string.Empty;
+        _modelSize = modelSize;
     }
 
     /// <inheritdoc/>
@@ -71,7 +71,7 @@ public sealed class LocalWhisperService : ISpeechToTextService
 
         try
         {
-            return await this.RunWhisperAsync(filePath, options, ct);
+            return await RunWhisperAsync(filePath, options, ct);
         }
         catch (Exception ex)
         {
@@ -95,7 +95,7 @@ public sealed class LocalWhisperService : ISpeechToTextService
             await fileStream.FlushAsync(ct);
             fileStream.Close();
 
-            return await this.TranscribeFileAsync(tempPath, options, ct);
+            return await TranscribeFileAsync(tempPath, options, ct);
         }
         finally
         {
@@ -121,7 +121,7 @@ public sealed class LocalWhisperService : ISpeechToTextService
         CancellationToken ct = default)
     {
         await using MemoryStream stream = new MemoryStream(audioData);
-        return await this.TranscribeStreamAsync(stream, fileName, options, ct);
+        return await TranscribeStreamAsync(stream, fileName, options, ct);
     }
 
     /// <inheritdoc/>
@@ -134,7 +134,7 @@ public sealed class LocalWhisperService : ISpeechToTextService
 
         // Add translation flag via prompt or special handling
         TranscriptionOptions translationOptions = options with { Prompt = "--translate " + (options.Prompt ?? string.Empty) };
-        return await this.TranscribeFileAsync(filePath, translationOptions, ct);
+        return await TranscribeFileAsync(filePath, translationOptions, ct);
     }
 
     /// <inheritdoc/>
@@ -149,10 +149,10 @@ public sealed class LocalWhisperService : ISpeechToTextService
             }
 
             // Check if whisper executable exists
-            if (File.Exists(this.whisperPath) || CanFindInPath(this.whisperPath))
+            if (File.Exists(_whisperPath) || CanFindInPath(_whisperPath))
             {
                 // Optionally check if model exists
-                if (!string.IsNullOrEmpty(this.modelPath) && !File.Exists(this.modelPath))
+                if (!string.IsNullOrEmpty(_modelPath) && !File.Exists(_modelPath))
                 {
                     return Task.FromResult(false);
                 }
@@ -390,15 +390,15 @@ public sealed class LocalWhisperService : ISpeechToTextService
         // Prefer Python whisper if available
         if (IsPythonWhisperAvailable())
         {
-            return await this.RunPythonWhisperAsync(filePath, options, ct);
+            return await RunPythonWhisperAsync(filePath, options, ct);
         }
 
         // Fall back to native whisper CLI
-        string args = this.BuildWhisperArguments(filePath, options);
+        string args = BuildWhisperArguments(filePath, options);
 
         ProcessStartInfo startInfo = new ProcessStartInfo
         {
-            FileName = this.whisperPath,
+            FileName = _whisperPath,
             Arguments = args,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -449,7 +449,7 @@ public sealed class LocalWhisperService : ISpeechToTextService
             // Use our wrapper script
             args.Add($"\"{scriptPath}\"");
             args.Add($"\"{filePath}\"");
-            args.Add($"--model {this.modelSize}");
+            args.Add($"--model {_modelSize}");
             args.Add("--output json");
 
             if (!string.IsNullOrEmpty(options.Language))
@@ -471,7 +471,7 @@ public sealed class LocalWhisperService : ISpeechToTextService
             string pythonCode = $@"
 import json
 import whisper
-model = whisper.load_model('{this.modelSize}')
+model = whisper.load_model('{_modelSize}')
 result = model.transcribe(r'{filePath.Replace("'", @"\'")}''{langArg}, task='{task}', verbose=False)
 output = {{
     'text': result['text'].strip(),
@@ -534,13 +534,13 @@ print(json.dumps(output, ensure_ascii=False))
         args.Add($"\"{filePath}\"");
 
         // Add model path or size
-        if (!string.IsNullOrEmpty(this.modelPath))
+        if (!string.IsNullOrEmpty(_modelPath))
         {
-            args.Add($"--model \"{this.modelPath}\"");
+            args.Add($"--model \"{_modelPath}\"");
         }
         else
         {
-            args.Add($"--model {this.modelSize}");
+            args.Add($"--model {_modelSize}");
         }
 
         // Add language

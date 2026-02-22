@@ -10,9 +10,9 @@ namespace Ouroboros.Agent.MetaAI.WorldModel;
 /// </summary>
 public sealed class SimpleTerminalPredictor : ITerminalPredictor
 {
-    private readonly float[] weights;
-    private readonly float bias;
-    private readonly float threshold;
+    private readonly float[] _weights;
+    private readonly float _bias;
+    private readonly float _threshold;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SimpleTerminalPredictor"/> class.
@@ -22,25 +22,25 @@ public sealed class SimpleTerminalPredictor : ITerminalPredictor
     /// <param name="threshold">Classification threshold (default 0.5).</param>
     public SimpleTerminalPredictor(float[] weights, float bias, float threshold = 0.5f)
     {
-        this.weights = weights;
-        this.bias = bias;
-        this.threshold = threshold;
+        _weights = weights;
+        _bias = bias;
+        _threshold = threshold;
     }
 
     /// <inheritdoc/>
     public Task<bool> PredictAsync(State state, CancellationToken ct = default)
     {
         // Logistic regression
-        float logit = bias;
-        for (int i = 0; i < Math.Min(state.Embedding.Length, weights.Length); i++)
+        float logit = _bias;
+        for (int i = 0; i < Math.Min(state.Embedding.Length, _weights.Length); i++)
         {
-            logit += state.Embedding[i] * weights[i];
+            logit += state.Embedding[i] * _weights[i];
         }
 
         // Sigmoid activation
         float probability = 1.0f / (1.0f + (float)Math.Exp(-logit));
 
-        bool isTerminal = probability >= threshold;
+        bool isTerminal = probability >= _threshold;
         return Task.FromResult(isTerminal);
     }
 

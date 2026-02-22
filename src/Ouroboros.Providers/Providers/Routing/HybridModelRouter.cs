@@ -48,7 +48,7 @@ public sealed class HybridModelRouter : Ouroboros.Abstractions.Core.IChatComplet
         // Select appropriate model
         Ouroboros.Abstractions.Core.IChatCompletionModel selectedModel = _taskModels[taskType];
 
-        Console.WriteLine($"[HybridModelRouter] Detected task: {taskType}, routing to appropriate model");
+        System.Diagnostics.Trace.TraceInformation("[HybridModelRouter] Detected task: {0}, routing to appropriate model", taskType);
 
         try
         {
@@ -61,14 +61,14 @@ public sealed class HybridModelRouter : Ouroboros.Abstractions.Core.IChatComplet
             // If selected model fails and we have a fallback, try it
             if (_config.FallbackModel != null && selectedModel != _config.FallbackModel)
             {
-                Console.WriteLine($"[HybridModelRouter] Primary model failed ({ex.Message}), trying fallback");
+                System.Diagnostics.Trace.TraceWarning("[HybridModelRouter] Primary model failed ({0}), trying fallback", ex.Message);
                 try
                 {
                     return await _config.FallbackModel.GenerateTextAsync(prompt, ct);
                 }
                 catch (Exception fallbackEx)
                 {
-                    Console.WriteLine($"[HybridModelRouter] Fallback also failed: {fallbackEx.Message}");
+                    System.Diagnostics.Trace.TraceWarning("[HybridModelRouter] Fallback also failed: {0}", fallbackEx.Message);
                 }
             }
 

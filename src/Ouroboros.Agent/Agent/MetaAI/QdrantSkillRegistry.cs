@@ -10,6 +10,7 @@
 // ==========================================================
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Qdrant.Client;
@@ -189,7 +190,7 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"[WARN] Qdrant semantic search failed: {ex.Message}");
+                    Trace.TraceWarning("[WARN] Qdrant semantic search failed: {0}", ex.Message);
                     // Fall back to simple filtering
                 }
             }
@@ -317,7 +318,7 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[WARN] Failed to delete skill '{skillId}' from Qdrant: {ex.Message}");
+                Trace.TraceWarning("[WARN] Failed to delete skill '{0}' from Qdrant: {1}", skillId, ex.Message);
             }
 
             return Result<Unit, string>.Success(Unit.Value);
@@ -379,7 +380,7 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
                         var sampleEmbedding = await _embedding.CreateEmbeddingsAsync("sample text for dimension detection", ct);
                         vectorSize = sampleEmbedding.Length;
                         _detectedVectorSize = vectorSize;
-                        Console.WriteLine($"[qdrant] Detected embedding dimension: {vectorSize}");
+                        Trace.TraceInformation("[qdrant] Detected embedding dimension: {0}", vectorSize);
                     }
                     catch
                     {
@@ -396,12 +397,12 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
                     },
                     cancellationToken: ct);
 
-                Console.WriteLine($"[qdrant] Created skills collection: {_config.CollectionName}");
+                Trace.TraceInformation("[qdrant] Created skills collection: {0}", _config.CollectionName);
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[WARN] Failed to ensure Qdrant collection: {ex.Message}");
+            Trace.TraceWarning("[WARN] Failed to ensure Qdrant collection: {0}", ex.Message);
         }
     }
 
@@ -462,7 +463,7 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[WARN] Failed to save skill '{skill.Name}' to Qdrant: {ex.Message}");
+            Trace.TraceWarning("[WARN] Failed to save skill '{0}' to Qdrant: {1}", skill.Name, ex.Message);
         }
         finally
         {
@@ -504,7 +505,7 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
                                 : skillData.Id.Trim();
                             if (string.IsNullOrWhiteSpace(skillId))
                             {
-                                Console.Error.WriteLine("[WARN] Skipping Qdrant skill with missing id");
+                                Trace.TraceWarning("[WARN] Skipping Qdrant skill with missing id");
                                 continue;
                             }
 
@@ -552,18 +553,18 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"[WARN] Failed to deserialize skill from Qdrant: {ex.Message}");
+                    Trace.TraceWarning("[WARN] Failed to deserialize skill from Qdrant: {0}", ex.Message);
                 }
             }
 
             if (_skillsCache.Count > 0)
             {
-                Console.WriteLine($"[qdrant] Loaded {_skillsCache.Count} skills from {_config.CollectionName}");
+                Trace.TraceInformation("[qdrant] Loaded {0} skills from {1}", _skillsCache.Count, _config.CollectionName);
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[WARN] Failed to load skills from Qdrant: {ex.Message}");
+            Trace.TraceWarning("[WARN] Failed to load skills from Qdrant: {0}", ex.Message);
         }
     }
 

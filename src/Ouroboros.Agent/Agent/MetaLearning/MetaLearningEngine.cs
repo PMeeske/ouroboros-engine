@@ -12,8 +12,8 @@ namespace Ouroboros.Agent.MetaLearning;
 /// </summary>
 public class MetaLearningEngine : IMetaLearningEngine
 {
-    private readonly IEmbeddingModel embeddingModel;
-    private readonly Random random;
+    private readonly IEmbeddingModel _embeddingModel;
+    private readonly Random _random;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MetaLearningEngine"/> class.
@@ -22,8 +22,8 @@ public class MetaLearningEngine : IMetaLearningEngine
     /// <param name="seed">Random seed for reproducibility (optional).</param>
     public MetaLearningEngine(IEmbeddingModel embeddingModel, int? seed = null)
     {
-        this.embeddingModel = embeddingModel ?? throw new ArgumentNullException(nameof(embeddingModel));
-        this.random = seed.HasValue ? new Random(seed.Value) : new Random();
+        _embeddingModel = embeddingModel ?? throw new ArgumentNullException(nameof(embeddingModel));
+        _random = seed.HasValue ? new Random(seed.Value) : new Random();
     }
 
     /// <inheritdoc/>
@@ -45,8 +45,8 @@ public class MetaLearningEngine : IMetaLearningEngine
 
             MetaModel? metaModel = config.Algorithm switch
             {
-                MetaAlgorithm.MAML => await this.MetaTrainMAMLAsync(baseModel, taskFamilies, config, ct),
-                MetaAlgorithm.Reptile => await this.MetaTrainReptileAsync(baseModel, taskFamilies, config, ct),
+                MetaAlgorithm.MAML => await MetaTrainMAMLAsync(baseModel, taskFamilies, config, ct),
+                MetaAlgorithm.Reptile => await MetaTrainReptileAsync(baseModel, taskFamilies, config, ct),
                 _ => throw new NotImplementedException($"Algorithm {config.Algorithm} not yet implemented"),
             };
 
@@ -101,7 +101,7 @@ public class MetaLearningEngine : IMetaLearningEngine
             var adaptationTime = DateTime.UtcNow - startTime;
 
             // Evaluate on validation set (using training set as proxy if no validation available)
-            var validationPerformance = await this.EvaluateModelAsync(adaptedModel, fewShotExamples, ct);
+            var validationPerformance = await EvaluateModelAsync(adaptedModel, fewShotExamples, ct);
 
             var result = AdaptedModel.Create(
                 adaptedModel,
@@ -130,8 +130,8 @@ public class MetaLearningEngine : IMetaLearningEngine
     {
         try
         {
-            var embeddingA = await this.EmbedTaskAsync(taskA, metaModel, ct);
-            var embeddingB = await this.EmbedTaskAsync(taskB, metaModel, ct);
+            var embeddingA = await EmbedTaskAsync(taskA, metaModel, ct);
+            var embeddingB = await EmbedTaskAsync(taskB, metaModel, ct);
 
             if (embeddingA.IsFailure || embeddingB.IsFailure)
             {
@@ -159,7 +159,7 @@ public class MetaLearningEngine : IMetaLearningEngine
             var taskDescription = $"{task.Name} ({task.Domain}): {task.Description ?? "No description"}";
 
             // Compute embedding using the embedding model
-            var embeddingVector = await this.embeddingModel.CreateEmbeddingsAsync(taskDescription, ct);
+            var embeddingVector = await _embeddingModel.CreateEmbeddingsAsync(taskDescription, ct);
 
             // Extract task characteristics
             var characteristics = new Dictionary<string, double>
@@ -197,7 +197,7 @@ public class MetaLearningEngine : IMetaLearningEngine
             ct.ThrowIfCancellationRequested();
 
             // Sample batch of tasks
-            var taskBatch = this.SampleTaskBatch(taskFamilies, config.TaskBatchSize);
+            var taskBatch = SampleTaskBatch(taskFamilies, config.TaskBatchSize);
 
             // Accumulate meta-gradients across tasks
             var metaGradients = new Dictionary<string, object>();
@@ -243,7 +243,7 @@ public class MetaLearningEngine : IMetaLearningEngine
             }
 
             // Average meta-gradients
-            this.AverageGradients(metaGradients, config.TaskBatchSize);
+            AverageGradients(metaGradients, config.TaskBatchSize);
 
             // Update meta-parameters
             await baseModel.UpdateParametersAsync(metaGradients, config.OuterLearningRate, ct);
@@ -268,7 +268,7 @@ public class MetaLearningEngine : IMetaLearningEngine
             ct.ThrowIfCancellationRequested();
 
             // Sample a task
-            var task = this.SampleTask(taskFamilies);
+            var task = SampleTask(taskFamilies);
 
             // Store initial parameters
             var initialParams = await baseModel.GetParametersAsync(ct);
@@ -284,7 +284,7 @@ public class MetaLearningEngine : IMetaLearningEngine
             var adaptedParams = await baseModel.GetParametersAsync(ct);
 
             // Reptile update: interpolate toward adapted parameters
-            var reptileGradients = this.ComputeReptileGradients(initialParams, adaptedParams);
+            var reptileGradients = ComputeReptileGradients(initialParams, adaptedParams);
             await baseModel.SetParametersAsync(initialParams, ct);
             await baseModel.UpdateParametersAsync(reptileGradients, config.OuterLearningRate, ct);
         }
@@ -315,8 +315,8 @@ public class MetaLearningEngine : IMetaLearningEngine
     /// </summary>
     private SynthesisTask SampleTask(List<TaskFamily> taskFamilies)
     {
-        var family = taskFamilies[this.random.Next(taskFamilies.Count)];
-        return family.SampleTrainingBatch(1, this.random)[0];
+        var family = taskFamilies[_random.Next(taskFamilies.Count)];
+        return family.SampleTrainingBatch(1, _random)[0];
     }
 
     /// <summary>
@@ -327,7 +327,7 @@ public class MetaLearningEngine : IMetaLearningEngine
         var batch = new List<SynthesisTask>();
         for (var i = 0; i < batchSize; i++)
         {
-            batch.Add(this.SampleTask(taskFamilies));
+            batch.Add(SampleTask(taskFamilies));
         }
 
         return batch;

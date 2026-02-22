@@ -14,6 +14,8 @@ namespace Ouroboros.Network;
 /// </summary>
 public sealed class QdrantDagStore : IAsyncDisposable
 {
+    private const int DefaultQdrantPort = 6334;
+
     private readonly QdrantDagConfig _config;
     private readonly QdrantClient _client;
     private readonly Func<string, Task<float[]>>? _embeddingFunc;
@@ -31,7 +33,7 @@ public sealed class QdrantDagStore : IAsyncDisposable
         _embeddingFunc = embeddingFunc;
 
         var uri = new Uri(config.Endpoint);
-        _client = new QdrantClient(uri.Host, uri.Port > 0 ? uri.Port : 6334, config.UseHttps);
+        _client = new QdrantClient(uri.Host, uri.Port > 0 ? uri.Port : DefaultQdrantPort, config.UseHttps);
     }
 
     /// <summary>

@@ -358,7 +358,7 @@ Write-Output 'OK'
         var result = await SpeakDirectAsync(text, ct);
         if (!result.IsSuccess)
         {
-            Console.WriteLine($"  [!] Local TTS Error: {result.Error}");
+            System.Diagnostics.Trace.TraceWarning("[Local TTS] Error: {0}", result.Error);
         }
     }
 

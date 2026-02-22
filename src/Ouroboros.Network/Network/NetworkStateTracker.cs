@@ -13,27 +13,27 @@ namespace Ouroboros.Network;
 /// </summary>
 public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
 {
-    private readonly MerkleDag dag;
-    private readonly NetworkStateProjector projector;
-    private readonly TransitionReplayEngine replayEngine;
-    private readonly Dictionary<string, PipelineBranchReifier> branchReifiers;
-    private readonly object syncLock = new();
-    private readonly List<string> mettaFacts = [];
-    private QdrantDagStore? qdrantStore;
-    private IMeTTaEngine? mettaEngine;
-    private bool autoPersist;
-    private bool autoExportMeTTa;
-    private bool disposed;
+    private readonly MerkleDag _dag;
+    private readonly NetworkStateProjector _projector;
+    private readonly TransitionReplayEngine _replayEngine;
+    private readonly Dictionary<string, PipelineBranchReifier> _branchReifiers;
+    private readonly object _syncLock = new();
+    private readonly List<string> _mettaFacts = [];
+    private QdrantDagStore? _qdrantStore;
+    private IMeTTaEngine? _mettaEngine;
+    private bool _autoPersist;
+    private bool _autoExportMeTTa;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NetworkStateTracker"/> class.
     /// </summary>
     public NetworkStateTracker()
     {
-        this.dag = new MerkleDag();
-        this.projector = new NetworkStateProjector(this.dag);
-        this.replayEngine = new TransitionReplayEngine(this.dag);
-        this.branchReifiers = new Dictionary<string, PipelineBranchReifier>();
+        _dag = new MerkleDag();
+        _projector = new NetworkStateProjector(_dag);
+        _replayEngine = new TransitionReplayEngine(_dag);
+        _branchReifiers = new Dictionary<string, PipelineBranchReifier>();
     }
 
     /// <summary>
@@ -41,8 +41,8 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// </summary>
     public bool AutoPersist
     {
-        get => this.autoPersist;
-        set => this.autoPersist = value;
+        get => _autoPersist;
+        set => _autoPersist = value;
     }
 
     /// <summary>
@@ -50,24 +50,24 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// </summary>
     public bool AutoExportMeTTa
     {
-        get => this.autoExportMeTTa;
-        set => this.autoExportMeTTa = value;
+        get => _autoExportMeTTa;
+        set => _autoExportMeTTa = value;
     }
 
     /// <summary>
     /// Gets whether Qdrant persistence is configured.
     /// </summary>
-    public bool HasQdrantStore => this.qdrantStore != null;
+    public bool HasQdrantStore => _qdrantStore != null;
 
     /// <summary>
     /// Gets whether MeTTa export is configured.
     /// </summary>
-    public bool HasMeTTaEngine => this.mettaEngine != null;
+    public bool HasMeTTaEngine => _mettaEngine != null;
 
     /// <summary>
     /// Gets all exported MeTTa facts.
     /// </summary>
-    public IReadOnlyList<string> MeTTaFacts => this.mettaFacts;
+    public IReadOnlyList<string> MeTTaFacts => _mettaFacts;
 
     /// <summary>
     /// Configures Qdrant persistence for the tracker.
@@ -76,8 +76,8 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// <param name="autoPersist">Whether to auto-persist after each update.</param>
     public void ConfigureQdrantPersistence(QdrantDagStore store, bool autoPersist = true)
     {
-        this.qdrantStore = store ?? throw new ArgumentNullException(nameof(store));
-        this.autoPersist = autoPersist;
+        _qdrantStore = store ?? throw new ArgumentNullException(nameof(store));
+        _autoPersist = autoPersist;
     }
 
     /// <summary>
@@ -87,29 +87,29 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// <param name="autoExport">Whether to auto-export after each update.</param>
     public void ConfigureMeTTaExport(IMeTTaEngine engine, bool autoExport = true)
     {
-        this.mettaEngine = engine ?? throw new ArgumentNullException(nameof(engine));
-        this.autoExportMeTTa = autoExport;
+        _mettaEngine = engine ?? throw new ArgumentNullException(nameof(engine));
+        _autoExportMeTTa = autoExport;
     }
 
     /// <summary>
     /// Gets the underlying MerkleDag.
     /// </summary>
-    public MerkleDag Dag => this.dag;
+    public MerkleDag Dag => _dag;
 
     /// <summary>
     /// Gets the network state projector.
     /// </summary>
-    public NetworkStateProjector Projector => this.projector;
+    public NetworkStateProjector Projector => _projector;
 
     /// <summary>
     /// Gets the transition replay engine.
     /// </summary>
-    public TransitionReplayEngine ReplayEngine => this.replayEngine;
+    public TransitionReplayEngine ReplayEngine => _replayEngine;
 
     /// <summary>
     /// Gets the count of tracked branches.
     /// </summary>
-    public int TrackedBranchCount => this.branchReifiers.Count;
+    public int TrackedBranchCount => _branchReifiers.Count;
 
     /// <summary>
     /// Event raised when a branch is reified (for external listeners).
@@ -128,19 +128,18 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
             return Result<ReificationResult>.Failure("Branch cannot be null");
         }
 
-        lock (this.syncLock)
+        lock (_syncLock)
         {
-            if (!this.branchReifiers.TryGetValue(branch.Name, out var reifier))
+            if (!_branchReifiers.TryGetValue(branch.Name, out var reifier))
             {
-                reifier = new PipelineBranchReifier(this.dag, this.projector);
-                this.branchReifiers[branch.Name] = reifier;
+                reifier = new PipelineBranchReifier(_dag, _projector);
+                _branchReifiers[branch.Name] = reifier;
             }
 
             var result = reifier.ReifyBranch(branch);
 
             if (result.IsSuccess)
             {
-                // Auto-persist and export if configured
                 _ = OnBranchUpdatedAsync(branch, result.Value.NodesCreated);
             }
 
@@ -162,12 +161,12 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
         }
 
         ReificationResult reificationResult;
-        lock (this.syncLock)
+        lock (_syncLock)
         {
-            if (!this.branchReifiers.TryGetValue(branch.Name, out var reifier))
+            if (!_branchReifiers.TryGetValue(branch.Name, out var reifier))
             {
-                reifier = new PipelineBranchReifier(this.dag, this.projector);
-                this.branchReifiers[branch.Name] = reifier;
+                reifier = new PipelineBranchReifier(_dag, _projector);
+                _branchReifiers[branch.Name] = reifier;
             }
 
             var result = reifier.ReifyBranch(branch);
@@ -196,13 +195,13 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
             return Result<int>.Failure("Branch cannot be null");
         }
 
-        lock (this.syncLock)
+        lock (_syncLock)
         {
-            if (!this.branchReifiers.TryGetValue(branch.Name, out var reifier))
+            if (!_branchReifiers.TryGetValue(branch.Name, out var reifier))
             {
                 // First time seeing this branch - do full reification
-                reifier = new PipelineBranchReifier(this.dag, this.projector);
-                this.branchReifiers[branch.Name] = reifier;
+                reifier = new PipelineBranchReifier(_dag, _projector);
+                _branchReifiers[branch.Name] = reifier;
                 var fullResult = reifier.ReifyBranch(branch);
                 if (fullResult.IsSuccess)
                 {
@@ -238,12 +237,12 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
         }
 
         int nodesCreated;
-        lock (this.syncLock)
+        lock (_syncLock)
         {
-            if (!this.branchReifiers.TryGetValue(branch.Name, out var reifier))
+            if (!_branchReifiers.TryGetValue(branch.Name, out var reifier))
             {
-                reifier = new PipelineBranchReifier(this.dag, this.projector);
-                this.branchReifiers[branch.Name] = reifier;
+                reifier = new PipelineBranchReifier(_dag, _projector);
+                _branchReifiers[branch.Name] = reifier;
                 var fullResult = reifier.ReifyBranch(branch);
                 if (!fullResult.IsSuccess)
                 {
@@ -279,24 +278,21 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     {
         try
         {
-            // Persist to Qdrant if configured
-            if (this.autoPersist && this.qdrantStore != null)
+            if (_autoPersist && _qdrantStore != null)
             {
                 await PersistToQdrantAsync(ct);
             }
 
-            // Export to MeTTa if configured
-            if (this.autoExportMeTTa && this.mettaEngine != null)
+            if (_autoExportMeTTa && _mettaEngine != null)
             {
                 await ExportToMeTTaAsync(branch, ct);
             }
 
-            // Raise event for external listeners
             BranchReified?.Invoke(this, new BranchReifiedEventArgs(branch.Name, nodesCreated));
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[NetworkStateTracker] Post-update error: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning($"[NetworkStateTracker] Post-update error: {ex.Message}");
         }
     }
 
@@ -307,12 +303,12 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// <returns>A Result containing the save result.</returns>
     public async Task<Result<DagSaveResult>> PersistToQdrantAsync(CancellationToken ct = default)
     {
-        if (this.qdrantStore == null)
+        if (_qdrantStore == null)
         {
             return Result<DagSaveResult>.Failure("Qdrant store not configured. Call ConfigureQdrantPersistence first.");
         }
 
-        return await this.qdrantStore.SaveDagAsync(this.dag, ct);
+        return await _qdrantStore.SaveDagAsync(_dag, ct);
     }
 
     /// <summary>
@@ -323,7 +319,7 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// <returns>A Result indicating success or failure.</returns>
     public async Task<Result<int>> ExportToMeTTaAsync(PipelineBranch branch, CancellationToken ct = default)
     {
-        if (this.mettaEngine == null)
+        if (_mettaEngine == null)
         {
             return Result<int>.Failure("MeTTa engine not configured. Call ConfigureMeTTaExport first.");
         }
@@ -338,14 +334,12 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
                 continue;
             }
 
-            // Track locally
-            if (!this.mettaFacts.Contains(fact))
+            if (!_mettaFacts.Contains(fact))
             {
-                this.mettaFacts.Add(fact);
+                _mettaFacts.Add(fact);
             }
 
-            // Add to engine
-            var result = await this.mettaEngine.AddFactAsync(fact, ct);
+            var result = await _mettaEngine.AddFactAsync(fact, ct);
             if (result.IsSuccess)
             {
                 addedCount++;
@@ -362,14 +356,13 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// <returns>A Result containing the total facts added.</returns>
     public async Task<Result<int>> ExportAllToMeTTaAsync(CancellationToken ct = default)
     {
-        if (this.mettaEngine == null)
+        if (_mettaEngine == null)
         {
             return Result<int>.Failure("MeTTa engine not configured. Call ConfigureMeTTaExport first.");
         }
 
         var totalAdded = 0;
 
-        // First add DAG constraint rules
         var rules = DagMeTTaExtensions.GetDagConstraintRules();
         foreach (var rule in rules)
         {
@@ -378,20 +371,19 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
                 continue;
             }
 
-            var result = await this.mettaEngine.AddFactAsync(rule, ct);
+            var result = await _mettaEngine.AddFactAsync(rule, ct);
             if (result.IsSuccess)
             {
                 totalAdded++;
             }
         }
 
-        // Then export all branches
-        foreach (var branchName in this.branchReifiers.Keys)
+        foreach (var branchName in _branchReifiers.Keys)
         {
-            if (this.branchReifiers.TryGetValue(branchName, out var reifier))
+            if (_branchReifiers.TryGetValue(branchName, out var reifier))
             {
-                // Get the branch from the reifier's tracked state
-                // Note: We need to iterate through all tracked branches
+                // Note: Branch export requires the PipelineBranch instance.
+                // Use ExportToMeTTaAsync(branch) for individual branches.
             }
         }
 
@@ -407,12 +399,12 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// <returns>True if the constraint is satisfied, false otherwise.</returns>
     public async Task<Result<bool>> VerifyConstraintAsync(string branchName, string constraint, CancellationToken ct = default)
     {
-        if (this.mettaEngine == null)
+        if (_mettaEngine == null)
         {
             return Result<bool>.Failure("MeTTa engine not configured. Call ConfigureMeTTaExport first.");
         }
 
-        var verifyResult = await this.mettaEngine.VerifyDagConstraintAsync(branchName, constraint, ct);
+        var verifyResult = await _mettaEngine.VerifyDagConstraintAsync(branchName, constraint, ct);
         return verifyResult.Match(
             isValid => Result<bool>.Success(isValid),
             error => Result<bool>.Failure(error));
@@ -425,10 +417,10 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     public GlobalNetworkState CreateSnapshot()
     {
         var metadata = ImmutableDictionary<string, string>.Empty
-            .Add("trackedBranches", string.Join(",", this.branchReifiers.Keys))
-            .Add("branchCount", this.branchReifiers.Count.ToString());
+            .Add("trackedBranches", string.Join(",", _branchReifiers.Keys))
+            .Add("branchCount", _branchReifiers.Count.ToString());
 
-        return this.projector.CreateSnapshot(metadata);
+        return _projector.CreateSnapshot(metadata);
     }
 
     /// <summary>
@@ -438,7 +430,7 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// <returns>A Result containing the transition path.</returns>
     public Result<ImmutableArray<TransitionEdge>> ReplayToNode(Guid targetNodeId)
     {
-        return this.replayEngine.ReplayPathToNode(targetNodeId);
+        return _replayEngine.ReplayPathToNode(targetNodeId);
     }
 
     /// <summary>
@@ -447,14 +439,14 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// <returns>A formatted summary string.</returns>
     public string GetStateSummary()
     {
-        var state = this.projector.ProjectCurrentState();
+        var state = _projector.ProjectCurrentState();
 
         var summary = new System.Text.StringBuilder();
         summary.AppendLine("=== Network State Summary ===");
         summary.AppendLine($"Total Nodes: {state.TotalNodes}");
         summary.AppendLine($"Total Transitions: {state.TotalTransitions}");
-        summary.AppendLine($"Tracked Branches: {this.branchReifiers.Count}");
-        summary.AppendLine($"Current Epoch: {this.projector.CurrentEpoch}");
+        summary.AppendLine($"Tracked Branches: {_branchReifiers.Count}");
+        summary.AppendLine($"Current Epoch: {_projector.CurrentEpoch}");
 
         if (state.AverageConfidence.HasValue)
         {
@@ -493,9 +485,9 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// <returns>An Option containing the reifier if found.</returns>
     public Option<PipelineBranchReifier> GetBranchReifier(string branchName)
     {
-        lock (this.syncLock)
+        lock (_syncLock)
         {
-            return this.branchReifiers.TryGetValue(branchName, out var reifier)
+            return _branchReifiers.TryGetValue(branchName, out var reifier)
                 ? Option<PipelineBranchReifier>.Some(reifier)
                 : Option<PipelineBranchReifier>.None();
         }
@@ -506,39 +498,38 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// </summary>
     public void Reset()
     {
-        lock (this.syncLock)
+        lock (_syncLock)
         {
-            this.branchReifiers.Clear();
-            this.mettaFacts.Clear();
-            // Note: MerkleDag doesn't have a Clear method - this creates fresh instances
+            _branchReifiers.Clear();
+            _mettaFacts.Clear();
         }
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (!this.disposed)
+        if (!_disposed)
         {
-            this.branchReifiers.Clear();
-            this.mettaFacts.Clear();
-            this.disposed = true;
+            _branchReifiers.Clear();
+            _mettaFacts.Clear();
+            _disposed = true;
         }
     }
 
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        if (!this.disposed)
+        if (!_disposed)
         {
-            this.branchReifiers.Clear();
-            this.mettaFacts.Clear();
+            _branchReifiers.Clear();
+            _mettaFacts.Clear();
 
-            if (this.qdrantStore != null)
+            if (_qdrantStore != null)
             {
-                await this.qdrantStore.DisposeAsync();
+                await _qdrantStore.DisposeAsync();
             }
 
-            this.disposed = true;
+            _disposed = true;
         }
     }
 }
