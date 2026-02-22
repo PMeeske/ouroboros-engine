@@ -115,6 +115,9 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 
         return persona.ToUpperInvariant() switch
         {
+            // Iaret uses the Azure multilingual voice — speaks any language automatically
+            // when xml:lang is set to the detected culture in SSML.
+            "IARET" => "en-US-AvaMultilingualNeural",
             "OUROBOROS" => isGerman ? "de-DE-KatjaNeural" : "en-US-JennyNeural",
             "ARIA" => isGerman ? "de-DE-AmalaNeural" : "en-US-AriaNeural",
             "ECHO" => isGerman ? "de-DE-LouisaNeural" : "en-GB-SoniaNeural",
@@ -126,7 +129,17 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 
     private void UpdateVoiceForCulture()
     {
-        // Extract persona from current voice name
+        // Multilingual voices (e.g. AvaMultilingualNeural) handle all languages via xml:lang
+        // in SSML — no need to switch voices when the culture changes.
+        if (_voiceName.Contains("Multilingual", StringComparison.OrdinalIgnoreCase))
+        {
+            // Just reinitialise with updated _culture (for xml:lang in SSML); voice stays the same.
+            _synthesizer?.Dispose();
+            InitializeSynthesizer();
+            return;
+        }
+
+        // For non-multilingual voices, select the culture-appropriate variant.
         string persona = _voiceName switch
         {
             var v when v.Contains("Jenny") || v.Contains("Katja") => "OUROBOROS",
