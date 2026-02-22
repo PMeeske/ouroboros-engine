@@ -231,19 +231,13 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 
             if (_synthesizer == null) InitializeSynthesizer();
 
-            bool isGerman = _culture.StartsWith("de", StringComparison.OrdinalIgnoreCase);
+            // express-as style='assistant' is English-only; use plain prosody for all other cultures
+            // so en-US-AvaMultilingualNeural speaks French, German, etc. without SSML errors.
+            bool isEnglish = _culture.StartsWith("en", StringComparison.OrdinalIgnoreCase);
 
             // Cortana-style: calm, warm, slightly ethereal, intelligent
-            var ssml = isGerman
+            var ssml = isEnglish
                 ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
-                    <voice name='{_voiceName}'>
-                        <prosody rate='-5%' pitch='+5%' volume='+5%'>
-                            {System.Security.SecurityElement.Escape(text)}
-                        </prosody>
-                    </voice>
-                </speak>"
-                : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
                     xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
                     <voice name='{_voiceName}'>
                         <mstts:express-as style='assistant' styledegree='1.2'>
@@ -251,6 +245,14 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
                                 {System.Security.SecurityElement.Escape(text)}
                             </prosody>
                         </mstts:express-as>
+                    </voice>
+                </speak>"
+                : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
+                    <voice name='{_voiceName}'>
+                        <prosody rate='-5%' pitch='+5%' volume='+5%'>
+                            {System.Security.SecurityElement.Escape(text)}
+                        </prosody>
                     </voice>
                 </speak>";
 
@@ -330,24 +332,14 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 
             if (_synthesizer == null) InitializeSynthesizer();
 
-            bool isGerman = _culture.StartsWith("de", StringComparison.OrdinalIgnoreCase);
+            // express-as styles work only for English; use plain prosody for other cultures.
+            bool isEnglish = _culture.StartsWith("en", StringComparison.OrdinalIgnoreCase);
             string ssml;
 
             if (isWhisper)
             {
-                // Cortana-style whisper: intimate, wise, slightly ethereal
-                ssml = isGerman
-                    ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
-                        <voice name='{_voiceName}'>
-                            <mstts:express-as style='whispering' styledegree='0.6'>
-                                <prosody rate='-8%' pitch='+3%' volume='-15%'>
-                                    {System.Security.SecurityElement.Escape(text)}
-                                </prosody>
-                            </mstts:express-as>
-                        </voice>
-                    </speak>"
-                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                // Whispering style is available for all languages on multilingual voices.
+                ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
                         xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
                         <voice name='{_voiceName}'>
                             <mstts:express-as style='whispering' styledegree='0.6'>
@@ -361,16 +353,8 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
             else
             {
                 // Cortana-style answers: calm, confident, warm
-                ssml = isGerman
+                ssml = isEnglish
                     ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
-                        <voice name='{_voiceName}'>
-                            <prosody rate='-5%' pitch='+5%' volume='+5%'>
-                                {System.Security.SecurityElement.Escape(text)}
-                            </prosody>
-                        </voice>
-                    </speak>"
-                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
                         xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
                         <voice name='{_voiceName}'>
                             <mstts:express-as style='assistant' styledegree='1.2'>
@@ -378,6 +362,14 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
                                     {System.Security.SecurityElement.Escape(text)}
                                 </prosody>
                             </mstts:express-as>
+                        </voice>
+                    </speak>"
+                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
+                        <voice name='{_voiceName}'>
+                            <prosody rate='-5%' pitch='+5%' volume='+5%'>
+                                {System.Security.SecurityElement.Escape(text)}
+                            </prosody>
                         </voice>
                     </speak>";
             }
@@ -453,7 +445,8 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
             var voice = _voiceName;
             var rate = options?.Speed ?? 1.0;
             var isWhisper = options?.IsWhisper ?? false;
-            bool isGerman = _culture.StartsWith("de", StringComparison.OrdinalIgnoreCase);
+            // express-as styles work only for English; plain prosody for other cultures.
+            bool isEnglish = _culture.StartsWith("en", StringComparison.OrdinalIgnoreCase);
 
             string ssml;
             if (isWhisper)
@@ -475,16 +468,8 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
             {
                 // Cortana-style: calm, warm, slightly ethereal, intelligent
                 var normalRate = -5 + (int)((rate - 1.0) * 50);
-                ssml = isGerman
+                ssml = isEnglish
                     ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
-                        <voice name='{voice}'>
-                            <prosody rate='{normalRate:+0;-0;0}%' pitch='+5%' volume='+5%'>
-                                {System.Security.SecurityElement.Escape(text)}
-                            </prosody>
-                        </voice>
-                    </speak>"
-                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
                         xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
                         <voice name='{voice}'>
                             <mstts:express-as style='assistant' styledegree='1.2'>
@@ -492,6 +477,14 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
                                     {System.Security.SecurityElement.Escape(text)}
                                 </prosody>
                             </mstts:express-as>
+                        </voice>
+                    </speak>"
+                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
+                        <voice name='{voice}'>
+                            <prosody rate='{normalRate:+0;-0;0}%' pitch='+5%' volume='+5%'>
+                                {System.Security.SecurityElement.Escape(text)}
+                            </prosody>
                         </voice>
                     </speak>";
             }
@@ -663,7 +656,8 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
             var voice = _voiceName;
             var rate = options?.Speed ?? 1.0;
             var isWhisper = options?.IsWhisper ?? false;
-            bool isGerman = _culture.StartsWith("de", StringComparison.OrdinalIgnoreCase);
+            // express-as styles work only for English; plain prosody for other cultures.
+            bool isEnglish = _culture.StartsWith("en", StringComparison.OrdinalIgnoreCase);
 
             string ssml;
             if (isWhisper)
@@ -685,16 +679,8 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
             {
                 // Cortana-style: calm, warm, slightly ethereal, intelligent
                 var normalRate = -5 + (int)((rate - 1.0) * 50);
-                ssml = isGerman
+                ssml = isEnglish
                     ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
-                        <voice name='{voice}'>
-                            <prosody rate='{normalRate:+0;-0;0}%' pitch='+5%' volume='+5%'>
-                                {System.Security.SecurityElement.Escape(text)}
-                            </prosody>
-                        </voice>
-                    </speak>"
-                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
                         xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
                         <voice name='{voice}'>
                             <mstts:express-as style='assistant' styledegree='1.2'>
@@ -702,6 +688,14 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
                                     {System.Security.SecurityElement.Escape(text)}
                                 </prosody>
                             </mstts:express-as>
+                        </voice>
+                    </speak>"
+                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
+                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{_culture}'>
+                        <voice name='{voice}'>
+                            <prosody rate='{normalRate:+0;-0;0}%' pitch='+5%' volume='+5%'>
+                                {System.Security.SecurityElement.Escape(text)}
+                            </prosody>
                         </voice>
                     </speak>";
             }
