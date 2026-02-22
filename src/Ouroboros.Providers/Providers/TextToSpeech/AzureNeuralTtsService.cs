@@ -22,6 +22,7 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     private readonly SemaphoreSlim _speechLock = new(1, 1);
     private readonly string _subscriptionKey;
     private readonly string _region;
+    private readonly string _persona;
     private string _voiceName;
     private string _culture;
     private SpeechSynthesizer? _synthesizer;
@@ -101,23 +102,38 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     {
         _subscriptionKey = subscriptionKey ?? throw new ArgumentNullException(nameof(subscriptionKey));
         _region = region ?? throw new ArgumentNullException(nameof(region));
+        _persona = persona;
         _culture = culture ?? "en-US";
 
         // Select voice based on persona and culture
-        _voiceName = SelectVoice(persona, _culture);
+        _voiceName = SelectVoice(_persona, _culture);
 
         InitializeSynthesizer();
     }
 
     private static string SelectVoice(string persona, string culture)
     {
-        bool isGerman = culture.Equals("de-DE", StringComparison.OrdinalIgnoreCase);
+        bool isGerman = culture.StartsWith("de", StringComparison.OrdinalIgnoreCase);
 
         return persona.ToUpperInvariant() switch
         {
-            // Iaret uses the Azure multilingual voice — speaks any language automatically
-            // when xml:lang is set to the detected culture in SSML.
-            "IARET" => "en-US-AvaMultilingualNeural",
+            // Iaret uses native-language voices per detected culture.
+            // Cross-lingual SSML on multilingual voices is unreliable; native voices are authoritative.
+            "IARET" => culture switch
+            {
+                var c when c.StartsWith("de", StringComparison.OrdinalIgnoreCase) => "de-DE-SeraphinaMultilingualNeural",
+                var c when c.StartsWith("fr", StringComparison.OrdinalIgnoreCase) => "fr-FR-VivienneMultilingualNeural",
+                var c when c.StartsWith("es", StringComparison.OrdinalIgnoreCase) => "es-ES-XimenaNeural",
+                var c when c.StartsWith("it", StringComparison.OrdinalIgnoreCase) => "it-IT-ElsaNeural",
+                var c when c.StartsWith("pt", StringComparison.OrdinalIgnoreCase) => "pt-PT-RaquelNeural",
+                var c when c.StartsWith("nl", StringComparison.OrdinalIgnoreCase) => "nl-NL-FennaNeural",
+                var c when c.StartsWith("ru", StringComparison.OrdinalIgnoreCase) => "ru-RU-DariyaNeural",
+                var c when c.StartsWith("ja", StringComparison.OrdinalIgnoreCase) => "ja-JP-NanamiNeural",
+                var c when c.StartsWith("zh", StringComparison.OrdinalIgnoreCase) => "zh-CN-XiaoxiaoNeural",
+                var c when c.StartsWith("ko", StringComparison.OrdinalIgnoreCase) => "ko-KR-SunHiNeural",
+                var c when c.StartsWith("ar", StringComparison.OrdinalIgnoreCase) => "ar-SA-ZariyahNeural",
+                _ => "en-US-AvaMultilingualNeural",
+            },
             "OUROBOROS" => isGerman ? "de-DE-KatjaNeural" : "en-US-JennyNeural",
             "ARIA" => isGerman ? "de-DE-AmalaNeural" : "en-US-AriaNeural",
             "ECHO" => isGerman ? "de-DE-LouisaNeural" : "en-GB-SoniaNeural",
@@ -129,30 +145,12 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 
     private void UpdateVoiceForCulture()
     {
-        // Multilingual voices (e.g. AvaMultilingualNeural) handle all languages via xml:lang
-        // in SSML — no need to switch voices when the culture changes.
-        if (_voiceName.Contains("Multilingual", StringComparison.OrdinalIgnoreCase))
-        {
-            // Just reinitialise with updated _culture (for xml:lang in SSML); voice stays the same.
-            _synthesizer?.Dispose();
-            InitializeSynthesizer();
-            return;
-        }
+        // Select the culture-appropriate voice for the stored persona.
+        // This always updates _voiceName, including for IARET which switches to
+        // native-language voices (e.g. de-DE-SeraphinaMultilingualNeural for German).
+        _voiceName = SelectVoice(_persona, _culture);
 
-        // For non-multilingual voices, select the culture-appropriate variant.
-        string persona = _voiceName switch
-        {
-            var v when v.Contains("Jenny") || v.Contains("Katja") => "OUROBOROS",
-            var v when v.Contains("Aria") || v.Contains("Amala") => "ARIA",
-            var v when v.Contains("Sonia") || v.Contains("Louisa") => "ECHO",
-            var v when v.Contains("Sara") || v.Contains("Elke") => "SAGE",
-            var v when v.Contains("Guy") || v.Contains("Conrad") => "ATLAS",
-            _ => "OUROBOROS"
-        };
-
-        _voiceName = SelectVoice(persona, _culture);
-
-        // Reinitialize synthesizer with new voice
+        // Reinitialize synthesizer with the new voice and updated culture.
         _synthesizer?.Dispose();
         InitializeSynthesizer();
     }
