@@ -117,23 +117,9 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 
         return persona.ToUpperInvariant() switch
         {
-            // Iaret uses native-language voices per detected culture.
-            // Cross-lingual SSML on multilingual voices is unreliable; native voices are authoritative.
-            "IARET" => culture switch
-            {
-                var c when c.StartsWith("de", StringComparison.OrdinalIgnoreCase) => "de-DE-SeraphinaMultilingualNeural",
-                var c when c.StartsWith("fr", StringComparison.OrdinalIgnoreCase) => "fr-FR-VivienneMultilingualNeural",
-                var c when c.StartsWith("es", StringComparison.OrdinalIgnoreCase) => "es-ES-XimenaNeural",
-                var c when c.StartsWith("it", StringComparison.OrdinalIgnoreCase) => "it-IT-ElsaNeural",
-                var c when c.StartsWith("pt", StringComparison.OrdinalIgnoreCase) => "pt-PT-RaquelNeural",
-                var c when c.StartsWith("nl", StringComparison.OrdinalIgnoreCase) => "nl-NL-FennaNeural",
-                var c when c.StartsWith("ru", StringComparison.OrdinalIgnoreCase) => "ru-RU-DariyaNeural",
-                var c when c.StartsWith("ja", StringComparison.OrdinalIgnoreCase) => "ja-JP-NanamiNeural",
-                var c when c.StartsWith("zh", StringComparison.OrdinalIgnoreCase) => "zh-CN-XiaoxiaoNeural",
-                var c when c.StartsWith("ko", StringComparison.OrdinalIgnoreCase) => "ko-KR-SunHiNeural",
-                var c when c.StartsWith("ar", StringComparison.OrdinalIgnoreCase) => "ar-SA-ZariyahNeural",
-                _ => "en-US-AvaMultilingualNeural",
-            },
+            // Iaret uses en-US-AvaMultilingualNeural (Cortana-like voice) for all languages.
+            // Cross-lingual synthesis is triggered by <lang xml:lang='xx-XX'> in BuildSsml.
+            "IARET" => "en-US-AvaMultilingualNeural",
             "OUROBOROS" => isGerman ? "de-DE-KatjaNeural" : "en-US-JennyNeural",
             "ARIA" => isGerman ? "de-DE-AmalaNeural" : "en-US-AriaNeural",
             "ECHO" => isGerman ? "de-DE-LouisaNeural" : "en-GB-SoniaNeural",
@@ -146,8 +132,8 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     private void UpdateVoiceForCulture()
     {
         // Select the culture-appropriate voice for the stored persona.
-        // This always updates _voiceName, including for IARET which switches to
-        // native-language voices (e.g. de-DE-SeraphinaMultilingualNeural for German).
+        // For IARET this always stays en-US-AvaMultilingualNeural (cross-lingual via <lang>).
+        // For other personas this picks the locale-specific voice (e.g. de-DE-KatjaNeural).
         _voiceName = SelectVoice(_persona, _culture);
 
         // Reinitialize synthesizer with the new voice and updated culture.
@@ -171,9 +157,72 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     /// The voice's primary locale for the SSML &lt;speak&gt; element.
     /// For cross-lingual synthesis the &lt;speak&gt; element must carry the voice's
     /// OWN locale (e.g. en-US for AvaMultilingualNeural); the target language is
-    /// declared on the &lt;voice xml:lang&gt; attribute instead.
+    /// declared on the inner &lt;lang&gt; element instead.
     /// </summary>
     private string SpeakLang => VoicePrimaryLocale(_voiceName);
+
+    /// <summary>
+    /// Builds an SSML document for the given text, style, and target culture.
+    /// Centralises all language/payload logic — the single source of truth for SSML construction.
+    /// <para>
+    /// Cross-lingual synthesis (e.g. en-US-AvaMultilingualNeural speaking German) is triggered
+    /// via a &lt;lang xml:lang='de-DE'&gt; element inside &lt;voice&gt; — the Azure-documented
+    /// format for cross-lingual neural voices. The caller may supply an explicit
+    /// <paramref name="cultureOverride"/> to drive language without mutating service state.
+    /// </para>
+    /// </summary>
+    /// <param name="text">Text to synthesise.</param>
+    /// <param name="isWhisper">Use whispering style.</param>
+    /// <param name="cultureOverride">Override culture for this utterance only (e.g. "de-DE").</param>
+    /// <param name="rate">Speed multiplier (1.0 = normal).</param>
+    private string BuildSsml(string text, bool isWhisper, string? cultureOverride = null, double rate = 1.0)
+    {
+        var escaped     = System.Security.SecurityElement.Escape(text);
+        string culture  = cultureOverride ?? _culture;
+        string voiceLoc = SpeakLang;                              // voice's own primary locale
+
+        bool isEnglish     = culture.StartsWith("en", StringComparison.OrdinalIgnoreCase);
+        bool isCrossLingual = voiceLoc.Length >= 2 && culture.Length >= 2
+            && !string.Equals(voiceLoc[..2], culture[..2], StringComparison.OrdinalIgnoreCase);
+
+        int normalRate  = -5 + (int)((rate - 1.0) * 50);
+        int whisperRate = -8 + (int)((rate - 1.0) * 50);
+
+        string content;
+        if (isWhisper)
+        {
+            // Whispering style + optional cross-lingual wrapper.
+            var inner = isCrossLingual ? $"<lang xml:lang='{culture}'>{escaped}</lang>" : escaped;
+            content = $"<mstts:express-as style='whispering' styledegree='0.6'>"
+                    + $"<prosody rate='{whisperRate:+0;-0;0}%' pitch='+3%' volume='-15%'>{inner}</prosody>"
+                    + $"</mstts:express-as>";
+        }
+        else if (isEnglish)
+        {
+            // Cortana-style English: express-as assistant.
+            content = $"<mstts:express-as style='assistant' styledegree='1.2'>"
+                    + $"<prosody rate='{normalRate:+0;-0;0}%' pitch='+5%'>{escaped}</prosody>"
+                    + $"</mstts:express-as>";
+        }
+        else if (isCrossLingual)
+        {
+            // Cross-lingual non-English: <lang> element selects the target language
+            // from a multilingual voice (e.g. AvaMultilingualNeural → German).
+            content = $"<lang xml:lang='{culture}'>"
+                    + $"<prosody rate='{normalRate:+0;-0;0}%' pitch='+5%' volume='+5%'>{escaped}</prosody>"
+                    + $"</lang>";
+        }
+        else
+        {
+            // Native-voice non-English (e.g. de-DE-KatjaNeural): plain prosody.
+            content = $"<prosody rate='{normalRate:+0;-0;0}%' pitch='+5%' volume='+5%'>{escaped}</prosody>";
+        }
+
+        return $"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' "
+             + $"xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{voiceLoc}'>"
+             + $"<voice name='{_voiceName}'>{content}</voice>"
+             + $"</speak>";
+    }
 
     private void InitializeSynthesizer()
     {
@@ -232,204 +281,72 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     }
 
     /// <summary>
-    /// Speaks text directly to the default audio output (blocking until complete).
-    /// Cancels any previous speech to prevent overlapping.
+    /// Speaks text to the default audio output using the service's current culture.
     /// </summary>
-    public async Task SpeakAsync(string text, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return;
-
-        // Cancel any ongoing speech first
-        await StopSpeakingAsync();
-
-        // Use semaphore to ensure only one speech at a time
-        await _speechLock.WaitAsync(ct);
-        try
-        {
-            _isSynthesizing = true;
-            _currentSynthesisCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-
-            if (_synthesizer == null) InitializeSynthesizer();
-
-            // express-as style='assistant' is English-only; use plain prosody for all other cultures
-            // so en-US-AvaMultilingualNeural speaks French, German, etc. without SSML errors.
-            bool isEnglish = _culture.StartsWith("en", StringComparison.OrdinalIgnoreCase);
-
-            // Cortana-style: calm, warm, slightly ethereal, intelligent
-            var ssml = isEnglish
-                ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{SpeakLang}'>
-                    <voice name='{_voiceName}' xml:lang='{_culture}'>
-                        <mstts:express-as style='assistant' styledegree='1.2'>
-                            <prosody rate='-5%' pitch='+5%'>
-                                {System.Security.SecurityElement.Escape(text)}
-                            </prosody>
-                        </mstts:express-as>
-                    </voice>
-                </speak>"
-                : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{SpeakLang}'>
-                    <voice name='{_voiceName}' xml:lang='{_culture}'>
-                        <prosody rate='-5%' pitch='+5%' volume='+5%'>
-                            {System.Security.SecurityElement.Escape(text)}
-                        </prosody>
-                    </voice>
-                </speak>";
-
-            // Use circuit breaker + retry with exponential backoff for 429 rate limiting
-            await CircuitBreakerPipeline.ExecuteAsync(async _ =>
-            {
-                await RetryPipeline.ExecuteAsync(async token =>
-                {
-                    using SpeechSynthesisResult result = await _synthesizer!.SpeakSsmlAsync(ssml);
-
-                    if (result.Reason == ResultReason.Canceled)
-                    {
-                        SpeechSynthesisCancellationDetails cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                        string errorDetails = cancellation.ErrorDetails ?? string.Empty;
-
-                        // Throw on 429 to trigger retry and circuit breaker
-                        if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
-                        {
-                            throw new HttpRequestException($"Rate limited: {errorDetails}");
-                        }
-
-                        Console.WriteLine($"  [!] Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
-                    }
-                    else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[Azure TTS] Audio synthesis completed, {result.AudioData.Length} bytes");
-                    }
-                }, ct);
-            }, ct);
-        }
-        catch (BrokenCircuitException)
-        {
-            // Circuit is open - skip Azure TTS entirely
-            Console.WriteLine($"  [!] Azure TTS circuit open - using fallback");
-            throw;
-        }
-        catch (HttpRequestException ex) when (ex.Message.Contains("Rate limited"))
-        {
-            // All retries exhausted - re-throw so fallback TTS can handle
-            Console.WriteLine($"  [!] Azure TTS rate limit exceeded after retries");
-            throw;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"  [!] Azure TTS exception: {ex.Message}");
-            throw;
-        }
-        finally
-        {
-            _isSynthesizing = false;
-            _currentSynthesisCts?.Dispose();
-            _currentSynthesisCts = null;
-            _speechLock.Release();
-        }
-    }
+    public Task SpeakAsync(string text, CancellationToken ct = default)
+        => SpeakCoreAsync(text, isWhisper: false, cultureOverride: null, ct);
 
     /// <summary>
-    /// Speaks text directly to the default audio output with optional whisper style.
-    /// Cancels any previous speech to prevent overlapping.
+    /// Speaks text to the default audio output in an explicitly specified culture,
+    /// without mutating the service's default culture state.
+    /// Iaret uses this overload to pass the detected response language directly.
     /// </summary>
-    /// <param name="text">The text to speak.</param>
-    /// <param name="isWhisper">If true, uses a whispering/soft style for inner thoughts.</param>
+    /// <param name="text">Text to synthesise.</param>
+    /// <param name="culture">BCP-47 culture for this utterance (e.g. "de-DE").</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task SpeakAsync(string text, bool isWhisper, CancellationToken ct = default)
+    public Task SpeakAsync(string text, string culture, CancellationToken ct = default)
+        => SpeakCoreAsync(text, isWhisper: false, cultureOverride: culture, ct);
+
+    /// <summary>
+    /// Speaks text to the default audio output with optional whisper style.
+    /// </summary>
+    /// <param name="text">Text to speak.</param>
+    /// <param name="isWhisper">Use whispering style for inner thoughts.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public Task SpeakAsync(string text, bool isWhisper, CancellationToken ct = default)
+        => SpeakCoreAsync(text, isWhisper, cultureOverride: null, ct);
+
+    private async Task SpeakCoreAsync(string text, bool isWhisper, string? cultureOverride, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
 
-        // Cancel any ongoing speech first
         await StopSpeakingAsync();
-
-        // Use semaphore to ensure only one speech at a time
         await _speechLock.WaitAsync(ct);
         try
         {
             _isSynthesizing = true;
             _currentSynthesisCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-
             if (_synthesizer == null) InitializeSynthesizer();
 
-            // express-as styles work only for English; use plain prosody for other cultures.
-            bool isEnglish = _culture.StartsWith("en", StringComparison.OrdinalIgnoreCase);
-            string ssml;
+            var ssml = BuildSsml(text, isWhisper, cultureOverride);
 
-            if (isWhisper)
-            {
-                // Whispering style is available for all languages on multilingual voices.
-                ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{SpeakLang}'>
-                        <voice name='{_voiceName}' xml:lang='{_culture}'>
-                            <mstts:express-as style='whispering' styledegree='0.6'>
-                                <prosody rate='-8%' pitch='+3%' volume='-15%'>
-                                    {System.Security.SecurityElement.Escape(text)}
-                                </prosody>
-                            </mstts:express-as>
-                        </voice>
-                    </speak>";
-            }
-            else
-            {
-                // Cortana-style answers: calm, confident, warm
-                ssml = isEnglish
-                    ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{SpeakLang}'>
-                        <voice name='{_voiceName}' xml:lang='{_culture}'>
-                            <mstts:express-as style='assistant' styledegree='1.2'>
-                                <prosody rate='-5%' pitch='+5%'>
-                                    {System.Security.SecurityElement.Escape(text)}
-                                </prosody>
-                            </mstts:express-as>
-                        </voice>
-                    </speak>"
-                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{SpeakLang}'>
-                        <voice name='{_voiceName}' xml:lang='{_culture}'>
-                            <prosody rate='-5%' pitch='+5%' volume='+5%'>
-                                {System.Security.SecurityElement.Escape(text)}
-                            </prosody>
-                        </voice>
-                    </speak>";
-            }
-
-            // Use circuit breaker + retry with exponential backoff for 429 rate limiting
             await CircuitBreakerPipeline.ExecuteAsync(async _ =>
             {
                 await RetryPipeline.ExecuteAsync(async token =>
                 {
                     using SpeechSynthesisResult result = await _synthesizer!.SpeakSsmlAsync(ssml);
-
                     if (result.Reason == ResultReason.Canceled)
                     {
-                        SpeechSynthesisCancellationDetails cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
+                        var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
                         string errorDetails = cancellation.ErrorDetails ?? string.Empty;
-
-                        // Throw on 429 to trigger retry and circuit breaker
                         if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
-                        {
                             throw new HttpRequestException($"Rate limited: {errorDetails}");
-                        }
-
                         Console.WriteLine($"  [!] Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
                     }
                     else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[Azure TTS] Audio synthesis completed, {result.AudioData.Length} bytes");
+                        System.Diagnostics.Debug.WriteLine($"[Azure TTS] Synthesis complete, {result.AudioData.Length} bytes");
                     }
                 }, ct);
             }, ct);
         }
         catch (BrokenCircuitException)
         {
-            // Circuit is open - skip Azure TTS entirely
             Console.WriteLine($"  [!] Azure TTS circuit open - using fallback");
             throw;
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("Rate limited"))
         {
-            // All retries exhausted - re-throw so fallback TTS can handle
             Console.WriteLine($"  [!] Azure TTS rate limit exceeded after retries");
             throw;
         }
@@ -462,52 +379,9 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 
         try
         {
-            var voice = _voiceName;
-            var rate = options?.Speed ?? 1.0;
+            var rate      = options?.Speed ?? 1.0;
             var isWhisper = options?.IsWhisper ?? false;
-            // express-as styles work only for English; plain prosody for other cultures.
-            bool isEnglish = _culture.StartsWith("en", StringComparison.OrdinalIgnoreCase);
-
-            string ssml;
-            if (isWhisper)
-            {
-                // Cortana-style whisper: intimate, wise, slightly ethereal (for inner thoughts)
-                var whisperRate = -8 + (int)((rate - 1.0) * 50);
-                ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{SpeakLang}'>
-                    <voice name='{voice}' xml:lang='{_culture}'>
-                        <mstts:express-as style='whispering' styledegree='0.6'>
-                            <prosody rate='{whisperRate:+0;-0;0}%' pitch='+3%' volume='-15%'>
-                                {System.Security.SecurityElement.Escape(text)}
-                            </prosody>
-                        </mstts:express-as>
-                    </voice>
-                </speak>";
-            }
-            else
-            {
-                // Cortana-style: calm, warm, slightly ethereal, intelligent
-                var normalRate = -5 + (int)((rate - 1.0) * 50);
-                ssml = isEnglish
-                    ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{SpeakLang}'>
-                        <voice name='{voice}' xml:lang='{_culture}'>
-                            <mstts:express-as style='assistant' styledegree='1.2'>
-                                <prosody rate='{normalRate:+0;-0;0}%' pitch='+5%'>
-                                    {System.Security.SecurityElement.Escape(text)}
-                                </prosody>
-                            </mstts:express-as>
-                        </voice>
-                    </speak>"
-                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{SpeakLang}'>
-                        <voice name='{voice}' xml:lang='{_culture}'>
-                            <prosody rate='{normalRate:+0;-0;0}%' pitch='+5%' volume='+5%'>
-                                {System.Security.SecurityElement.Escape(text)}
-                            </prosody>
-                        </voice>
-                    </speak>";
-            }
+            var ssml      = BuildSsml(text, isWhisper, cultureOverride: null, rate);
 
             using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
 
@@ -673,52 +547,9 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
         try
         {
             _isSynthesizing = true;
-            var voice = _voiceName;
-            var rate = options?.Speed ?? 1.0;
+            var rate      = options?.Speed ?? 1.0;
             var isWhisper = options?.IsWhisper ?? false;
-            // express-as styles work only for English; plain prosody for other cultures.
-            bool isEnglish = _culture.StartsWith("en", StringComparison.OrdinalIgnoreCase);
-
-            string ssml;
-            if (isWhisper)
-            {
-                // Cortana-style whisper: intimate, wise, slightly ethereal (for inner thoughts)
-                var whisperRate = -8 + (int)((rate - 1.0) * 50);
-                ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                    xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{SpeakLang}'>
-                    <voice name='{voice}' xml:lang='{_culture}'>
-                        <mstts:express-as style='whispering' styledegree='0.6'>
-                            <prosody rate='{whisperRate:+0;-0;0}%' pitch='+3%' volume='-15%'>
-                                {System.Security.SecurityElement.Escape(text)}
-                            </prosody>
-                        </mstts:express-as>
-                    </voice>
-                </speak>";
-            }
-            else
-            {
-                // Cortana-style: calm, warm, slightly ethereal, intelligent
-                var normalRate = -5 + (int)((rate - 1.0) * 50);
-                ssml = isEnglish
-                    ? $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{SpeakLang}'>
-                        <voice name='{voice}' xml:lang='{_culture}'>
-                            <mstts:express-as style='assistant' styledegree='1.2'>
-                                <prosody rate='{normalRate:+0;-0;0}%' pitch='+5%'>
-                                    {System.Security.SecurityElement.Escape(text)}
-                                </prosody>
-                            </mstts:express-as>
-                        </voice>
-                    </speak>"
-                    : $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis'
-                        xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{SpeakLang}'>
-                        <voice name='{voice}' xml:lang='{_culture}'>
-                            <prosody rate='{normalRate:+0;-0;0}%' pitch='+5%' volume='+5%'>
-                                {System.Security.SecurityElement.Escape(text)}
-                            </prosody>
-                        </voice>
-                    </speak>";
-            }
+            var ssml      = BuildSsml(text, isWhisper, cultureOverride: null, rate);
 
             using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
 
