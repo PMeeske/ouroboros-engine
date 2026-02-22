@@ -117,9 +117,9 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 
         return persona.ToUpperInvariant() switch
         {
-            // Iaret uses en-US-AvaMultilingualNeural (Cortana-like voice) for all languages.
+            // Iaret uses en-US-JennyMultilingualNeural (Cortana voice) for all languages.
             // Cross-lingual synthesis is triggered by <lang xml:lang='xx-XX'> in BuildSsml.
-            "IARET" => "en-US-AvaMultilingualNeural",
+            "IARET" => "en-US-JennyMultilingualNeural",
             "OUROBOROS" => isGerman ? "de-DE-KatjaNeural" : "en-US-JennyNeural",
             "ARIA" => isGerman ? "de-DE-AmalaNeural" : "en-US-AriaNeural",
             "ECHO" => isGerman ? "de-DE-LouisaNeural" : "en-GB-SoniaNeural",
@@ -239,6 +239,7 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     /// <inheritdoc/>
     public IReadOnlyList<string> AvailableVoices => new[]
     {
+        "en-US-JennyMultilingualNeural",
         "en-US-JennyNeural",
         "en-US-AriaNeural",
         "en-US-GuyNeural",
