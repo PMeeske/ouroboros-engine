@@ -46,14 +46,19 @@ public sealed class WorldModelEngine : IWorldModelEngine
             }
 
             // Create predictors based on architecture
-            var (statePredictor, rewardPredictor, terminalPredictor) = architecture switch
+            if (architecture is ModelArchitecture.Transformer or ModelArchitecture.GNN or ModelArchitecture.Hybrid)
             {
-                ModelArchitecture.MLP => await CreateMlpPredictorsAsync(transitions, embeddingSize, ct),
-                ModelArchitecture.Transformer => throw new NotImplementedException("Transformer architecture not yet implemented"),
-                ModelArchitecture.GNN => throw new NotImplementedException("GNN architecture not yet implemented"),
-                ModelArchitecture.Hybrid => throw new NotImplementedException("Hybrid architecture not yet implemented"),
-                _ => throw new ArgumentException($"Unknown architecture: {architecture}"),
-            };
+                return Result<WorldModel, string>.Failure(
+                    $"{architecture} architecture is not yet implemented. Use ModelArchitecture.MLP.");
+            }
+
+            if (!Enum.IsDefined(architecture))
+            {
+                return Result<WorldModel, string>.Failure($"Unknown architecture: {architecture}");
+            }
+
+            var (statePredictor, rewardPredictor, terminalPredictor) =
+                await CreateMlpPredictorsAsync(transitions, embeddingSize, ct);
 
             var hyperparameters = new Dictionary<string, object>
             {
