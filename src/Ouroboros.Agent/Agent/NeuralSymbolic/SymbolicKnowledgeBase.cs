@@ -164,15 +164,15 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
     Task<Result<Unit, string>> ISymbolicKnowledgeBase.AddRuleAsync(
         Ouroboros.Abstractions.Domain.SymbolicRule rule,
         CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload accepting Ouroboros.Agent.NeuralSymbolic.SymbolicRule.");
+        Task.FromResult(Result<Unit, string>.Failure(
+            "Use the overload accepting Ouroboros.Agent.NeuralSymbolic.SymbolicRule."));
 
     /// <inheritdoc />
     Task<Result<List<Ouroboros.Abstractions.Domain.SymbolicRule>, string>> ISymbolicKnowledgeBase.QueryRulesAsync(
         string pattern,
         CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload returning Ouroboros.Agent.NeuralSymbolic.SymbolicRule.");
+        Task.FromResult(Result<List<Ouroboros.Abstractions.Domain.SymbolicRule>, string>.Failure(
+            "Use the overload returning Ouroboros.Agent.NeuralSymbolic.SymbolicRule."));
 
     #endregion
 }

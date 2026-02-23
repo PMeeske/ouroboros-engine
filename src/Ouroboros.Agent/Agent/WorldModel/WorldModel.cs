@@ -604,15 +604,15 @@ public sealed class WorldModel : IWorldModel
         Ouroboros.Abstractions.Domain.SensorState currentState,
         Ouroboros.Abstractions.Domain.EmbodiedAction action,
         CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload accepting Ouroboros.Domain.Embodied types.");
+        Task.FromResult(Result<Ouroboros.Abstractions.Domain.PredictedState, string>.Failure(
+            "Use the overload accepting Ouroboros.Domain.Embodied types."));
 
     /// <inheritdoc />
     Task<Result<Unit, string>> IWorldModel.UpdateFromExperienceAsync(
         IReadOnlyList<Ouroboros.Abstractions.Domain.EmbodiedTransition> transitions,
         CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload accepting Ouroboros.Domain.Embodied types.");
+        Task.FromResult(Result<Unit, string>.Failure(
+            "Use the overload accepting Ouroboros.Domain.Embodied types."));
 
     /// <inheritdoc />
     Task<Result<List<Ouroboros.Abstractions.Domain.EmbodiedAction>, string>> IWorldModel.PlanWithModelAsync(
@@ -620,23 +620,22 @@ public sealed class WorldModel : IWorldModel
         string goal,
         int horizon,
         CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload accepting Ouroboros.Domain.Embodied types.");
+        Task.FromResult(Result<List<Ouroboros.Abstractions.Domain.EmbodiedAction>, string>.Failure(
+            "Use the overload accepting Ouroboros.Domain.Embodied types."));
 
     /// <inheritdoc />
     Task<double> IWorldModel.GetUncertaintyAsync(
         Ouroboros.Abstractions.Domain.SensorState state,
         Ouroboros.Abstractions.Domain.EmbodiedAction action) =>
-        throw new NotImplementedException(
-            "Use the overload accepting Ouroboros.Domain.Embodied types.");
+        Task.FromResult(0.0);
 
     /// <inheritdoc />
     Task<Result<List<Ouroboros.Abstractions.Domain.PredictedState>, string>> IWorldModel.SimulateTrajectoryAsync(
         Ouroboros.Abstractions.Domain.SensorState initialState,
         IReadOnlyList<Ouroboros.Abstractions.Domain.EmbodiedAction> actions,
         CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload accepting Ouroboros.Domain.Embodied types.");
+        Task.FromResult(Result<List<Ouroboros.Abstractions.Domain.PredictedState>, string>.Failure(
+            "Use the overload accepting Ouroboros.Domain.Embodied types."));
 
     #endregion
 }

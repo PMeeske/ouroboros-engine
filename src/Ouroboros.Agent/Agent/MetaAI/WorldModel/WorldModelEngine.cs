@@ -411,8 +411,8 @@ public sealed class WorldModelEngine : IWorldModelEngine
         List<WorldTransition> transitions,
         ModelArchitecture architecture,
         CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload accepting local WorldModel types.");
+        Task.FromResult(Result<LearnedWorldModel, string>.Failure(
+            "Use the overload accepting local WorldModel types."));
 
     /// <inheritdoc />
     Task<Result<WorldState, string>> IWorldModelEngine.PredictNextStateAsync(
@@ -420,8 +420,8 @@ public sealed class WorldModelEngine : IWorldModelEngine
         AgentAction action,
         LearnedWorldModel model,
         CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload accepting local WorldModel types.");
+        Task.FromResult(Result<WorldState, string>.Failure(
+            "Use the overload accepting local WorldModel types."));
 
     /// <inheritdoc />
     Task<Result<ActionPlan, string>> IWorldModelEngine.PlanInImaginationAsync(
@@ -430,16 +430,16 @@ public sealed class WorldModelEngine : IWorldModelEngine
         LearnedWorldModel model,
         int lookaheadDepth,
         CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload accepting local WorldModel types.");
+        Task.FromResult(Result<ActionPlan, string>.Failure(
+            "Use the overload accepting local WorldModel types."));
 
     /// <inheritdoc />
     Task<Result<ModelQuality, string>> IWorldModelEngine.EvaluateModelAsync(
         LearnedWorldModel model,
         List<WorldTransition> testSet,
         CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload accepting local WorldModel types.");
+        Task.FromResult(Result<ModelQuality, string>.Failure(
+            "Use the overload accepting local WorldModel types."));
 
     /// <inheritdoc />
     Task<Result<List<WorldTransition>, string>> IWorldModelEngine.GenerateSyntheticExperienceAsync(
@@ -447,8 +447,8 @@ public sealed class WorldModelEngine : IWorldModelEngine
         WorldState startState,
         int trajectoryLength,
         CancellationToken ct) =>
-        throw new NotImplementedException(
-            "Use the overload accepting local WorldModel types.");
+        Task.FromResult(Result<List<WorldTransition>, string>.Failure(
+            "Use the overload accepting local WorldModel types."));
 
     #endregion
 }
