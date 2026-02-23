@@ -196,8 +196,7 @@ public static class ServiceCollectionExtensions
         {
             var client = sp.GetRequiredService<QdrantClient>();
             var registry = sp.GetRequiredService<IQdrantCollectionRegistry>();
-            var logger = sp.GetService<ILogger<QdrantCollectionAdmin>>();
-            return new QdrantCollectionAdmin(client, registry, logger);
+            return new QdrantCollectionAdmin(client, registry);
         });
 
         return services;
