@@ -178,6 +178,7 @@ public sealed class Phase2OrchestratorBuilder
             _router,
             _safety,
             _ethics,
+            approvalProvider: null,
             _skillExtractor);
 
         // Create self-evaluator (requires orchestrator)

@@ -23,6 +23,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
     private readonly IUncertaintyRouter _router;
     private readonly ISafetyGuard _safety;
     private readonly IEthicsFramework _ethics;
+    private readonly IHumanApprovalProvider _approvalProvider;
     private readonly ISkillExtractor? _skillExtractor;
     private readonly ConcurrentDictionary<string, PerformanceMetrics> _metrics = new();
 
@@ -34,6 +35,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         IUncertaintyRouter router,
         ISafetyGuard safety,
         IEthicsFramework ethics,
+        IHumanApprovalProvider? approvalProvider = null,
         ISkillExtractor? skillExtractor = null)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
@@ -43,6 +45,7 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
         _router = router ?? throw new ArgumentNullException(nameof(router));
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
         _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
+        _approvalProvider = approvalProvider ?? new AutoDenyApprovalProvider();
         _skillExtractor = skillExtractor ?? new SkillExtractor(llm, skills, ethics);
     }
 
@@ -120,10 +123,28 @@ public sealed class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrator
 
             if (ethicsResult.Value.Level == EthicalClearanceLevel.RequiresHumanApproval)
             {
-                // TODO: Implement human approval workflow for plans
-                // Currently blocked until human review mechanism is implemented
-                return Result<Plan, string>.Failure(
-                    $"Plan requires human approval: {ethicsResult.Value.Reasoning}");
+                var approvalRequest = new HumanApprovalRequest
+                {
+                    Category = "plan",
+                    Description = $"Plan for goal: {goal}",
+                    Clearance = ethicsResult.Value,
+                    Context = new Dictionary<string, object>
+                    {
+                        ["goal"] = goal,
+                        ["steps"] = plan.Steps.Select(s => s.Action).ToList(),
+                        ["concerns"] = ethicsResult.Value.Concerns.Select(c => c.Description).ToList(),
+                        ["reasoning"] = ethicsResult.Value.Reasoning
+                    }
+                };
+
+                var approvalResponse = await _approvalProvider.RequestApprovalAsync(approvalRequest, ct);
+
+                if (approvalResponse.Decision != HumanApprovalDecision.Approved)
+                {
+                    return Result<Plan, string>.Failure(
+                        $"Plan requires human approval and was {approvalResponse.Decision}: " +
+                        $"{approvalResponse.ReviewerComments ?? ethicsResult.Value.Reasoning}");
+                }
             }
 
             // Safety checks - secondary validation after ethics clearance

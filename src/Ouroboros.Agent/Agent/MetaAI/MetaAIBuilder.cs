@@ -168,7 +168,7 @@ public sealed class MetaAIBuilder
             router = _router;
         }
 
-        return new MetaAIPlannerOrchestrator(_llm, tools, memory, skills, router, safety, ethics, _skillExtractor);
+        return new MetaAIPlannerOrchestrator(_llm, tools, memory, skills, router, safety, ethics, approvalProvider: null, _skillExtractor);
     }
 
     /// <summary>
