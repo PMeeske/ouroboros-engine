@@ -9,10 +9,12 @@
 /// <param name="QualityScore">Quality score from 0.0 to 1.0.</param>
 /// <param name="Insights">Key insights learned from this experience.</param>
 /// <param name="Timestamp">When this experience occurred.</param>
+/// <param name="Duration">Total execution duration of the orchestration cycle.</param>
 public sealed record OuroborosExperience(
     Guid Id,
     string Goal,
     bool Success,
     double QualityScore,
     IReadOnlyList<string> Insights,
-    DateTime Timestamp);
+    DateTime Timestamp,
+    TimeSpan Duration = default);

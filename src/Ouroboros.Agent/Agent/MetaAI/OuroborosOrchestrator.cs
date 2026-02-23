@@ -490,14 +490,16 @@ public sealed class OuroborosOrchestrator : OrchestratorBase<string, OuroborosRe
             // Extract insights from execution
             List<string> insights = await ExtractInsightsAsync(goal, phaseResults, ct);
 
-            // Record experience
+            // Record experience with total cycle duration
+            TimeSpan cycleDuration = phaseResults.Aggregate(TimeSpan.Zero, (sum, p) => sum + p.Duration);
             OuroborosExperience experience = new OuroborosExperience(
                 Id: Guid.NewGuid(),
                 Goal: goal,
                 Success: overallSuccess,
                 QualityScore: averageQuality,
                 Insights: insights,
-                Timestamp: DateTime.UtcNow);
+                Timestamp: DateTime.UtcNow,
+                Duration: cycleDuration);
 
             _atom.RecordExperience(experience);
 

@@ -134,8 +134,16 @@ public sealed class PlanStrategyFitness : IFitnessFunction<PlanStrategyGene>
     }
 
     /// <summary>
+    /// Reference duration used for normalization. Experiences completing faster than this
+    /// score above 0.5; slower experiences score below 0.5.
+    /// </summary>
+    private static readonly TimeSpan ReferenceDuration = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Calculates a normalized speed score from experiences.
-    /// Faster executions get higher scores.
+    /// Faster executions get higher scores. Uses <c>1 / (1 + avg_seconds / reference_seconds)</c>
+    /// so the score is always in (0, 1] and approaches 1.0 for near-instant executions.
+    /// Experiences without duration data are excluded; if none have duration, returns 0.5.
     /// </summary>
     /// <param name="experiences">The experiences to evaluate.</param>
     /// <returns>Speed score between 0.0 and 1.0.</returns>
@@ -146,16 +154,18 @@ public sealed class PlanStrategyFitness : IFitnessFunction<PlanStrategyGene>
             return 0.5;
         }
 
-        // TODO: Implement proper speed scoring when execution duration tracking is added to OuroborosExperience
-        // Currently, OuroborosExperience only has Timestamp but not execution Duration.
-        // 
-        // Proposed enhancement:
-        //   1. Add Duration field to OuroborosExperience record
-        //   2. Track execution time in OuroborosOrchestrator.RunAsync()
-        //   3. Calculate speed score here as: 1.0 / (1.0 + normalized_avg_duration)
-        //
-        // For now, return a neutral-to-positive constant to slightly favor current strategies
-        // without penalizing any particular approach.
-        return 0.7; // Placeholder: slightly favor current strategies until duration tracking is implemented
+        // Filter to experiences that have actual duration data (non-default)
+        var withDuration = experiences.Where(e => e.Duration > TimeSpan.Zero).ToList();
+
+        if (withDuration.Count == 0)
+        {
+            // No duration data yet — return neutral score
+            return 0.5;
+        }
+
+        double avgSeconds = withDuration.Average(e => e.Duration.TotalSeconds);
+
+        // Normalize: 1 / (1 + avg / reference) → fast = close to 1.0, slow = close to 0.0
+        return 1.0 / (1.0 + avgSeconds / ReferenceDuration.TotalSeconds);
     }
 }
