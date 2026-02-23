@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <PackageReference Include="Anthropic.SDK" Version="5.9.0" />
+    <PackageReference Include="Qdrant.Client" Version="1.16.1" />
     <PackageReference Include="Azure.AI.Inference" Version="1.0.0-beta.5" />
     <PackageReference Include="LangChain" Version="0.17.0" />
     <PackageReference Include="Microsoft.CognitiveServices.Speech" Version="1.48.1" />

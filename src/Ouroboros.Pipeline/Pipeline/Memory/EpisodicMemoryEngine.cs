@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Ouroboros.Core.Configuration;
 using Ouroboros.Domain;
 using Ouroboros.Domain.States;
 using Ouroboros.Domain.Vectors;
@@ -29,6 +30,23 @@ public sealed class EpisodicMemoryEngine : IEpisodicMemoryEngine, IAsyncDisposab
     private readonly string _collectionName;
     private readonly bool _disposeClient;
     private bool _collectionInitialized;
+
+    /// <summary>
+    /// Initializes a new instance using the DI-provided client and collection registry.
+    /// </summary>
+    public EpisodicMemoryEngine(
+        QdrantClient qdrantClient,
+        IQdrantCollectionRegistry registry,
+        IEmbeddingModel embeddingModel,
+        ILogger<EpisodicMemoryEngine>? logger = null)
+    {
+        _qdrantClient = qdrantClient ?? throw new ArgumentNullException(nameof(qdrantClient));
+        ArgumentNullException.ThrowIfNull(registry);
+        _embeddingModel = embeddingModel ?? throw new ArgumentNullException(nameof(embeddingModel));
+        _collectionName = registry.GetCollectionName(QdrantCollectionRole.EpisodicMemory);
+        _logger = logger;
+        _disposeClient = false;
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EpisodicMemoryEngine"/> class.
@@ -53,10 +71,7 @@ public sealed class EpisodicMemoryEngine : IEpisodicMemoryEngine, IAsyncDisposab
     /// <summary>
     /// Initializes a new instance of the <see cref="EpisodicMemoryEngine"/> class with connection string.
     /// </summary>
-    /// <param name="qdrantConnectionString">Qdrant connection string (e.g., "http://localhost:6333").</param>
-    /// <param name="embeddingModel">The embedding model for creating semantic vectors.</param>
-    /// <param name="collectionName">Name of the Qdrant collection to use.</param>
-    /// <param name="logger">Optional logger instance.</param>
+    [Obsolete("Use the constructor accepting QdrantClient + IQdrantCollectionRegistry from DI.")]
     public EpisodicMemoryEngine(
         string qdrantConnectionString,
         IEmbeddingModel embeddingModel,

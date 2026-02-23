@@ -5,6 +5,7 @@
 namespace Ouroboros.Network;
 
 using System.Text.Json;
+using Ouroboros.Core.Configuration;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 
@@ -14,8 +15,8 @@ using Qdrant.Client.Grpc;
 /// </summary>
 public sealed class PersistentNetworkStateProjector : IAsyncDisposable
 {
-    private const string SnapshotCollectionName = "network_state_snapshots";
-    private const string LearningsCollectionName = "network_learnings";
+    private readonly string _snapshotCollectionName;
+    private readonly string _learningsCollectionName;
     private const float DefaultScoreThreshold = 0.6f;
     private const int DefaultScrollLimit = 100;
 
@@ -29,11 +30,33 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
     private int _detectedVectorDimension;
 
     /// <summary>
+    /// Initializes a new instance using the DI-provided client and collection registry.
+    /// </summary>
+    public PersistentNetworkStateProjector(
+        MerkleDag dag,
+        QdrantClient client,
+        IQdrantCollectionRegistry registry,
+        Func<string, Task<float[]>> embeddingFunc)
+    {
+        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
+        _qdrantClient = client ?? throw new ArgumentNullException(nameof(client));
+        ArgumentNullException.ThrowIfNull(registry);
+        _embeddingFunc = embeddingFunc ?? throw new ArgumentNullException(nameof(embeddingFunc));
+        _snapshotCollectionName = registry.GetCollectionName(QdrantCollectionRole.NetworkSnapshots);
+        _learningsCollectionName = registry.GetCollectionName(QdrantCollectionRole.NetworkLearnings);
+        _snapshots = new List<GlobalNetworkState>();
+        _recentLearnings = new List<Learning>();
+        _currentEpoch = 0;
+        _initialized = false;
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="PersistentNetworkStateProjector"/> class.
     /// </summary>
     /// <param name="dag">The Merkle-DAG to project from.</param>
     /// <param name="qdrantEndpoint">The Qdrant endpoint (e.g., "http://localhost:6334").</param>
     /// <param name="embeddingFunc">Function to generate embeddings for semantic storage.</param>
+    [Obsolete("Use the constructor accepting QdrantClient + IQdrantCollectionRegistry from DI.")]
     public PersistentNetworkStateProjector(
         MerkleDag dag,
         string qdrantEndpoint,
@@ -41,6 +64,8 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
     {
         _dag = dag ?? throw new ArgumentNullException(nameof(dag));
         _embeddingFunc = embeddingFunc ?? throw new ArgumentNullException(nameof(embeddingFunc));
+        _snapshotCollectionName = "network_state_snapshots";
+        _learningsCollectionName = "network_learnings";
         var normalizedEndpoint = NormalizeEndpoint(qdrantEndpoint, "http://localhost:6334");
         var endpointUri = new Uri(normalizedEndpoint, UriKind.Absolute);
         var host = endpointUri.Host;
@@ -244,7 +269,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
             var embedding = await _embeddingFunc(context);
 
             var results = await _qdrantClient.SearchAsync(
-                LearningsCollectionName,
+                _learningsCollectionName,
                 embedding,
                 limit: (ulong)limit,
                 scoreThreshold: DefaultScoreThreshold,
@@ -305,7 +330,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
             };
 
             var results = await _qdrantClient.ScrollAsync(
-                LearningsCollectionName,
+                _learningsCollectionName,
                 filter: filter,
                 limit: DefaultScrollLimit,
                 cancellationToken: ct);
@@ -336,8 +361,8 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
     {
         try
         {
-            await EnsureCollectionWithDimensionAsync(SnapshotCollectionName, ct);
-            await EnsureCollectionWithDimensionAsync(LearningsCollectionName, ct);
+            await EnsureCollectionWithDimensionAsync(_snapshotCollectionName, ct);
+            await EnsureCollectionWithDimensionAsync(_learningsCollectionName, ct);
         }
         catch (Exception ex)
         {
@@ -371,7 +396,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         try
         {
             var scrollResult = await _qdrantClient.ScrollAsync(
-                SnapshotCollectionName,
+                _snapshotCollectionName,
                 limit: DefaultScrollLimit,
                 cancellationToken: ct);
 
@@ -402,7 +427,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
             }
 
             var learningsResult = await _qdrantClient.ScrollAsync(
-                LearningsCollectionName,
+                _learningsCollectionName,
                 limit: DefaultScrollLimit,
                 cancellationToken: ct);
 
@@ -450,7 +475,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
                 },
             };
 
-            await _qdrantClient.UpsertAsync(SnapshotCollectionName, new[] { point }, cancellationToken: ct);
+            await _qdrantClient.UpsertAsync(_snapshotCollectionName, new[] { point }, cancellationToken: ct);
         }
         catch (Exception ex)
         {
@@ -481,7 +506,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
                 },
             };
 
-            await _qdrantClient.UpsertAsync(LearningsCollectionName, new[] { point }, cancellationToken: ct);
+            await _qdrantClient.UpsertAsync(_learningsCollectionName, new[] { point }, cancellationToken: ct);
         }
         catch (Exception ex)
         {

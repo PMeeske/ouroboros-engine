@@ -5,6 +5,7 @@
 namespace Ouroboros.Providers;
 
 using LangChain.Providers.Ollama;
+using Microsoft.Extensions.Configuration;
 using Ouroboros.Core.Configuration;
 using Ouroboros.Domain.Vectors;
 using Ouroboros.Providers.SpeechToText;
@@ -12,6 +13,7 @@ using Ouroboros.Providers.TextToSpeech;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Qdrant.Client;
 
 /// <summary>
 /// Dependency injection helpers for registering chat and embedding models.
@@ -113,6 +115,61 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers centralized Qdrant infrastructure as a cross-cutting concern:
+    /// <list type="bullet">
+    ///   <item><see cref="QdrantSettings"/> bound from <c>Ouroboros:Qdrant</c> in appsettings</item>
+    ///   <item>Singleton <see cref="IQdrantClient"/> (<see cref="QdrantClient"/>)</item>
+    ///   <item>Singleton <see cref="IQdrantCollectionRegistry"/> for role-based collection resolution</item>
+    /// </list>
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">Application configuration root.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddQdrant(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        // Bind settings from appsettings "Ouroboros:Qdrant"
+        services.Configure<QdrantSettings>(
+            configuration.GetSection(QdrantSettings.SectionPath));
+
+        // Bind collection overrides from "Ouroboros:Qdrant:Collections"
+        services.Configure<QdrantCollectionOverrides>(
+            configuration.GetSection($"{QdrantSettings.SectionPath}:Collections"));
+
+        // Register singleton QdrantClient as IQdrantClient
+        services.AddSingleton<IQdrantClient>(sp =>
+        {
+            var settings = sp.GetRequiredService<IOptions<QdrantSettings>>().Value;
+            return new QdrantClient(
+                settings.Host,
+                settings.GrpcPort,
+                settings.UseHttps,
+                apiKey: settings.ApiKey);
+        });
+
+        // Also register concrete QdrantClient (same instance) for backward compat
+        services.AddSingleton(sp =>
+            (QdrantClient)sp.GetRequiredService<IQdrantClient>());
+
+        // Register collection registry
+        services.AddSingleton<IQdrantCollectionRegistry>(sp =>
+        {
+            var client = sp.GetRequiredService<QdrantClient>();
+            var overrides = sp.GetService<IOptions<QdrantCollectionOverrides>>();
+            var logger = sp.GetService<ILogger<QdrantCollectionRegistry>>();
+            return overrides != null
+                ? new QdrantCollectionRegistry(client, overrides, logger)
+                : new QdrantCollectionRegistry(client, logger);
+        });
+
+        return services;
+    }
+
+    /// <summary>
     /// Register vector store based on configuration.
     /// Supports InMemory (default), Qdrant, and extensible to other backends.
     /// </summary>
@@ -123,12 +180,14 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // Register the factory
+        // Register the factory — use DI-provided Qdrant client when available
         services.AddSingleton<VectorStoreFactory>(sp =>
         {
             var config = configuration ?? sp.GetService<IOptions<VectorStoreConfiguration>>()?.Value ?? new VectorStoreConfiguration();
+            var qdrantClient = sp.GetService<QdrantClient>();
+            var registry = sp.GetService<IQdrantCollectionRegistry>();
             var logger = sp.GetService<ILogger<VectorStoreFactory>>();
-            return new VectorStoreFactory(config, logger);
+            return new VectorStoreFactory(config, qdrantClient, registry, logger);
         });
 
         // Register IVectorStore using the factory

@@ -3,6 +3,7 @@
 /// <summary>
 /// Configuration for Qdrant DAG storage.
 /// </summary>
+[Obsolete("Use QdrantSettings + IQdrantCollectionRegistry from DI instead.")]
 /// <param name="Endpoint">Qdrant server endpoint (e.g., "http://localhost:6334").</param>
 /// <param name="NodesCollection">Collection name for MonadNodes.</param>
 /// <param name="EdgesCollection">Collection name for TransitionEdges.</param>
