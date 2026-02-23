@@ -7,6 +7,7 @@ namespace Ouroboros.Providers;
 using LangChain.Providers.Ollama;
 using Microsoft.Extensions.Configuration;
 using Ouroboros.Core.Configuration;
+using Ouroboros.Domain.Autonomous;
 using Ouroboros.Domain.Vectors;
 using Ouroboros.Providers.SpeechToText;
 using Ouroboros.Providers.TextToSpeech;
@@ -164,6 +165,38 @@ public static class ServiceCollectionExtensions
             return overrides != null
                 ? new QdrantCollectionRegistry(client, overrides, logger)
                 : new QdrantCollectionRegistry(client, logger);
+        });
+
+        // Register QdrantSettings as a concrete singleton for direct injection
+        services.AddSingleton(sp =>
+            sp.GetRequiredService<IOptions<QdrantSettings>>().Value);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers Qdrant-consuming services that can be pre-resolved at startup.
+    /// Services needing runtime deps (embedding, MeTTa) are created by subsystems using
+    /// <see cref="QdrantClient"/> and <see cref="IQdrantCollectionRegistry"/> from DI.
+    /// </summary>
+    public static IServiceCollection AddQdrantServices(
+        this IServiceCollection services)
+    {
+        // QdrantNeuralMemory — uses gRPC client + registry
+        services.AddSingleton(sp =>
+        {
+            var client = sp.GetRequiredService<QdrantClient>();
+            var registry = sp.GetRequiredService<IQdrantCollectionRegistry>();
+            var settings = sp.GetRequiredService<QdrantSettings>();
+            return new QdrantNeuralMemory(client, registry, settings);
+        });
+
+        // QdrantCollectionAdmin — needs gRPC client + registry
+        services.AddSingleton(sp =>
+        {
+            var client = sp.GetRequiredService<QdrantClient>();
+            var registry = sp.GetRequiredService<IQdrantCollectionRegistry>();
+            return new QdrantCollectionAdmin(client, registry);
         });
 
         return services;
