@@ -1,10 +1,13 @@
-// <copyright file="PersistentNetworkStateProjector.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="PersistentNetworkStateProjector.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
 namespace Ouroboros.Network;
 
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Core.Configuration;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
@@ -25,6 +28,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
     private readonly Func<string, Task<float[]>> _embeddingFunc;
     private readonly List<GlobalNetworkState> _snapshots;
     private readonly List<Learning> _recentLearnings;
+    private readonly ILogger _logger;
     private long _currentEpoch;
     private bool _initialized;
     private int _detectedVectorDimension;
@@ -36,12 +40,14 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         MerkleDag dag,
         QdrantClient client,
         IQdrantCollectionRegistry registry,
-        Func<string, Task<float[]>> embeddingFunc)
+        Func<string, Task<float[]>> embeddingFunc,
+        ILogger<PersistentNetworkStateProjector>? logger = null)
     {
         _dag = dag ?? throw new ArgumentNullException(nameof(dag));
         _qdrantClient = client ?? throw new ArgumentNullException(nameof(client));
         ArgumentNullException.ThrowIfNull(registry);
         _embeddingFunc = embeddingFunc ?? throw new ArgumentNullException(nameof(embeddingFunc));
+        _logger = logger ?? NullLogger<PersistentNetworkStateProjector>.Instance;
         _snapshotCollectionName = registry.GetCollectionName(QdrantCollectionRole.NetworkSnapshots);
         _learningsCollectionName = registry.GetCollectionName(QdrantCollectionRole.NetworkLearnings);
         _snapshots = new List<GlobalNetworkState>();
@@ -292,7 +298,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Trace.TraceWarning($"[NetworkState] Failed to retrieve learnings: {ex.Message}");
+            _logger.LogWarning(ex, "Failed to retrieve learnings");
             return new List<Learning>();
         }
     }
@@ -352,7 +358,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Trace.TraceWarning($"[NetworkState] Failed to retrieve learnings by category: {ex.Message}");
+            _logger.LogWarning(ex, "Failed to retrieve learnings by category");
             return new List<Learning>();
         }
     }
@@ -366,7 +372,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Trace.TraceWarning($"[NetworkState] Failed to create Qdrant collections: {ex.Message}");
+            _logger.LogWarning(ex, "Failed to create Qdrant collections");
         }
     }
 
@@ -380,7 +386,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
             var currentDim = info.Config?.Params?.VectorsConfig?.Params?.Size;
             if (currentDim.HasValue && currentDim.Value != (ulong)_detectedVectorDimension)
             {
-                System.Diagnostics.Trace.TraceInformation($"[NetworkState] Dimension mismatch in {collectionName} ({currentDim} vs {_detectedVectorDimension}), recreating...");
+                _logger.LogInformation("Dimension mismatch in {CollectionName} ({CurrentDim} vs {ExpectedDim}), recreating...", collectionName, currentDim, _detectedVectorDimension);
                 await _qdrantClient.DeleteCollectionAsync(collectionName, cancellationToken: ct);
                 await _qdrantClient.CreateCollectionAsync(collectionName, vectorParams, cancellationToken: ct);
             }
@@ -423,7 +429,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
             if (latestSnapshot != null)
             {
                 _currentEpoch = latestSnapshot.Epoch + 1;
-                System.Diagnostics.Trace.TraceInformation($"[NetworkState] Resumed from epoch {latestSnapshot.Epoch} ({_snapshots.Count} snapshots loaded)");
+                _logger.LogInformation("Resumed from epoch {Epoch} ({SnapshotCount} snapshots loaded)", latestSnapshot.Epoch, _snapshots.Count);
             }
 
             var learningsResult = await _qdrantClient.ScrollAsync(
@@ -445,12 +451,12 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
 
             if (_recentLearnings.Count > 0)
             {
-                System.Diagnostics.Trace.TraceInformation($"[NetworkState] Loaded {_recentLearnings.Count} previous learnings");
+                _logger.LogInformation("Loaded {LearningCount} previous learnings", _recentLearnings.Count);
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Trace.TraceWarning($"[NetworkState] Failed to load previous state: {ex.Message}");
+            _logger.LogWarning(ex, "Failed to load previous state");
         }
     }
 
@@ -479,7 +485,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Trace.TraceWarning($"[NetworkState] Failed to persist snapshot: {ex.Message}");
+            _logger.LogWarning(ex, "Failed to persist snapshot");
         }
     }
 
@@ -510,7 +516,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Trace.TraceWarning($"[NetworkState] Failed to persist learning: {ex.Message}");
+            _logger.LogWarning(ex, "Failed to persist learning");
         }
     }
 

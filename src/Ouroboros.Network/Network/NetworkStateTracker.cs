@@ -1,7 +1,10 @@
-// <copyright file="NetworkStateTracker.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="NetworkStateTracker.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Network;
@@ -19,6 +22,7 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     private readonly Dictionary<string, PipelineBranchReifier> _branchReifiers;
     private readonly object _syncLock = new();
     private readonly List<string> _mettaFacts = [];
+    private readonly ILogger _logger;
     private QdrantDagStore? _qdrantStore;
     private IMeTTaEngine? _mettaEngine;
     private bool _autoPersist;
@@ -28,8 +32,9 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="NetworkStateTracker"/> class.
     /// </summary>
-    public NetworkStateTracker()
+    public NetworkStateTracker(ILogger<NetworkStateTracker>? logger = null)
     {
+        _logger = logger ?? NullLogger<NetworkStateTracker>.Instance;
         _dag = new MerkleDag();
         _projector = new NetworkStateProjector(_dag);
         _replayEngine = new TransitionReplayEngine(_dag);
@@ -292,7 +297,7 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Trace.TraceWarning($"[NetworkStateTracker] Post-update error: {ex.Message}");
+            _logger.LogWarning(ex, "Post-update error");
         }
     }
 
