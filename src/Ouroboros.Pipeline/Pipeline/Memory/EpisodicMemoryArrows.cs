@@ -2,6 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Core.Configuration;
 using Qdrant.Client;
 
 namespace Ouroboros.Pipeline.Memory;
@@ -226,12 +227,30 @@ public static class EpisodicMemoryArrows
         };
 
     /// <summary>
+    /// Creates a pre-configured episodic memory system using the collection registry.
+    /// </summary>
+    /// <param name="qdrantClient">The Qdrant client for vector storage.</param>
+    /// <param name="registry">The collection registry for role-based collection resolution.</param>
+    /// <param name="embeddingModel">The embedding model for creating semantic vectors.</param>
+    /// <returns>An object with pre-configured arrow factories.</returns>
+    public static EpisodicMemorySystem CreateConfiguredMemorySystem(
+        QdrantClient qdrantClient,
+        IQdrantCollectionRegistry registry,
+        IEmbeddingModel embeddingModel)
+    {
+        ArgumentNullException.ThrowIfNull(registry);
+        var collectionName = registry.GetCollectionName(QdrantCollectionRole.EpisodicMemory);
+        return new EpisodicMemorySystem(qdrantClient, embeddingModel, collectionName);
+    }
+
+    /// <summary>
     /// Creates a pre-configured episodic memory system.
     /// </summary>
     /// <param name="qdrantClient">The Qdrant client for vector storage.</param>
     /// <param name="embeddingModel">The embedding model for creating semantic vectors.</param>
     /// <param name="collectionName">Name of the Qdrant collection to use.</param>
     /// <returns>An object with pre-configured arrow factories.</returns>
+    [Obsolete("Use the overload accepting IQdrantCollectionRegistry.")]
     public static EpisodicMemorySystem CreateConfiguredMemorySystem(
         QdrantClient qdrantClient,
         IEmbeddingModel embeddingModel,

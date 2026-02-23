@@ -2,6 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Core.Configuration;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 using Match = Qdrant.Client.Grpc.Match;
@@ -23,10 +24,32 @@ public sealed class QdrantDagStore : IAsyncDisposable
     private bool _disposed;
 
     /// <summary>
+    /// Initializes a new instance using the DI-provided client and collection registry.
+    /// </summary>
+    public QdrantDagStore(
+        QdrantClient client,
+        IQdrantCollectionRegistry registry,
+        QdrantSettings settings,
+        Func<string, Task<float[]>>? embeddingFunc = null)
+    {
+        _client = client ?? throw new ArgumentNullException(nameof(client));
+        ArgumentNullException.ThrowIfNull(registry);
+        ArgumentNullException.ThrowIfNull(settings);
+        _embeddingFunc = embeddingFunc;
+        _config = new QdrantDagConfig(
+            Endpoint: settings.GrpcEndpoint,
+            NodesCollection: registry.GetCollectionName(QdrantCollectionRole.DagNodes),
+            EdgesCollection: registry.GetCollectionName(QdrantCollectionRole.DagEdges),
+            VectorSize: settings.DefaultVectorSize,
+            UseHttps: settings.UseHttps);
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="QdrantDagStore"/> class.
     /// </summary>
     /// <param name="config">Qdrant configuration.</param>
     /// <param name="embeddingFunc">Optional function to generate embeddings for semantic search.</param>
+    [Obsolete("Use the constructor accepting QdrantClient + IQdrantCollectionRegistry from DI.")]
     public QdrantDagStore(QdrantDagConfig config, Func<string, Task<float[]>>? embeddingFunc = null)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));

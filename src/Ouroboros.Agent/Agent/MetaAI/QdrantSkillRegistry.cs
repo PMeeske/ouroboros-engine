@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Ouroboros.Core.Configuration;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 using Ouroboros.Abstractions;
@@ -40,6 +41,27 @@ public sealed class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    /// <summary>
+    /// Initializes a new instance using the DI-provided client and collection registry.
+    /// </summary>
+    public QdrantSkillRegistry(
+        QdrantClient client,
+        IQdrantCollectionRegistry registry,
+        QdrantSettings settings,
+        IEmbeddingModel? embedding = null)
+    {
+        _client = client ?? throw new ArgumentNullException(nameof(client));
+        ArgumentNullException.ThrowIfNull(registry);
+        ArgumentNullException.ThrowIfNull(settings);
+        _embedding = embedding;
+        _config = new QdrantSkillConfig(
+            ConnectionString: settings.GrpcEndpoint,
+            CollectionName: registry.GetCollectionName(QdrantCollectionRole.Skills),
+            VectorSize: settings.DefaultVectorSize);
+        _disposeClient = false;
+    }
+
+    [Obsolete("Use the constructor accepting QdrantClient + IQdrantCollectionRegistry from DI.")]
     public QdrantSkillRegistry(
         IEmbeddingModel? embedding = null,
         QdrantSkillConfig? config = null)
