@@ -45,20 +45,15 @@ public sealed class WorldModelEngine : IWorldModelEngine
                 return Result<WorldModel, string>.Failure("Inconsistent embedding sizes in transitions");
             }
 
-            // Create predictors based on architecture
-            if (architecture is ModelArchitecture.Transformer or ModelArchitecture.GNN or ModelArchitecture.Hybrid)
-            {
-                return Result<WorldModel, string>.Failure(
-                    $"{architecture} architecture is not yet implemented. Use ModelArchitecture.MLP.");
-            }
-
+            // Validate architecture
             if (!Enum.IsDefined(architecture))
             {
                 return Result<WorldModel, string>.Failure($"Unknown architecture: {architecture}");
             }
 
+            // Create predictors based on architecture
             var (statePredictor, rewardPredictor, terminalPredictor) =
-                await CreateMlpPredictorsAsync(transitions, embeddingSize, ct);
+                await CreatePredictorsAsync(transitions, embeddingSize, architecture, ct);
 
             var hyperparameters = new Dictionary<string, object>
             {
@@ -294,21 +289,29 @@ public sealed class WorldModelEngine : IWorldModelEngine
         }
     }
 
-    private async Task<(IStatePredictor, IRewardPredictor, ITerminalPredictor)> CreateMlpPredictorsAsync(
+    private Task<(IStatePredictor, IRewardPredictor, ITerminalPredictor)> CreatePredictorsAsync(
         List<Transition> transitions,
         int embeddingSize,
+        ModelArchitecture architecture,
         CancellationToken ct)
     {
-        // For MLP: simple initialization with random weights
-        // In practice, would train on the transitions
         int hiddenSize = Math.Max(64, embeddingSize * 2);
         int actionEmbeddingSize = 10;
 
-        var statePredictor = MlpStatePredictor.CreateRandom(
-            embeddingSize,
-            actionEmbeddingSize,
-            hiddenSize,
-            _random.Next());
+        IStatePredictor statePredictor = architecture switch
+        {
+            ModelArchitecture.Transformer => TransformerStatePredictor.CreateRandom(
+                embeddingSize, actionEmbeddingSize, hiddenSize, _random.Next()),
+            ModelArchitecture.GNN => GnnStatePredictor.CreateRandom(
+                embeddingSize, actionEmbeddingSize, hiddenSize, _random.Next()),
+            ModelArchitecture.Hybrid => new HybridStatePredictor(
+                TransformerStatePredictor.CreateRandom(
+                    embeddingSize, actionEmbeddingSize, hiddenSize, _random.Next()),
+                GnnStatePredictor.CreateRandom(
+                    embeddingSize, actionEmbeddingSize, hiddenSize, _random.Next())),
+            _ => MlpStatePredictor.CreateRandom(
+                embeddingSize, actionEmbeddingSize, hiddenSize, _random.Next()),
+        };
 
         var rewardPredictor = SimpleRewardPredictor.CreateRandom(
             embeddingSize * 2 + actionEmbeddingSize,
@@ -318,8 +321,8 @@ public sealed class WorldModelEngine : IWorldModelEngine
             embeddingSize,
             _random.Next());
 
-        await Task.CompletedTask; // For async signature
-        return (statePredictor, rewardPredictor, terminalPredictor);
+        return Task.FromResult<(IStatePredictor, IRewardPredictor, ITerminalPredictor)>(
+            (statePredictor, rewardPredictor, terminalPredictor));
     }
 
     private async Task<Plan> GreedyPlanningAsync(
