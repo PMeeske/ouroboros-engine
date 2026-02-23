@@ -3,6 +3,7 @@
 // </copyright>
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Ouroboros.Providers.Docker;
 using Ouroboros.Providers.DuckDuckGo;
 using Ouroboros.Providers.Firecrawl;
@@ -30,8 +31,8 @@ public static class McpServiceCollectionExtensions
         var options = new KubernetesMcpClientOptions();
         configure?.Invoke(options);
 
-        services.AddSingleton(options);
-        services.AddSingleton<IKubernetesMcpClient>(sp =>
+        services.TryAddSingleton(options);
+        services.TryAddSingleton<IKubernetesMcpClient>(sp =>
             new KubernetesMcpClient(sp.GetRequiredService<KubernetesMcpClientOptions>()));
 
         return services;
@@ -52,8 +53,8 @@ public static class McpServiceCollectionExtensions
         var options = new DockerMcpClientOptions();
         configure?.Invoke(options);
 
-        services.AddSingleton(options);
-        services.AddSingleton<IDockerMcpClient>(sp =>
+        services.TryAddSingleton(options);
+        services.TryAddSingleton<IDockerMcpClient>(sp =>
             new DockerMcpClient(sp.GetRequiredService<DockerMcpClientOptions>()));
 
         return services;
@@ -74,8 +75,8 @@ public static class McpServiceCollectionExtensions
         var options = new FirecrawlMcpClientOptions();
         configure?.Invoke(options);
 
-        services.AddSingleton(options);
-        services.AddSingleton<IFirecrawlMcpClient>(sp =>
+        services.TryAddSingleton(options);
+        services.TryAddSingleton<IFirecrawlMcpClient>(sp =>
             new FirecrawlMcpClient(sp.GetRequiredService<FirecrawlMcpClientOptions>()));
 
         return services;
@@ -96,8 +97,8 @@ public static class McpServiceCollectionExtensions
         var options = new DuckDuckGoMcpClientOptions();
         configure?.Invoke(options);
 
-        services.AddSingleton(options);
-        services.AddSingleton<IDuckDuckGoMcpClient>(sp =>
+        services.TryAddSingleton(options);
+        services.TryAddSingleton<IDuckDuckGoMcpClient>(sp =>
             new DuckDuckGoMcpClient(sp.GetRequiredService<DuckDuckGoMcpClientOptions>()));
 
         return services;

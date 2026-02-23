@@ -1,5 +1,6 @@
-// <copyright file="ServiceCollectionExtensions.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="ServiceCollectionExtensions.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
 namespace Ouroboros.Providers;
@@ -12,6 +13,7 @@ using Ouroboros.Domain.Vectors;
 using Ouroboros.Providers.SpeechToText;
 using Ouroboros.Providers.TextToSpeech;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Qdrant.Client;
@@ -33,9 +35,9 @@ public static class ServiceCollectionExtensions
         model = string.IsNullOrWhiteSpace(model) ? "llama3" : model;
         embed = string.IsNullOrWhiteSpace(embed) ? "nomic-embed-text" : embed;
 
-        services.AddSingleton<OllamaProvider>();
+        services.TryAddSingleton<OllamaProvider>();
 
-        services.AddSingleton<Ouroboros.Abstractions.Core.IChatCompletionModel>(sp =>
+        services.TryAddSingleton<Ouroboros.Abstractions.Core.IChatCompletionModel>(sp =>
         {
             (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.Resolve();
             if (!string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(apiKey))
@@ -98,14 +100,14 @@ public static class ServiceCollectionExtensions
             return new OllamaChatAdapter(chat);
         });
 
-        services.AddSingleton<IEmbeddingModel>(sp =>
+        services.TryAddSingleton<IEmbeddingModel>(sp =>
         {
             OllamaProvider provider = sp.GetRequiredService<OllamaProvider>();
             return new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embed!));
         });
 
-        services.AddSingleton<ToolRegistry>();
-        services.AddSingleton(sp =>
+        services.TryAddSingleton<ToolRegistry>();
+        services.TryAddSingleton(sp =>
         {
             ToolRegistry registry = sp.GetRequiredService<ToolRegistry>();
             Ouroboros.Abstractions.Core.IChatCompletionModel chat = sp.GetRequiredService<Ouroboros.Abstractions.Core.IChatCompletionModel>();
@@ -142,7 +144,7 @@ public static class ServiceCollectionExtensions
             configuration.GetSection($"{QdrantSettings.SectionPath}:Collections"));
 
         // Register singleton QdrantClient as IQdrantClient
-        services.AddSingleton<IQdrantClient>(sp =>
+        services.TryAddSingleton<IQdrantClient>(sp =>
         {
             var settings = sp.GetRequiredService<IOptions<QdrantSettings>>().Value;
             return new QdrantClient(
@@ -153,11 +155,11 @@ public static class ServiceCollectionExtensions
         });
 
         // Also register concrete QdrantClient (same instance) for backward compat
-        services.AddSingleton(sp =>
+        services.TryAddSingleton(sp =>
             (QdrantClient)sp.GetRequiredService<IQdrantClient>());
 
         // Register collection registry
-        services.AddSingleton<IQdrantCollectionRegistry>(sp =>
+        services.TryAddSingleton<IQdrantCollectionRegistry>(sp =>
         {
             var client = sp.GetRequiredService<QdrantClient>();
             var overrides = sp.GetService<IOptions<QdrantCollectionOverrides>>();
@@ -168,7 +170,7 @@ public static class ServiceCollectionExtensions
         });
 
         // Register QdrantSettings as a concrete singleton for direct injection
-        services.AddSingleton(sp =>
+        services.TryAddSingleton(sp =>
             sp.GetRequiredService<IOptions<QdrantSettings>>().Value);
 
         return services;
@@ -183,7 +185,7 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services)
     {
         // QdrantNeuralMemory — uses gRPC client + registry
-        services.AddSingleton(sp =>
+        services.TryAddSingleton(sp =>
         {
             var client = sp.GetRequiredService<QdrantClient>();
             var registry = sp.GetRequiredService<IQdrantCollectionRegistry>();
@@ -192,7 +194,7 @@ public static class ServiceCollectionExtensions
         });
 
         // QdrantCollectionAdmin — needs gRPC client + registry
-        services.AddSingleton(sp =>
+        services.TryAddSingleton(sp =>
         {
             var client = sp.GetRequiredService<QdrantClient>();
             var registry = sp.GetRequiredService<IQdrantCollectionRegistry>();
@@ -214,7 +216,7 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         // Register the factory — use DI-provided Qdrant client when available
-        services.AddSingleton<VectorStoreFactory>(sp =>
+        services.TryAddSingleton<VectorStoreFactory>(sp =>
         {
             var config = configuration ?? sp.GetService<IOptions<VectorStoreConfiguration>>()?.Value ?? new VectorStoreConfiguration();
             var qdrantClient = sp.GetService<QdrantClient>();
@@ -224,7 +226,7 @@ public static class ServiceCollectionExtensions
         });
 
         // Register IVectorStore using the factory
-        services.AddSingleton<IVectorStore>(sp =>
+        services.TryAddSingleton<IVectorStore>(sp =>
         {
             var factory = sp.GetRequiredService<VectorStoreFactory>();
             return factory.Create();
@@ -271,7 +273,7 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddSingleton<ISpeechToTextService>(sp =>
+        services.TryAddSingleton<ISpeechToTextService>(sp =>
         {
             var key = apiKey ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY")
                 ?? throw new InvalidOperationException("OpenAI API key required. Set OPENAI_API_KEY or pass apiKey parameter.");
@@ -297,7 +299,7 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddSingleton<ISpeechToTextService>(sp =>
+        services.TryAddSingleton<ISpeechToTextService>(sp =>
             new LocalWhisperService(whisperPath, modelPath, modelSize));
 
         return services;
@@ -316,7 +318,7 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(service);
 
-        services.AddSingleton(service);
+        services.TryAddSingleton(service);
         return services;
     }
 
@@ -334,7 +336,7 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddSingleton<ITextToSpeechService>(sp =>
+        services.TryAddSingleton<ITextToSpeechService>(sp =>
         {
             string key = apiKey ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY")
                 ?? throw new InvalidOperationException("OpenAI API key required. Set OPENAI_API_KEY or pass apiKey parameter.");
@@ -357,7 +359,7 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(service);
 
-        services.AddSingleton(service);
+        services.TryAddSingleton(service);
         return services;
     }
 
