@@ -4,6 +4,7 @@
 
 namespace Ouroboros.Agent.MetaAI.WorldModel;
 
+using System.Collections.Concurrent;
 using Core.Monads;
 
 /// <summary>
@@ -14,6 +15,7 @@ using Core.Monads;
 public sealed class WorldModelEngine : IWorldModelEngine
 {
     private readonly Random _random;
+    private readonly ConcurrentDictionary<Guid, WorldModel> _learnedModels = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WorldModelEngine"/> class.
@@ -70,6 +72,8 @@ public sealed class WorldModelEngine : IWorldModelEngine
                 RewardModel: rewardPredictor,
                 TerminalModel: terminalPredictor,
                 Hyperparameters: hyperparameters);
+
+            _learnedModels[model.Id] = model;
 
             return Result<WorldModel, string>.Success(model);
         }
@@ -407,51 +411,136 @@ public sealed class WorldModelEngine : IWorldModelEngine
     // The IWorldModelEngine interface is bound to Abstractions-level types
     // (LearnedWorldModel, WorldTransition, WorldState, AgentAction, ActionPlan),
     // while this class operates on the richer local types (WorldModel, Transition, State, Action, Plan).
-    // These explicit implementations satisfy the interface contract.
+    // These explicit implementations bridge between the two type systems.
 
     /// <inheritdoc />
-    Task<Result<LearnedWorldModel, string>> IWorldModelEngine.LearnModelAsync(
+    async Task<Result<LearnedWorldModel, string>> IWorldModelEngine.LearnModelAsync(
         List<WorldTransition> transitions,
         ModelArchitecture architecture,
-        CancellationToken ct) =>
-        Task.FromResult(Result<LearnedWorldModel, string>.Failure(
-            "Use the overload accepting local WorldModel types."));
+        CancellationToken ct)
+    {
+        var localTransitions = transitions.Select(ToLocalTransition).ToList();
+        var result = await LearnModelAsync(localTransitions, architecture, ct);
+        return result.Match<Result<LearnedWorldModel, string>>(
+            model => Result<LearnedWorldModel, string>.Success(ToLearnedWorldModel(model, architecture)),
+            error => Result<LearnedWorldModel, string>.Failure(error));
+    }
 
     /// <inheritdoc />
-    Task<Result<WorldState, string>> IWorldModelEngine.PredictNextStateAsync(
+    async Task<Result<WorldState, string>> IWorldModelEngine.PredictNextStateAsync(
         WorldState currentState,
         AgentAction action,
         LearnedWorldModel model,
-        CancellationToken ct) =>
-        Task.FromResult(Result<WorldState, string>.Failure(
-            "Use the overload accepting local WorldModel types."));
+        CancellationToken ct)
+    {
+        if (!_learnedModels.TryGetValue(model.Id, out var localModel))
+        {
+            return Result<WorldState, string>.Failure($"Model {model.Id} not found in registry");
+        }
+
+        var result = await PredictNextStateAsync(ToLocalState(currentState), ToLocalAction(action), localModel, ct);
+        return result.Match<Result<WorldState, string>>(
+            state => Result<WorldState, string>.Success(ToWorldState(state)),
+            error => Result<WorldState, string>.Failure(error));
+    }
 
     /// <inheritdoc />
-    Task<Result<ActionPlan, string>> IWorldModelEngine.PlanInImaginationAsync(
+    async Task<Result<ActionPlan, string>> IWorldModelEngine.PlanInImaginationAsync(
         WorldState initialState,
         string goal,
         LearnedWorldModel model,
         int lookaheadDepth,
-        CancellationToken ct) =>
-        Task.FromResult(Result<ActionPlan, string>.Failure(
-            "Use the overload accepting local WorldModel types."));
+        CancellationToken ct)
+    {
+        if (!_learnedModels.TryGetValue(model.Id, out var localModel))
+        {
+            return Result<ActionPlan, string>.Failure($"Model {model.Id} not found in registry");
+        }
+
+        var result = await PlanInImaginationAsync(ToLocalState(initialState), goal, localModel, lookaheadDepth, ct);
+        return result.Match<Result<ActionPlan, string>>(
+            plan => Result<ActionPlan, string>.Success(ToActionPlan(plan, lookaheadDepth)),
+            error => Result<ActionPlan, string>.Failure(error));
+    }
 
     /// <inheritdoc />
-    Task<Result<ModelQuality, string>> IWorldModelEngine.EvaluateModelAsync(
+    async Task<Result<ModelQuality, string>> IWorldModelEngine.EvaluateModelAsync(
         LearnedWorldModel model,
         List<WorldTransition> testSet,
-        CancellationToken ct) =>
-        Task.FromResult(Result<ModelQuality, string>.Failure(
-            "Use the overload accepting local WorldModel types."));
+        CancellationToken ct)
+    {
+        if (!_learnedModels.TryGetValue(model.Id, out var localModel))
+        {
+            return Result<ModelQuality, string>.Failure($"Model {model.Id} not found in registry");
+        }
+
+        var localTestSet = testSet.Select(ToLocalTransition).ToList();
+        return await EvaluateModelAsync(localModel, localTestSet, ct);
+    }
 
     /// <inheritdoc />
-    Task<Result<List<WorldTransition>, string>> IWorldModelEngine.GenerateSyntheticExperienceAsync(
+    async Task<Result<List<WorldTransition>, string>> IWorldModelEngine.GenerateSyntheticExperienceAsync(
         LearnedWorldModel model,
         WorldState startState,
         int trajectoryLength,
-        CancellationToken ct) =>
-        Task.FromResult(Result<List<WorldTransition>, string>.Failure(
-            "Use the overload accepting local WorldModel types."));
+        CancellationToken ct)
+    {
+        if (!_learnedModels.TryGetValue(model.Id, out var localModel))
+        {
+            return Result<List<WorldTransition>, string>.Failure($"Model {model.Id} not found in registry");
+        }
+
+        var result = await GenerateSyntheticExperienceAsync(localModel, ToLocalState(startState), trajectoryLength, ct);
+        return result.Match<Result<List<WorldTransition>, string>>(
+            transitions => Result<List<WorldTransition>, string>.Success(
+                transitions.Select(ToWorldTransition).ToList()),
+            error => Result<List<WorldTransition>, string>.Failure(error));
+    }
+
+    #endregion
+
+    #region Type Adapters
+
+    private static State ToLocalState(WorldState ws) =>
+        new(ws.Features,
+            ws.Features.TryGetValue("embedding", out var emb) && emb is float[] floats
+                ? floats
+                : new float[8]);
+
+    private static Action ToLocalAction(AgentAction aa) =>
+        new(aa.Name, aa.Parameters ?? new Dictionary<string, object>());
+
+    private static Transition ToLocalTransition(WorldTransition wt) =>
+        new(ToLocalState(wt.FromState),
+            ToLocalAction(wt.Action),
+            ToLocalState(wt.ToState),
+            wt.Reward,
+            Terminal: false);
+
+    private static WorldState ToWorldState(State s) =>
+        new(Guid.NewGuid(),
+            new Dictionary<string, object>(s.Features) { ["embedding"] = s.Embedding },
+            DateTime.UtcNow);
+
+    private static WorldTransition ToWorldTransition(Transition t) =>
+        new(ToWorldState(t.PreviousState),
+            new AgentAction(t.ActionTaken.Name, t.ActionTaken.Parameters),
+            ToWorldState(t.NextState),
+            t.Reward);
+
+    private static LearnedWorldModel ToLearnedWorldModel(WorldModel wm, ModelArchitecture arch) =>
+        new(wm.Id,
+            wm.Domain,
+            arch,
+            Accuracy: 0.0,
+            TrainingSamples: wm.Hyperparameters.TryGetValue("training_samples", out var ts) && ts is int count ? count : 0,
+            TrainedAt: DateTime.UtcNow);
+
+    private static ActionPlan ToActionPlan(Plan p, int lookaheadDepth) =>
+        new(p.Actions.Select(a => new AgentAction(a.Name, a.Parameters)).ToList(),
+            p.ExpectedReward,
+            p.Confidence,
+            lookaheadDepth);
 
     #endregion
 }
