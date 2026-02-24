@@ -1,0 +1,78 @@
+# ComfyUI Performance Settings — Optimized for ASUS ROG Ally (AMD Z1/Z1 Extreme)
+#
+# These settings are applied via command-line flags and environment variables.
+# See scripts/start-comfyui.ps1 for the launch configuration.
+
+# === Runtime Backend ===
+backend: directml          # Use DirectML for AMD RDNA 3 iGPU
+# Do NOT use: cuda, rocm   (not available on ROG Ally)
+
+# === Memory Management ===
+vram_mode: lowvram
+# Options:
+#   lowvram    - Aggressively offloads model components to system RAM.
+#                Recommended for 8GB shared VRAM on ROG Ally.
+#                Slower but prevents OOM errors.
+#   normalvram - Keep full model in VRAM. Only if generation is stable.
+#   highvram   - NOT recommended. Will crash on ROG Ally.
+
+# === Attention Configuration ===
+# DirectML does NOT support xformers or FlashAttention.
+# Attention slicing is used automatically in lowvram mode.
+attention_slicing: true
+attention_slice_size: 1     # Process attention one head at a time (safest)
+# Increase to 2 or 4 for faster generation IF no OOM errors occur.
+
+# === Sampler Recommendations ===
+# Ordered by speed on DirectML (fastest to slowest):
+#
+#   1. DPM++ 2M Karras    — Best quality/speed ratio. 20 steps recommended.
+#   2. Euler A            — Fast, good variety. 20-25 steps.
+#   3. DPM++ SDE Karras   — Higher quality, ~30% slower. 20 steps.
+#   4. DDIM               — Consistent results. 30+ steps needed (slower).
+#   5. UniPC              — Good quality, moderate speed. 20 steps.
+#
+# Avoid: DPM++ 3M (too slow), Heun (double evaluations = 2x time)
+
+sampler:
+  name: dpmpp_2m_karras
+  steps: 20
+  cfg_scale: 7.5
+  scheduler: karras
+
+# === Resolution ===
+default_resolution:
+  width: 512
+  height: 512
+  # SD 1.5 native resolution. Do not exceed 768 on either axis.
+  # For ControlNet workflows, reduce to 384x384 if OOM occurs.
+
+# === Batch Generation ===
+batch:
+  size: 1
+  # Generate panels one at a time to stay under VRAM limits.
+  # Sequential panel generation is safer on integrated GPUs.
+  # The assemble-strip.py script composites them afterward.
+
+# === Preview ===
+preview:
+  method: auto              # Enable in-browser generation preview
+  # Options: auto, taesd, latent2rgb, none
+  # 'auto' picks the fastest available method.
+  # 'none' saves slight GPU overhead if you don't need live preview.
+
+# === Environment Variables (set before launching ComfyUI) ===
+environment:
+  PYTORCH_DIRECTML_ENABLE_GRAPH_CAPTURE: "1"
+  # Enables DirectML graph capture for better kernel fusion.
+  # Can improve performance 5-15% on repeated operations.
+
+  ONNXRUNTIME_DML_GRAPH_CAPTURE: "1"
+  # Same optimization for ONNX Runtime DirectML sessions.
+
+# === Windows Power Settings ===
+# For best performance, ensure:
+#   1. Power plan: Best Performance (Settings → System → Power)
+#   2. ASUS Armoury Crate: Turbo mode
+#   3. Device plugged in (battery mode throttles APU significantly)
+#   4. Game Mode: OFF (Settings → Gaming → Game Mode)
