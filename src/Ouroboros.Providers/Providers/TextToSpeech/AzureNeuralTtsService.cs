@@ -79,6 +79,13 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     public static bool IsCircuitOpen { get; private set; }
 
     /// <summary>
+    /// Raised after every successful synthesis with the raw audio data (WAV format).
+    /// Subscribers can use this to feed an FFT-based voice fingerprint detector
+    /// for self-echo suppression in ambient microphone capture.
+    /// </summary>
+    public event Action<byte[]>? OnAudioSynthesized;
+
+    /// <summary>
     /// Gets or sets the culture for voice selection and language.
     /// </summary>
     public string Culture
@@ -337,6 +344,7 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
                     else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
                     {
                         System.Diagnostics.Debug.WriteLine($"[Azure TTS] Synthesis complete, {result.AudioData.Length} bytes");
+                        try { OnAudioSynthesized?.Invoke(result.AudioData); } catch { }
                     }
                 }, ct);
             }, ct);
