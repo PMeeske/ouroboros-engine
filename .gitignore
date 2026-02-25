@@ -29,3 +29,18 @@ StrykerOutput/
 # Logs
 logs/
 *.log
+
+# Security - prevent accidental credential commits
+.env
+.env.*
+*.env
+appsettings.*.local.json
+appsettings.Local.json
+credentials.json
+secrets.json
+launchSettings.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
