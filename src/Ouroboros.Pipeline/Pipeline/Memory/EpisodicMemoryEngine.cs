@@ -252,21 +252,32 @@ public sealed class EpisodicMemoryEngine : IEpisodicMemoryEngine, IAsyncDisposab
                 strategy,
                 cutoffTime);
 
-            // Scroll through old episodes
-            // Note: Qdrant filter API for dates is complex, so we retrieve all and filter in memory
-            // For production use, consider custom filtering logic or timestamp-based collections
-            var scrollResult = await _qdrantClient.ScrollAsync(
-                _collectionName,
-                limit: 1000,
-                cancellationToken: ct);
-
+            // Paginated scroll through all episodes, filtering by cutoff in memory.
+            // Uses cursor-based pagination (NextPageOffset) to avoid artificial ceilings.
             var oldEpisodes = new List<Episode>();
-            foreach (var point in scrollResult.Result)
+            PointId? nextOffset = null;
+
+            while (true)
             {
-                var episodeOption = DeserializeEpisodeFromRetrieved(point);
-                if (episodeOption.HasValue && episodeOption.Value!.Timestamp < cutoffTime)
+                var scrollResult = await _qdrantClient.ScrollAsync(
+                    _collectionName,
+                    limit: 100,
+                    offset: nextOffset,
+                    cancellationToken: ct);
+
+                foreach (var point in scrollResult.Result)
                 {
-                    oldEpisodes.Add(episodeOption.Value!);
+                    var episodeOption = DeserializeEpisodeFromRetrieved(point);
+                    if (episodeOption.HasValue && episodeOption.Value!.Timestamp < cutoffTime)
+                    {
+                        oldEpisodes.Add(episodeOption.Value!);
+                    }
+                }
+
+                nextOffset = scrollResult.NextPageOffset;
+                if (nextOffset is null || scrollResult.Result.Count == 0)
+                {
+                    break;
                 }
             }
 
