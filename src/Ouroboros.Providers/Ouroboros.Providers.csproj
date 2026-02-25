@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Ouroboros</RootNamespace>
+    <AssemblyName>Ouroboros.Providers</AssemblyName>
+    <Product>Ouroboros Providers</Product>
+    <Description>External service providers and adapters for Ouroboros</Description>
+  </PropertyGroup>
+
+  <!-- Remove local model duplicates; use the canonical definitions from Ouroboros.Abstractions -->
+  <ItemGroup>
+    <Compile Remove="Providers\Docker\DockerModels.cs" />
+    <Compile Remove="Providers\Kubernetes\KubernetesModels.cs" />
+    <Compile Remove="Providers\DuckDuckGo\DuckDuckGoModels.cs" />
+    <Compile Remove="Providers\Firecrawl\FirecrawlModels.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Abstractions\Ouroboros.Abstractions.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Core\Ouroboros.Core.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Domain\Ouroboros.Domain.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Tools\Ouroboros.Tools.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
+    <PackageReference Include="Anthropic.SDK" Version="5.9.0" />
+    <PackageReference Include="Qdrant.Client" Version="1.16.1" />
+    <PackageReference Include="Azure.AI.Inference" Version="1.0.0-beta.5" />
+    <PackageReference Include="LangChain" Version="0.17.0" />
+    <PackageReference Include="Microsoft.CognitiveServices.Speech" Version="1.48.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
+    <PackageReference Include="Polly" Version="8.6.5" />
+    <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
+    <PackageReference Include="System.Reactive" Version="6.1.0" />
+    <PackageReference Include="Whisper.net" Version="1.9.0" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.0" />
+  </ItemGroup>
+
+</Project>

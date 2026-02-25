@@ -1,0 +1,70 @@
+# CI pipeline for ouroboros-engine
+# Triggers on push to main and pull requests
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  repository_dispatch:
+    types: [dependency-updated]
+  workflow_dispatch:
+
+concurrency:
+  # Use dispatch source for grouping when triggered by repository_dispatch,
+  # otherwise use git ref. This allows multiple dispatch events from different
+  # sources to run concurrently while still preventing duplicate runs per source.
+  group: ci-${{ github.event_name == 'repository_dispatch' && format('dispatch-{0}', github.event.client_payload.source_repo) || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-build.yml@main
+    with:
+      projects: >-
+        src/Ouroboros.Agent/Ouroboros.Agent.csproj
+        src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
+        src/Ouroboros.Providers/Ouroboros.Providers.csproj
+        src/Ouroboros.Network/Ouroboros.Network.csproj
+
+  test:
+    name: Test
+    needs: build
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-test.yml@main
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    with:
+      job-identifier: "test"
+      test-projects: >-
+        tests/Ouroboros.Agent.Tests/Ouroboros.Agent.Tests.csproj
+        tests/Ouroboros.Pipeline.Tests/Ouroboros.Pipeline.Tests.csproj
+        tests/Ouroboros.Providers.Tests/Ouroboros.Providers.Tests.csproj
+        tests/Ouroboros.Network.Tests/Ouroboros.Network.Tests.csproj
+      build-projects: >-
+        src/Ouroboros.Agent/Ouroboros.Agent.csproj
+        src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
+        src/Ouroboros.Providers/Ouroboros.Providers.csproj
+        src/Ouroboros.Network/Ouroboros.Network.csproj
+      coverage-threshold: 60
+
+  bdd:
+    name: BDD Tests
+    needs: build
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-test.yml@main
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    with:
+      job-identifier: "bdd"
+      test-projects: tests/Ouroboros.Engine.BDD/Ouroboros.Engine.BDD.csproj
+      build-projects: >-
+        src/Ouroboros.Agent/Ouroboros.Agent.csproj
+        src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
+        src/Ouroboros.Providers/Ouroboros.Providers.csproj
+      coverage-threshold: 0

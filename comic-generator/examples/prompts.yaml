@@ -1,0 +1,201 @@
+# Example Comic Prompts — Optimized for SD 1.5 manga/comic style
+#
+# Each entry includes:
+#   positive:  What you want to generate
+#   negative:  What to avoid
+#   settings:  Recommended sampler settings
+#   notes:     Usage tips
+#
+# Prompt structure for best results:
+#   [quality tags], [style tags], [subject], [action], [environment], [lighting]
+
+# === Negative prompt (shared across all examples) ===
+shared_negative: &negative >
+  lowres, bad anatomy, bad hands, text, error, missing fingers,
+  extra digit, fewer digits, cropped, worst quality, low quality,
+  normal quality, jpeg artifacts, signature, watermark, username,
+  blurry, colored, photorealistic, 3d render, cgi, photograph
+
+# ============================================================
+# STYLE 1: Black & White Manga (Ink)
+# ============================================================
+
+manga_action_panel:
+  description: "Dynamic action scene in manga ink style"
+  positive: >
+    masterpiece, best quality, manga panel, black and white,
+    ink drawing, clean lineart, screentone shading, speed lines,
+    1boy warrior, dynamic pose, sword slash, intense expression,
+    debris flying, dramatic angle, professional manga art
+  negative: *negative
+  settings:
+    sampler: dpmpp_2m_karras
+    steps: 20
+    cfg: 7.5
+    seed: -1
+    resolution: 512x512
+
+manga_dialogue_panel:
+  description: "Close-up character dialogue panel"
+  positive: >
+    masterpiece, best quality, manga panel, black and white,
+    ink drawing, clean lineart, halftone shading,
+    1girl close-up face, speaking, expressive eyes, school uniform,
+    simple background, speech lines, professional manga art
+  negative: *negative
+  settings:
+    sampler: dpmpp_2m_karras
+    steps: 20
+    cfg: 7.0
+    seed: -1
+    resolution: 512x512
+
+manga_establishing_shot:
+  description: "Wide establishing shot of a location"
+  positive: >
+    masterpiece, best quality, manga panel, black and white,
+    ink drawing, detailed lineart, crosshatch shading,
+    wide shot, cityscape, tokyo street, night scene,
+    detailed buildings, atmospheric perspective, no people,
+    professional manga background art
+  negative: *negative
+  settings:
+    sampler: dpmpp_2m_karras
+    steps: 25
+    cfg: 8.0
+    seed: -1
+    resolution: 512x512
+  notes: "Use 25 steps for more background detail. Higher CFG for sharper architecture."
+
+# ============================================================
+# STYLE 2: Western Comic Book
+# ============================================================
+
+comic_hero_panel:
+  description: "Western superhero comic style panel"
+  positive: >
+    masterpiece, best quality, comic book panel, western comic style,
+    bold ink lines, crosshatch shading, ben-day dots,
+    1boy superhero, muscular, cape flowing, heroic pose,
+    city rooftop, moonlight, dramatic shadows,
+    professional comic book art, marvel style
+  negative: *negative
+  settings:
+    sampler: dpmpp_2m_karras
+    steps: 20
+    cfg: 7.5
+    seed: -1
+    resolution: 512x512
+
+comic_noir_panel:
+  description: "Film noir detective comic style"
+  positive: >
+    masterpiece, best quality, comic book panel, noir style,
+    heavy shadows, high contrast black and white,
+    1man detective, trench coat, fedora hat, smoking,
+    rain, dark alley, street lamp, venetian blinds shadows,
+    crime comic art, sin city style
+  negative: *negative
+  settings:
+    sampler: dpmpp_2m_karras
+    steps: 20
+    cfg: 8.0
+    seed: -1
+    resolution: 512x512
+  notes: "Higher CFG (8.0) pushes stronger contrast for noir style."
+
+# ============================================================
+# STYLE 3: Color Comic (use with Counterfeit V3.0 model)
+# ============================================================
+
+color_comic_panel:
+  description: "Full color comic panel (use Counterfeit V3.0 model)"
+  positive: >
+    masterpiece, best quality, comic book panel, flat colors,
+    cel shading, bold outlines, vibrant colors,
+    1girl adventurer, fantasy armor, magical forest,
+    glowing particles, epic scene, professional illustration
+  negative: >
+    lowres, bad anatomy, bad hands, text, error, missing fingers,
+    extra digit, fewer digits, cropped, worst quality, low quality,
+    jpeg artifacts, signature, watermark, blurry, photorealistic,
+    3d render, gradient shading
+  settings:
+    sampler: dpmpp_2m_karras
+    steps: 20
+    cfg: 7.5
+    seed: -1
+    resolution: 512x512
+  notes: >
+    Remove 'colored' from negative prompt for color output.
+    Add 'gradient shading' to negative to keep flat comic colors.
+    Use Counterfeit V3.0 model for best color results.
+
+# ============================================================
+# MULTI-PANEL STRIP EXAMPLE
+# ============================================================
+# Generate each panel separately with the same seed base,
+# then assemble with: python scripts/assemble-strip.py
+
+three_panel_strip:
+  description: "3-panel comic strip sequence"
+  panel_1:
+    positive: >
+      masterpiece, best quality, manga panel, black and white,
+      ink drawing, clean lineart, halftone shading,
+      1girl student, walking to school, morning, cherry blossoms,
+      wide shot, peaceful mood, professional manga art
+    seed: 42
+  panel_2:
+    positive: >
+      masterpiece, best quality, manga panel, black and white,
+      ink drawing, clean lineart, halftone shading,
+      1girl student, surprised face, looking at phone,
+      medium shot, school gate background, professional manga art
+    seed: 43
+  panel_3:
+    positive: >
+      masterpiece, best quality, manga panel, black and white,
+      ink drawing, clean lineart, halftone shading,
+      1girl student, running, late for class, speed lines,
+      dynamic angle, school hallway, professional manga art
+    seed: 44
+  assembly:
+    layout: "1x3"
+    command: >
+      python scripts/assemble-strip.py
+      --panels output/comic_panel_00001.png
+              output/comic_panel_00002.png
+              output/comic_panel_00003.png
+      --layout 1x3
+      --output output/strip_morning_rush.png
+      --halftone
+
+# ============================================================
+# CHARACTER CONSISTENCY TIPS
+# ============================================================
+#
+# Maintaining the same character across panels is the hardest part
+# of comic generation. Strategies that work within SD 1.5 constraints:
+#
+# 1. FIXED SEED RANGE: Use sequential seeds (42, 43, 44...).
+#    Not guaranteed but sometimes produces similar characters.
+#
+# 2. DETAILED CHARACTER TAGS: Be very specific about the character
+#    in every prompt. Always include:
+#    - Hair: "long black hair, straight hair, bangs"
+#    - Eyes: "blue eyes, large eyes"
+#    - Clothing: "white school uniform, red ribbon, pleated skirt"
+#    - Distinguishing marks: "scar on left cheek"
+#
+# 3. CONTROLNET SKETCH: Draw a rough sketch of each panel with
+#    the same character proportions. The ControlNet lineart
+#    workflow enforces consistent body shape and pose.
+#
+# 4. LORA (advanced): Train a character LoRA on 10-20 reference
+#    images. LoRAs are small (~10-50MB) and work on ROG Ally.
+#    Training requires a more powerful GPU, but inference is fine.
+#
+# 5. IMG2IMG: Generate panel 1, then use it as img2img input
+#    for subsequent panels with different prompts but same
+#    character description. Denoise strength 0.5-0.7.

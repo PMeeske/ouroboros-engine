@@ -1,0 +1,50 @@
+# Mutation testing for ouroboros-engine
+# Runs on schedule and manual trigger
+
+name: Mutation Testing
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Weekly Sunday 3am UTC
+  workflow_dispatch:
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutate-agent:
+    name: Mutate Agent
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-mutation-testing.yml@main
+    with:
+      project: src/Ouroboros.Agent/Ouroboros.Agent.csproj
+      test-project: tests/Ouroboros.Agent.Tests/Ouroboros.Agent.Tests.csproj
+      category: agent
+      mutation-level: Standard
+
+  mutate-pipeline:
+    name: Mutate Pipeline
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-mutation-testing.yml@main
+    with:
+      project: src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
+      test-project: tests/Ouroboros.Pipeline.Tests/Ouroboros.Pipeline.Tests.csproj
+      category: pipeline
+      mutation-level: Standard
+
+  mutate-providers:
+    name: Mutate Providers
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-mutation-testing.yml@main
+    with:
+      project: src/Ouroboros.Providers/Ouroboros.Providers.csproj
+      test-project: tests/Ouroboros.Providers.Tests/Ouroboros.Providers.Tests.csproj
+      category: providers
+      mutation-level: Standard
+
+  mutate-network:
+    name: Mutate Network
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-mutation-testing.yml@main
+    with:
+      project: src/Ouroboros.Network/Ouroboros.Network.csproj
+      test-project: tests/Ouroboros.Network.Tests/Ouroboros.Network.Tests.csproj
+      category: network
+      mutation-level: Standard

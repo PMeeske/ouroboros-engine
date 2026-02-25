@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Ouroboros</RootNamespace>
+    <AssemblyName>Ouroboros.Pipeline</AssemblyName>
+    <Product>Ouroboros Pipeline</Product>
+    <Description>Pipeline implementations including reasoning, ingestion, and replay for Ouroboros</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Abstractions\Ouroboros.Abstractions.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Core\Ouroboros.Core.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Domain\Ouroboros.Domain.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Tools\Ouroboros.Tools.csproj" />
+    <ProjectReference Include="..\Ouroboros.Providers\Ouroboros.Providers.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LangChain" Version="0.17.0" />
+    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
+    <PackageReference Include="System.Interactive.Async" Version="7.0.0" />
+    <PackageReference Include="System.Reactive" Version="6.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="MeTTa\Schemas\**\*.metta" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="contentFiles\any\any\MeTTa\Schemas">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

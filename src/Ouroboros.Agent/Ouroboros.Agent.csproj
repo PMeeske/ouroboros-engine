@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Ouroboros</RootNamespace>
+    <AssemblyName>Ouroboros.Agent</AssemblyName>
+    <Product>Ouroboros Agent</Product>
+    <Description>AI orchestration and Meta-AI layer for Ouroboros</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Abstractions\Ouroboros.Abstractions.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Core\Ouroboros.Core.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Domain\Ouroboros.Domain.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Genetic\Ouroboros.Genetic.csproj" />
+    <ProjectReference Include="..\Ouroboros.Pipeline\Ouroboros.Pipeline.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Tools\Ouroboros.Tools.csproj" />
+    <ProjectReference Include="..\Ouroboros.Providers\Ouroboros.Providers.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LangChain" Version="0.17.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
+    <PackageReference Include="Polly" Version="8.6.5" />
+    <PackageReference Include="Qdrant.Client" Version="1.16.1" />
+  </ItemGroup>
+
+</Project>
