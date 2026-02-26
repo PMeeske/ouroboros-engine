@@ -346,6 +346,32 @@ public static class TapoServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds the Tapo Gateway manager for auto-starting the Python gateway process.
+    /// The gateway provides device discovery and REST API proxy for Tapo devices.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="gatewayScriptPath">Path to the tapo_gateway.py script.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddTapoGateway(
+        this IServiceCollection services,
+        string gatewayScriptPath)
+    {
+        if (services == null)
+            throw new ArgumentNullException(nameof(services));
+
+        if (string.IsNullOrWhiteSpace(gatewayScriptPath))
+            throw new ArgumentException("Gateway script path is required", nameof(gatewayScriptPath));
+
+        services.AddSingleton(sp =>
+        {
+            var logger = sp.GetService<ILogger<TapoGatewayManager>>();
+            return new TapoGatewayManager(gatewayScriptPath, logger);
+        });
+
+        return services;
+    }
+
     private static bool IsCameraDevice(TapoDeviceType deviceType) =>
         deviceType is TapoDeviceType.C100 or TapoDeviceType.C200 or TapoDeviceType.C210
             or TapoDeviceType.C220 or TapoDeviceType.C310 or TapoDeviceType.C320

@@ -17,7 +17,7 @@ namespace Ouroboros.Providers.Tapo;
 /// </summary>
 public sealed class TapoEmbodimentProvider : IEmbodimentProvider
 {
-    private readonly TapoRestClient? _tapoClient;
+    private TapoRestClient? _tapoClient;
     private readonly ITapoRtspClientFactory? _rtspClientFactory;
     private readonly IVisionModel? _visionModel;
     private readonly ITtsModel? _ttsModel;
@@ -143,6 +143,14 @@ public sealed class TapoEmbodimentProvider : IEmbodimentProvider
     /// Gets the REST client (if configured).
     /// </summary>
     public TapoRestClient? RestClient => _tapoClient;
+
+    /// <summary>
+    /// Sets the REST client dynamically (e.g., after gateway startup).
+    /// </summary>
+    public void SetRestClient(TapoRestClient client)
+    {
+        _tapoClient = client;
+    }
 
     /// <inheritdoc/>
     public string ProviderId { get; }
