@@ -3,7 +3,7 @@
 // </copyright>
 
 using FluentAssertions;
-using Ouroboros.Abstractions.Monads;
+using Ouroboros.Abstractions;
 using Ouroboros.Agent.MetaAI.WorldModel;
 using Action = Ouroboros.Agent.MetaAI.WorldModel.Action;
 
@@ -299,7 +299,7 @@ public class WorldModelEngineTests
 
         // Assert
         result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("action");
+        result.Error.Should().ContainEquivalentOf("action");
     }
 
     [Fact]
