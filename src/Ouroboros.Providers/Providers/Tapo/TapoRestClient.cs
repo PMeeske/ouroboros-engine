@@ -306,6 +306,80 @@ public sealed class TapoRestClient : IDisposable
     }
 
     /// <summary>
+    /// Triggers network discovery on the gateway and returns newly found devices.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Result containing newly discovered devices or error.</returns>
+    public async Task<Result<List<TapoDevice>>> DiscoverDevicesAsync(CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_sessionId))
+            return Result<List<TapoDevice>>.Failure("Not authenticated. Call LoginAsync first.");
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/discover");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
+
+            var response = await _httpClient.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync(ct);
+                _logger?.LogError("Discovery failed: {Error}", error);
+                return Result<List<TapoDevice>>.Failure($"Discovery failed: {response.StatusCode}");
+            }
+
+            var devices = await response.Content.ReadFromJsonAsync<List<TapoDevice>>(_jsonOptions, ct);
+            return devices != null
+                ? Result<List<TapoDevice>>.Success(devices)
+                : Result<List<TapoDevice>>.Failure("No devices returned from discovery");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger?.LogError(ex, "HTTP error during discovery");
+            return Result<List<TapoDevice>>.Failure($"HTTP error: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error during discovery");
+            return Result<List<TapoDevice>>.Failure($"Discovery failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Checks if the gateway server is healthy and responding.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Result containing "ok" on success or error message.</returns>
+    public async Task<Result<string>> HealthCheckAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("/health", ct);
+            if (!response.IsSuccessStatusCode)
+                return Result<string>.Failure($"Health check failed: {response.StatusCode}");
+
+            var body = await response.Content.ReadAsStringAsync(ct);
+            return Result<string>.Success(body);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            return Result<string>.Failure($"Health check failed: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            return Result<string>.Failure($"Health check failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Disposes resources.
     /// </summary>
     public void Dispose()
