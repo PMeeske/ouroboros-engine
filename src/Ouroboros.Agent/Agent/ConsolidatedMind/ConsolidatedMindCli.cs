@@ -4,6 +4,7 @@
 // </copyright>
 
 using LangChain.Providers.Ollama;
+using Ouroboros.Agent.NanoAtoms;
 
 namespace Ouroboros.Agent.ConsolidatedMind;
 
@@ -168,6 +169,7 @@ public static class ConsolidatedMindCli
         Console.WriteLine("║    /code <prompt>  - Force code expert mode                 ║");
         Console.WriteLine("║    /plan <prompt>  - Force planning mode                    ║");
         Console.WriteLine("║    /models         - Show registered models                 ║");
+        Console.WriteLine("║    /nano <prompt>  - NanoAtom pipeline (tiny model mode)    ║");
         Console.WriteLine("║    /help           - Show this help                         ║");
         Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
         Console.WriteLine();
@@ -221,6 +223,12 @@ public static class ConsolidatedMindCli
                 {
                     input = input[6..];
                     input = $"[PLANNING TASK] {input}";
+                }
+                else if (input.StartsWith("/nano ", StringComparison.OrdinalIgnoreCase))
+                {
+                    string nanoPrompt = input[6..].Trim();
+                    await HandleNanoCommandAsync(mind, nanoPrompt, cancellationToken);
+                    continue;
                 }
 
                 Console.ForegroundColor = ConsoleColor.DarkGray;
@@ -308,11 +316,84 @@ public static class ConsolidatedMindCli
         Console.WriteLine("  /think <prompt> - Force deep reasoning with thinking tokens");
         Console.WriteLine("  /code <prompt>  - Route to code expert model");
         Console.WriteLine("  /plan <prompt>  - Route to planning model");
+        Console.WriteLine("  /nano <prompt>  - NanoAtom pipeline (fragment→digest→consolidate)");
         Console.WriteLine("  /models         - Show all registered specialist models");
         Console.WriteLine("  /help           - Show this help");
         Console.WriteLine();
         Console.WriteLine("The ConsolidatedMind automatically routes your prompts to the");
         Console.WriteLine("most appropriate specialist model based on content analysis.");
+        Console.WriteLine();
+        Console.WriteLine("NanoAtom mode fragments large prompts into nano-sized pieces,");
+        Console.WriteLine("processes them through self-consuming atoms, and consolidates");
+        Console.WriteLine("the results. Ideal for low-context/tiny Ollama models.");
+        Console.WriteLine();
+    }
+
+    /// <summary>
+    /// Handles the /nano command by running the prompt through a NanoAtomModel.
+    /// The NanoAtomModel wraps the first available specialist as an IChatCompletionModel,
+    /// fragmenting the prompt, processing through self-consuming atoms, and consolidating.
+    /// </summary>
+    private static async Task HandleNanoCommandAsync(
+        ConsolidatedMind mind,
+        string prompt,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("Usage: /nano <prompt>");
+            Console.ResetColor();
+            return;
+        }
+
+        // Use the first available specialist model as the inner model for NanoAtom
+        var specialist = mind.Specialists.Values.FirstOrDefault();
+        if (specialist == null)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("No specialist models registered. Cannot run NanoAtom pipeline.");
+            Console.ResetColor();
+            return;
+        }
+
+        Console.ForegroundColor = ConsoleColor.DarkGray;
+        Console.WriteLine($"NanoAtom pipeline via {specialist.ModelName}...");
+        Console.ResetColor();
+
+        try
+        {
+            var nanoModel = new NanoAtomModel(specialist.Model);
+            var result = await nanoModel.ProcessFullAsync(prompt, ct);
+
+            if (result.IsSuccess)
+            {
+                var action = result.Value;
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.Write("Nano> ");
+                Console.ResetColor();
+                Console.WriteLine(action.Content);
+
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"  [{action.StreamCount} streams, {action.SourceDigests.Count} digests, " +
+                                  $"confidence: {action.Confidence:P0}, type: {action.ActionType}, " +
+                                  $"{action.ElapsedMs}ms]");
+                Console.ResetColor();
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"NanoAtom failed: {result.Error}");
+                Console.ResetColor();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"NanoAtom error: {ex.Message}");
+            Console.ResetColor();
+        }
+
         Console.WriteLine();
     }
 
