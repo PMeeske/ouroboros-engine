@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/PMeeske/ouroboros-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/PMeeske/ouroboros-engine/actions/workflows/ci.yml)
 [![Mutation Testing](https://github.com/PMeeske/ouroboros-engine/actions/workflows/mutation.yml/badge.svg)](https://github.com/PMeeske/ouroboros-engine/actions/workflows/mutation.yml)
+![Tests](https://img.shields.io/badge/tests-3%2C146%20passed-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-452%20test%20files%20%2F%20771%20src-blue)
 
 **Ouroboros Engine** is the core execution layer of the Ouroboros cognitive AI system, providing composable AI pipelines, agent orchestration, provider integrations, and network capabilities.
 
