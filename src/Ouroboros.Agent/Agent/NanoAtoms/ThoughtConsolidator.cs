@@ -111,10 +111,7 @@ public sealed class ThoughtConsolidator
                 ElapsedMs: stopwatch.ElapsedMilliseconds,
                 Timestamp: DateTime.UtcNow));
         }
-        catch (OperationCanceledException)
-        {
-            return Result<ConsolidatedAction, string>.Failure("Consolidation was cancelled");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ConsolidatedAction, string>.Failure($"Consolidation failed: {ex.Message}");

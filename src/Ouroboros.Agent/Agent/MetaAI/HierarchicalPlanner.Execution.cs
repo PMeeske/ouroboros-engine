@@ -35,10 +35,7 @@ public sealed partial class HierarchicalPlanner
                 _ => Result<Plan, string>.Failure($"Unknown repair strategy: {strategy}")
             };
         }
-        catch (OperationCanceledException)
-        {
-            return Result<Plan, string>.Failure("Plan repair was cancelled");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Plan, string>.Failure($"Plan repair failed: {ex.Message}");
@@ -194,10 +191,7 @@ public sealed partial class HierarchicalPlanner
 
             return Result<string, string>.Success(explanation);
         }
-        catch (OperationCanceledException)
-        {
-            return Result<string, string>.Failure("Plan explanation was cancelled");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<string, string>.Failure($"Plan explanation failed: {ex.Message}");

@@ -91,20 +91,7 @@ public sealed class OrchestrationExperiment : IOrchestrationExperiment
             _experimentResults[experimentId] = result;
             return Result<ExperimentResult, string>.Success(result);
         }
-        catch (OperationCanceledException)
-        {
-            var cancelledResult = new ExperimentResult(
-                ExperimentId: experimentId,
-                StartedAt: state.StartedAt,
-                CompletedAt: DateTime.UtcNow,
-                VariantResults: new List<VariantResult>(),
-                Analysis: null,
-                Winner: null,
-                Status: ExperimentStatus.Cancelled);
-
-            _experimentResults[experimentId] = cancelledResult;
-            return Result<ExperimentResult, string>.Failure("Experiment was cancelled");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             var failedResult = new ExperimentResult(

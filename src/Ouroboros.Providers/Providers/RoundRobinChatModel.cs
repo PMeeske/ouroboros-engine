@@ -216,6 +216,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
             {
                 throw; // deliberate cancellation — don't retry
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 stats.FailedRequests++;
@@ -307,6 +308,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                     observer.OnCompleted(); // deliberate cancellation — don't retry
                     return;
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     stats.FailedRequests++;

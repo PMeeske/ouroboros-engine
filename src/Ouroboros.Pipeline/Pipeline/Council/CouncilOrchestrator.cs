@@ -135,10 +135,7 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
             var decision = await SynthesizeDecisionAsync(topic, transcript, votes, config, ct);
             return decision;
         }
-        catch (OperationCanceledException)
-        {
-            return Result<CouncilDecision, string>.Failure("Council debate was cancelled.");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<CouncilDecision, string>.Failure($"Council debate failed: {ex.Message}");

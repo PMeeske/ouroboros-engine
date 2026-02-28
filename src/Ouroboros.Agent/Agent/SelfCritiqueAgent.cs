@@ -158,10 +158,7 @@ public sealed class SelfCritiqueAgent
 
             return Result<SelfCritiqueResult, string>.Success(result);
         }
-        catch (OperationCanceledException)
-        {
-            return Result<SelfCritiqueResult, string>.Failure("Operation was cancelled");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<SelfCritiqueResult, string>.Failure($"Self-critique failed: {ex.Message}");

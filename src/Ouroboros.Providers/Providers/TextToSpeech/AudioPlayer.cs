@@ -89,10 +89,7 @@ public static class AudioPlayer
             await process.WaitForExitAsync(ct);
             return Result<bool, string>.Success(true);
         }
-        catch (OperationCanceledException)
-        {
-            return Result<bool, string>.Failure("Playback cancelled");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<bool, string>.Failure($"Playback failed: {ex.Message}");

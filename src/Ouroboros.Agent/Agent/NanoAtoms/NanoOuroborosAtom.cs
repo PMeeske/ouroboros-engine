@@ -157,11 +157,7 @@ public sealed class NanoOuroborosAtom : IDisposable
 
             return Result<DigestFragment, string>.Success(digest);
         }
-        catch (OperationCanceledException)
-        {
-            CurrentPhase = NanoAtomPhase.Idle;
-            return Result<DigestFragment, string>.Failure("Processing was cancelled");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             CurrentPhase = NanoAtomPhase.Idle;

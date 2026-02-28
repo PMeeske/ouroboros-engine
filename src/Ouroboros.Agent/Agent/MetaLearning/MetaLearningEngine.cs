@@ -56,10 +56,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
 
             return Result<MetaModel, string>.Success(metaModel);
         }
-        catch (OperationCanceledException)
-        {
-            return Result<MetaModel, string>.Failure("Meta-training was cancelled");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<MetaModel, string>.Failure($"Meta-training failed: {ex.Message}");
@@ -106,10 +103,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
 
             return Result<AdaptedModel, string>.Success(result);
         }
-        catch (OperationCanceledException)
-        {
-            return Result<AdaptedModel, string>.Failure("Adaptation was cancelled");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<AdaptedModel, string>.Failure($"Adaptation failed: {ex.Message}");

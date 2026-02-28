@@ -127,11 +127,7 @@ public sealed class AgentCoordinator : IAgentCoordinator
                     CoordinationResult.Failure(goal, $"{failedCount} tasks failed during execution.", completedTasks, duration));
             }
         }
-        catch (OperationCanceledException)
-        {
-            TimeSpan duration = DateTime.UtcNow - startTime;
-            return Result<CoordinationResult, string>.Failure($"Coordination was cancelled after {duration.TotalSeconds:F2} seconds.");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             TimeSpan duration = DateTime.UtcNow - startTime;
@@ -203,11 +199,7 @@ public sealed class AgentCoordinator : IAgentCoordinator
                     CoordinationResult.Failure(compositeGoal, $"{failedGoals}/{goals.Count} goals failed.", allTasks, duration));
             }
         }
-        catch (OperationCanceledException)
-        {
-            TimeSpan duration = DateTime.UtcNow - startTime;
-            return Result<CoordinationResult, string>.Failure($"Parallel coordination was cancelled after {duration.TotalSeconds:F2} seconds.");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             TimeSpan duration = DateTime.UtcNow - startTime;

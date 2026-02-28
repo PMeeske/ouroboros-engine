@@ -33,10 +33,7 @@ public static class MessageBusExtensions
         {
             return Result<AgentMessage>.Failure($"Request timed out: {ex.Message}");
         }
-        catch (OperationCanceledException)
-        {
-            return Result<AgentMessage>.Failure("Request was cancelled.");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<AgentMessage>.Failure($"Request failed: {ex.Message}");
@@ -63,10 +60,7 @@ public static class MessageBusExtensions
             await bus.PublishAsync(message, ct).ConfigureAwait(false);
             return Result<Unit>.Success(Unit.Value);
         }
-        catch (OperationCanceledException)
-        {
-            return Result<Unit>.Failure("Publish was cancelled.");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit>.Failure($"Publish failed: {ex.Message}");

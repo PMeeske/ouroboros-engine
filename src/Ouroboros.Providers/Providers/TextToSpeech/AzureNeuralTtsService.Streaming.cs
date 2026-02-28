@@ -87,10 +87,7 @@ public sealed partial class AzureNeuralTtsService
 
                 observer.OnCompleted();
             }
-            catch (OperationCanceledException)
-            {
-                observer.OnCompleted();
-            }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 observer.OnError(ex);

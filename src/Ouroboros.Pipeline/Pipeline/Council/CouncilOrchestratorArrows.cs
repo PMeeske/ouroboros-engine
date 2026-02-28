@@ -209,10 +209,7 @@ public static class CouncilOrchestratorArrows
             var decision = await SynthesizeDecisionAsync(llm, topic, transcript, votes, config, ct);
             return decision;
         }
-        catch (OperationCanceledException)
-        {
-            return Result<CouncilDecision, string>.Failure("Council debate was cancelled.");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<CouncilDecision, string>.Failure($"Council debate failed: {ex.Message}");

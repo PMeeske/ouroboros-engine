@@ -110,15 +110,7 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
             stopwatch.Stop();
             return HandleSuccess(output, stopwatch.Elapsed, metadata, activity);
         }
-        catch (OperationCanceledException ex)
-        {
-            stopwatch.Stop();
-            return HandleFailure(
-                $"Operation cancelled: {ex.Message}",
-                stopwatch.Elapsed,
-                metadata,
-                activity);
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             stopwatch.Stop();

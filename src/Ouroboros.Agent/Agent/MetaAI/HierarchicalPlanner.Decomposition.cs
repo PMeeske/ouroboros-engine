@@ -81,10 +81,7 @@ public sealed partial class HierarchicalPlanner
 
             return Result<HtnHierarchicalPlan, string>.Success(htnPlan);
         }
-        catch (OperationCanceledException)
-        {
-            return Result<HtnHierarchicalPlan, string>.Failure("HTN planning was cancelled");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<HtnHierarchicalPlan, string>.Failure($"HTN planning failed: {ex.Message}");
@@ -189,10 +186,7 @@ public sealed partial class HierarchicalPlanner
 
             return Result<TemporalPlan, string>.Success(temporalPlan);
         }
-        catch (OperationCanceledException)
-        {
-            return Result<TemporalPlan, string>.Failure("Temporal planning was cancelled");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<TemporalPlan, string>.Failure($"Temporal planning failed: {ex.Message}");

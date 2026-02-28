@@ -388,6 +388,7 @@ public sealed class TapoRtspClient : IDisposable
                 return Result<string>.Failure($"Connection failed: {error}");
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<string>.Failure($"Connection test failed: {ex.Message}");
