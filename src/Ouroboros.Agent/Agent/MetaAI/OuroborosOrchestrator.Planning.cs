@@ -119,25 +119,6 @@ Provide {planningGuidance}. {stepGuidance}. Each step should be actionable and s
     }
 
     /// <summary>
-    /// Calculates the current selection threshold based on arousal.
-    /// </summary>
-    private static double CalculateSelectionThreshold(Affect.AffectiveState state)
-    {
-        double threshold = 0.5 - (state.Arousal * 0.2) + (state.Stress * 0.15);
-        return Math.Clamp(threshold, 0.2, 0.8);
-    }
-
-    /// <summary>
-    /// Calculates the effective resolution level combining evolved strategy genes with arousal.
-    /// </summary>
-    private double GetEffectiveResolutionLevel(Affect.AffectiveState state)
-    {
-        double evolvedDepth = _atom.GetStrategyWeight("PlanningDepth", 0.5);
-        double arousalModulation = 1.0 - (state.Arousal * 0.4);
-        return Math.Clamp(evolvedDepth * arousalModulation, 0.1, 1.0);
-    }
-
-    /// <summary>
     /// Projects the current affective state into the MeTTa knowledge base.
     /// </summary>
     private async Task ProjectAffectiveStateToMeTTaAsync(

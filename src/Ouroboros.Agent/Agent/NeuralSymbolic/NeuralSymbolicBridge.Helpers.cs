@@ -13,7 +13,7 @@ using Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed partial class NeuralSymbolicBridge
 {
-    private string BuildRuleExtractionPrompt(Skill skill)
+    private static string BuildRuleExtractionPrompt(Skill skill)
     {
         var stepsText = string.Join("\n", skill.Steps.Select((s, i) => $"{i + 1}. {s}"));
 
@@ -40,7 +40,7 @@ EFFECTS: <effect1>, <effect2>, ...
 ---";
     }
 
-    private List<SymbolicRule> ParseExtractedRules(string response, Skill skill)
+    private static List<SymbolicRule> ParseExtractedRules(string response, Skill skill)
     {
         var rules = new List<SymbolicRule>();
         var ruleBlocks = response.Split("---", StringSplitOptions.RemoveEmptyEntries);
@@ -77,7 +77,7 @@ EFFECTS: <effect1>, <effect2>, ...
         return rules;
     }
 
-    private MeTTaExpression ParseMeTTaExpression(string response)
+    private static MeTTaExpression ParseMeTTaExpression(string response)
     {
         var cleaned = response.Trim();
 
@@ -86,17 +86,10 @@ EFFECTS: <effect1>, <effect2>, ...
         var rawExpression = match.Success ? match.Value : cleaned;
 
         // Parse symbols and variables
-        var symbols = new List<string>();
-        var variables = new List<string>();
         var tokens = TokenRegex().Matches(rawExpression);
-
-        foreach (Match token in tokens)
-        {
-            if (token.Value.StartsWith("$"))
-                variables.Add(token.Value);
-            else if (!string.IsNullOrWhiteSpace(token.Value))
-                symbols.Add(token.Value);
-        }
+        var tokenValues = tokens.Select(token => token.Value).ToList();
+        var variables = tokenValues.Where(v => v.StartsWith('$')).ToList();
+        var symbols = tokenValues.Where(v => !v.StartsWith('$') && !string.IsNullOrWhiteSpace(v)).ToList();
 
         var type = DetermineExpressionType(rawExpression);
 
@@ -108,7 +101,7 @@ EFFECTS: <effect1>, <effect2>, ...
             new Dictionary<string, object>());
     }
 
-    private ExpressionType DetermineExpressionType(string expression)
+    private static ExpressionType DetermineExpressionType(string expression)
     {
         if (expression.Contains("$"))
             return ExpressionType.Variable;
@@ -116,7 +109,7 @@ EFFECTS: <effect1>, <effect2>, ...
             return ExpressionType.Rule;
         if (expression.Contains("?"))
             return ExpressionType.Query;
-        if (expression.StartsWith("(") && expression.Contains(" "))
+        if (expression.StartsWith('(') && expression.Contains(' '))
             return ExpressionType.Expression;
 
         return ExpressionType.Atom;
@@ -167,7 +160,7 @@ EFFECTS: <effect1>, <effect2>, ...
         }
     }
 
-    private string BuildConsistencyCheckPrompt(MetaAI.Hypothesis hypothesis, IReadOnlyList<SymbolicRule> knowledgeBase)
+    private static string BuildConsistencyCheckPrompt(MetaAI.Hypothesis hypothesis, IReadOnlyList<SymbolicRule> knowledgeBase)
     {
         var rulesText = string.Join("\n", knowledgeBase.Take(10).Select(r =>
             $"- {r.Name}: {r.NaturalLanguageDescription}"));
@@ -191,7 +184,7 @@ CONFLICTS: <conflict descriptions, if any>
 MISSING: <missing prerequisites, if any>";
     }
 
-    private (bool isConsistent, List<LogicalConflict> conflicts, List<string> missing) ParseConsistencyAnalysis(
+    private static (bool isConsistent, List<LogicalConflict> conflicts, List<string> missing) ParseConsistencyAnalysis(
         string response, IReadOnlyList<SymbolicRule> knowledgeBase)
     {
         var isConsistent = response.Contains("CONSISTENT: Yes", StringComparison.OrdinalIgnoreCase);
@@ -229,7 +222,7 @@ MISSING: <missing prerequisites, if any>";
         return (isConsistent, conflicts, missing);
     }
 
-    private (string type, List<string> properties, List<string> relations) ParseGroundingResponse(string response)
+    private static (string type, List<string> properties, List<string> relations) ParseGroundingResponse(string response)
     {
         var type = ExtractField(response, "Type:") ?? "Concept";
         var properties = ExtractList(response, "Properties:");
@@ -238,13 +231,13 @@ MISSING: <missing prerequisites, if any>";
         return (type, properties, relations);
     }
 
-    private string ExtractField(string text, string fieldName)
+    private static string ExtractField(string text, string fieldName)
     {
         var match = Regex.Match(text, $@"{Regex.Escape(fieldName)}\s*(.+?)(?=\n[A-Z]+:|$)", RegexOptions.Singleline);
         return match.Success ? match.Groups[1].Value.Trim() : string.Empty;
     }
 
-    private List<string> ExtractList(string text, string fieldName)
+    private static List<string> ExtractList(string text, string fieldName)
     {
         var field = ExtractField(text, fieldName);
         if (string.IsNullOrWhiteSpace(field))

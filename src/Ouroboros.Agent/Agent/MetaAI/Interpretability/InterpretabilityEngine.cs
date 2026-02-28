@@ -107,7 +107,7 @@ public sealed class InterpretabilityEngine
     /// <summary>
     /// Explains a plan by describing the reasoning for each step.
     /// </summary>
-    public PlanExplanation ExplainPlan(string planGoal, IReadOnlyList<string> steps)
+    public static PlanExplanation ExplainPlan(string planGoal, IReadOnlyList<string> steps)
     {
         var explanations = new List<StepExplanation>();
 

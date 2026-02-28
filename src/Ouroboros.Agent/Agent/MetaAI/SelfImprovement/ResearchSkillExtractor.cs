@@ -195,7 +195,7 @@ Papers:
 Return a JSON object mapping methodology names to paper indices.
 Example: {{""experimental"": [0, 2], ""theoretical"": [1, 3], ""survey"": [4]}}";
 
-        string response = await _model.GenerateTextAsync(prompt);
+        _ = await _model.GenerateTextAsync(prompt);
 
         // Parse and group
         // Simplified: just use category as methodology proxy
@@ -240,7 +240,7 @@ Steps:
 2. [step2]
 ...";
 
-        string response = await _model.GenerateTextAsync(prompt);
+        _ = await _model.GenerateTextAsync(prompt);
 
         // Parse response into skill
         string skillName = $"{SanitizeName(methodology)}Analysis";
@@ -275,7 +275,7 @@ Papers:
 
 What unique synthesis approach would be valuable for this domain?";
 
-        string response = await _model.GenerateTextAsync(prompt);
+        _ = await _model.GenerateTextAsync(prompt);
 
         return new Skill(
             Name: $"{sanitizedDomain}Synthesis",

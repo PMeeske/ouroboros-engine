@@ -246,31 +246,24 @@ public sealed partial class EpisodicMemoryEngine
         }
     }
 
-    private ImmutableList<string> ExtractLessonsLearned(PipelineBranch branch)
+    private static ImmutableList<string> ExtractLessonsLearned(PipelineBranch branch)
     {
         var lessons = new List<string>();
 
         // Extract insights from reasoning steps
         var reasoningSteps = branch.Events.OfType<ReasoningStep>().ToList();
 
-        foreach (var step in reasoningSteps)
-        {
-            // Look for critique and final spec states that often contain insights
-            if (step.State is Critique critique)
+        // Look for critique and final spec states that often contain insights
+        lessons.AddRange(reasoningSteps
+            .Select(step => step.State switch
             {
-                if (!string.IsNullOrWhiteSpace(critique.Text) && critique.Text.Length > 20)
-                {
-                    lessons.Add($"Critique insight: {critique.Text.Substring(0, Math.Min(200, critique.Text.Length))}");
-                }
-            }
-            else if (step.State is FinalSpec finalSpec)
-            {
-                if (!string.IsNullOrWhiteSpace(finalSpec.Text) && finalSpec.Text.Length > 20)
-                {
-                    lessons.Add($"Final insight: {finalSpec.Text.Substring(0, Math.Min(200, finalSpec.Text.Length))}");
-                }
-            }
-        }
+                Critique critique when !string.IsNullOrWhiteSpace(critique.Text) && critique.Text.Length > 20
+                    => $"Critique insight: {critique.Text.Substring(0, Math.Min(200, critique.Text.Length))}",
+                FinalSpec finalSpec when !string.IsNullOrWhiteSpace(finalSpec.Text) && finalSpec.Text.Length > 20
+                    => $"Final insight: {finalSpec.Text.Substring(0, Math.Min(200, finalSpec.Text.Length))}",
+                _ => null
+            })
+            .Where(lesson => lesson is not null)!);
 
         // If no lessons found, add a generic one
         if (lessons.Count == 0 && reasoningSteps.Count > 0)

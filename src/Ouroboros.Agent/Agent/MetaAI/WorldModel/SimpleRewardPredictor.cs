@@ -58,7 +58,7 @@ public sealed class SimpleRewardPredictor : IRewardPredictor
         return new SimpleRewardPredictor(weights, 0.0f);
     }
 
-    private float[] CombineFeatures(float[] stateEmb, Action action, float[] nextEmb)
+    private static float[] CombineFeatures(float[] stateEmb, Action action, float[] nextEmb)
     {
         // Simple concatenation - could use more sophisticated feature engineering
         var actionHash = (float)action.Name.GetHashCode() / int.MaxValue;

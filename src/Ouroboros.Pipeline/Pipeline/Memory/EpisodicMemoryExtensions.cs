@@ -149,7 +149,7 @@ public static class EpisodicMemoryExtensions
 
         if (reasoningSteps.Count > 0)
         {
-            var firstPrompt = reasoningSteps.First().Prompt;
+            var firstPrompt = reasoningSteps[0].Prompt;
             if (!string.IsNullOrWhiteSpace(firstPrompt))
             {
                 // Extract first line or first 100 characters as goal

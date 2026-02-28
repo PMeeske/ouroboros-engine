@@ -178,7 +178,7 @@ public static class CollectiveMindFactory
     {
         var mind = new CollectiveMind();
 
-        foreach (var (name, type, model, tier) in pathways)
+        foreach (var (name, type, model, _) in pathways)
         {
             mind.AddPathway(name, type, model, settings: settings);
             // Note: Tier is inferred automatically, but we could add explicit tier setting

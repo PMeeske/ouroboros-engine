@@ -99,7 +99,7 @@ public sealed class IITPhiCalculator
     /// </summary>
     /// <param name="pathways">Snapshot of pathways from <see cref="CollectiveMind"/>.</param>
     /// <returns>A <see cref="PhiResult"/> containing Φ and the minimum information partition.</returns>
-    public PhiResult Compute(IReadOnlyList<NeuralPathway> pathways)
+    public static PhiResult Compute(IReadOnlyList<NeuralPathway> pathways)
     {
         int n = pathways.Count;
         if (n == 0) return PhiResult.Empty;
@@ -115,14 +115,7 @@ public sealed class IITPhiCalculator
                 coupling[j, i] = c;
             }
 
-        // ── 2. Whole-system integrated information ───────────────────────────
-        var all = Enumerable.Range(0, n).ToList();
-        // For the full system, we use half-half split information as upper bound.
-        double wholeSystemEI = EffectiveInformation(all.Take(n / 2).ToList(),
-                                                    all.Skip(n / 2).ToList(),
-                                                    pathways, coupling);
-
-        // ── 3. Search all non-trivial bipartitions ───────────────────────────
+        // ── 2. Search all non-trivial bipartitions ───────────────────────────
         // The number of bipartitions is 2^(n-1) - 1.  For n ≤ 20 this is feasible.
         double minEI = double.MaxValue;
         List<int> mipA = [];

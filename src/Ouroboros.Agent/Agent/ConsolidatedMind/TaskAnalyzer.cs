@@ -248,21 +248,15 @@ public static partial class TaskAnalyzer
         {
             double score = 0.0;
 
-            foreach (var pattern in patterns)
+            foreach (var pattern in patterns.Where(pattern => pattern(prompt)))
             {
-                if (pattern(prompt))
-                {
-                    score += 2.0;
-                }
+                score += 2.0;
             }
 
-            foreach (var keyword in keywords)
+            foreach (var keyword in keywords.Where(keyword => lowerPrompt.Contains(keyword)))
             {
-                if (lowerPrompt.Contains(keyword))
-                {
-                    score += 1.0;
-                    matchedCapabilities.Add(keyword);
-                }
+                score += 1.0;
+                matchedCapabilities.Add(keyword);
             }
 
             if (score > 0)
@@ -328,20 +322,14 @@ public static partial class TaskAnalyzer
 
         complexity += Math.Min(0.3, length / 2000.0);
 
-        foreach (var indicator in HighComplexityIndicators)
+        foreach (var indicator in HighComplexityIndicators.Where(indicator => lowerPrompt.Contains(indicator)))
         {
-            if (lowerPrompt.Contains(indicator))
-            {
-                complexity += 0.15;
-            }
+            complexity += 0.15;
         }
 
-        foreach (var indicator in LowComplexityIndicators)
+        foreach (var indicator in LowComplexityIndicators.Where(indicator => lowerPrompt.Contains(indicator)))
         {
-            if (lowerPrompt.Contains(indicator))
-            {
-                complexity -= 0.1;
-            }
+            complexity -= 0.1;
         }
 
         int questionMarks = prompt.Count(c => c == '?');

@@ -187,16 +187,13 @@ public static partial class MicrophoneRecorder
             // Parse output to find audio devices
             // Format: [dshow @ ...] "Device Name" (audio)
             List<string> audioDevices = new List<string>();
-            foreach (string line in error.Split('\n'))
+            foreach (string line in error.Split('\n').Where(line => line.Contains("(audio)")))
             {
-                if (line.Contains("(audio)"))
+                int start = line.IndexOf('"');
+                int end = line.LastIndexOf('"');
+                if (start >= 0 && end > start)
                 {
-                    int start = line.IndexOf('"');
-                    int end = line.LastIndexOf('"');
-                    if (start >= 0 && end > start)
-                    {
-                        audioDevices.Add(line.Substring(start + 1, end - start - 1));
-                    }
+                    audioDevices.Add(line.Substring(start + 1, end - start - 1));
                 }
             }
 

@@ -166,38 +166,33 @@ public static class AudioPlayer
             // Try mpv, then ffplay, then aplay for wav
             string[] players = ["mpv", "ffplay", "paplay", "aplay"];
 
-            foreach (string player in players)
+            var availablePlayer = players.FirstOrDefault(IsCommandAvailable);
+            if (availablePlayer == null) return null;
+
+            var linuxPsi = new ProcessStartInfo
             {
-                if (IsCommandAvailable(player))
-                {
-                    var linuxPsi = new ProcessStartInfo
-                    {
-                        FileName = player,
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                    };
+                FileName = availablePlayer,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
 
-                    switch (player)
-                    {
-                        case "mpv":
-                            linuxPsi.ArgumentList.Add("--no-video");
-                            linuxPsi.ArgumentList.Add(filePath);
-                            break;
-                        case "ffplay":
-                            linuxPsi.ArgumentList.Add("-nodisp");
-                            linuxPsi.ArgumentList.Add("-autoexit");
-                            linuxPsi.ArgumentList.Add(filePath);
-                            break;
-                        default:
-                            linuxPsi.ArgumentList.Add(filePath);
-                            break;
-                    }
-
-                    return linuxPsi;
-                }
+            switch (availablePlayer)
+            {
+                case "mpv":
+                    linuxPsi.ArgumentList.Add("--no-video");
+                    linuxPsi.ArgumentList.Add(filePath);
+                    break;
+                case "ffplay":
+                    linuxPsi.ArgumentList.Add("-nodisp");
+                    linuxPsi.ArgumentList.Add("-autoexit");
+                    linuxPsi.ArgumentList.Add(filePath);
+                    break;
+                default:
+                    linuxPsi.ArgumentList.Add(filePath);
+                    break;
             }
 
-            return null;
+            return linuxPsi;
         }
 
         return null;

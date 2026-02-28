@@ -106,6 +106,7 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
         _toolSelector = new ToolSelector(_tools.All.ToList(), _llm);
         _valenceMonitor = valenceMonitor;
         _priorityModulator = priorityModulator;
+        _ = _priorityModulator;
         _urgeSystem = urgeSystem;
         _spreading = spreading;
     }

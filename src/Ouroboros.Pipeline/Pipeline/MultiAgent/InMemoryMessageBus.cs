@@ -251,12 +251,10 @@ public sealed class InMemoryMessageBus : IMessageBus, IDisposable
         AddToHistory(message);
 
         // Handle response messages for pending requests
-        if (message.Type == MessageType.Response && message.CorrelationId.HasValue)
+        if (message.Type == MessageType.Response && message.CorrelationId.HasValue
+            && _pendingRequests.TryRemove(message.CorrelationId.Value, out TaskCompletionSource<AgentMessage>? tcs))
         {
-            if (_pendingRequests.TryRemove(message.CorrelationId.Value, out TaskCompletionSource<AgentMessage>? tcs))
-            {
-                tcs.TrySetResult(message);
-            }
+            tcs.TrySetResult(message);
         }
 
         // Get matching subscriptions ordered by priority
@@ -283,7 +281,7 @@ public sealed class InMemoryMessageBus : IMessageBus, IDisposable
         await Task.WhenAll(dispatchTasks).ConfigureAwait(false);
     }
 
-    private async Task DispatchToSubscriptionAsync(AgentMessage message, Subscription subscription)
+    private static async Task DispatchToSubscriptionAsync(AgentMessage message, Subscription subscription)
     {
         try
         {

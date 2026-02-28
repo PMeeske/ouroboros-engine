@@ -71,7 +71,7 @@ public sealed partial class MetacognitiveReasoner
         return observations <= 1 && conclusions > 0;
     }
 
-    private ImmutableList<string> DetectFallacies(ReasoningTrace trace)
+    private static ImmutableList<string> DetectFallacies(ReasoningTrace trace)
     {
         var detected = new List<string>();
 
@@ -208,21 +208,17 @@ public sealed partial class MetacognitiveReasoner
 
     private static double CalculateAnchoringStrength(IReadOnlyList<ReasoningTrace> traces)
     {
-        var anchoredCount = 0;
-        foreach (var trace in traces)
+        var anchoredCount = traces.Count(trace =>
         {
             if (trace.Steps.Count < 3)
             {
-                continue;
+                return false;
             }
 
             var firstStepRefs = trace.Steps.Sum(s => s.Dependencies.Count(d => d == 1));
             var totalRefs = trace.Steps.Sum(s => s.Dependencies.Count);
-            if (totalRefs > 0 && (double)firstStepRefs / totalRefs > 0.5)
-            {
-                anchoredCount++;
-            }
-        }
+            return totalRefs > 0 && (double)firstStepRefs / totalRefs > 0.5;
+        });
 
         return traces.Count > 0 ? (double)anchoredCount / traces.Count : 0.0;
     }

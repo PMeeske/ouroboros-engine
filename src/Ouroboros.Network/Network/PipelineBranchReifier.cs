@@ -309,7 +309,7 @@ public sealed class PipelineBranchReifier
         return MonadNode.FromPayload(evt.Kind, new { EventId = evt.Id, evt.Timestamp }, parentIds);
     }
 
-    private MonadNode CreateStepExecutionNode(StepExecutionEvent stepExec, Guid? parentNodeId)
+    private static MonadNode CreateStepExecutionNode(StepExecutionEvent stepExec, Guid? parentNodeId)
     {
         var parentIds = parentNodeId.HasValue
             ? ImmutableArray.Create(parentNodeId.Value)

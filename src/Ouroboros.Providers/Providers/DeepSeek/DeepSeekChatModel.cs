@@ -16,7 +16,6 @@ namespace Ouroboros.Providers.DeepSeek;
 public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
 {
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _underlyingModel;
-    private readonly string _modelName;
 
     /// <summary>
     /// Model identifier for DeepSeek R1 distilled 7B (local).
@@ -51,7 +50,6 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
     {
         if (ollamaModel == null) throw new ArgumentNullException(nameof(ollamaModel));
         _underlyingModel = new OllamaChatAdapter(ollamaModel);
-        _modelName = "deepseek-local";
     }
 
     /// <summary>
@@ -72,7 +70,6 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
         if (string.IsNullOrWhiteSpace(model)) throw new ArgumentException("Model is required", nameof(model));
 
         _underlyingModel = new OllamaCloudChatModel(endpoint, apiKey, model, settings);
-        _modelName = model;
     }
 
     /// <summary>

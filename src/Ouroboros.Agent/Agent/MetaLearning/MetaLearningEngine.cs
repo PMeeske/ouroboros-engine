@@ -209,7 +209,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
     /// <summary>
     /// Averages gradients in-place.
     /// </summary>
-    private void AverageGradients(Dictionary<string, object> gradients, int count)
+    private static void AverageGradients(Dictionary<string, object> gradients, int count)
     {
         foreach (var key in gradients.Keys.ToList())
         {
@@ -230,7 +230,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
     /// <summary>
     /// Computes Reptile gradients (difference between adapted and initial parameters).
     /// </summary>
-    private Dictionary<string, object> ComputeReptileGradients(
+    private static Dictionary<string, object> ComputeReptileGradients(
         Dictionary<string, object> initialParams,
         Dictionary<string, object> adaptedParams)
     {
@@ -267,7 +267,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
     /// <summary>
     /// Evaluates model performance on examples.
     /// </summary>
-    private async Task<double> EvaluateModelAsync(
+    private static async Task<double> EvaluateModelAsync(
         IModel model,
         List<Example> examples,
         CancellationToken ct)

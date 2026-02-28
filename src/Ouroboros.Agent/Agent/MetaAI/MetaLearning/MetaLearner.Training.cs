@@ -58,7 +58,7 @@ TASK TYPE BREAKDOWN:
 
 MOST SUCCESSFUL APPROACH:
 - Task type: {mostSuccessfulTaskType}
-- Strategy: {byTaskType[mostSuccessfulTaskType].First().StrategyUsed.Approach}
+- Strategy: {byTaskType[mostSuccessfulTaskType][0].StrategyUsed.Approach}
 
 FAILURE ANALYSIS:
 {(failed.Any() ? string.Join("\n", failed.Take(3).Select(e => $"- {e.TaskType}: {e.FailureReason}")) : "No failures")}
@@ -210,7 +210,7 @@ ESTIMATED_PERFORMANCE: [0-1]";
         }
     }
 
-    private LearningStrategy ParseStrategyResponse(string response, List<LearningEpisode> successfulEpisodes)
+    private static LearningStrategy ParseStrategyResponse(string response, List<LearningEpisode> successfulEpisodes)
     {
         string[] lines = response.Split('\n');
         string name = "Optimized Strategy";
@@ -268,7 +268,7 @@ ESTIMATED_PERFORMANCE: [0-1]";
             CustomConfig: new Dictionary<string, object>());
     }
 
-    private AdaptedModel ParseAdaptationResponse(
+    private static AdaptedModel ParseAdaptationResponse(
         string response,
         string taskDescription,
         int examplesUsed,
@@ -312,11 +312,11 @@ ESTIMATED_PERFORMANCE: [0-1]";
                 inSteps = false;
                 inPatterns = false;
             }
-            else if (inPatterns && trimmed.StartsWith("-"))
+            else if (inPatterns && trimmed.StartsWith('-'))
             {
                 patterns.Add(trimmed.TrimStart('-').Trim());
             }
-            else if (inSteps && (trimmed.StartsWith("-") || char.IsDigit(trimmed.FirstOrDefault())))
+            else if (inSteps && (trimmed.StartsWith('-') || char.IsDigit(trimmed.FirstOrDefault())))
             {
                 string stepText = trimmed.TrimStart('-', ' ', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.');
                 if (!string.IsNullOrWhiteSpace(stepText))
@@ -360,7 +360,7 @@ ESTIMATED_PERFORMANCE: [0-1]";
             LearnedPatterns: patterns.Any() ? patterns : new List<string> { "General task pattern" });
     }
 
-    private HyperparameterConfig CreateDefaultHyperparameters(string taskType, Dictionary<string, object>? context = null)
+    private static HyperparameterConfig CreateDefaultHyperparameters(string taskType, Dictionary<string, object>? context = null)
     {
         var customParams = context ?? new Dictionary<string, object>();
 

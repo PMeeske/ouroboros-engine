@@ -253,7 +253,7 @@ Write a 1-2 sentence description of this skill's capability:";
     /// <summary>
     /// Extracts prerequisites from successful execution steps.
     /// </summary>
-    private List<string> ExtractPrerequisites(PlanExecutionResult execution, SkillExtractionConfig config)
+    private static List<string> ExtractPrerequisites(PlanExecutionResult execution, SkillExtractionConfig config)
     {
         List<string> prerequisites = new List<string>();
 
@@ -273,7 +273,7 @@ Write a 1-2 sentence description of this skill's capability:";
     /// Parameterizes plan steps to make them more reusable.
     /// Identifies common patterns and replaces specific values with parameter placeholders.
     /// </summary>
-    private List<PlanStep> ParameterizeSteps(List<PlanStep> steps)
+    private static List<PlanStep> ParameterizeSteps(List<PlanStep> steps)
     {
         List<PlanStep> parameterizedSteps = new List<PlanStep>();
 
@@ -346,7 +346,7 @@ Write a 1-2 sentence description of this skill's capability:";
     /// <summary>
     /// Sanitizes skill name to follow naming conventions.
     /// </summary>
-    private string SanitizeSkillName(string name)
+    private static string SanitizeSkillName(string name)
     {
         // Remove quotes and extra whitespace
         name = name.Trim('"', '\'', ' ', '\n', '\r');
@@ -373,7 +373,7 @@ Write a 1-2 sentence description of this skill's capability:";
     /// <summary>
     /// Generates a fallback skill name when LLM generation fails.
     /// </summary>
-    private string GenerateFallbackSkillName(PlanExecutionResult execution)
+    private static string GenerateFallbackSkillName(PlanExecutionResult execution)
     {
         // Extract first action as basis for name
         string firstAction = execution.Plan.Steps.FirstOrDefault()?.Action ?? "skill";

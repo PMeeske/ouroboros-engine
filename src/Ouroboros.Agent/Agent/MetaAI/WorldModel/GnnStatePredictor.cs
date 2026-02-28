@@ -37,6 +37,7 @@ public sealed class GnnStatePredictor : IStatePredictor
         int messagePasses)
     {
         _embeddingSize = embeddingSize;
+        _ = _embeddingSize;
         _nodeCount = nodeCount;
         _nodeFeatureSize = nodeFeatureSize;
         _messageWeights = messageWeights;

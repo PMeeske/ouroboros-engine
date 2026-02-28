@@ -27,6 +27,7 @@ public sealed partial class TransferLearner : ITransferLearner
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        _ = _memory;
         _config = config ?? new TransferLearningConfig();
     }
 
@@ -262,7 +263,7 @@ database_query -> library_search (confidence: 0.8)
 
     // Private helper methods
 
-    private string InferDomainFromSkill(Skill skill)
+    private static string InferDomainFromSkill(Skill skill)
     {
         // Extract domain hints from skill name and description
         string[] words = skill.Name.Split('_', StringSplitOptions.RemoveEmptyEntries);
@@ -271,7 +272,7 @@ database_query -> library_search (confidence: 0.8)
         return string.Join(" ", domainHints);
     }
 
-    private string BuildAdaptationPrompt(
+    private static string BuildAdaptationPrompt(
         Skill sourceSkill,
         string targetDomain,
         List<(string source, string target, double confidence)> analogies)
@@ -306,7 +307,7 @@ EXPECTED: [expected outcome]
 ";
     }
 
-    private List<PlanStep> ParseAdaptedSteps(string response, List<PlanStep> originalSteps)
+    private static List<PlanStep> ParseAdaptedSteps(string response, List<PlanStep> originalSteps)
     {
         List<PlanStep> adaptedSteps = new List<PlanStep>();
         string[] lines = response.Split('\n');
@@ -358,20 +359,18 @@ EXPECTED: [expected outcome]
         return adaptedSteps.Any() ? adaptedSteps : originalSteps;
     }
 
-    private List<string> ExtractAdaptations(string response)
+    private static List<string> ExtractAdaptations(string response)
     {
         List<string> adaptations = new List<string>();
 
         // Look for lines that describe adaptations
         string[] lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        foreach (string line in lines)
+        foreach (string line in lines.Where(line =>
+            line.Contains("adapted", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("modified", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("changed", StringComparison.OrdinalIgnoreCase)))
         {
-            if (line.Contains("adapted", StringComparison.OrdinalIgnoreCase) ||
-                line.Contains("modified", StringComparison.OrdinalIgnoreCase) ||
-                line.Contains("changed", StringComparison.OrdinalIgnoreCase))
-            {
-                adaptations.Add(line.Trim());
-            }
+            adaptations.Add(line.Trim());
         }
 
         return adaptations.Take(5).ToList();

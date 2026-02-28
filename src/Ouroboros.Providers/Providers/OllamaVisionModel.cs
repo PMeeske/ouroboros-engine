@@ -420,15 +420,7 @@ public sealed class OllamaVisionModel : IVisionModel
             "living room", "bathroom", "garden", "park", "beach", "forest", "city", "rural",
             "restaurant", "store", "classroom", "laboratory", "warehouse", "parking"];
 
-        foreach (string scene in sceneTypes)
-        {
-            if (lower.Contains(scene))
-            {
-                return scene;
-            }
-        }
-
-        return null;
+        return sceneTypes.FirstOrDefault(scene => lower.Contains(scene));
     }
 
     private static List<string>? ExtractColors(string response)
@@ -437,14 +429,7 @@ public sealed class OllamaVisionModel : IVisionModel
         string[] colorNames = ["red", "blue", "green", "yellow", "orange", "purple", "pink",
             "white", "black", "gray", "brown", "beige", "teal", "cyan", "magenta"];
 
-        List<string> found = new List<string>();
-        foreach (string color in colorNames)
-        {
-            if (lower.Contains(color))
-            {
-                found.Add(color);
-            }
-        }
+        List<string> found = colorNames.Where(color => lower.Contains(color)).ToList();
 
         return found.Count > 0 ? found : null;
     }

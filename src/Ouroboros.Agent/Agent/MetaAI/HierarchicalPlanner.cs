@@ -20,6 +20,7 @@ public sealed partial class HierarchicalPlanner : IHierarchicalPlanner
     {
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        _ = _llm;
     }
 
     /// <summary>

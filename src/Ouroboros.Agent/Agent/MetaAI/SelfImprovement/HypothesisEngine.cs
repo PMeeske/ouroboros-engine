@@ -32,6 +32,7 @@ public sealed partial class HypothesisEngine : IHypothesisEngine
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
         _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
         _config = config ?? new HypothesisEngineConfig();
+        _ = _config;
     }
 
     /// <summary>

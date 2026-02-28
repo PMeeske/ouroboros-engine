@@ -42,6 +42,7 @@ public sealed partial class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrat
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _router = router ?? throw new ArgumentNullException(nameof(router));
+        _ = _router;
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
         _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
         _approvalProvider = approvalProvider ?? new AutoDenyApprovalProvider();
@@ -118,21 +119,21 @@ public sealed partial class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrat
     {
         _metrics.AddOrUpdate(
             component,
-            _ => new PerformanceMetrics(
-                component,
+            key => new PerformanceMetrics(
+                key,
                 ExecutionCount: 1,
                 AverageLatencyMs: latencyMs,
                 SuccessRate: success ? 1.0 : 0.0,
                 LastUsed: DateTime.UtcNow,
                 CustomMetrics: new Dictionary<string, double>()),
-            (_, existing) =>
+            (key, existing) =>
             {
                 int newCount = existing.ExecutionCount + 1;
                 double newAvgLatency = ((existing.AverageLatencyMs * existing.ExecutionCount) + latencyMs) / newCount;
                 double newSuccessRate = ((existing.SuccessRate * existing.ExecutionCount) + (success ? 1.0 : 0.0)) / newCount;
 
                 return new PerformanceMetrics(
-                    component,
+                    key,
                     ExecutionCount: newCount,
                     AverageLatencyMs: newAvgLatency,
                     SuccessRate: newSuccessRate,

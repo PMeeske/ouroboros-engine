@@ -11,13 +11,10 @@ internal static class ZipArchiveRegistry
     }
     public static void Release(string path)
     {
-        if (Map.TryGetValue(path, out ZipArchiveHolder? holder))
+        if (Map.TryGetValue(path, out ZipArchiveHolder? holder) && holder.ReleaseRef() <= 0)
         {
-            if (holder.ReleaseRef() <= 0)
-            {
-                holder.Dispose();
-                Map.TryRemove(path, out _);
-            }
+            holder.Dispose();
+            Map.TryRemove(path, out _);
         }
     }
 }

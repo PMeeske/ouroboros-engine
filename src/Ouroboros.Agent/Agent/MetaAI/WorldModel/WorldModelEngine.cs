@@ -85,7 +85,7 @@ public sealed partial class WorldModelEngine : IWorldModelEngine
     }
 
     /// <inheritdoc/>
-    public async Task<Result<State, string>> PredictNextStateAsync(
+    public static async Task<Result<State, string>> PredictNextStateAsync(
         State currentState,
         Action action,
         WorldModel model,
@@ -160,7 +160,7 @@ public sealed partial class WorldModelEngine : IWorldModelEngine
     }
 
     /// <inheritdoc/>
-    public async Task<Result<ModelQuality, string>> EvaluateModelAsync(
+    public static async Task<Result<ModelQuality, string>> EvaluateModelAsync(
         WorldModel model,
         List<Transition> testSet,
         CancellationToken ct = default)

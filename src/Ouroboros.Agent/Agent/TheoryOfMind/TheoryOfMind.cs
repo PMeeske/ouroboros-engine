@@ -249,8 +249,8 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
             // Get or create agent model
             AgentModel model = _agentModels.AddOrUpdate(
                 agentId,
-                _ => AgentModel.Create(agentId).WithObservation(observation),
-                (_, existing) => existing.WithObservation(observation));
+                key => AgentModel.Create(key).WithObservation(observation),
+                (key, existing) => existing.WithObservation(observation));
 
             // Infer beliefs from recent observations
             List<AgentObservation> recentObs = model.ObservationHistory.TakeLast(10).ToList();

@@ -220,7 +220,6 @@ public sealed partial class TapoEmbodimentProvider
         var result = await _tapoClient.LoginAsync(serverPassword, ct);
         if (result.IsSuccess)
         {
-            _sessionId = result.Value;
             await RefreshDeviceInventoryAsync(ct);
         }
 

@@ -15,7 +15,6 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
 {
     private readonly GgmlType _modelType;
     private readonly string _modelDirectory;
-    private readonly bool _lazyLoad;
     private WhisperProcessor? _processor;
     private WhisperFactory? _factory;
     private readonly SemaphoreSlim _initLock = new(1, 1);
@@ -49,7 +48,6 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
     {
         _modelType = modelType;
         _modelDirectory = modelDirectory ?? GetDefaultModelDirectory();
-        _lazyLoad = lazyLoad;
 
         if (!lazyLoad)
         {

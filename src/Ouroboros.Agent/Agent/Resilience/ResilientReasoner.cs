@@ -44,6 +44,7 @@ public sealed class ResilientReasoner : IReasoner
     {
         _bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
         _llm = llm;
+        _ = _llm;
         _config = config ?? new CircuitBreakerConfig();
         _logger = logger;
         

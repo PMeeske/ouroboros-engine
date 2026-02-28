@@ -36,15 +36,9 @@ public sealed class MeTTaMemoryBridge
             MetaAIMemoryStatistics stats = statsResult.IsSuccess 
                 ? new MetaAIMemoryStatistics(statsResult.Value.TotalExperiences, statsResult.Value.SuccessfulExperiences, statsResult.Value.FailedExperiences, statsResult.Value.UniqueContexts, statsResult.Value.UniqueTags, AverageQualityScore: statsResult.Value.AverageQualityScore)
                 : new MetaAIMemoryStatistics(0, 0, 0, 0, 0, AverageQualityScore: 0.0);
-            List<Experience> experiences = new List<Experience>();
-
             // Retrieve all experiences (this is a simplified approach)
             // In a real implementation, you'd want pagination or streaming
-            for (int i = 0; i < stats.TotalExperiences && i < 1000; i++)
-            {
-                // Note: This assumes we can enumerate experiences somehow
-                // The actual MemoryStore API might need extension for this
-            }
+            // The actual MemoryStore API might need extension for enumeration
 
             int factCount = 0;
 

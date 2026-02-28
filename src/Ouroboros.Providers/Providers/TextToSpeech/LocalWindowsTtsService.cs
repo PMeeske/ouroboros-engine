@@ -220,7 +220,7 @@ Write-Output 'OK'
     /// <summary>
     /// Builds SSML with enhanced prosody for more natural speech.
     /// </summary>
-    private string BuildEnhancedSsml(string text, int rate)
+    private static string BuildEnhancedSsml(string text, int rate)
     {
         // Convert rate (-10 to 10) to SSML prosody rate (x-slow to x-fast)
         string prosodyRate = rate switch
@@ -245,7 +245,7 @@ Write-Output 'OK'
     /// <summary>
     /// Adds natural prosody markers to text for more expressive speech.
     /// </summary>
-    private string AddNaturalProsody(string text)
+    private static string AddNaturalProsody(string text)
     {
         // Escape XML special characters first
         text = text
@@ -393,7 +393,7 @@ Write-Output 'OK'
     /// <param name="volume">Volume from 0 to 100.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating success or failure.</returns>
-    public async Task<Result<bool, string>> SpeakWithToneAsync(
+    public static async Task<Result<bool, string>> SpeakWithToneAsync(
         string text,
         int rate,
         int volume,

@@ -55,6 +55,7 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _router = router ?? throw new ArgumentNullException(nameof(router));
+        _ = _router;
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
         _mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
         _representation = new MeTTaRepresentation(mettaEngine, formBridge);

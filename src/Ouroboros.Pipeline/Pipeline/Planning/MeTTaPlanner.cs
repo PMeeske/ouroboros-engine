@@ -48,7 +48,7 @@ public sealed class MeTTaPlanner
             Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct);
 
             return result.Match(
-                success => this.ParseToolChain(success),
+                success => ParseToolChain(success),
                 error => Result<ToolChain, string>.Failure($"Planning failed: {error}"));
         }
         catch (OperationCanceledException) { throw; }
@@ -72,7 +72,7 @@ public sealed class MeTTaPlanner
         Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct);
 
         return result.Match(
-            success => Result<IReadOnlyList<string>, string>.Success(this.ParseToolNames(success)),
+            success => Result<IReadOnlyList<string>, string>.Success(ParseToolNames(success)),
             error => Result<IReadOnlyList<string>, string>.Failure(error));
     }
 
@@ -90,7 +90,7 @@ public sealed class MeTTaPlanner
         Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct);
 
         return result.Match(
-            success => Result<IReadOnlyList<string>, string>.Success(this.ParseToolNames(success)),
+            success => Result<IReadOnlyList<string>, string>.Success(ParseToolNames(success)),
             error => Result<IReadOnlyList<string>, string>.Failure(error));
     }
 
@@ -162,7 +162,7 @@ public sealed class MeTTaPlanner
     /// <summary>
     /// Parses a tool chain from MeTTa output.
     /// </summary>
-    private Result<ToolChain, string> ParseToolChain(string mettaOutput)
+    private static Result<ToolChain, string> ParseToolChain(string mettaOutput)
     {
         List<string> tools = new();
 
@@ -178,24 +178,15 @@ public sealed class MeTTaPlanner
         // Extract tool names from the chain expression
         Regex toolPattern = new(@"\b([a-z_]+_tool)\b", RegexOptions.Compiled);
         
-        foreach (Match match in toolPattern.Matches(normalized))
-        {
-            tools.Add(match.Value);
-        }
+        tools.AddRange(toolPattern.Matches(normalized).Select(match => match.Value));
 
         if (tools.Count == 0)
         {
             // Try to extract any identifier that looks like a tool
             Regex identPattern = new(@"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", RegexOptions.Compiled);
-            foreach (Match match in identPattern.Matches(normalized))
-            {
-                string value = match.Value;
-                // Skip MeTTa keywords
-                if (value != "chain" && value != "solve" && value != "match")
-                {
-                    tools.Add(value);
-                }
-            }
+            tools.AddRange(identPattern.Matches(normalized)
+                .Select(match => match.Value)
+                .Where(value => value != "chain" && value != "solve" && value != "match"));
         }
 
         return tools.Count > 0
@@ -206,20 +197,13 @@ public sealed class MeTTaPlanner
     /// <summary>
     /// Parses tool names from MeTTa list output.
     /// </summary>
-    private IReadOnlyList<string> ParseToolNames(string mettaOutput)
+    private static IReadOnlyList<string> ParseToolNames(string mettaOutput)
     {
-        List<string> tools = new();
-
         Regex toolPattern = new(@"\b([a-z_]+_tool)\b", RegexOptions.Compiled);
-        
-        foreach (Match match in toolPattern.Matches(mettaOutput))
-        {
-            if (!tools.Contains(match.Value))
-            {
-                tools.Add(match.Value);
-            }
-        }
 
-        return tools;
+        return toolPattern.Matches(mettaOutput)
+            .Select(match => match.Value)
+            .Distinct()
+            .ToList();
     }
 }

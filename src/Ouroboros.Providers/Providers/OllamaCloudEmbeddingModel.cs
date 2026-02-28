@@ -62,22 +62,20 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
             response.EnsureSuccessStatusCode();
 
             Dictionary<string, object?>? json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
-            if (json is not null && json.TryGetValue("embedding", out object? embeddingValue))
+            if (json is not null && json.TryGetValue("embedding", out object? embeddingValue)
+                && embeddingValue is System.Text.Json.JsonElement jsonElement && jsonElement.ValueKind == System.Text.Json.JsonValueKind.Array)
             {
-                if (embeddingValue is System.Text.Json.JsonElement jsonElement && jsonElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                List<float> floats = new List<float>();
+                foreach (System.Text.Json.JsonElement element in jsonElement.EnumerateArray())
                 {
-                    List<float> floats = new List<float>();
-                    foreach (System.Text.Json.JsonElement element in jsonElement.EnumerateArray())
+                    if (element.TryGetSingle(out float value))
                     {
-                        if (element.TryGetSingle(out float value))
-                        {
-                            floats.Add(value);
-                        }
+                        floats.Add(value);
                     }
-                    if (floats.Count > 0)
-                    {
-                        return floats.ToArray();
-                    }
+                }
+                if (floats.Count > 0)
+                {
+                    return floats.ToArray();
                 }
             }
         }

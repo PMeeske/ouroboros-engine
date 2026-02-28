@@ -112,7 +112,7 @@ public sealed partial class WorldModelEngine
         return new Action(name, new Dictionary<string, object>());
     }
 
-    private double ComputeStateDistance(State predicted, State actual)
+    private static double ComputeStateDistance(State predicted, State actual)
     {
         // Euclidean distance in embedding space
         double sum = 0;

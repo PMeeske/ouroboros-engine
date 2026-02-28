@@ -36,14 +36,11 @@ public sealed class ToolBinder
         }
 
         // Validate all tools exist
-        foreach (string toolName in chain.Tools)
+        string? missingTool = chain.Tools.FirstOrDefault(toolName => this._registry.Get(toolName) == null);
+        if (missingTool != null)
         {
-            ITool? tool = this._registry.Get(toolName);
-            if (tool == null)
-            {
-                return Result<Step<string, string>, string>.Failure(
-                    $"Tool not found in registry: {toolName}");
-            }
+            return Result<Step<string, string>, string>.Failure(
+                $"Tool not found in registry: {missingTool}");
         }
 
         // Compose the pipeline
@@ -67,14 +64,11 @@ public sealed class ToolBinder
         }
 
         // Validate all tools exist
-        foreach (string toolName in chain.Tools)
+        string? missingTool = chain.Tools.FirstOrDefault(toolName => this._registry.Get(toolName) == null);
+        if (missingTool != null)
         {
-            ITool? tool = this._registry.Get(toolName);
-            if (tool == null)
-            {
-                return Result<KleisliResult<string, string, string>, string>.Failure(
-                    $"Tool not found in registry: {toolName}");
-            }
+            return Result<KleisliResult<string, string, string>, string>.Failure(
+                $"Tool not found in registry: {missingTool}");
         }
 
         // Compose the safe pipeline
@@ -161,13 +155,11 @@ public sealed class ToolBinder
             return Result<Step<string, string>, string>.Failure("Cannot bind empty tool chain");
         }
 
-        foreach (string toolName in chain.Tools)
+        string? missingToolName = chain.Tools.FirstOrDefault(toolName => this._registry.Get(toolName) == null);
+        if (missingToolName != null)
         {
-            if (this._registry.Get(toolName) == null)
-            {
-                return Result<Step<string, string>, string>.Failure(
-                    $"Tool not found in registry: {toolName}");
-            }
+            return Result<Step<string, string>, string>.Failure(
+                $"Tool not found in registry: {missingToolName}");
         }
 
         Step<string, string> pipeline = async input =>

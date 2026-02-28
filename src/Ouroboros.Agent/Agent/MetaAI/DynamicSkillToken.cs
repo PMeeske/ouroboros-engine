@@ -26,13 +26,6 @@ public sealed class DynamicSkillToken
     /// </summary>
     public async Task<string> ExecuteAsync(string input, string? args)
     {
-        // Execute each step in the skill
-        var context = new Dictionary<string, string>
-        {
-            ["input"] = input,
-            ["args"] = args ?? string.Empty,
-        };
-
         string currentOutput = input;
 
         foreach (PlanStep planStep in Skill.Steps)

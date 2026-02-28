@@ -238,7 +238,7 @@ APPLICABLE_TO: [task types, comma-separated]";
         return Task.FromResult(recommendations);
     }
 
-    private List<MetaKnowledge> ParseMetaKnowledgeResponse(
+    private static List<MetaKnowledge> ParseMetaKnowledgeResponse(
         string response,
         string taskType,
         int supportingExamples)

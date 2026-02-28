@@ -15,7 +15,6 @@ namespace Ouroboros.Providers.Kubernetes;
 /// </summary>
 public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposable
 {
-    private readonly KubernetesMcpClientOptions _options;
     private readonly HttpClient _httpClient;
     private readonly JsonSerializerOptions _jsonOptions;
     private bool _disposed;
@@ -32,7 +31,6 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
             throw new ArgumentException("Invalid KubernetesMcpClientOptions. Provide BaseUrl+Token, KubeConfigPath, or run in-cluster.", nameof(options));
         }
 
-        _options = options;
         _httpClient = httpClient ?? CreateHttpClient(options);
         _jsonOptions = JsonDefaults.CamelCase;
     }

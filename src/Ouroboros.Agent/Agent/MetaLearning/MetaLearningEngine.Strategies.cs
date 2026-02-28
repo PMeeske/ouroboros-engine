@@ -22,7 +22,7 @@ public partial class MetaLearningEngine
         MetaLearningConfig config,
         CancellationToken ct)
     {
-        var metaParameters = await baseModel.GetParametersAsync(ct);
+        _ = await baseModel.GetParametersAsync(ct);
 
         for (var iteration = 0; iteration < config.MetaIterations; iteration++)
         {

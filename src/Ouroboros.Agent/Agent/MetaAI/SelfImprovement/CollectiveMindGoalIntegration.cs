@@ -27,6 +27,7 @@ public sealed class CollectiveMindGoalIntegration
     {
         _mind = mind ?? throw new ArgumentNullException(nameof(mind));
         _goalHierarchy = goalHierarchy;
+        _ = _goalHierarchy;
     }
 
     /// <summary>

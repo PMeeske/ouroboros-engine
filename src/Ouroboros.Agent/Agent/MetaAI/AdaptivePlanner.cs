@@ -166,16 +166,13 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
         CancellationToken ct = default)
     {
         // Check all registered triggers
-        foreach (AdaptationTrigger trigger in _triggers)
+        foreach (AdaptationTrigger trigger in _triggers.Where(trigger => trigger.Condition(context)))
         {
-            if (trigger.Condition(context))
+            // Trigger matched - determine adaptation action
+            AdaptationAction? action = await CreateAdaptationActionAsync(trigger, context, ct);
+            if (action != null)
             {
-                // Trigger matched - determine adaptation action
-                AdaptationAction? action = await CreateAdaptationActionAsync(trigger, context, ct);
-                if (action != null)
-                {
-                    return action;
-                }
+                return action;
             }
         }
 

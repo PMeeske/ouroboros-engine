@@ -39,8 +39,11 @@ public sealed class MlpStatePredictor : IStatePredictor
         float[] biasOutput)
     {
         _inputSize = inputSize;
+        _ = _inputSize;
         _hiddenSize = hiddenSize;
+        _ = _hiddenSize;
         _outputSize = outputSize;
+        _ = _outputSize;
         _weightsInputHidden = weightsInputHidden;
         _biasHidden = biasHidden;
         _weightsHiddenOutput = weightsHiddenOutput;
@@ -113,7 +116,7 @@ public sealed class MlpStatePredictor : IStatePredictor
         return weights;
     }
 
-    private float[] EncodeAction(Action action)
+    private static float[] EncodeAction(Action action)
     {
         // Simple hash-based encoding - in practice would use learned embeddings
         var hash = action.Name.GetHashCode();
@@ -126,7 +129,7 @@ public sealed class MlpStatePredictor : IStatePredictor
         return embedding;
     }
 
-    private float[] ConcatenateEmbeddings(float[] a, float[] b)
+    private static float[] ConcatenateEmbeddings(float[] a, float[] b)
     {
         var result = new float[a.Length + b.Length];
         Array.Copy(a, 0, result, 0, a.Length);
@@ -134,7 +137,7 @@ public sealed class MlpStatePredictor : IStatePredictor
         return result;
     }
 
-    private float[] ForwardLayer(float[] input, float[][] weights, float[] bias, bool relu)
+    private static float[] ForwardLayer(float[] input, float[][] weights, float[] bias, bool relu)
     {
         var output = new float[weights[0].Length];
 

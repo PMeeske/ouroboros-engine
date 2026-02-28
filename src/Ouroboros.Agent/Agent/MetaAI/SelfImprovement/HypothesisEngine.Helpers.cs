@@ -10,7 +10,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed partial class HypothesisEngine
 {
-    private string BuildHypothesisPrompt(
+    private static string BuildHypothesisPrompt(
         string observation,
         List<Experience> experiences,
         Dictionary<string, object>? context)
@@ -40,7 +40,7 @@ DOMAIN: [domain]
 EVIDENCE: [supporting points]";
     }
 
-    private Hypothesis ParseHypothesis(string response, string observation, Dictionary<string, object>? context)
+    private static Hypothesis ParseHypothesis(string response, string observation, Dictionary<string, object>? context)
     {
         string[] lines = response.Split('\n');
 
@@ -88,7 +88,7 @@ EVIDENCE: [supporting points]";
             Validated: null);
     }
 
-    private List<PlanStep> ParseExperimentSteps(string response)
+    private static List<PlanStep> ParseExperimentSteps(string response)
     {
         List<PlanStep> steps = new List<PlanStep>();
         string[] lines = response.Split('\n');
@@ -126,7 +126,7 @@ EVIDENCE: [supporting points]";
         return steps;
     }
 
-    private Dictionary<string, object> ParseExpectedOutcomes(string response)
+    private static Dictionary<string, object> ParseExpectedOutcomes(string response)
     {
         Dictionary<string, object> outcomes = new Dictionary<string, object>();
         string[] lines = response.Split('\n');
@@ -150,7 +150,7 @@ EVIDENCE: [supporting points]";
         return outcomes;
     }
 
-    private bool AnalyzeExperimentResults(PlanExecutionResult execution, Dictionary<string, object> expectedOutcomes)
+    private static bool AnalyzeExperimentResults(PlanExecutionResult execution, Dictionary<string, object> expectedOutcomes)
     {
         // Check if execution was successful
         if (!execution.Success)
@@ -200,7 +200,7 @@ EVIDENCE: [supporting points]";
         return baseLikelihood + (0.5 - baseLikelihood) * (1.0 - quality);
     }
 
-    private string GenerateExplanation(Hypothesis hypothesis, PlanExecutionResult execution, bool supported)
+    private static string GenerateExplanation(Hypothesis hypothesis, PlanExecutionResult execution, bool supported)
     {
         if (supported)
         {

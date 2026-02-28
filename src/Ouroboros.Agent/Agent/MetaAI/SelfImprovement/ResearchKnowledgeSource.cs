@@ -209,8 +209,6 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
         List<ResearchPaper> papers = papersResult.Value;
 
         // Identify research gaps and novel directions
-        var categories = papers.Select(p => p.Category).Distinct().ToList();
-
         // Create exploration opportunities from underexplored areas
         var categoryGroups = papers.GroupBy(p => p.Category).OrderBy(g => g.Count());
 
@@ -225,19 +223,17 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
         }
 
         // Add opportunities based on paper abstracts
-        foreach (var paper in papers.Take(3))
+        foreach (var paper in papers.Take(3).Where(paper =>
+            paper.Abstract.Contains("novel", StringComparison.OrdinalIgnoreCase) ||
+            paper.Abstract.Contains("first", StringComparison.OrdinalIgnoreCase) ||
+            paper.Abstract.Contains("new approach", StringComparison.OrdinalIgnoreCase)))
         {
-            if (paper.Abstract.Contains("novel", StringComparison.OrdinalIgnoreCase) ||
-                paper.Abstract.Contains("first", StringComparison.OrdinalIgnoreCase) ||
-                paper.Abstract.Contains("new approach", StringComparison.OrdinalIgnoreCase))
-            {
-                opportunities.Add(new ExplorationOpportunity(
-                    Description: $"Investigate novel approach: {paper.Title}",
-                    NoveltyScore: 0.85,
-                    InformationGainEstimate: 0.80,
-                    Prerequisites: new List<string> { paper.Category },
-                    IdentifiedAt: DateTime.UtcNow));
-            }
+            opportunities.Add(new ExplorationOpportunity(
+                Description: $"Investigate novel approach: {paper.Title}",
+                NoveltyScore: 0.85,
+                InformationGainEstimate: 0.80,
+                Prerequisites: new List<string> { paper.Category },
+                IdentifiedAt: DateTime.UtcNow));
         }
 
         return opportunities.Take(maxOpportunities).ToList();
@@ -318,7 +314,7 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
     // Helper Methods
     // ========================================
 
-    private List<ResearchPaper> ParseArxivResponse(string xmlContent)
+    private static List<ResearchPaper> ParseArxivResponse(string xmlContent)
     {
         List<ResearchPaper> papers = new();
 
@@ -331,7 +327,7 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
             foreach (XElement entry in doc.Descendants(atom + "entry"))
             {
                 string? idUrl = entry.Element(atom + "id")?.Value;
-                string id = idUrl?.Split('/').Last() ?? Guid.NewGuid().ToString();
+                string id = idUrl?.Split('/')[^1] ?? Guid.NewGuid().ToString();
                 string title = entry.Element(atom + "title")?.Value?.Replace("\n", " ").Trim() ?? "Unknown";
                 string summary = entry.Element(atom + "summary")?.Value?.Replace("\n", " ").Trim() ?? "";
                 string authors = string.Join(", ", entry.Elements(atom + "author")
@@ -364,7 +360,7 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
         return papers;
     }
 
-    private CitationMetadata ParseSemanticScholarResponse(string paperId, string json)
+    private static CitationMetadata ParseSemanticScholarResponse(string paperId, string json)
     {
         using JsonDocument doc = JsonDocument.Parse(json);
         JsonElement root = doc.RootElement;

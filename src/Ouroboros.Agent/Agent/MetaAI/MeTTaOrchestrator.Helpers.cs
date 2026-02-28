@@ -228,15 +228,15 @@ CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ourobor
     {
         _metrics.AddOrUpdate(
             component,
-            _ => new PerformanceMetrics(
-                ResourceName: component,
+            key => new PerformanceMetrics(
+                ResourceName: key,
                 ExecutionCount: 1,
                 AverageLatencyMs: latencyMs,
                 SuccessRate: success ? 1.0 : 0.0,
                 LastUsed: DateTime.UtcNow,
                 CustomMetrics: new Dictionary<string, double>()
             ),
-            (_, old) =>
+            (key, old) =>
             {
                 int totalCalls = old.ExecutionCount + 1;
                 int successCalls = (int)(old.SuccessRate * old.ExecutionCount) + (success ? 1 : 0);
@@ -244,7 +244,7 @@ CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ourobor
                 double successRate = (double)successCalls / totalCalls;
 
                 return new PerformanceMetrics(
-                    ResourceName: component,
+                    ResourceName: key,
                     ExecutionCount: totalCalls,
                     AverageLatencyMs: avgLatency,
                     SuccessRate: successRate,

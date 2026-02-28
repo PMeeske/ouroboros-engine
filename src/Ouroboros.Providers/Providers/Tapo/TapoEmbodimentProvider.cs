@@ -35,7 +35,6 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
 
     private bool _isConnected;
     private bool _disposed;
-    private string? _sessionId;
     private EmbodimentCapabilities _capabilities;
 
     /// <summary>
@@ -233,7 +232,6 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
             _sensors.Clear();
             _actuators.Clear();
             _activeSensors.Clear();
-            _sessionId = null;
 
             RaiseEvent(EmbodimentProviderEventType.Disconnected);
 

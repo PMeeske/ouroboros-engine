@@ -208,14 +208,14 @@ Improved response:";
     {
         _metrics.AddOrUpdate(
             modelName,
-            _ => new PerformanceMetrics(
-                modelName,
+            key => new PerformanceMetrics(
+                key,
                 ExecutionCount: 1,
                 AverageLatencyMs: latencyMs,
                 SuccessRate: success ? 1.0 : 0.0,
                 LastUsed: DateTime.UtcNow,
                 CustomMetrics: new Dictionary<string, double>()),
-            (_, existing) =>
+            (key, existing) =>
             {
                 int newCount = existing.ExecutionCount + 1;
                 double newLatency = (existing.AverageLatencyMs * existing.ExecutionCount + latencyMs) / newCount;

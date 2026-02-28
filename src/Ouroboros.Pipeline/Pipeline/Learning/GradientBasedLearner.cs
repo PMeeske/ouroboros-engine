@@ -284,7 +284,7 @@ public sealed class GradientBasedLearner : IOnlineLearner
         return updates;
     }
 
-    private double ComputeConfidence(Feedback feedback)
+    private static double ComputeConfidence(Feedback feedback)
     {
         // Base confidence by feedback type
         var baseConfidence = feedback.Type switch
@@ -321,7 +321,7 @@ public sealed class GradientBasedLearner : IOnlineLearner
         return _config.LearningRate / (Math.Sqrt(newSquaredGrad) + epsilon);
     }
 
-    private List<LearningUpdate> AggregateUpdates(List<LearningUpdate> updates)
+    private static List<LearningUpdate> AggregateUpdates(List<LearningUpdate> updates)
     {
         var grouped = updates.GroupBy(u => u.ParameterName);
         var aggregated = new List<LearningUpdate>();

@@ -127,7 +127,6 @@ public sealed class CompositeStrategy : IDelegationStrategy
             .Select(kvp =>
             {
                 double weightedSum = kvp.Value.Sum(s => s.Score * s.Weight);
-                double appliedWeight = kvp.Value.Sum(s => s.Weight);
                 double compositeScore = weightedSum / totalWeight;
 
                 string contributions = string.Join(", ",

@@ -25,7 +25,6 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     private MasterModelElection? _election;
     private DecompositionConfig _decompositionConfig = DecompositionConfig.Default;
     private readonly Subject<SubGoalResult> _subGoalStream = new();
-    private readonly IITPhiCalculator _phiCalculator = new();
 
     /// <summary>
     /// Observable stream of the mind's internal thoughts and reasoning.
@@ -135,7 +134,7 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
         return this;
     }
 
-    private async Task<ThinkingResponse> QueryPathway(NeuralPathway pathway, string prompt, CancellationToken ct)
+    private static async Task<ThinkingResponse> QueryPathway(NeuralPathway pathway, string prompt, CancellationToken ct)
     {
         pathway.CostTracker.StartRequest();
 
@@ -239,7 +238,7 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
         IReadOnlyList<NeuralPathway> snapshot;
         lock (_lock) { snapshot = _pathways.ToList(); }
 
-        var result = _phiCalculator.Compute(snapshot);
+        var result = IITPhiCalculator.Compute(snapshot);
         _thoughtStream.OnNext($"Φ={result.Phi:F4} | MIP: {result.MinimumInformationPartition}");
         return result;
     }
@@ -274,7 +273,7 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
             // IIT Φ — integrated information of the pathway topology
             if (_pathways.Count >= 2)
             {
-                var phi = _phiCalculator.Compute(_pathways.ToList());
+                var phi = IITPhiCalculator.Compute(_pathways.ToList());
                 sb.AppendLine();
                 sb.AppendLine($"   IIT Φ: {phi.Phi:F4} | {phi.Description}");
                 sb.AppendLine($"   MIP:   {phi.MinimumInformationPartition}");
