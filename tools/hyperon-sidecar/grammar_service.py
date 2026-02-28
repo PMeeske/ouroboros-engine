@@ -269,6 +269,378 @@ class GrammarAtomSpace:
 
         return False, "", "", 0.0
 
+    # =========================================================================
+    # Logic Transfer Object (LTO) Operations
+    # =========================================================================
+
+    def atoms_to_g4(self, metta_atoms: str) -> tuple[bool, str, list[str]]:
+        """Convert MeTTa grammar spec atoms (LTOs) to an ANTLR4 .g4 grammar string.
+
+        The atoms should use MkGrammar, MkProduction, MkTerminal, and MkRegexTerminal
+        constructors as defined in grammar_atoms.metta.
+        """
+        notes: list[str] = []
+
+        try:
+            # Parse the MeTTa source into the space
+            results = self._metta.run(metta_atoms)
+            notes.append(f"Parsed {len(results)} MeTTa expression group(s)")
+        except Exception as e:
+            return False, "", [f"Failed to parse MeTTa atoms: {e}"]
+
+        # Extract grammar structure by querying the space
+        grammar_name, start_rule, productions, terminals = self._extract_grammar_structure(
+            metta_atoms, notes
+        )
+
+        if not grammar_name:
+            return False, "", notes + ["No MkGrammar atom found in the provided atoms"]
+
+        # Build the .g4 output
+        g4_lines = [f"grammar {grammar_name};", ""]
+
+        # Parser rules
+        for prod_name, alternatives in productions.items():
+            if prod_name[0].islower() if prod_name else False:
+                alts_str = "\n    | ".join(alternatives)
+                g4_lines.append(f"{prod_name}\n    : {alts_str}\n    ;")
+                g4_lines.append("")
+
+        # Lexer rules (uppercase)
+        for prod_name, alternatives in productions.items():
+            if prod_name and prod_name[0].isupper():
+                alts_str = "\n    | ".join(alternatives)
+                g4_lines.append(f"{prod_name}\n    : {alts_str}\n    ;")
+                g4_lines.append("")
+
+        # Explicit terminal definitions
+        for term_name, term_pattern in terminals.items():
+            if term_name not in productions:
+                g4_lines.append(f"{term_name}: {term_pattern};")
+
+        # Add default WS skip rule if not explicitly defined
+        has_ws = any(
+            name.upper() == "WS" for name in list(productions.keys()) + list(terminals.keys())
+        )
+        if not has_ws:
+            g4_lines.append("")
+            g4_lines.append("WS: [ \\t\\r\\n]+ -> skip;")
+
+        g4 = "\n".join(g4_lines)
+        notes.append(f"Generated {len(productions)} production(s) and {len(terminals)} terminal(s)")
+        return True, g4, notes
+
+    def validate_atoms(self, metta_atoms: str) -> tuple[bool, list[dict], list[str]]:
+        """Validate MeTTa grammar spec atoms against structural rules.
+
+        Runs the MeTTa validation rules (is-left-recursive, is-reachable, etc.)
+        directly on the atom structure, not on .g4 text.
+        """
+        notes: list[str] = []
+        issues: list[dict] = []
+
+        try:
+            self._metta.run(metta_atoms)
+        except Exception as e:
+            issues.append({
+                "severity": pb2.GRAMMAR_ISSUE_SEVERITY_ERROR,
+                "rule_name": "",
+                "description": f"Failed to parse MeTTa atoms: {e}",
+                "kind": pb2.GRAMMAR_ISSUE_KIND_SYNTAX_ERROR,
+            })
+            return False, issues, [str(e)]
+
+        # Run the validate-grammar MeTTa function if a grammar is present
+        try:
+            validation_results = self._metta.run(
+                "(match &self (= (validate-grammar $g) $result) $result)"
+            )
+            for group in validation_results:
+                for atom in group:
+                    atom_str = str(atom)
+                    if atom_str.startswith("("):
+                        # Parse issue strings like "LEFT_RECURSION:ruleName"
+                        self._parse_validation_atom(atom_str, issues, notes)
+        except Exception as e:
+            notes.append(f"MeTTa validation query returned: {e}")
+
+        # Also do structural validation by extracting and checking directly
+        grammar_name, start_rule, productions, terminals = self._extract_grammar_structure(
+            metta_atoms, notes
+        )
+
+        if grammar_name:
+            # Check left recursion on extracted productions
+            for name, alts in productions.items():
+                for alt in alts:
+                    tokens = alt.strip().split()
+                    if tokens and tokens[0] == name:
+                        issues.append({
+                            "severity": pb2.GRAMMAR_ISSUE_SEVERITY_ERROR,
+                            "rule_name": name,
+                            "description": f"Direct left recursion in atom spec: {name} -> {name} ...",
+                            "kind": pb2.GRAMMAR_ISSUE_KIND_LEFT_RECURSION,
+                        })
+                        break
+
+            # Check for undefined references
+            defined = set(productions.keys()) | set(terminals.keys())
+            for name, alts in productions.items():
+                for alt in alts:
+                    for token in alt.strip().split():
+                        cleaned = re.sub(r"[?*+()'\"]", "", token)
+                        if (
+                            cleaned
+                            and cleaned[0].islower()
+                            and cleaned not in defined
+                            and cleaned not in ("true", "false", "null")
+                        ):
+                            issues.append({
+                                "severity": pb2.GRAMMAR_ISSUE_SEVERITY_ERROR,
+                                "rule_name": name,
+                                "description": f"Atom spec references undefined rule '{cleaned}'",
+                                "kind": pb2.GRAMMAR_ISSUE_KIND_MISSING_RULE,
+                            })
+
+        is_valid = not any(
+            i["severity"] == pb2.GRAMMAR_ISSUE_SEVERITY_ERROR for i in issues
+        )
+        return is_valid, issues, notes
+
+    def correct_atoms(
+        self, metta_atoms: str, known_issues: list[dict]
+    ) -> tuple[bool, str, list[str], list[dict]]:
+        """Correct MeTTa grammar spec atoms by applying symbolic rewriting rules.
+
+        Uses the fix-left-recursion and other correction rules from grammar_atoms.metta
+        to transform the atom specification.
+        """
+        corrections: list[str] = []
+        corrected = metta_atoms
+
+        has_left_recursion = any(
+            i.get("kind", 0) == pb2.GRAMMAR_ISSUE_KIND_LEFT_RECURSION
+            for i in known_issues
+        )
+
+        if has_left_recursion:
+            # Try to run MeTTa fix-left-recursion on the atoms
+            try:
+                fix_results = self._metta.run(
+                    "(match &self (= (fix-left-recursion $prod) $result) $result)"
+                )
+                for group in fix_results:
+                    for atom in group:
+                        atom_str = str(atom)
+                        if "MkProduction" in atom_str:
+                            corrections.append(f"Applied fix-left-recursion: {atom_str[:100]}")
+            except Exception as e:
+                corrections.append(f"MeTTa correction attempted: {e}")
+
+            # Also apply structural correction on the extracted atoms
+            notes: list[str] = []
+            grammar_name, start_rule, productions, terminals = self._extract_grammar_structure(
+                metta_atoms, notes
+            )
+
+            if grammar_name:
+                fixed_productions: dict[str, list[str]] = {}
+                for rule_name in known_issues:
+                    name = rule_name.get("rule_name", "")
+                    if name and name in productions:
+                        alts = productions[name]
+                        recursive = []
+                        non_recursive = []
+                        for alt in alts:
+                            tokens = alt.strip().split()
+                            if tokens and tokens[0] == name:
+                                recursive.append(" ".join(tokens[1:]))
+                            else:
+                                non_recursive.append(alt)
+
+                        if recursive:
+                            prime_name = f"{name}_prime"
+                            new_alts = [f"{nr} {prime_name}" for nr in non_recursive] if non_recursive else [prime_name]
+                            prime_alts = [f"{r} {prime_name}" for r in recursive] + ["/* epsilon */"]
+
+                            fixed_productions[name] = new_alts
+                            fixed_productions[prime_name] = prime_alts
+                            corrections.append(f"Removed left recursion from '{name}' in atom spec")
+
+                # Rebuild MeTTa atoms with corrections
+                if fixed_productions:
+                    corrected = self._rebuild_metta_atoms(
+                        grammar_name, start_rule, productions, terminals, fixed_productions
+                    )
+
+        # Re-validate the corrected atoms
+        is_valid, remaining_issues, _ = self.validate_atoms(corrected)
+        return True, corrected, corrections, remaining_issues
+
+    def _extract_grammar_structure(
+        self, metta_atoms: str, notes: list[str]
+    ) -> tuple[str, str, dict[str, list[str]], dict[str, str]]:
+        """Extract grammar structure from MeTTa atom source text by parsing atom expressions."""
+        grammar_name = ""
+        start_rule = ""
+        productions: dict[str, list[str]] = {}
+        terminals: dict[str, str] = {}
+
+        # Parse MkGrammar: (MkGrammar "name" "start" (Cons prod1 ...))
+        grammar_match = re.search(
+            r'\(MkGrammar\s+"([^"]+)"\s+"([^"]+)"',
+            metta_atoms,
+        )
+        if grammar_match:
+            grammar_name = grammar_match.group(1)
+            start_rule = grammar_match.group(2)
+            notes.append(f"Found grammar '{grammar_name}' with start rule '{start_rule}'")
+
+        # Parse MkProduction: (MkProduction "name" (Cons (Cons "sym1" ...) ...))
+        for prod_match in re.finditer(
+            r'\(MkProduction\s+"([^"]+)"\s+\((.+?)\)\s*\)',
+            metta_atoms,
+        ):
+            prod_name = prod_match.group(1)
+            alts_raw = prod_match.group(2)
+
+            # Extract alternatives from nested Cons lists
+            alternatives = self._parse_cons_list_of_lists(alts_raw)
+            if alternatives:
+                productions[prod_name] = alternatives
+            else:
+                # Fallback: try simpler list format
+                symbols = re.findall(r'"([^"]+)"', alts_raw)
+                if symbols:
+                    productions[prod_name] = [" ".join(symbols)]
+
+        # Parse MkTerminal: (MkTerminal "NAME")
+        for term_match in re.finditer(r'\(MkTerminal\s+"([^"]+)"\)', metta_atoms):
+            term_name = term_match.group(1)
+            terminals[term_name] = f"'{term_name}'"
+
+        # Parse MkRegexTerminal: (MkRegexTerminal "NAME" "pattern")
+        for regex_match in re.finditer(
+            r'\(MkRegexTerminal\s+"([^"]+)"\s+"([^"]+)"\)',
+            metta_atoms,
+        ):
+            term_name = regex_match.group(1)
+            term_pattern = regex_match.group(2)
+            terminals[term_name] = term_pattern
+
+        return grammar_name, start_rule, productions, terminals
+
+    def _parse_cons_list_of_lists(self, raw: str) -> list[str]:
+        """Parse nested Cons-list structure into a list of space-separated alternatives."""
+        alternatives: list[str] = []
+
+        # Handle: Cons (Cons "a" (Cons "b" Nil)) (Cons (Cons "c" Nil) Nil)
+        # Simplified: extract all quoted strings grouped by inner Cons blocks
+        depth = 0
+        current_alt: list[str] = []
+        i = 0
+
+        # Simpler approach: find all inner (Cons "..." ...) groups
+        inner_lists = re.findall(r'\(Cons\s+((?:"[^"]*"\s*(?:\(Cons\s+)*)*)', raw)
+
+        if not inner_lists:
+            # Try flat list: "sym1" "sym2" | "sym3"
+            all_symbols = re.findall(r'"([^"]+)"', raw)
+            if all_symbols:
+                return [" ".join(all_symbols)]
+            return []
+
+        # Group symbols by tracking Cons nesting for alternatives
+        # Each top-level Cons entry is one alternative
+        current: list[str] = []
+        for item in re.findall(r'"([^"]+)"', raw):
+            current.append(item)
+
+        # Simple heuristic: split on "Nil)" boundaries to find alternatives
+        parts = re.split(r'Nil\s*\)', raw)
+        alternatives = []
+        for part in parts:
+            symbols = re.findall(r'"([^"]+)"', part)
+            if symbols:
+                alternatives.append(" ".join(symbols))
+
+        return alternatives if alternatives else [" ".join(current)] if current else []
+
+    @staticmethod
+    def _parse_validation_atom(atom_str: str, issues: list[dict], notes: list[str]) -> None:
+        """Parse a MeTTa validation result atom into issue dicts."""
+        # Parse strings like "LEFT_RECURSION:ruleName" from validation results
+        for item_str in re.findall(r'"([^"]+)"', atom_str):
+            if ":" in item_str:
+                kind_str, _, rule_name = item_str.partition(":")
+                kind_map = {
+                    "LEFT_RECURSION": pb2.GRAMMAR_ISSUE_KIND_LEFT_RECURSION,
+                    "UNREACHABLE": pb2.GRAMMAR_ISSUE_KIND_UNREACHABLE_RULE,
+                    "FIRST_CONFLICT": pb2.GRAMMAR_ISSUE_KIND_FIRST_SET_CONFLICT,
+                    "MISSING_RULE": pb2.GRAMMAR_ISSUE_KIND_MISSING_RULE,
+                }
+                kind = kind_map.get(kind_str, pb2.GRAMMAR_ISSUE_KIND_UNSPECIFIED)
+                severity = (
+                    pb2.GRAMMAR_ISSUE_SEVERITY_ERROR
+                    if kind_str in ("LEFT_RECURSION", "MISSING_RULE")
+                    else pb2.GRAMMAR_ISSUE_SEVERITY_WARNING
+                )
+                issues.append({
+                    "severity": severity,
+                    "rule_name": rule_name,
+                    "description": f"MeTTa validation: {kind_str} in '{rule_name}'",
+                    "kind": kind,
+                })
+
+    @staticmethod
+    def _rebuild_metta_atoms(
+        grammar_name: str,
+        start_rule: str,
+        original_productions: dict[str, list[str]],
+        terminals: dict[str, str],
+        overrides: dict[str, list[str]],
+    ) -> str:
+        """Rebuild MeTTa atom source with corrected productions."""
+        lines: list[str] = []
+
+        # Build MkProduction atoms
+        all_productions = dict(original_productions)
+        all_productions.update(overrides)
+
+        prod_atoms: list[str] = []
+        for name, alts in all_productions.items():
+            # Build Cons list of Cons lists for alternatives
+            alt_atoms: list[str] = []
+            for alt in alts:
+                symbols = alt.split()
+                sym_list = "Nil"
+                for sym in reversed(symbols):
+                    sym_list = f'(Cons "{sym}" {sym_list})'
+                alt_atoms.append(sym_list)
+
+            alts_list = "Nil"
+            for alt_atom in reversed(alt_atoms):
+                alts_list = f"(Cons {alt_atom} {alts_list})"
+
+            prod_atoms.append(f'(MkProduction "{name}" {alts_list})')
+
+        # Build productions list
+        prods_list = "Nil"
+        for prod in reversed(prod_atoms):
+            prods_list = f"(Cons {prod} {prods_list})"
+
+        # Build terminal atoms
+        for name, pattern in terminals.items():
+            if pattern.startswith("'"):
+                lines.append(f'(MkTerminal "{name}")')
+            else:
+                lines.append(f'(MkRegexTerminal "{name}" "{pattern}")')
+
+        # Build grammar atom
+        lines.append(f'(MkGrammar "{grammar_name}" "{start_rule}" {prods_list})')
+
+        return "\n".join(lines)
+
     @property
     def grammar_count(self) -> int:
         return len(self._proven_grammars)
@@ -360,6 +732,55 @@ class HyperonGrammarServicer(pb2_grpc.HyperonGrammarServiceServicer):
             grammar_g4=g4,
             grammar_id=gid,
             similarity_score=score,
+        )
+
+    # ----- Logic Transfer Object (LTO) RPC Handlers -----
+
+    def AtomsToGrammar(self, request, context):
+        success, g4, notes = self._space.atoms_to_g4(request.metta_atoms)
+        return pb2.AtomsToGrammarResponse(
+            success=success,
+            grammar_g4=g4,
+            notes=notes,
+        )
+
+    def ValidateAtoms(self, request, context):
+        is_valid, issues, notes = self._space.validate_atoms(request.metta_atoms)
+        return pb2.ValidateAtomsResponse(
+            is_valid=is_valid,
+            issues=[
+                pb2.GrammarIssue(
+                    severity=i["severity"],
+                    rule_name=i["rule_name"],
+                    description=i["description"],
+                    kind=i["kind"],
+                )
+                for i in issues
+            ],
+            validation_notes=notes,
+        )
+
+    def CorrectAtoms(self, request, context):
+        known = [
+            {"kind": i.kind, "rule_name": i.rule_name, "description": i.description}
+            for i in request.known_issues
+        ]
+        success, corrected, corrections, remaining = self._space.correct_atoms(
+            request.metta_atoms, known
+        )
+        return pb2.CorrectAtomsResponse(
+            success=success,
+            corrected_metta_atoms=corrected,
+            corrections_applied=corrections,
+            remaining_issues=[
+                pb2.GrammarIssue(
+                    severity=i["severity"],
+                    rule_name=i["rule_name"],
+                    description=i["description"],
+                    kind=i["kind"],
+                )
+                for i in remaining
+            ],
         )
 
     def HealthCheck(self, request, context):

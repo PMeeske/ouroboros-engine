@@ -113,3 +113,18 @@
 
 ; Temperature used for generation
 (: GenerationTemperature (-> String Number Bool))  ; grammar-id, temperature
+
+; =============================================================================
+; Logic Transfer Object (LTO) Traceability
+; =============================================================================
+
+; Links a grammar ID to the MeTTa source atoms that generated it.
+; This ensures every compiled grammar is traceable back to its formal specification.
+(: SpecAtoms (-> String String Bool))  ; grammar-id, metta-source
+
+; Records that a grammar was generated via the LTO pipeline
+; (atoms → wire → .g4 → compiled) rather than direct .g4 generation.
+(: LtoGenerated (-> String Bool))  ; grammar-id
+
+; Links the atom spec to the resulting .g4 grammar for debugging/auditing
+(: AtomsProducedG4 (-> String String Bool))  ; metta-source-hash, g4-content-hash

@@ -26,6 +26,19 @@ service HyperonGrammarService {
 
   // Health check for sidecar availability.
   rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+
+  // --- Logic Transfer Object (LTO) Operations ---
+  // These RPCs accept MeTTa atoms as formal specifications (LTOs)
+  // and convert them to executable ANTLR grammars over the wire.
+
+  // Converts MeTTa grammar spec atoms to an ANTLR4 .g4 grammar string.
+  rpc AtomsToGrammar (AtomsToGrammarRequest) returns (AtomsToGrammarResponse);
+
+  // Validates MeTTa grammar spec atoms against structural rules in the AtomSpace.
+  rpc ValidateAtoms (ValidateAtomsRequest) returns (ValidateAtomsResponse);
+
+  // Corrects MeTTa grammar spec atoms by applying symbolic rewriting rules.
+  rpc CorrectAtoms (CorrectAtomsRequest) returns (CorrectAtomsResponse);
 }
 
 // --- Validation ---
@@ -132,6 +145,46 @@ message RetrieveGrammarResponse {
   string grammar_g4 = 2;
   string grammar_id = 3;
   double similarity_score = 4;
+}
+
+// --- Logic Transfer Object (LTO) Operations ---
+// MeTTa atoms serve as formal specifications (Logic Transfer Objects) that
+// carry verifiable logic over the wire, not just data.
+
+message AtomsToGrammarRequest {
+  // MeTTa source containing grammar spec atoms (MkGrammar, MkProduction, etc.)
+  string metta_atoms = 1;
+}
+
+message AtomsToGrammarResponse {
+  bool success = 1;
+  string grammar_g4 = 2;
+  repeated string notes = 3;
+}
+
+message ValidateAtomsRequest {
+  // MeTTa source containing grammar spec atoms to validate
+  string metta_atoms = 1;
+}
+
+message ValidateAtomsResponse {
+  bool is_valid = 1;
+  repeated GrammarIssue issues = 2;
+  repeated string validation_notes = 3;
+}
+
+message CorrectAtomsRequest {
+  // MeTTa source containing grammar spec atoms to correct
+  string metta_atoms = 1;
+  repeated GrammarIssue known_issues = 2;
+}
+
+message CorrectAtomsResponse {
+  bool success = 1;
+  // Corrected MeTTa atoms source
+  string corrected_metta_atoms = 2;
+  repeated string corrections_applied = 3;
+  repeated GrammarIssue remaining_issues = 4;
 }
 
 // --- Health ---
