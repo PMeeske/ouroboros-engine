@@ -2,6 +2,8 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using Ouroboros.Providers.Configuration;
+
 namespace Ouroboros.Providers.Tapo;
 
 /// <summary>
@@ -33,7 +35,7 @@ public sealed record TapoVisionModelConfig
     /// <summary>
     /// Gets the Ollama endpoint for vision model inference.
     /// </summary>
-    public string OllamaEndpoint { get; init; } = "http://localhost:11434";
+    public string OllamaEndpoint { get; init; } = DefaultEndpoints.Ollama;
 
     /// <summary>
     /// Gets the timeout for vision model requests.

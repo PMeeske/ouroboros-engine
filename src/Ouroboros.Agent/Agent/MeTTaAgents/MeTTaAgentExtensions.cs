@@ -4,6 +4,7 @@
 // </copyright>
 
 using Ouroboros.Agent.ConsolidatedMind;
+using Ouroboros.Providers.Configuration;
 
 namespace Ouroboros.Agent.MeTTaAgents;
 
@@ -55,7 +56,7 @@ public static class MeTTaAgentExtensions
     /// <param name="ollamaEndpoint">Optional Ollama endpoint override.</param>
     /// <returns>List of provider factories.</returns>
     public static IReadOnlyList<IAgentProviderFactory> CreateDefaultProviders(
-        string ollamaEndpoint = "http://localhost:11434")
+        string ollamaEndpoint = DefaultEndpoints.Ollama)
     {
         return new IAgentProviderFactory[]
         {
@@ -72,7 +73,7 @@ public static class MeTTaAgentExtensions
     /// <returns>A configured MeTTaAgentRuntime.</returns>
     public static MeTTaAgentRuntime CreateDefaultRuntime(
         IMeTTaEngine engine,
-        string ollamaEndpoint = "http://localhost:11434")
+        string ollamaEndpoint = DefaultEndpoints.Ollama)
     {
         return new MeTTaAgentRuntime(engine, CreateDefaultProviders(ollamaEndpoint));
     }

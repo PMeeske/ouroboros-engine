@@ -56,7 +56,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
         _metricsStore = metricsStore;
         _fallbackModel = fallbackModel;
 
-        // Load persisted metrics if store provided
+        // Intentional: sync-over-async in constructor; metrics must be loaded before orchestrator is usable
         if (_metricsStore != null)
         {
             LoadPersistedMetricsAsync().GetAwaiter().GetResult();

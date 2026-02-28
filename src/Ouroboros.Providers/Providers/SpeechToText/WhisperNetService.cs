@@ -162,7 +162,7 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
         {
             if (needsCleanup && File.Exists(wavPath))
             {
-                try { File.Delete(wavPath); } catch (IOException) { }
+                try { File.Delete(wavPath); } catch (IOException) { /* Intentional: best-effort temp file cleanup */ }
             }
         }
     }
@@ -188,7 +188,7 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
         {
             if (File.Exists(tempPath))
             {
-                try { File.Delete(tempPath); } catch (IOException) { }
+                try { File.Delete(tempPath); } catch (IOException) { /* Intentional: best-effort temp file cleanup */ }
             }
         }
     }
@@ -323,7 +323,7 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
                 if (convertResult.IsSuccess)
                 {
                     var samples = await ReadAudioSamplesAsync(convertedPath, ct);
-                    try { File.Delete(convertedPath); } catch (IOException) { }
+                    try { File.Delete(convertedPath); } catch (IOException) { /* Intentional: best-effort temp file cleanup */ }
                     return samples;
                 }
                 return null;

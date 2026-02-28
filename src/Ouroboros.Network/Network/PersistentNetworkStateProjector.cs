@@ -7,6 +7,7 @@ namespace Ouroboros.Network;
 
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Ouroboros.Providers.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Core.Configuration;
 using Qdrant.Client;
@@ -60,7 +61,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
     /// Initializes a new instance of the <see cref="PersistentNetworkStateProjector"/> class.
     /// </summary>
     /// <param name="dag">The Merkle-DAG to project from.</param>
-    /// <param name="qdrantEndpoint">The Qdrant endpoint (e.g., "http://localhost:6334").</param>
+    /// <param name="qdrantEndpoint">The Qdrant endpoint (e.g., <see cref="DefaultEndpoints.QdrantGrpc"/>).</param>
     /// <param name="embeddingFunc">Function to generate embeddings for semantic storage.</param>
     [Obsolete("Use the constructor accepting QdrantClient + IQdrantCollectionRegistry from DI.")]
     public PersistentNetworkStateProjector(
@@ -72,7 +73,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         _embeddingFunc = embeddingFunc ?? throw new ArgumentNullException(nameof(embeddingFunc));
         _snapshotCollectionName = "network_state_snapshots";
         _learningsCollectionName = "network_learnings";
-        var normalizedEndpoint = NormalizeEndpoint(qdrantEndpoint, "http://localhost:6334");
+        var normalizedEndpoint = NormalizeEndpoint(qdrantEndpoint, DefaultEndpoints.QdrantGrpc);
         var endpointUri = new Uri(normalizedEndpoint, UriKind.Absolute);
         var host = endpointUri.Host;
         var port = endpointUri.Port > 0 ? endpointUri.Port : 6334;

@@ -197,7 +197,7 @@ Write-Output 'OK'
                 byte[] audioData = await File.ReadAllBytesAsync(tempFile, ct);
 
                 // Clean up temp file
-                try { File.Delete(tempFile); } catch (IOException) { }
+                try { File.Delete(tempFile); } catch (IOException) { /* Intentional: best-effort temp file cleanup */ }
 
                 return Result<SpeechResult, string>.Success(new SpeechResult(audioData, "wav"));
             }

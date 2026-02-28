@@ -263,6 +263,7 @@ public class HyperonReasoningStep : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        // Intentional: sync-over-async in Dispose; IDisposable cannot be async and flow requires async disposal
         _flow.DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 }

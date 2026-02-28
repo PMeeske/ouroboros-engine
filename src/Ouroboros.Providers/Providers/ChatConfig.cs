@@ -1,5 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using Microsoft.Extensions.Configuration;
+using Ouroboros.Providers.Configuration;
 
 namespace Ouroboros.Providers;
 
@@ -56,7 +57,7 @@ public static class ChatConfig
         [ChatEndpointType.Replicate] = "https://api.replicate.com",
         [ChatEndpointType.HuggingFace] = "https://api-inference.huggingface.co",
         [ChatEndpointType.GitHubModels] = "https://models.inference.ai.azure.com",
-        [ChatEndpointType.OllamaLocal] = "http://localhost:11434",
+        [ChatEndpointType.OllamaLocal] = DefaultEndpoints.Ollama,
     };
 
     /// <summary>

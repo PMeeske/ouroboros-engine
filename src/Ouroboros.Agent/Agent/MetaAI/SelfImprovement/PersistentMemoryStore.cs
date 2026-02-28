@@ -39,6 +39,7 @@ public sealed class PersistentMemoryStore : IMemoryStore
 
         if (!string.IsNullOrEmpty(_persistencePath))
         {
+            // Intentional: sync-over-async in constructor; persistence load must complete before instance is usable
             LoadFromDiskAsync().GetAwaiter().GetResult();
         }
     }

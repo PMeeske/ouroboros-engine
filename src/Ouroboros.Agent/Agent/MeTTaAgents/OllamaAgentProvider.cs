@@ -5,6 +5,7 @@
 
 using LangChain.Providers.Ollama;
 using Ouroboros.Providers;
+using Ouroboros.Providers.Configuration;
 
 namespace Ouroboros.Agent.MeTTaAgents;
 
@@ -21,7 +22,7 @@ public sealed class OllamaAgentProvider : IAgentProviderFactory
     /// Creates a new Ollama agent provider.
     /// </summary>
     /// <param name="defaultEndpoint">Default Ollama endpoint URL.</param>
-    public OllamaAgentProvider(string defaultEndpoint = "http://localhost:11434")
+    public OllamaAgentProvider(string defaultEndpoint = DefaultEndpoints.Ollama)
     {
         _defaultEndpoint = defaultEndpoint;
     }

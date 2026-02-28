@@ -5,6 +5,7 @@
 namespace Ouroboros.Providers;
 
 using System.Diagnostics;
+using Ouroboros.Providers.Configuration;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -37,12 +38,12 @@ public sealed class OllamaVisionModel : IVisionModel
     /// <summary>
     /// Initializes a new instance of the <see cref="OllamaVisionModel"/> class.
     /// </summary>
-    /// <param name="endpoint">Ollama API endpoint (e.g. http://localhost:11434).</param>
+    /// <param name="endpoint">Ollama API endpoint (e.g. <see cref="DefaultEndpoints.Ollama"/>).</param>
     /// <param name="model">Vision model name (e.g. qwen3-vl:235b-cloud).</param>
     /// <param name="timeout">Request timeout. Defaults to 120 seconds.</param>
     /// <param name="logger">Optional logger.</param>
     public OllamaVisionModel(
-        string endpoint = "http://localhost:11434",
+        string endpoint = DefaultEndpoints.Ollama,
         string model = DefaultModel,
         TimeSpan? timeout = null,
         ILogger<OllamaVisionModel>? logger = null)

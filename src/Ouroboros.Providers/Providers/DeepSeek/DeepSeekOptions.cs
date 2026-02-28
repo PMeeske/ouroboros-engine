@@ -3,20 +3,22 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using Ouroboros.Providers.Configuration;
+
 namespace Ouroboros.Providers.DeepSeek;
 
 /// <summary>
 /// Configuration options for DeepSeek models via Ollama.
 /// </summary>
 /// <param name="UseLocal">Whether to use local Ollama (true) or Ollama Cloud (false).</param>
-/// <param name="LocalEndpoint">Local Ollama endpoint (default: http://localhost:11434).</param>
+/// <param name="LocalEndpoint">Local Ollama endpoint (default: <see cref="DefaultEndpoints.Ollama"/>).</param>
 /// <param name="CloudEndpoint">Ollama Cloud endpoint URL.</param>
 /// <param name="ApiKey">API key for Ollama Cloud access.</param>
 /// <param name="DefaultModel">Default DeepSeek model (default: deepseek-r1:8b for local, deepseek-r1:32b for cloud).</param>
 /// <param name="ReasoningModel">DeepSeek model for reasoning tasks (default: deepseek-r1:32b).</param>
 public record DeepSeekOptions(
     bool UseLocal = true,
-    string LocalEndpoint = "http://localhost:11434",
+    string LocalEndpoint = DefaultEndpoints.Ollama,
     string? CloudEndpoint = null,
     string? ApiKey = null,
     string? DefaultModel = null,

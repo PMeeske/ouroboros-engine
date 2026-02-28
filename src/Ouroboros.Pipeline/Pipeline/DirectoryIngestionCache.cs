@@ -43,7 +43,7 @@ internal sealed class DirectoryIngestionCache
             _hashes[file] = h;
             _dirty = true;
         }
-        catch (IOException) { }
+        catch (IOException) { /* Intentional: best-effort cache hash update; failure is non-critical */ }
     }
 
     public void Persist()
@@ -55,7 +55,7 @@ internal sealed class DirectoryIngestionCache
             File.WriteAllText(_path, json);
             _dirty = false;
         }
-        catch (IOException) { }
+        catch (IOException) { /* Intentional: best-effort cache persistence; failure is non-critical */ }
     }
 
     private static string ComputeHash(string file)

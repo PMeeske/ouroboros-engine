@@ -6,6 +6,7 @@
 
 using System.Diagnostics;
 using System.Text.Json;
+using Ouroboros.Providers.Configuration;
 using Qdrant.Client.Grpc;
 
 namespace Ouroboros.Agent.MetaAI;
@@ -235,13 +236,13 @@ public sealed partial class QdrantSkillRegistry
         var endpoint = (rawConnectionString ?? string.Empty).Trim().Trim('"');
         if (string.IsNullOrWhiteSpace(endpoint))
         {
-            return "http://localhost:6334";
+            return DefaultEndpoints.QdrantGrpc;
         }
 
         var schemeSeparatorCount = endpoint.Split("://", StringSplitOptions.None).Length - 1;
         if (schemeSeparatorCount > 1)
         {
-            return "http://localhost:6334";
+            return DefaultEndpoints.QdrantGrpc;
         }
 
         if (!endpoint.Contains("://", StringComparison.Ordinal))
@@ -251,18 +252,18 @@ public sealed partial class QdrantSkillRegistry
 
         if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
         {
-            return "http://localhost:6334";
+            return DefaultEndpoints.QdrantGrpc;
         }
 
         if (!uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) &&
             !uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
         {
-            return "http://localhost:6334";
+            return DefaultEndpoints.QdrantGrpc;
         }
 
         if (string.IsNullOrWhiteSpace(uri.Host) || uri.Host.Contains("://", StringComparison.Ordinal))
         {
-            return "http://localhost:6334";
+            return DefaultEndpoints.QdrantGrpc;
         }
 
         return uri.GetLeftPart(UriPartial.Authority).TrimEnd('/');

@@ -22,6 +22,7 @@ public static class TextToSpeechPlaybackExtensions
         Result<SpeechResult, string> synthesisResult = await service.SynthesizeAsync(text, options, ct);
 
         return synthesisResult.Match(
+            // Intentional: sync-over-async in Match callback; Result.Match requires synchronous delegates
             speech => AudioPlayer.PlayAsync(speech, ct).GetAwaiter().GetResult(),
             error => Result<bool, string>.Failure(error));
     }

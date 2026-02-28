@@ -1,4 +1,6 @@
-﻿namespace Ouroboros.Providers;
+﻿using Ouroboros.Providers.Configuration;
+
+namespace Ouroboros.Providers;
 
 /// <summary>
 /// Factory for creating pre-configured CollectiveMind instances.
@@ -74,7 +76,7 @@ public static class CollectiveMindFactory
     /// Creates a local-only collective using Ollama.
     /// Provides resilience features (circuit breaker, health tracking) for a single local provider.
     /// </summary>
-    public static CollectiveMind CreateLocal(string model = "llama3.2", string endpoint = "http://localhost:11434", ChatRuntimeSettings? settings = null)
+    public static CollectiveMind CreateLocal(string model = "llama3.2", string endpoint = DefaultEndpoints.Ollama, ChatRuntimeSettings? settings = null)
     {
         var mind = new CollectiveMind();
         mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, model, endpoint, settings: settings);
@@ -147,7 +149,7 @@ public static class CollectiveMindFactory
     /// </summary>
     public static CollectiveMind CreateLocalFirstDecomposed(
         string localModel = "llama3.2",
-        string localEndpoint = "http://localhost:11434",
+        string localEndpoint = DefaultEndpoints.Ollama,
         ChatRuntimeSettings? settings = null)
     {
         var mind = new CollectiveMind();
