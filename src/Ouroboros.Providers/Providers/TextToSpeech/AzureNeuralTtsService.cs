@@ -351,19 +351,16 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         }
         catch (BrokenCircuitException)
         {
-            System.Diagnostics.Trace.TraceWarning("[Azure TTS] Circuit open - using fallback");
-            throw;
+            Console.Error.WriteLine("[TTS] Circuit open -- speech temporarily disabled");
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("Rate limited"))
         {
-            System.Diagnostics.Trace.TraceWarning("[Azure TTS] Rate limit exceeded after retries");
-            throw;
+            Console.Error.WriteLine("[TTS] Rate limit (429) -- skipping speech");
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            System.Diagnostics.Trace.TraceWarning("[Azure TTS] Exception: {0}", ex.Message);
-            throw;
+            Console.Error.WriteLine($"[TTS] {ex.GetType().Name}: {ex.Message} -- skipping speech");
         }
         finally
         {
