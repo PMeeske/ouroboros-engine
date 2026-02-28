@@ -258,6 +258,7 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
                         cancellationToken: ct);
                 }
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex) // Intentional: Qdrant delete best-effort
             {
                 Trace.TraceWarning("[WARN] Failed to delete skill '{0}' from Qdrant: {1}", skillId, ex.Message);

@@ -471,6 +471,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
 
             await _vectorStore.AddAsync(new[] { vector }, ct);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex) // Intentional: background vector store operation
         {
             Trace.TraceWarning("[WARN] Failed to add skill '{0}' to vector store: {1}", skill.Name, ex.Message);

@@ -90,6 +90,7 @@ public sealed class NanoOuroborosAtom : IDisposable
                     rawOutput = await _model.GenerateTextAsync(prompt, ct);
                     ResetCircuitBreaker();
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception) when (_config.EnableCircuitBreaker)
                 {
                     RecordFailure();
@@ -124,6 +125,7 @@ public sealed class NanoOuroborosAtom : IDisposable
                         ? EstimateConfidence(rawOutput, digestContent)
                         : 0.7; // Default medium confidence
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception) when (_config.EnableCircuitBreaker)
                 {
                     RecordFailure();

@@ -275,6 +275,7 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
                 var result = await operation();
                 return Result<T, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception) when (attempt < retryConfig.MaxRetries && !ct.IsCancellationRequested)
             {
                 // Add jitter to prevent thundering herd
@@ -284,7 +285,6 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
                     Math.Min(delay.TotalMilliseconds * retryConfig.BackoffMultiplier,
                              retryConfig.MaxDelay.TotalMilliseconds));
             }
-            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<T, string>.Failure($"Operation failed after {attempt} attempts: {ex.Message}");
