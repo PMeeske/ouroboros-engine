@@ -54,13 +54,15 @@ public sealed class HttpOpenAiCompatibleChatModel : Ouroboros.Abstractions.Core.
         _costTracker?.StartRequest();
         try
         {
-            using JsonContent payload = JsonContent.Create(new
+            var body = new Dictionary<string, object?>
             {
-                model = _model,
-                temperature = _settings.Temperature,
-                max_output_tokens = _settings.MaxTokens,
-                input = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt
-            });
+                ["model"] = _model,
+                ["temperature"] = _settings.Temperature,
+                ["input"] = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt
+            };
+            if (_settings.MaxTokens > 0)
+                body["max_output_tokens"] = _settings.MaxTokens;
+            using JsonContent payload = JsonContent.Create(body);
 
             HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
             {
