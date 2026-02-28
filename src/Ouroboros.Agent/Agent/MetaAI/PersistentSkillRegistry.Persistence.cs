@@ -190,6 +190,7 @@ public sealed partial class PersistentSkillRegistry
             await SaveSkillsAsync();
         }
         _saveLock.Dispose();
+        _initLock.Dispose();
     }
 
     /// <summary>

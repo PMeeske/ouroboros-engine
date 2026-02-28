@@ -24,7 +24,8 @@ public sealed partial class PersistentSkillRegistry : ISkillRegistry, IAsyncDisp
     private readonly PersistentSkillConfig _config;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
     private volatile bool _isDirty;
-    private bool _isInitialized;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private volatile bool _isInitialized;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -51,8 +52,15 @@ public sealed partial class PersistentSkillRegistry : ISkillRegistry, IAsyncDisp
     {
         if (_isInitialized) return;
 
-        await LoadSkillsAsync(ct);
-        _isInitialized = true;
+        await _initLock.WaitAsync(ct);
+        try
+        {
+            if (_isInitialized) return;
+
+            await LoadSkillsAsync(ct);
+            _isInitialized = true;
+        }
+        finally { _initLock.Release(); }
     }
 
     /// <summary>
