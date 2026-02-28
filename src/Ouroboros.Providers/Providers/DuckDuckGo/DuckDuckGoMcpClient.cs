@@ -59,7 +59,8 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
             var results = ParseHtmlSearchResults(html, maxResults);
             return Result<IReadOnlyList<DuckDuckGoSearchResult>, string>.Success(results);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<IReadOnlyList<DuckDuckGoSearchResult>, string>.Failure($"Search failed: {ex.Message}");
         }
@@ -87,7 +88,8 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
             var results = ParseHtmlNewsResults(html, maxResults);
             return Result<IReadOnlyList<DuckDuckGoNewsResult>, string>.Success(results);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<IReadOnlyList<DuckDuckGoNewsResult>, string>.Failure($"News search failed: {ex.Message}");
         }
@@ -143,7 +145,12 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
 
             return Result<DuckDuckGoInstantAnswer, string>.Success(answer);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<DuckDuckGoInstantAnswer, string>.Failure($"Instant answer failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<DuckDuckGoInstantAnswer, string>.Failure($"Instant answer failed: {ex.Message}");
         }

@@ -120,7 +120,7 @@ public sealed class TapoRestClient : IDisposable
             _logger?.LogError(ex, "HTTP error during login");
             return Result<string>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
             _logger?.LogError(ex, "Unexpected error during login");
             return Result<string>.Failure($"Login failed: {ex.Message}");
@@ -164,7 +164,7 @@ public sealed class TapoRestClient : IDisposable
             _logger?.LogError(ex, "HTTP error getting devices");
             return Result<List<TapoDevice>>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
             _logger?.LogError(ex, "Error getting devices");
             return Result<List<TapoDevice>>.Failure($"Failed to get devices: {ex.Message}");
@@ -208,7 +208,7 @@ public sealed class TapoRestClient : IDisposable
             _logger?.LogError(ex, "HTTP error getting actions");
             return Result<List<string>>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
             _logger?.LogError(ex, "Error getting actions");
             return Result<List<string>>.Failure($"Failed to get actions: {ex.Message}");
@@ -255,7 +255,7 @@ public sealed class TapoRestClient : IDisposable
             _logger?.LogError(ex, "HTTP error refreshing session for device {Device}", deviceName);
             return Result<Unit>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             _logger?.LogError(ex, "Error refreshing session for device {Device}", deviceName);
             return Result<Unit>.Failure($"Failed to refresh session: {ex.Message}");
@@ -298,7 +298,7 @@ public sealed class TapoRestClient : IDisposable
             _logger?.LogError(ex, "HTTP error reloading config");
             return Result<Unit>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             _logger?.LogError(ex, "Error reloading config");
             return Result<Unit>.Failure($"Failed to reload config: {ex.Message}");
@@ -342,7 +342,7 @@ public sealed class TapoRestClient : IDisposable
             _logger?.LogError(ex, "HTTP error during discovery");
             return Result<List<TapoDevice>>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
             _logger?.LogError(ex, "Error during discovery");
             return Result<List<TapoDevice>>.Failure($"Discovery failed: {ex.Message}");
@@ -373,7 +373,7 @@ public sealed class TapoRestClient : IDisposable
         {
             return Result<string>.Failure($"Health check failed: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             return Result<string>.Failure($"Health check failed: {ex.Message}");
         }

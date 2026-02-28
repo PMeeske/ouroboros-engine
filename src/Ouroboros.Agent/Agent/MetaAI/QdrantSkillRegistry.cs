@@ -116,7 +116,8 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
             await SaveSkillToQdrantAsync(skill, ct);
             return Result<Unit, string>.Success(Unit.Value);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) // Intentional: Qdrant gRPC + embedding operations
         {
             return Result<Unit, string>.Failure($"Failed to register skill: {ex.Message}");
         }
@@ -145,7 +146,7 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
 
             return Task.FromResult(Result<AgentSkill, string>.Failure($"Skill '{skillId}' not found"));
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
             return Task.FromResult(Result<AgentSkill, string>.Failure($"Failed to get skill: {ex.Message}"));
         }
@@ -168,7 +169,8 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
 
             return Result<Unit, string>.Success(Unit.Value);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) // Intentional: Qdrant gRPC + embedding operations
         {
             return Result<Unit, string>.Failure($"Failed to update skill: {ex.Message}");
         }
@@ -211,7 +213,8 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
 
             return Result<Unit, string>.Success(Unit.Value);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) // Intentional: Qdrant gRPC save operations
         {
             return Result<Unit, string>.Failure($"Failed to record execution: {ex.Message}");
         }
@@ -255,14 +258,15 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
                         cancellationToken: ct);
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Qdrant delete best-effort
             {
                 Trace.TraceWarning("[WARN] Failed to delete skill '{0}' from Qdrant: {1}", skillId, ex.Message);
             }
 
             return Result<Unit, string>.Success(Unit.Value);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<Unit, string>.Failure($"Failed to unregister skill: {ex.Message}");
         }
@@ -278,7 +282,7 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
             var skills = _skillsCache.Values.OrderByDescending(s => s.SuccessRate).ToList();
             return Task.FromResult(Result<IReadOnlyList<AgentSkill>, string>.Success((IReadOnlyList<AgentSkill>)skills));
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             return Task.FromResult(Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to get all skills: {ex.Message}"));
         }
@@ -322,7 +326,7 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
             _skillsCache[skill.Id] = skill;
             return Result<Unit, string>.Success(Unit.Value);
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
             return Result<Unit, string>.Failure($"Failed to register skill: {ex.Message}");
         }

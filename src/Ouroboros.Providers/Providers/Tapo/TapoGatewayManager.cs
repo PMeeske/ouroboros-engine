@@ -200,12 +200,12 @@ public sealed class TapoGatewayManager : IAsyncDisposable
                 var psi = new ProcessStartInfo
                 {
                     FileName = name,
-                    Arguments = "--version",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                 };
+                psi.ArgumentList.Add("--version");
 
                 using var proc = Process.Start(psi);
                 if (proc == null) continue;

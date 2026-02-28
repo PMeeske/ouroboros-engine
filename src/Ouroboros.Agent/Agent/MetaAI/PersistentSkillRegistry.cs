@@ -76,7 +76,8 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
 
             return Result<Unit, string>.Success(Unit.Value);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (IOException ex)
         {
             return Result<Unit, string>.Failure($"Failed to register skill: {ex.Message}");
         }
@@ -103,7 +104,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
 
             return Task.FromResult(Result<AgentSkill, string>.Failure($"Skill '{skillId}' not found"));
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
             return Task.FromResult(Result<AgentSkill, string>.Failure($"Failed to get skill: {ex.Message}"));
         }
@@ -221,7 +222,8 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
 
             return Result<IReadOnlyList<AgentSkill>, string>.Success(filtered);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) // Intentional: embedding + vector store operations across providers
         {
             return Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to find skills: {ex.Message}");
         }
@@ -251,7 +253,8 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
 
             return Result<Unit, string>.Success(Unit.Value);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (IOException ex)
         {
             return Result<Unit, string>.Failure($"Failed to update skill: {ex.Message}");
         }
@@ -295,7 +298,8 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
 
             return Result<Unit, string>.Success(Unit.Value);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (IOException ex)
         {
             return Result<Unit, string>.Failure($"Failed to record execution: {ex.Message}");
         }
@@ -320,7 +324,8 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
 
             return Result<Unit, string>.Failure($"Skill '{skillId}' not found");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (IOException ex)
         {
             return Result<Unit, string>.Failure($"Failed to unregister skill: {ex.Message}");
         }
@@ -336,7 +341,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
             var skills = _skills.Values.OrderByDescending(s => s.SuccessRate).ToList();
             return Task.FromResult(Result<IReadOnlyList<AgentSkill>, string>.Success((IReadOnlyList<AgentSkill>)skills));
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             return Task.FromResult(Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to get all skills: {ex.Message}"));
         }
@@ -466,7 +471,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
 
             await _vectorStore.AddAsync(new[] { vector }, ct);
         }
-        catch (Exception ex)
+        catch (Exception ex) // Intentional: background vector store operation
         {
             Trace.TraceWarning("[WARN] Failed to add skill '{0}' to vector store: {1}", skill.Name, ex.Message);
         }
@@ -533,7 +538,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
             _isDirty = true;
             return Result<Unit, string>.Success(Unit.Value);
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
             return Result<Unit, string>.Failure($"Failed to register skill: {ex.Message}");
         }
@@ -645,7 +650,7 @@ public sealed class PersistentSkillRegistry : ISkillRegistry, IAsyncDisposable
 
             return Task.FromResult(Result<Skill, string>.Success(skill));
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
             return Task.FromResult(Result<Skill, string>.Failure($"Failed to extract skill: {ex.Message}"));
         }

@@ -61,7 +61,8 @@ public sealed partial class MetaLearner
 
             return Result<LearningEfficiencyReport, string>.Success(report);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<LearningEfficiencyReport, string>.Failure(
                 $"Learning efficiency evaluation failed: {ex.Message}");
@@ -147,7 +148,8 @@ APPLICABLE_TO: [task types, comma-separated]";
 
             return Result<List<MetaKnowledge>, string>.Success(metaKnowledge);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<List<MetaKnowledge>, string>.Failure(
                 $"Meta-knowledge extraction failed: {ex.Message}");

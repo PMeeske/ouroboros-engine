@@ -97,12 +97,22 @@ public sealed class TapoRtspClient : IDisposable
             var startInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-rtsp_transport tcp -i \"{rtspUrl}\" -frames:v 1 -f image2pipe -vcodec mjpeg -",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            startInfo.ArgumentList.Add("-rtsp_transport");
+            startInfo.ArgumentList.Add("tcp");
+            startInfo.ArgumentList.Add("-i");
+            startInfo.ArgumentList.Add(rtspUrl);
+            startInfo.ArgumentList.Add("-frames:v");
+            startInfo.ArgumentList.Add("1");
+            startInfo.ArgumentList.Add("-f");
+            startInfo.ArgumentList.Add("image2pipe");
+            startInfo.ArgumentList.Add("-vcodec");
+            startInfo.ArgumentList.Add("mjpeg");
+            startInfo.ArgumentList.Add("-");
 
             using var process = new Process { StartInfo = startInfo };
             process.Start();
@@ -177,12 +187,22 @@ public sealed class TapoRtspClient : IDisposable
         var startInfo = new ProcessStartInfo
         {
             FileName = "ffmpeg",
-            Arguments = $"-rtsp_transport tcp -i \"{rtspUrl}\" -r {frameRate} -f image2pipe -vcodec mjpeg -",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        startInfo.ArgumentList.Add("-rtsp_transport");
+        startInfo.ArgumentList.Add("tcp");
+        startInfo.ArgumentList.Add("-i");
+        startInfo.ArgumentList.Add(rtspUrl);
+        startInfo.ArgumentList.Add("-r");
+        startInfo.ArgumentList.Add(frameRate.ToString());
+        startInfo.ArgumentList.Add("-f");
+        startInfo.ArgumentList.Add("image2pipe");
+        startInfo.ArgumentList.Add("-vcodec");
+        startInfo.ArgumentList.Add("mjpeg");
+        startInfo.ArgumentList.Add("-");
 
         _ffmpegProcess = new Process { StartInfo = startInfo };
 
@@ -319,12 +339,18 @@ public sealed class TapoRtspClient : IDisposable
             var startInfo = new ProcessStartInfo
             {
                 FileName = "ffprobe",
-                Arguments = $"-rtsp_transport tcp -i \"{rtspUrl}\" -show_format -v quiet",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            startInfo.ArgumentList.Add("-rtsp_transport");
+            startInfo.ArgumentList.Add("tcp");
+            startInfo.ArgumentList.Add("-i");
+            startInfo.ArgumentList.Add(rtspUrl);
+            startInfo.ArgumentList.Add("-show_format");
+            startInfo.ArgumentList.Add("-v");
+            startInfo.ArgumentList.Add("quiet");
 
             using var process = new Process { StartInfo = startInfo };
             process.Start();

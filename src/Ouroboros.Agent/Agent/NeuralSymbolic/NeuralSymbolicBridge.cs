@@ -48,7 +48,8 @@ public sealed partial class NeuralSymbolicBridge : INeuralSymbolicBridge
 
             return Result<List<SymbolicRule>, string>.Success(rules);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<List<SymbolicRule>, string>.Failure($"Rule extraction failed: {ex.Message}");
         }
@@ -76,7 +77,8 @@ MeTTa expression:";
 
             return Result<MeTTaExpression, string>.Success(expression);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<MeTTaExpression, string>.Failure($"Conversion failed: {ex.Message}");
         }
@@ -103,7 +105,8 @@ Natural language explanation:";
 
             return Result<string, string>.Success(explanation);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<string, string>.Failure($"Explanation failed: {ex.Message}");
         }
@@ -238,7 +241,8 @@ Natural language explanation:";
 
             return Result<ReasoningResult, string>.Success(result);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<ReasoningResult, string>.Failure($"Hybrid reasoning failed: {ex.Message}");
         }
@@ -285,7 +289,8 @@ Natural language explanation:";
 
             return Result<ConsistencyReport, string>.Success(report);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<ConsistencyReport, string>.Failure($"Consistency check failed: {ex.Message}");
         }
@@ -330,7 +335,8 @@ Relations: <rel1>, <rel2>, ...";
 
             return Result<GroundedConcept, string>.Success(concept);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<GroundedConcept, string>.Failure($"Concept grounding failed: {ex.Message}");
         }
@@ -463,7 +469,8 @@ EFFECTS: <effect1>, <effect2>, ...
 
             return Result<(string, List<ReasoningStep>, double), string>.Success((result.Value, steps, 0.85));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<(string, List<ReasoningStep>, double), string>.Failure(ex.Message);
         }
@@ -484,7 +491,8 @@ EFFECTS: <effect1>, <effect2>, ...
 
             return Result<(string, List<ReasoningStep>, double), string>.Success((response, steps, 0.7));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<(string, List<ReasoningStep>, double), string>.Failure(ex.Message);
         }

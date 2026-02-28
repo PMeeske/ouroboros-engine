@@ -119,7 +119,8 @@ public sealed class TapoCameraPtzClient : IDisposable
 
             return Result<PtzCapabilities>.Success(Capabilities);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Failed to initialize PTZ for {CameraIp}", _cameraIp);
             return Result<PtzCapabilities>.Failure($"PTZ initialization failed: {ex.Message}");
@@ -220,7 +221,8 @@ public sealed class TapoCameraPtzClient : IDisposable
 
             return Result<PtzMoveResult>.Failure($"Stop failed: {result.Error}");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Failed to stop PTZ on {CameraIp}", _cameraIp);
             return Result<PtzMoveResult>.Failure($"Stop failed: {ex.Message}");
@@ -249,7 +251,8 @@ public sealed class TapoCameraPtzClient : IDisposable
 
             return Result<PtzMoveResult>.Failure($"Go home failed: {result.Error}");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Failed to go home on {CameraIp}", _cameraIp);
             return Result<PtzMoveResult>.Failure($"Go home failed: {ex.Message}");
@@ -281,7 +284,8 @@ public sealed class TapoCameraPtzClient : IDisposable
 
             return Result<PtzMoveResult>.Failure($"Set preset failed: {result.Error}");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Failed to set preset on {CameraIp}", _cameraIp);
             return Result<PtzMoveResult>.Failure($"Set preset failed: {ex.Message}");
@@ -313,7 +317,8 @@ public sealed class TapoCameraPtzClient : IDisposable
 
             return Result<PtzMoveResult>.Failure($"Go to preset failed: {result.Error}");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Failed to go to preset on {CameraIp}", _cameraIp);
             return Result<PtzMoveResult>.Failure($"Go to preset failed: {ex.Message}");
@@ -355,7 +360,8 @@ public sealed class TapoCameraPtzClient : IDisposable
             return Result<PtzMoveResult>.Success(
                 new PtzMoveResult(true, "patrol_sweep", sw.Elapsed, "Patrol sweep completed"));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Patrol sweep failed on {CameraIp}", _cameraIp);
             return Result<PtzMoveResult>.Failure($"Patrol sweep failed: {ex.Message}");
@@ -375,7 +381,8 @@ public sealed class TapoCameraPtzClient : IDisposable
                 ? Result<string>.Success($"PTZ control available at {_cameraIp}")
                 : Result<string>.Failure($"PTZ not responding: {stopResult.Error}");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string>.Failure($"PTZ connection test failed: {ex.Message}");
         }
@@ -440,7 +447,7 @@ public sealed class TapoCameraPtzClient : IDisposable
             await StopAsync(CancellationToken.None);
             return Result<PtzMoveResult>.Failure("Movement cancelled");
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "PTZ move failed on {CameraIp}", _cameraIp);
             return Result<PtzMoveResult>.Failure($"Move failed: {ex.Message}");
@@ -489,7 +496,7 @@ public sealed class TapoCameraPtzClient : IDisposable
         {
             return Result<string>.Failure("ONVIF request timed out");
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             return Result<string>.Failure($"ONVIF error: {ex.Message}");
         }
@@ -531,7 +538,7 @@ public sealed class TapoCameraPtzClient : IDisposable
 
             return Result<string>.Failure("ONVIF not available on any port");
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             return Result<string>.Failure($"Alternate port probe failed: {ex.Message}");
         }
@@ -576,7 +583,7 @@ public sealed class TapoCameraPtzClient : IDisposable
 
             return Result<string>.Failure($"GetProfiles failed: {response.StatusCode}");
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             return Result<string>.Failure($"GetProfiles failed: {ex.Message}");
         }

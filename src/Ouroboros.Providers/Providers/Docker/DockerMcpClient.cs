@@ -59,7 +59,12 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<IReadOnlyList<DockerContainerInfo>, string>.Success(containers);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<DockerContainerInfo>, string>.Failure($"ListContainers failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<DockerContainerInfo>, string>.Failure($"ListContainers failed: {ex.Message}");
         }
@@ -81,7 +86,12 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
             var el = JsonDocument.Parse(json).RootElement;
             return Result<DockerContainerInfo, string>.Success(ParseContainerInspect(el));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<DockerContainerInfo, string>.Failure($"InspectContainer failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<DockerContainerInfo, string>.Failure($"InspectContainer failed: {ex.Message}");
         }
@@ -104,7 +114,8 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
             var logs = await response.Content.ReadAsStringAsync(ct);
             return Result<string, string>.Success(StripDockerStreamHeaders(logs));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"GetContainerLogs failed: {ex.Message}");
         }
@@ -129,7 +140,8 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<string, string>.Success($"Container '{containerId}' started");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"StartContainer failed: {ex.Message}");
         }
@@ -155,7 +167,8 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<string, string>.Success($"Container '{containerId}' stopped");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"StopContainer failed: {ex.Message}");
         }
@@ -177,7 +190,8 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<string, string>.Success($"Container '{containerId}' removed");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"RemoveContainer failed: {ex.Message}");
         }
@@ -218,7 +232,12 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<IReadOnlyList<DockerImageInfo>, string>.Success(images);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<DockerImageInfo>, string>.Failure($"ListImages failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<DockerImageInfo>, string>.Failure($"ListImages failed: {ex.Message}");
         }
@@ -242,7 +261,8 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
             await response.Content.ReadAsStringAsync(ct);
             return Result<string, string>.Success($"Image '{image}' pulled successfully");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"PullImage failed: {ex.Message}");
         }
@@ -276,7 +296,12 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<IReadOnlyList<DockerNetworkInfo>, string>.Success(networks);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<DockerNetworkInfo>, string>.Failure($"ListNetworks failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<DockerNetworkInfo>, string>.Failure($"ListNetworks failed: {ex.Message}");
         }
@@ -318,7 +343,12 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<IReadOnlyList<DockerVolumeInfo>, string>.Success(volumes);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<DockerVolumeInfo>, string>.Failure($"ListVolumes failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<DockerVolumeInfo>, string>.Failure($"ListVolumes failed: {ex.Message}");
         }
@@ -392,7 +422,12 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<string, string>.Success(containerId);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<string, string>.Failure($"RunContainer failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<string, string>.Failure($"RunContainer failed: {ex.Message}");
         }

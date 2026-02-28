@@ -280,7 +280,8 @@ public sealed partial class CollectiveMind
             {
                 _thoughtStream.OnNext($"⏸️ '{pathway.Name}' circuit is open, skipping...");
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) // Intentional: circuit-breaker fallback across provider types
             {
                 pathway.RecordInhibition();
                 _thoughtStream.OnNext($"✗ '{pathway.Name}' failed: {ex.Message}");

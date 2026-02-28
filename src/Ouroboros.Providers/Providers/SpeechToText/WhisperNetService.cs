@@ -427,11 +427,20 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
             var startInfo = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-i \"{inputPath}\" -ar 16000 -ac 1 -f wav -y \"{outputPath}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardError = true
             };
+            startInfo.ArgumentList.Add("-i");
+            startInfo.ArgumentList.Add(inputPath);
+            startInfo.ArgumentList.Add("-ar");
+            startInfo.ArgumentList.Add("16000");
+            startInfo.ArgumentList.Add("-ac");
+            startInfo.ArgumentList.Add("1");
+            startInfo.ArgumentList.Add("-f");
+            startInfo.ArgumentList.Add("wav");
+            startInfo.ArgumentList.Add("-y");
+            startInfo.ArgumentList.Add(outputPath);
 
             using var process = System.Diagnostics.Process.Start(startInfo);
             if (process == null)

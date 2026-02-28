@@ -242,12 +242,13 @@ public sealed class LocalWhisperService : ISpeechToTextService
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = python,
-                Arguments = "-c \"import whisper; print('ok')\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true,
             };
+            startInfo.ArgumentList.Add("-c");
+            startInfo.ArgumentList.Add("import whisper; print('ok')");
 
             using Process? process = Process.Start(startInfo);
             if (process == null)

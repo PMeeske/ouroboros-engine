@@ -1,6 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Collections.Concurrent;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Ouroboros.Providers;
@@ -80,7 +81,8 @@ public sealed partial class CollectiveMind
 
             return ParseSubGoals(response.Content);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) // Intentional: LLM provider fallback to single-goal mode
         {
             _thoughtStream.OnNext($"⚠️ Decomposition failed: {ex.Message}, falling back to single goal");
             decomposer.RecordInhibition();
@@ -130,7 +132,7 @@ public sealed partial class CollectiveMind
                 goals.Add(new SubGoal(id, description, complexity, type, deps, tier));
             }
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
             _thoughtStream.OnNext($"⚠️ Failed to parse sub-goals: {ex.Message}");
         }
@@ -294,7 +296,8 @@ public sealed partial class CollectiveMind
 
             _thoughtStream.OnNext($"✓ '{goal.Id}' completed by {pathway.Name} in {sw.ElapsedMilliseconds}ms");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) // Intentional: sub-goal isolation across provider types
         {
             sw.Stop();
             pathway.RecordInhibition();
@@ -451,7 +454,8 @@ public sealed partial class CollectiveMind
 
             return new ThinkingResponse(thinking.ToString(), response.Content);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) // Intentional: synthesis fallback across provider types
         {
             sw.Stop();
             synthesizer.RecordInhibition();

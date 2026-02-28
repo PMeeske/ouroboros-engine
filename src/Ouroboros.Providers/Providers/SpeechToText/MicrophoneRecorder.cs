@@ -252,58 +252,81 @@ public static class MicrophoneRecorder
                     audioDevice = "Microphone"; // Fallback
                 }
 
-                return new ProcessStartInfo
+                var psi = new ProcessStartInfo
                 {
                     FileName = "ffmpeg",
-                    Arguments = $"-f dshow -i audio=\"{audioDevice}\" -t {durationSeconds} -y \"{outputPath}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardError = true,
                     RedirectStandardOutput = true,
                 };
+                psi.ArgumentList.Add("-f");
+                psi.ArgumentList.Add("dshow");
+                psi.ArgumentList.Add("-i");
+                psi.ArgumentList.Add($"audio={audioDevice}");
+                psi.ArgumentList.Add("-t");
+                psi.ArgumentList.Add(durationSeconds.ToString());
+                psi.ArgumentList.Add("-y");
+                psi.ArgumentList.Add(outputPath);
+                return psi;
             }
 
             // Fallback to PowerShell with Windows.Media.Capture
-            return new ProcessStartInfo
+            var psPsi = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = $"-NoProfile -Command \"" +
-                    $"Add-Type -AssemblyName System.Speech; " +
-                    $"$recognizer = New-Object System.Speech.Recognition.SpeechRecognitionEngine; " +
-                    $"$recognizer.SetInputToDefaultAudioDevice(); " +
-                    $"Start-Sleep -Seconds {durationSeconds}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardError = true,
             };
+            psPsi.ArgumentList.Add("-NoProfile");
+            psPsi.ArgumentList.Add("-Command");
+            psPsi.ArgumentList.Add(
+                "Add-Type -AssemblyName System.Speech; " +
+                "$recognizer = New-Object System.Speech.Recognition.SpeechRecognitionEngine; " +
+                "$recognizer.SetInputToDefaultAudioDevice(); " +
+                $"Start-Sleep -Seconds {durationSeconds}");
+            return psPsi;
         }
         else if (OperatingSystem.IsMacOS())
         {
             // Use ffmpeg with AVFoundation on macOS
             if (IsCommandAvailable("ffmpeg"))
             {
-                return new ProcessStartInfo
+                var macPsi = new ProcessStartInfo
                 {
                     FileName = "ffmpeg",
-                    Arguments = $"-f avfoundation -i \":0\" -t {durationSeconds} -y \"{outputPath}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardError = true,
                     RedirectStandardOutput = true,
                 };
+                macPsi.ArgumentList.Add("-f");
+                macPsi.ArgumentList.Add("avfoundation");
+                macPsi.ArgumentList.Add("-i");
+                macPsi.ArgumentList.Add(":0");
+                macPsi.ArgumentList.Add("-t");
+                macPsi.ArgumentList.Add(durationSeconds.ToString());
+                macPsi.ArgumentList.Add("-y");
+                macPsi.ArgumentList.Add(outputPath);
+                return macPsi;
             }
 
             // Fallback to sox/rec
             if (IsCommandAvailable("rec"))
             {
-                return new ProcessStartInfo
+                var recPsi = new ProcessStartInfo
                 {
                     FileName = "rec",
-                    Arguments = $"\"{outputPath}\" trim 0 {durationSeconds}",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardError = true,
                 };
+                recPsi.ArgumentList.Add(outputPath);
+                recPsi.ArgumentList.Add("trim");
+                recPsi.ArgumentList.Add("0");
+                recPsi.ArgumentList.Add(durationSeconds.ToString());
+                return recPsi;
             }
         }
         else if (OperatingSystem.IsLinux())
@@ -312,29 +335,42 @@ public static class MicrophoneRecorder
             if (IsCommandAvailable("ffmpeg"))
             {
                 // Try PulseAudio first, fall back to ALSA
-                string input = IsCommandAvailable("pactl") ? "-f pulse -i default" : "-f alsa -i default";
-                return new ProcessStartInfo
+                string inputFormat = IsCommandAvailable("pactl") ? "pulse" : "alsa";
+                var linuxFfmpegPsi = new ProcessStartInfo
                 {
                     FileName = "ffmpeg",
-                    Arguments = $"{input} -t {durationSeconds} -y \"{outputPath}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardError = true,
                     RedirectStandardOutput = true,
                 };
+                linuxFfmpegPsi.ArgumentList.Add("-f");
+                linuxFfmpegPsi.ArgumentList.Add(inputFormat);
+                linuxFfmpegPsi.ArgumentList.Add("-i");
+                linuxFfmpegPsi.ArgumentList.Add("default");
+                linuxFfmpegPsi.ArgumentList.Add("-t");
+                linuxFfmpegPsi.ArgumentList.Add(durationSeconds.ToString());
+                linuxFfmpegPsi.ArgumentList.Add("-y");
+                linuxFfmpegPsi.ArgumentList.Add(outputPath);
+                return linuxFfmpegPsi;
             }
 
             // Fallback to arecord
             if (IsCommandAvailable("arecord"))
             {
-                return new ProcessStartInfo
+                var arecordPsi = new ProcessStartInfo
                 {
                     FileName = "arecord",
-                    Arguments = $"-d {durationSeconds} -f cd \"{outputPath}\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardError = true,
                 };
+                arecordPsi.ArgumentList.Add("-d");
+                arecordPsi.ArgumentList.Add(durationSeconds.ToString());
+                arecordPsi.ArgumentList.Add("-f");
+                arecordPsi.ArgumentList.Add("cd");
+                arecordPsi.ArgumentList.Add(outputPath);
+                return arecordPsi;
             }
         }
 
@@ -352,12 +388,17 @@ public static class MicrophoneRecorder
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = "-list_devices true -f dshow -i dummy",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true,
             };
+            startInfo.ArgumentList.Add("-list_devices");
+            startInfo.ArgumentList.Add("true");
+            startInfo.ArgumentList.Add("-f");
+            startInfo.ArgumentList.Add("dshow");
+            startInfo.ArgumentList.Add("-i");
+            startInfo.ArgumentList.Add("dummy");
 
             using Process? process = Process.Start(startInfo);
             if (process == null)

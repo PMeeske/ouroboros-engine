@@ -59,7 +59,12 @@ public sealed class KubernetesMcpClient : IKubernetesMcpClient, IDisposable
             var pods = ParsePodList(doc.RootElement);
             return Result<IReadOnlyList<KubernetesPodInfo>, string>.Success(pods);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<KubernetesPodInfo>, string>.Failure($"ListPods failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<KubernetesPodInfo>, string>.Failure($"ListPods failed: {ex.Message}");
         }
@@ -82,7 +87,12 @@ public sealed class KubernetesMcpClient : IKubernetesMcpClient, IDisposable
             var doc = JsonDocument.Parse(json);
             return Result<KubernetesPodInfo, string>.Success(ParsePod(doc.RootElement));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<KubernetesPodInfo, string>.Failure($"GetPod failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<KubernetesPodInfo, string>.Failure($"GetPod failed: {ex.Message}");
         }
@@ -110,7 +120,8 @@ public sealed class KubernetesMcpClient : IKubernetesMcpClient, IDisposable
             var logs = await response.Content.ReadAsStringAsync(ct);
             return Result<string, string>.Success(logs);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"GetPodLogs failed: {ex.Message}");
         }
@@ -138,7 +149,12 @@ public sealed class KubernetesMcpClient : IKubernetesMcpClient, IDisposable
             var deployments = ParseDeploymentList(doc.RootElement);
             return Result<IReadOnlyList<KubernetesDeploymentInfo>, string>.Success(deployments);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<KubernetesDeploymentInfo>, string>.Failure($"ListDeployments failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<KubernetesDeploymentInfo>, string>.Failure($"ListDeployments failed: {ex.Message}");
         }
@@ -174,7 +190,12 @@ public sealed class KubernetesMcpClient : IKubernetesMcpClient, IDisposable
             var doc = JsonDocument.Parse(json);
             return Result<KubernetesDeploymentInfo, string>.Success(ParseDeployment(doc.RootElement));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<KubernetesDeploymentInfo, string>.Failure($"ScaleDeployment failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<KubernetesDeploymentInfo, string>.Failure($"ScaleDeployment failed: {ex.Message}");
         }
@@ -197,7 +218,12 @@ public sealed class KubernetesMcpClient : IKubernetesMcpClient, IDisposable
             var services = ParseServiceList(doc.RootElement);
             return Result<IReadOnlyList<KubernetesServiceInfo>, string>.Success(services);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<KubernetesServiceInfo>, string>.Failure($"ListServices failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<KubernetesServiceInfo>, string>.Failure($"ListServices failed: {ex.Message}");
         }
@@ -225,7 +251,12 @@ public sealed class KubernetesMcpClient : IKubernetesMcpClient, IDisposable
 
             return Result<IReadOnlyList<string>, string>.Success(names);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<string>, string>.Failure($"ListNamespaces failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<string>, string>.Failure($"ListNamespaces failed: {ex.Message}");
         }
@@ -262,7 +293,12 @@ public sealed class KubernetesMcpClient : IKubernetesMcpClient, IDisposable
 
             return Result<string, string>.Success($"{kind}/{name} applied successfully");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<string, string>.Failure($"ApplyManifest failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<string, string>.Failure($"ApplyManifest failed: {ex.Message}");
         }
@@ -293,7 +329,8 @@ public sealed class KubernetesMcpClient : IKubernetesMcpClient, IDisposable
 
             return Result<string, string>.Success($"{kind}/{name} deleted");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"DeleteResource failed: {ex.Message}");
         }

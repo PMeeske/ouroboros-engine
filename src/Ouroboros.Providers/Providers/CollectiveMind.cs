@@ -222,7 +222,8 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
                     observer.OnCompleted();
                 });
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) { throw; }
+            catch (InvalidOperationException ex)
             {
                 pathway.RecordInhibition();
                 _thoughtStream.OnNext($"✗ Streaming failed on '{pathway.Name}': {ex.Message}");

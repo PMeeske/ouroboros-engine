@@ -83,7 +83,8 @@ OPTIMIZATIONS: [bullet points]";
 
             return Result<LearningStrategy, string>.Success(strategy);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<LearningStrategy, string>.Failure($"Strategy optimization failed: {ex.Message}");
         }
@@ -152,7 +153,8 @@ ESTIMATED_PERFORMANCE: [0-1]";
 
             return Result<AdaptedModel, string>.Success(model);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<AdaptedModel, string>.Failure($"Few-shot adaptation failed: {ex.Message}");
         }
@@ -202,7 +204,8 @@ ESTIMATED_PERFORMANCE: [0-1]";
 
             return Result<HyperparameterConfig, string>.Success(config);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<HyperparameterConfig, string>.Failure($"Hyperparameter suggestion failed: {ex.Message}");
         }

@@ -120,40 +120,47 @@ public static class AudioPlayer
             if (ext == ".wav")
             {
                 // SoundPlayer is much faster for WAV files
-                return new ProcessStartInfo
+                var wavPsi = new ProcessStartInfo
                 {
                     FileName = "powershell.exe",
-                    Arguments = $"-NoProfile -Command \"Add-Type -AssemblyName System.Windows.Forms; $p = New-Object System.Media.SoundPlayer('{filePath.Replace("'", "''")}'); $p.PlaySync(); $p.Dispose()\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                 };
+                wavPsi.ArgumentList.Add("-NoProfile");
+                wavPsi.ArgumentList.Add("-Command");
+                wavPsi.ArgumentList.Add($"Add-Type -AssemblyName System.Windows.Forms; $p = New-Object System.Media.SoundPlayer('{filePath.Replace("'", "''")}'); $p.PlaySync(); $p.Dispose()");
+                return wavPsi;
             }
             else
             {
                 // For MP3 and other formats, use a simpler approach
-                return new ProcessStartInfo
+                var mp3Psi = new ProcessStartInfo
                 {
                     FileName = "powershell.exe",
-                    Arguments = $"-NoProfile -Command \"Add-Type -AssemblyName presentationCore; $p = New-Object System.Windows.Media.MediaPlayer; $p.Open([Uri]::new('{filePath.Replace("'", "''")}')); $p.Play(); while($p.NaturalDuration.HasTimeSpan -eq $false){{Start-Sleep -Milliseconds 100}}; Start-Sleep -Milliseconds ([int]$p.NaturalDuration.TimeSpan.TotalMilliseconds + 100); $p.Close()\"",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                 };
+                mp3Psi.ArgumentList.Add("-NoProfile");
+                mp3Psi.ArgumentList.Add("-Command");
+                mp3Psi.ArgumentList.Add($"Add-Type -AssemblyName presentationCore; $p = New-Object System.Windows.Media.MediaPlayer; $p.Open([Uri]::new('{filePath.Replace("'", "''")}')); $p.Play(); while($p.NaturalDuration.HasTimeSpan -eq $false){{Start-Sleep -Milliseconds 100}}; Start-Sleep -Milliseconds ([int]$p.NaturalDuration.TimeSpan.TotalMilliseconds + 100); $p.Close()");
+                return mp3Psi;
             }
         }
         else if (OperatingSystem.IsMacOS())
         {
             // Use afplay on macOS
-            return new ProcessStartInfo
+            var afplayPsi = new ProcessStartInfo
             {
                 FileName = "afplay",
-                Arguments = $"\"{filePath}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
             };
+            afplayPsi.ArgumentList.Add(filePath);
+            return afplayPsi;
         }
         else if (OperatingSystem.IsLinux())
         {
@@ -164,21 +171,30 @@ public static class AudioPlayer
             {
                 if (IsCommandAvailable(player))
                 {
-                    string args = player switch
-                    {
-                        "mpv" => $"--no-video \"{filePath}\"",
-                        "ffplay" => $"-nodisp -autoexit \"{filePath}\"",
-                        "paplay" or "aplay" => $"\"{filePath}\"",
-                        _ => $"\"{filePath}\"",
-                    };
-
-                    return new ProcessStartInfo
+                    var linuxPsi = new ProcessStartInfo
                     {
                         FileName = player,
-                        Arguments = args,
                         UseShellExecute = false,
                         CreateNoWindow = true,
                     };
+
+                    switch (player)
+                    {
+                        case "mpv":
+                            linuxPsi.ArgumentList.Add("--no-video");
+                            linuxPsi.ArgumentList.Add(filePath);
+                            break;
+                        case "ffplay":
+                            linuxPsi.ArgumentList.Add("-nodisp");
+                            linuxPsi.ArgumentList.Add("-autoexit");
+                            linuxPsi.ArgumentList.Add(filePath);
+                            break;
+                        default:
+                            linuxPsi.ArgumentList.Add(filePath);
+                            break;
+                    }
+
+                    return linuxPsi;
                 }
             }
 
