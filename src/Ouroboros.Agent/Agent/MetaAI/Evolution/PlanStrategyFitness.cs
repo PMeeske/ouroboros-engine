@@ -94,6 +94,7 @@ public sealed class PlanStrategyFitness : IFitnessFunction<PlanStrategyGene>
 
             return Task.FromResult(Math.Clamp(fitness, 0.0, 1.0));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception)
         {
             // On any error, return neutral fitness

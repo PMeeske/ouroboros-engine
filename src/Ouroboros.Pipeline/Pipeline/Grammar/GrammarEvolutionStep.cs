@@ -65,6 +65,7 @@ public sealed class GrammarEvolutionStep : IDisposable
                 RecordEvent("GrammarEvolutionSucceeded", compiled.GrammarName);
                 return compiled;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 RecordEvent("GrammarEvolutionFailed", ex.Message);
@@ -96,6 +97,7 @@ public sealed class GrammarEvolutionStep : IDisposable
             RecordEvent("GrammarEvolutionSucceeded", compiled.GrammarName);
             return compiled;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             RecordEvent("GrammarEvolutionFailed", ex.Message);

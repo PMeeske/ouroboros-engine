@@ -63,6 +63,7 @@ public sealed class MeTTaMemoryBridge
 
             return Result<int, string>.Success(factCount);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<int, string>.Failure($"Memory sync failed: {ex.Message}");
@@ -104,6 +105,7 @@ public sealed class MeTTaMemoryBridge
 
             return Result<Unit, string>.Success(Unit.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Failed to add experience: {ex.Message}");

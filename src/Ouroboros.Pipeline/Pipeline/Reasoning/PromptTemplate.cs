@@ -50,6 +50,7 @@ public sealed class PromptTemplate(string template)
 
             return Result<string>.Success(result);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<string>.Failure($"Template formatting failed: {ex.Message}");

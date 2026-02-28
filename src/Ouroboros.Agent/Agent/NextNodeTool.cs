@@ -108,6 +108,7 @@ public sealed class NextNodeTool : ITool
 
             return Result<string, string>.Success(JsonSerializer.Serialize(response, JsonDefaults.Indented));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<string, string>.Failure($"NextNode tool error: {ex.Message}");
@@ -158,6 +159,7 @@ public sealed class NextNodeTool : ITool
                 new NextNodeRequest(stepId, goal, context, constraints)
             );
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<NextNodeRequest, string>.Failure(

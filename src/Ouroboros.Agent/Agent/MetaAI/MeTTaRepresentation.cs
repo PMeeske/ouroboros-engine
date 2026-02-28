@@ -143,6 +143,7 @@ public sealed partial class MeTTaRepresentation
             var factResult = await _engine.AddFactAsync(sb.ToString(), ct);
             return factResult.Map(_ => Unit.Value).MapError(_ => "Failed to add plan facts to MeTTa");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Plan translation error: {ex.Message}");
@@ -188,6 +189,7 @@ public sealed partial class MeTTaRepresentation
             var result = await _engine.AddFactAsync(sb.ToString(), ct);
             return result.Map(_ => Unit.Value).MapError(_ => "Failed to add execution state to MeTTa");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Execution state translation error: {ex.Message}");
@@ -229,6 +231,7 @@ public sealed partial class MeTTaRepresentation
             var result = await _engine.AddFactAsync(sb.ToString(), ct);
             return result.Map(_ => Unit.Value).MapError(_ => "Failed to add tool facts to MeTTa");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Tool translation error: {ex.Message}");
@@ -261,6 +264,7 @@ public sealed partial class MeTTaRepresentation
                 error => Result<List<NextNodeCandidate>, string>.Failure($"Next node query failed: {error}")
             );
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<List<NextNodeCandidate>, string>.Failure($"Query error: {ex.Message}");

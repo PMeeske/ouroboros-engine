@@ -199,6 +199,7 @@ public sealed class TapoEmbodiment : IDisposable
             await Task.CompletedTask; // Placeholder for async cleanup
             return Result<Unit>.Success(Unit.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error stopping capture");

@@ -74,6 +74,7 @@ public sealed class HypothesisEngine : IHypothesisEngine
 
             return Result<Hypothesis, string>.Success(hypothesis);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Hypothesis, string>.Failure($"Hypothesis generation failed: {ex.Message}");
@@ -131,6 +132,7 @@ CRITERIA: [how to measure success]";
 
             return Result<Experiment, string>.Success(experiment);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Experiment, string>.Failure($"Experiment design failed: {ex.Message}");
@@ -258,6 +260,7 @@ CRITERIA: [how to measure success]";
 
             return Result<HypothesisTestResult, string>.Success(result);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<HypothesisTestResult, string>.Failure($"Hypothesis testing failed: {ex.Message}");
@@ -308,6 +311,7 @@ ALTERNATIVES: [other possibilities]";
 
             return Result<Hypothesis, string>.Success(hypothesis);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Hypothesis, string>.Failure($"Abductive reasoning failed: {ex.Message}");

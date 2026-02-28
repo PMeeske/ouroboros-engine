@@ -124,6 +124,7 @@ public sealed partial class MetaAIPlannerOrchestrator
             RecordMetric("planner", 1.0, true);
             return Result<Plan, string>.Success(plan);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             RecordMetric("planner", 1.0, false);

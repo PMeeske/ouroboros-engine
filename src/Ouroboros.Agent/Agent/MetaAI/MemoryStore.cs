@@ -65,6 +65,7 @@ public sealed class MemoryStore : IMemoryStore
 
             return Result<Unit, string>.Success(Unit.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Failed to store experience: {ex.Message}");
@@ -149,6 +150,7 @@ public sealed class MemoryStore : IMemoryStore
 
             return Result<IReadOnlyList<Experience>, string>.Success(matches);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IReadOnlyList<Experience>, string>.Failure($"Failed to query experiences: {ex.Message}");
@@ -185,6 +187,7 @@ public sealed class MemoryStore : IMemoryStore
 
             return Task.FromResult(Result<MemoryStatistics, string>.Success(stats));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Task.FromResult(Result<MemoryStatistics, string>.Failure($"Failed to get statistics: {ex.Message}"));
@@ -207,6 +210,7 @@ public sealed class MemoryStore : IMemoryStore
 
             return Result<Unit, string>.Success(Unit.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Failed to clear memory: {ex.Message}");
@@ -233,6 +237,7 @@ public sealed class MemoryStore : IMemoryStore
                 return Task.FromResult(Result<Experience, string>.Failure($"Experience with ID '{id}' not found"));
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Task.FromResult(Result<Experience, string>.Failure($"Failed to get experience: {ex.Message}"));
@@ -257,6 +262,7 @@ public sealed class MemoryStore : IMemoryStore
 
             return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Task.FromResult(Result<Unit, string>.Failure($"Failed to delete experience: {ex.Message}"));

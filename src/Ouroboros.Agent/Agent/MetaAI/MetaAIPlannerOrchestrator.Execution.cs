@@ -86,6 +86,7 @@ public sealed partial class MetaAIPlannerOrchestrator
             RecordMetric("executor", stopwatch.Elapsed.TotalMilliseconds, overallSuccess);
             return Result<PlanExecutionResult, string>.Success(execution);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             stopwatch.Stop();
@@ -116,6 +117,7 @@ public sealed partial class MetaAIPlannerOrchestrator
             RecordMetric("verifier", 1.0, verification.Verified);
             return Result<PlanVerificationResult, string>.Success(verification);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             RecordMetric("verifier", 1.0, false);
@@ -193,6 +195,7 @@ public sealed partial class MetaAIPlannerOrchestrator
                     ["type"] = "llm_task"
                 });
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             stopwatch.Stop();

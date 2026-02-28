@@ -90,6 +90,7 @@ public sealed partial class HierarchicalPlanner : IHierarchicalPlanner
 
             return Result<HierarchicalPlan, string>.Success(hierarchicalPlan);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             stopwatch.Stop();
@@ -133,6 +134,7 @@ public sealed partial class HierarchicalPlanner : IHierarchicalPlanner
 
             return executionResult;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             stopwatch.Stop();

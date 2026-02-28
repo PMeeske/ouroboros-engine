@@ -105,6 +105,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
 
             return Result<CostBenefitAnalysis, string>.Success(analysis);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<CostBenefitAnalysis, string>.Failure($"Cost-aware routing failed: {ex.Message}");
@@ -192,6 +193,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
 
             return Result<Plan, string>.Success(optimizedPlan);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Plan, string>.Failure($"Plan optimization failed: {ex.Message}");

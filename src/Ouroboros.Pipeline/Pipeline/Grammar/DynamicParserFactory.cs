@@ -122,6 +122,7 @@ public sealed class DynamicParserFactory : IDisposable
             {
                 Directory.Delete(tempDir, recursive: true);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 _logger?.LogWarning(ex, "Failed to clean up temp directory {TempDir}", tempDir);

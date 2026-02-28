@@ -51,6 +51,7 @@ public sealed class MeTTaPlanner
                 success => this.ParseToolChain(success),
                 error => Result<ToolChain, string>.Failure($"Planning failed: {error}"));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ToolChain, string>.Failure($"Planning exception: {ex.Message}");

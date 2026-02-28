@@ -284,6 +284,7 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
                     Math.Min(delay.TotalMilliseconds * retryConfig.BackoffMultiplier,
                              retryConfig.MaxDelay.TotalMilliseconds));
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<T, string>.Failure($"Operation failed after {attempt} attempts: {ex.Message}");

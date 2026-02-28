@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Pipeline.Planning;
+namespace Ouroboros.Pipeline.Planning;
 
 /// <summary>
 /// Extension methods for integrating MeTTa planning with tool binding.
@@ -62,6 +62,7 @@ public static class ToolBinderExtensions
             string result = await bindResult.Value(input);
             return Result<string, string>.Success(result);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<string, string>.Failure($"Execution failed: {ex.Message}");

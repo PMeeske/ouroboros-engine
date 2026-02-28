@@ -158,6 +158,7 @@ public sealed class TapoRtspClient : IDisposable
             _logger?.LogDebug("Captured frame {FrameNumber}, {Size} bytes", _frameCount, frameData.Length);
             return Result<TapoCameraFrame>.Success(frame);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to capture frame from {CameraIp}", _cameraIp);
@@ -313,6 +314,7 @@ public sealed class TapoRtspClient : IDisposable
                 _ffmpegProcess.Kill(entireProcessTree: true);
                 _ffmpegProcess.Dispose();
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 _logger?.LogWarning(ex, "Error stopping FFmpeg process");

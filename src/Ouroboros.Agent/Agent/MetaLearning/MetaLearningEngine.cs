@@ -136,6 +136,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
             var similarity = embeddingA.Value.CosineSimilarity(embeddingB.Value);
             return Result<double, string>.Success(similarity);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<double, string>.Failure($"Task similarity computation failed: {ex.Message}");
@@ -165,6 +166,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
             var embedding = new TaskEmbedding(embeddingVector, characteristics, taskDescription);
             return Result<TaskEmbedding, string>.Success(embedding);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<TaskEmbedding, string>.Failure($"Task embedding failed: {ex.Message}");

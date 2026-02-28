@@ -78,6 +78,7 @@ public sealed class ResearchSkillExtractor
 
             return Result<List<Skill>, string>.Success(extractedSkills);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<List<Skill>, string>.Failure($"Failed to extract skills: {ex.Message}");

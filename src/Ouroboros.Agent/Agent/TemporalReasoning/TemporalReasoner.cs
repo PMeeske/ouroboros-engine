@@ -88,6 +88,7 @@ public sealed partial class TemporalReasoner : ITemporalReasoner
 
             return Result<Timeline, string>.Success(timeline);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Timeline, string>.Failure($"Timeline construction failed: {ex.Message}");

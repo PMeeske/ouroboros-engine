@@ -28,6 +28,7 @@ public static class MetaAIConvenience
 
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IMetaAIPlannerOrchestrator, string>.Failure($"Failed to create simple orchestrator: {ex.Message}");
@@ -58,6 +59,7 @@ public static class MetaAIConvenience
 
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IMetaAIPlannerOrchestrator, string>.Failure($"Failed to create standard orchestrator: {ex.Message}");
@@ -86,6 +88,7 @@ public static class MetaAIConvenience
 
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IMetaAIPlannerOrchestrator, string>.Failure($"Failed to create advanced orchestrator: {ex.Message}");
@@ -236,6 +239,7 @@ public static class MetaAIConvenience
 
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IMetaAIPlannerOrchestrator, string>.Failure($"Failed to create research assistant: {ex.Message}");
@@ -260,6 +264,7 @@ public static class MetaAIConvenience
 
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IMetaAIPlannerOrchestrator, string>.Failure($"Failed to create code assistant: {ex.Message}");
@@ -285,6 +290,7 @@ public static class MetaAIConvenience
 
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IMetaAIPlannerOrchestrator, string>.Failure($"Failed to create chat assistant: {ex.Message}");

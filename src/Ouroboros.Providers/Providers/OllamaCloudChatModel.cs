@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Reactive.Linq;
 using Polly;
 using Polly.CircuitBreaker;
@@ -279,6 +279,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 // Circuit is open - complete gracefully without error
                 observer.OnCompleted();
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 observer.OnError(ex);
@@ -356,6 +357,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 // Circuit is open - complete gracefully without error
                 observer.OnCompleted();
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 observer.OnError(ex);

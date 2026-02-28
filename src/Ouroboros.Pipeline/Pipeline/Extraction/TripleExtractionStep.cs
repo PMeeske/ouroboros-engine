@@ -67,6 +67,7 @@ public sealed class TripleExtractionStep
 
             return Result<ExtractionResult, string>.Success(new ExtractionResult(documentId, triples));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ExtractionResult, string>.Failure($"Triple extraction failed: {ex.Message}");

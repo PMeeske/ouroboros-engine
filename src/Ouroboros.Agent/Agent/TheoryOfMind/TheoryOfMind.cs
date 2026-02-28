@@ -94,6 +94,7 @@ Focus on actionable beliefs that would influence the agent's behavior. Limit to 
 
             return Result<BeliefState, string>.Success(beliefs);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<BeliefState, string>.Failure($"Belief inference failed: {ex.Message}");
@@ -157,6 +158,7 @@ Consider both explicit statements and implicit behavior patterns.";
 
             return Result<IntentionPrediction, string>.Success(prediction);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IntentionPrediction, string>.Failure($"Intention prediction failed: {ex.Message}");
@@ -222,6 +224,7 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
 
             return Result<ActionPrediction, string>.Success(prediction);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ActionPrediction, string>.Failure($"Action prediction failed: {ex.Message}");
@@ -266,6 +269,7 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
             await Task.CompletedTask;
             return Result<Unit, string>.Success(Unit.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Model update failed: {ex.Message}");

@@ -185,6 +185,7 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
 
             return ParseToolChain(result.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ToolChain, string>.Failure($"Planning exception: {ex.Message}");
@@ -356,6 +357,7 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
                 stepResult.Output = current;
                 stepResult.Success = true;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 stepResult.Error = ex.Message;

@@ -72,6 +72,7 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
             (string text, List<ToolExecution> tools) = await this.GenerateWithToolsAsync(prompt, ct);
             return Result<(string, List<ToolExecution>), string>.Success((text, tools));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<(string, List<ToolExecution>), string>.Failure($"Tool-aware generation failed: {ex.Message}");
@@ -91,6 +92,7 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
             var result = await GenerateWithThinkingAndToolsAsync(prompt, ct);
             return Result<(ThinkingResponse, List<ToolExecution>), string>.Success(result);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<(ThinkingResponse, List<ToolExecution>), string>.Failure($"Tool-aware generation with thinking failed: {ex.Message}");
@@ -165,6 +167,7 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
                     success => success,
                     error => $"error: {error}");
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 output = $"error: {ex.Message}";

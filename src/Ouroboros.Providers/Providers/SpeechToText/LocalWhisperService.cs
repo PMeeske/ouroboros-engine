@@ -73,7 +73,12 @@ public sealed class LocalWhisperService : ISpeechToTextService
         {
             return await RunWhisperAsync(filePath, options, ct);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
+        {
+            return Result<TranscriptionResult, string>.Failure($"Transcription failed: {ex.Message}");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Transcription failed: {ex.Message}");
         }
@@ -429,7 +434,12 @@ public sealed class LocalWhisperService : ISpeechToTextService
 
             return ParseWhisperOutput(output, options.ResponseFormat);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
+        {
+            return Result<TranscriptionResult, string>.Failure($"Failed to run Whisper: {ex.Message}");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Failed to run Whisper: {ex.Message}");
         }
@@ -521,7 +531,12 @@ print(json.dumps(output, ensure_ascii=False))
 
             return ParseWhisperOutput(output, "json");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
+        {
+            return Result<TranscriptionResult, string>.Failure($"Failed to run Python Whisper: {ex.Message}");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Failed to run Python Whisper: {ex.Message}");
         }

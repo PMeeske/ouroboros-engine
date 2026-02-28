@@ -69,6 +69,7 @@ public sealed partial class EpisodicMemoryEngine
 
             return Result<ImmutableList<Episode>, string>.Success(episodes);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to retrieve similar episodes");
@@ -118,6 +119,7 @@ public sealed partial class EpisodicMemoryEngine
 
             return Result<Plan, string>.Success(plan);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to generate plan with experience");
@@ -179,6 +181,7 @@ public sealed partial class EpisodicMemoryEngine
 
             return Option<Episode>.Some(episode);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Failed to deserialize episode from point");

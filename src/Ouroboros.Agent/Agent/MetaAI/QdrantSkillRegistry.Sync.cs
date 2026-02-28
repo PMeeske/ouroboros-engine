@@ -50,6 +50,7 @@ public sealed partial class QdrantSkillRegistry
                 Trace.TraceInformation("[qdrant] Created skills collection: {0}", _config.CollectionName);
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             Trace.TraceWarning("[WARN] Failed to ensure Qdrant collection: {0}", ex.Message);
@@ -111,6 +112,7 @@ public sealed partial class QdrantSkillRegistry
 
             await _client.UpsertAsync(_config.CollectionName, new[] { point }, cancellationToken: ct);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             Trace.TraceWarning("[WARN] Failed to save skill '{0}' to Qdrant: {1}", skill.Name, ex.Message);
@@ -201,6 +203,7 @@ public sealed partial class QdrantSkillRegistry
                         }
                     }
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     Trace.TraceWarning("[WARN] Failed to deserialize skill from Qdrant: {0}", ex.Message);
@@ -212,6 +215,7 @@ public sealed partial class QdrantSkillRegistry
                 Trace.TraceInformation("[qdrant] Loaded {0} skills from {1}", _skillsCache.Count, _config.CollectionName);
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             Trace.TraceWarning("[WARN] Failed to load skills from Qdrant: {0}", ex.Message);

@@ -175,6 +175,7 @@ public sealed partial class SkillExtractor : ISkillExtractor
 
             return Result<Skill, string>.Success(skill);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Skill, string>.Failure($"Skill extraction failed: {ex.Message}");
@@ -336,6 +337,7 @@ Write a 1-2 sentence description of this skill's capability:";
 
             return await Task.FromResult(Result<Skill, string>.Success(updatedSkill));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Skill, string>.Failure($"Failed to update existing skill: {ex.Message}");

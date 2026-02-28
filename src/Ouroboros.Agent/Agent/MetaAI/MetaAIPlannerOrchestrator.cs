@@ -97,6 +97,7 @@ public sealed partial class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrat
                             });
                     }
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     RecordMetric("skill_extraction_error", 1.0, false);

@@ -77,6 +77,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
 
             return Result<WorldModel, string>.Success(model);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<WorldModel, string>.Failure($"Failed to learn model: {ex.Message}");
@@ -110,6 +111,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
             var nextState = await model.TransitionModel.PredictAsync(currentState, action, ct);
             return Result<State, string>.Success(nextState);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<State, string>.Failure($"Failed to predict next state: {ex.Message}");
@@ -150,6 +152,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
             var plan = await GreedyPlanningAsync(initialState, goal, model, lookaheadDepth, ct);
             return Result<Plan, string>.Success(plan);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Plan, string>.Failure($"Failed to plan in imagination: {ex.Message}");
@@ -221,6 +224,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
 
             return Result<ModelQuality, string>.Success(quality);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ModelQuality, string>.Failure($"Failed to evaluate model: {ex.Message}");
@@ -287,6 +291,7 @@ public sealed class WorldModelEngine : IWorldModelEngine
 
             return Result<List<Transition>, string>.Success(transitions);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<List<Transition>, string>.Failure($"Failed to generate synthetic experience: {ex.Message}");

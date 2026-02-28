@@ -88,7 +88,12 @@ $synth.GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name }
                     output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()),
                 error => Result<List<string>, string>.Failure(error));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
+        {
+            return Result<List<string>, string>.Failure(ex.Message);
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<List<string>, string>.Failure(ex.Message);
         }
@@ -201,7 +206,12 @@ Write-Output 'OK'
                 return Result<SpeechResult, string>.Failure(runResult.Error);
             }
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
+        {
+            return Result<SpeechResult, string>.Failure($"TTS error: {ex.Message}");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<SpeechResult, string>.Failure($"TTS error: {ex.Message}");
         }
@@ -309,7 +319,8 @@ Write-Output 'OK'
                 await File.WriteAllBytesAsync(outputPath, result.Value.AudioData, ct);
                 return Result<string, string>.Success(outputPath);
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) { throw; }
+            catch (IOException ex)
             {
                 return Result<string, string>.Failure($"Failed to save audio: {ex.Message}");
             }
@@ -336,7 +347,8 @@ Write-Output 'OK'
                 await outputStream.WriteAsync(result.Value.AudioData, ct);
                 return Result<string, string>.Success("wav");
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) { throw; }
+            catch (IOException ex)
             {
                 return Result<string, string>.Failure($"Failed to write to stream: {ex.Message}");
             }
@@ -422,7 +434,12 @@ $synth.Speak($speechText)
                 _ => Result<bool, string>.Success(true),
                 error => Result<bool, string>.Failure(error));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
+        {
+            return Result<bool, string>.Failure($"TTS error: {ex.Message}");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<bool, string>.Failure($"TTS error: {ex.Message}");
         }
@@ -467,7 +484,12 @@ $synth.Speak($speechText)
 
             return Result<string, string>.Success(output.Trim());
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
+        {
+            return Result<string, string>.Failure(ex.Message);
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<string, string>.Failure(ex.Message);
         }

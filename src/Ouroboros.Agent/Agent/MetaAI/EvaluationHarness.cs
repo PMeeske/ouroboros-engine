@@ -95,6 +95,7 @@ public sealed class EvaluationHarness
             _results.Add(metrics);
             return metrics;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             stopwatch.Stop();

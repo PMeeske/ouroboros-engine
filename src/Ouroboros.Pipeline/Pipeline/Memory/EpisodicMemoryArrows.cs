@@ -54,6 +54,7 @@ public static class EpisodicMemoryArrows
 
                 return branch;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception)
             {
                 return branch; // Gracefully continue even if storage fails
@@ -99,6 +100,7 @@ public static class EpisodicMemoryArrows
                             DateTime.UtcNow))),
                     error => Result<PipelineBranch, string>.Failure(error));
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Failed to store episode: {ex.Message}");
@@ -144,6 +146,7 @@ public static class EpisodicMemoryArrows
 
                 return branch;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception)
             {
                 return branch; // Gracefully continue
@@ -220,6 +223,7 @@ public static class EpisodicMemoryArrows
 
                 return (branch, null);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception)
             {
                 return (branch, null);

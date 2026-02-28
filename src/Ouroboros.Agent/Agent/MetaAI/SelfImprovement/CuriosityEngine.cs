@@ -201,6 +201,7 @@ STEP 2: ...";
 
             return Result<Plan, string>.Success(plan);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Plan, string>.Failure($"Exploratory plan generation failed: {ex.Message}");

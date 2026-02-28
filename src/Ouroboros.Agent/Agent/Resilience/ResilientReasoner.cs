@@ -161,11 +161,13 @@ public sealed class ResilientReasoner : IReasoner
                     ? Result<string, string>.Success(fallbackResult.Value.Answer)
                     : Result<string, string>.Failure($"Neural reasoning unavailable (circuit open), symbolic fallback failed: {fallbackResult.Error}");
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception fallbackEx)
             {
                 return Result<string, string>.Failure($"Neural reasoning unavailable (circuit open), symbolic fallback exception: {fallbackEx.Message}");
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             // Exception thrown - record failure for neural modes
@@ -189,6 +191,7 @@ public sealed class ResilientReasoner : IReasoner
                         ? Result<string, string>.Success(fallbackResult.Value.Answer)
                         : Result<string, string>.Failure($"Both neural and symbolic reasoning failed. Neural error: {ex.Message}, Symbolic error: {fallbackResult.Error}");
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception fallbackEx)
                 {
                     return Result<string, string>.Failure($"Both neural and symbolic reasoning failed. Neural error: {ex.Message}, Symbolic error: {fallbackEx.Message}");

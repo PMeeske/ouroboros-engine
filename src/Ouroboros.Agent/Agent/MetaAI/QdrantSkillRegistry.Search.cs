@@ -69,6 +69,7 @@ public sealed partial class QdrantSkillRegistry
                         }
                     }
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     Trace.TraceWarning("[WARN] Qdrant semantic search failed: {0}", ex.Message);
@@ -87,6 +88,7 @@ public sealed partial class QdrantSkillRegistry
 
             return Result<IReadOnlyList<AgentSkill>, string>.Success(filtered);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to find skills: {ex.Message}");
@@ -153,6 +155,7 @@ public sealed partial class QdrantSkillRegistry
 
             return Task.FromResult(Result<Skill, string>.Success(skill));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Task.FromResult(Result<Skill, string>.Failure($"Failed to extract skill: {ex.Message}"));

@@ -57,6 +57,7 @@ public sealed class ToolSelector
             // Parse the LLM response
             return ParseToolSelectionResponse(response);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception)
         {
             // If LLM call fails, return null to allow fallback

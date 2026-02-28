@@ -105,6 +105,7 @@ public sealed partial class TransferLearner : ITransferLearner
 
             return Result<TransferResult, string>.Success(result);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<TransferResult, string>.Failure($"Transfer learning failed: {ex.Message}");

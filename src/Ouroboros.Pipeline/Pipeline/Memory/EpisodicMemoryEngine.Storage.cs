@@ -92,6 +92,7 @@ public sealed partial class EpisodicMemoryEngine
 
             return Result<EpisodeId, string>.Success(new EpisodeId(episodeId));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to store episode");
@@ -162,6 +163,7 @@ public sealed partial class EpisodicMemoryEngine
 
             return consolidationResult;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to consolidate memories");
@@ -194,6 +196,7 @@ public sealed partial class EpisodicMemoryEngine
 
             _collectionInitialized = true;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to initialize collection");
@@ -207,6 +210,7 @@ public sealed partial class EpisodicMemoryEngine
         {
             return JsonSerializer.Serialize(branch, JsonDefaults.Default);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Failed to serialize pipeline branch, storing minimal info");

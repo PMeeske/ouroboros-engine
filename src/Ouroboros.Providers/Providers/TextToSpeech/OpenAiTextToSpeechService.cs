@@ -113,6 +113,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
             return Result<SpeechResult, string>.Success(
                 new SpeechResult(audioData, format));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<SpeechResult, string>.Failure($"Speech synthesis failed: {ex.Message}");
@@ -152,6 +153,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
                     File.WriteAllBytes(outputPath, speech.AudioData);
                     return Result<string, string>.Success(outputPath);
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     return Result<string, string>.Failure($"Failed to save audio file: {ex.Message}");
@@ -177,6 +179,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
                     outputStream.Write(speech.AudioData, 0, speech.AudioData.Length);
                     return Result<string, string>.Success(speech.Format);
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     return Result<string, string>.Failure($"Failed to write audio stream: {ex.Message}");

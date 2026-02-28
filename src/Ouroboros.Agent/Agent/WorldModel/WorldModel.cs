@@ -152,6 +152,7 @@ public sealed class WorldModel : IWorldModel
 
             return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to update world model from experience");

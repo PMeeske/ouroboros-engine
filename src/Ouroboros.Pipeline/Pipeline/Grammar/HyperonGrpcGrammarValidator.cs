@@ -174,6 +174,7 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
             var response = await _client.HealthCheckAsync(new HealthCheckRequest(), cancellationToken: ct);
             return response.Healthy;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Hyperon grammar sidecar health check failed");

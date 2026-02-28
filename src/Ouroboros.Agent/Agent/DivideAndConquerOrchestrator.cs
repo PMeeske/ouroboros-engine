@@ -89,6 +89,7 @@ public sealed class DivideAndConquerOrchestrator
 
             return Result<string, string>.Success(mergedResult);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             totalTimer.Stop();
@@ -188,6 +189,7 @@ public sealed class DivideAndConquerOrchestrator
                 ExecutionTime: sw.Elapsed,
                 Success: true);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             sw.Stop();

@@ -96,6 +96,7 @@ public class HyperonReasoningStep : IDisposable
 
                 return result;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 // Record step failure

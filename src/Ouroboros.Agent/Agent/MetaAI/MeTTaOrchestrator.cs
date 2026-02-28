@@ -163,6 +163,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             RecordMetric("planner", sw.ElapsedMilliseconds, true);
             return Result<Plan, string>.Success(plan);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             RecordMetric("planner", 1.0, false);
@@ -243,6 +244,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             return Result<PlanExecutionResult, string>.Success(
                 new PlanExecutionResult(plan, stepResults, true, finalOutput, metadata, sw.Elapsed));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             RecordMetric("executor", sw.ElapsedMilliseconds, false);
@@ -287,6 +289,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
             return Result<PlanVerificationResult, string>.Success(verification);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             RecordMetric("verifier", 1.0, false);
@@ -355,6 +358,7 @@ public sealed class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 error => new StepResult(step, false, string.Empty, error, sw.Elapsed, observedState)
             );
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return new StepResult(step, false, string.Empty, ex.Message, sw.Elapsed, observedState);

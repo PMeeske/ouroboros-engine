@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Pipeline.Learning;
+namespace Ouroboros.Pipeline.Learning;
 
 /// <summary>
 /// Thread-safe gradient-based online learner implementing stochastic gradient descent
@@ -76,6 +76,7 @@ public sealed class GradientBasedLearner : IOnlineLearner
 
             return Result<IReadOnlyList<LearningUpdate>, string>.Success(updates);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IReadOnlyList<LearningUpdate>, string>.Failure(
@@ -180,6 +181,7 @@ public sealed class GradientBasedLearner : IOnlineLearner
 
             return Result<int, string>.Success(appliedCount);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<int, string>.Failure($"Failed to apply updates: {ex.Message}");

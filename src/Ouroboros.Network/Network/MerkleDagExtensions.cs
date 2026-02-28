@@ -157,6 +157,7 @@ public static class MerkleDagExtensions
 
             return Result<MerkleDag>.Success(dag);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<MerkleDag>.Failure($"Failed to deserialize DAG: {ex.Message}");

@@ -83,6 +83,7 @@ public sealed partial class SymbolicReasonerAdapter : Ouroboros.Abstractions.Cor
             // Should never reach here due to constructor validation, but handle gracefully
             return FormatLimitedResponse(prompt, "No symbolic reasoning engine configured");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             // As the ultimate fallback, we NEVER throw - always return something

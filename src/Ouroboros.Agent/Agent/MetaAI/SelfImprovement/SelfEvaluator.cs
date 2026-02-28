@@ -99,6 +99,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
 
             return Result<SelfAssessment, string>.Success(assessment);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<SelfAssessment, string>.Failure($"Performance evaluation failed: {ex.Message}");
@@ -254,6 +255,7 @@ DURATION: [days/weeks]";
 
             return Result<ImprovementPlan, string>.Success(plan);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ImprovementPlan, string>.Failure($"Improvement planning failed: {ex.Message}");

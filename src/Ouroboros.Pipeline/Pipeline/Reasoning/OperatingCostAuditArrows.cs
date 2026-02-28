@@ -117,6 +117,7 @@ public static class OperatingCostAuditArrows
                 PipelineBranch result = branch.WithReasoning(new Draft(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Main statement analysis failed: {ex.Message}");
@@ -238,6 +239,7 @@ public static class OperatingCostAuditArrows
                 PipelineBranch result = branch.WithReasoning(new FinalSpec(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Audit report generation failed: {ex.Message}");

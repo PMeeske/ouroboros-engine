@@ -214,6 +214,7 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
 
             return Result<EmbodimentCapabilities>.Success(_capabilities);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to connect to Tapo provider");
@@ -239,6 +240,7 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
             await Task.CompletedTask;
             return Result<Unit>.Success(Unit.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error disconnecting from Tapo provider");

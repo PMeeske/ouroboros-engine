@@ -80,6 +80,7 @@ public sealed partial class OuroborosOrchestrator
                     ["total_experiences"] = _atom.Experiences.Count,
                 });
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             sw.Stop();
@@ -239,6 +240,7 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
                 }
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             Trace.TraceWarning("[GA] Strategy evolution failed (non-fatal): {0}", ex.Message);

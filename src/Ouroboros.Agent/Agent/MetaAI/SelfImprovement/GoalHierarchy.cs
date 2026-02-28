@@ -112,6 +112,7 @@ public sealed class GoalHierarchy : IGoalHierarchy
 
             return Result<Goal, string>.Success(goal);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Goal, string>.Failure($"Goal addition failed: {ex.Message}");
@@ -197,6 +198,7 @@ SUBGOAL 2: ...";
 
             return Result<Goal, string>.Success(updatedGoal);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Goal, string>.Failure($"Goal decomposition failed: {ex.Message}");

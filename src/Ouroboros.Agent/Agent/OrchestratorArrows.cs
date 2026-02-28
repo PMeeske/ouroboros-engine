@@ -144,6 +144,7 @@ public static class OrchestratorArrows
                 {
                     return await arrow(input);
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     lastException = ex;

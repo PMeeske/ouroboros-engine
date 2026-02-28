@@ -125,6 +125,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
 
             return Result<PlanExecutionResult, string>.Success(execution);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<PlanExecutionResult, string>.Failure($"Distributed execution failed: {ex.Message}");
@@ -233,6 +234,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
                     ["task_id"] = assignment.TaskId
                 });
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             sw.Stop();

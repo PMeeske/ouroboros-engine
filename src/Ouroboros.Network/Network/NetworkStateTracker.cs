@@ -295,6 +295,7 @@ public sealed class NetworkStateTracker : IDisposable, IAsyncDisposable
 
             BranchReified?.Invoke(this, new BranchReifiedEventArgs(branch.Name, nodesCreated));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Post-update error");

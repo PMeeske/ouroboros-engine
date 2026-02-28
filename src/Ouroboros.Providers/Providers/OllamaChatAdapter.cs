@@ -1,4 +1,4 @@
-﻿using System.Reactive.Linq;
+using System.Reactive.Linq;
 using LangChain.Providers.Ollama;
 
 namespace Ouroboros.Providers;
@@ -117,6 +117,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
 
                 observer.OnCompleted();
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 observer.OnError(ex);
@@ -143,6 +144,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
                 }
                 observer.OnCompleted();
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 observer.OnError(ex);

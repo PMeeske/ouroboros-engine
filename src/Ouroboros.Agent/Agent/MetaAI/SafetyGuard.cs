@@ -193,6 +193,7 @@ public sealed class SafetyGuard : ISafetyGuard
 
             return Task.FromResult(new SandboxResult(true, sandboxedStep, restrictions, null));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Task.FromResult(new SandboxResult(false, null, Array.Empty<string>(), ex.Message));
@@ -532,6 +533,7 @@ public sealed class SafetyGuard : ISafetyGuard
                 onSuccess: _ => Result<Unit, string>.Success(Unit.Value),
                 onFailure: error => Result<Unit, string>.Failure($"Failed to add MeTTa safety rules: {error}"));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Exception adding MeTTa safety rules: {ex.Message}");

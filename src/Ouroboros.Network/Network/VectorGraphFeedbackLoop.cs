@@ -136,6 +136,7 @@ public sealed class VectorGraphFeedbackLoop
 
             return Result<FeedbackResult, string>.Success(result);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<FeedbackResult, string>.Failure($"Feedback cycle failed: {ex.Message}");
@@ -156,6 +157,7 @@ public sealed class VectorGraphFeedbackLoop
                 var embedding = await _embeddingModel.CreateEmbeddingsAsync(semanticText, ct);
                 _embeddingCache[node.Id] = embedding;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 System.Diagnostics.Trace.TraceWarning(

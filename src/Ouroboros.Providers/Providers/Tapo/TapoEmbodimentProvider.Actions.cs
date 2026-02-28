@@ -142,6 +142,7 @@ public sealed partial class TapoEmbodimentProvider
                 elapsed,
                 Error: result?.Error ?? "Unknown error"));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             var elapsed = DateTime.UtcNow - startTime;
@@ -283,6 +284,7 @@ public sealed partial class TapoEmbodimentProvider
                     ptzClient.Dispose();
                 }
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 _logger?.LogWarning(ex,

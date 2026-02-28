@@ -50,6 +50,7 @@ public sealed class OllamaAgentProvider : IAgentProviderFactory
             return Task.FromResult(
                 Result<Ouroboros.Abstractions.Core.IChatCompletionModel, string>.Success(adapter));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Task.FromResult(
@@ -71,6 +72,7 @@ public sealed class OllamaAgentProvider : IAgentProviderFactory
             return Result<ProviderHealthStatus, string>.Success(
                 new ProviderHealthStatus("Ollama", resp.IsSuccessStatusCode, sw.ElapsedMilliseconds));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             sw.Stop();

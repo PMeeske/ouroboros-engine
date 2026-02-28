@@ -149,6 +149,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
                 ct);
             return Result<SpeechResult, string>.Success(new SpeechResult(audioData, "mp3"));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<SpeechResult, string>.Failure($"Edge TTS error: {ex.Message}");
@@ -177,6 +178,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
                 await File.WriteAllBytesAsync(outputPath, result.Value.AudioData, ct);
                 return Result<string, string>.Success(outputPath);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<string, string>.Failure($"Failed to save audio: {ex.Message}");

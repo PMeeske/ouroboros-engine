@@ -112,6 +112,7 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
                     if (_useCache && _cache is not null && !skipByCache) _cache.UpdateHash(file);
                     if (debug) Console.WriteLine($"[ingest] loaded {file} docs={loaded.Count}");
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     if (debug) Console.WriteLine($"[ingest] error {file} {ex.Message}");

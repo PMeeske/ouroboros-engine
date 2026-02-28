@@ -88,6 +88,7 @@ public sealed class SkillComposer : ISkillComposer
 
             return await Task.FromResult(Result<Skill, string>.Success(compositeSkill));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Skill, string>.Failure($"Skill composition failed: {ex.Message}");

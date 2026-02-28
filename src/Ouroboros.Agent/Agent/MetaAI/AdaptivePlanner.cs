@@ -143,6 +143,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
 
             return Result<PlanExecutionResult, string>.Success(execution);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<PlanExecutionResult, string>.Failure($"Adaptive execution failed: {ex.Message}");
@@ -215,6 +216,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                 if (lastResult.Success)
                     break;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 sw.Stop();

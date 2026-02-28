@@ -78,6 +78,7 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
         {
             return Result<List<ResearchPaper>, string>.Failure("Request timed out");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<List<ResearchPaper>, string>.Failure($"Unexpected error: {ex.Message}");
@@ -127,6 +128,7 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
         {
             return Result<CitationMetadata, string>.Failure($"Semantic Scholar API error: {ex.Message}");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<CitationMetadata, string>.Failure($"Error fetching citations: {ex.Message}");

@@ -79,6 +79,7 @@ public sealed class ExperienceReplay : IExperienceReplay
 
             return Result<TrainingResult, string>.Success(result);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<TrainingResult, string>.Failure($"Training failed: {ex.Message}");

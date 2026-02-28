@@ -74,6 +74,7 @@ public static class ReasoningArrows
                 PipelineBranch result = branch.WithReasoning(new Thinking(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Thinking generation failed: {ex.Message}");
@@ -124,6 +125,7 @@ public static class ReasoningArrows
                 PipelineBranch result = branch.WithReasoning(new Draft(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Draft generation failed: {ex.Message}");
@@ -185,6 +187,7 @@ public static class ReasoningArrows
                 PipelineBranch result = branch.WithReasoning(new Critique(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Critique generation failed: {ex.Message}");
@@ -253,6 +256,7 @@ public static class ReasoningArrows
                 PipelineBranch result = branch.WithReasoning(new FinalSpec(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Improvement generation failed: {ex.Message}");
@@ -350,6 +354,7 @@ public static class ReasoningArrows
                             Result<string, string> toolResult = await tool.InvokeAsync(args, ct);
                             output = toolResult.Match(success => success, error => $"error: {error}");
                         }
+                        catch (OperationCanceledException) { throw; }
                         catch (Exception ex)
                         {
                             output = $"error: {ex.Message}";
@@ -577,6 +582,7 @@ public static class ReasoningArrows
 
                 observer.OnCompleted();
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 observer.OnError(ex);

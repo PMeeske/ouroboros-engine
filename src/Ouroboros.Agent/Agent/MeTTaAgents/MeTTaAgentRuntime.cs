@@ -191,6 +191,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
 
             return Result<string, string>.Success(response);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             await _engine.AddFactAsync(

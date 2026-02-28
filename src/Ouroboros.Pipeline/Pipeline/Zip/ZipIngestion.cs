@@ -121,6 +121,7 @@ public static class ZipIngestion
                     };
                 }
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 // Last resort: preserve kind intent
@@ -149,6 +150,7 @@ public static class ZipIngestion
         {
             return await ParseCsvAsync(rec, maxLines, ct);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return new Dictionary<string, object>
@@ -166,6 +168,7 @@ public static class ZipIngestion
         {
             return await ParseXmlAsync(rec, includeText, ct);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return new Dictionary<string, object>

@@ -1,4 +1,4 @@
-﻿using Ouroboros.Abstractions;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.Metacognition;
 
@@ -46,6 +46,7 @@ public sealed class CognitiveIntrospector : IIntrospector
 
                 return Result<InternalState, string>.Success(snapshot);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<InternalState, string>.Failure($"Failed to capture state: {ex.Message}");
@@ -89,6 +90,7 @@ public sealed class CognitiveIntrospector : IIntrospector
 
             return Result<IntrospectionReport, string>.Success(report);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IntrospectionReport, string>.Failure($"Analysis failed: {ex.Message}");
@@ -108,6 +110,7 @@ public sealed class CognitiveIntrospector : IIntrospector
             var comparison = StateComparison.Create(before, after);
             return Result<StateComparison, string>.Success(comparison);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<StateComparison, string>.Failure($"Comparison failed: {ex.Message}");
@@ -189,6 +192,7 @@ public sealed class CognitiveIntrospector : IIntrospector
 
             return Result<ImmutableList<string>, string>.Success(patterns.ToImmutableList());
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ImmutableList<string>, string>.Failure($"Pattern identification failed: {ex.Message}");

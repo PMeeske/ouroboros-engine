@@ -47,6 +47,7 @@ public static class NanoAtomMeTTaExtensions
             var result = await engine.AddFactAsync(sb.ToString(), ct);
             return result.Map(_ => Unit.Value).MapError(_ => "Failed to add NanoAtom state to MeTTa");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"NanoAtom MeTTa translation error: {ex.Message}");
@@ -100,6 +101,7 @@ public static class NanoAtomMeTTaExtensions
             var result = await engine.AddFactAsync(sb.ToString(), ct);
             return result.Map(_ => Unit.Value).MapError(_ => "Failed to add ThoughtFragment to MeTTa");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"ThoughtFragment MeTTa translation error: {ex.Message}");
@@ -135,6 +137,7 @@ public static class NanoAtomMeTTaExtensions
             var result = await engine.AddFactAsync(sb.ToString(), ct);
             return result.Map(_ => Unit.Value).MapError(_ => "Failed to add DigestFragment to MeTTa");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"DigestFragment MeTTa translation error: {ex.Message}");
@@ -169,6 +172,7 @@ public static class NanoAtomMeTTaExtensions
             var result = await engine.AddFactAsync(sb.ToString(), ct);
             return result.Map(_ => Unit.Value).MapError(_ => "Failed to add ConsolidatedAction to MeTTa");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"ConsolidatedAction MeTTa translation error: {ex.Message}");

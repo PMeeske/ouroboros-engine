@@ -359,6 +359,7 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
             System.Diagnostics.Trace.TraceWarning("[Azure TTS] Rate limit exceeded after retries");
             throw;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             System.Diagnostics.Trace.TraceWarning("[Azure TTS] Exception: {0}", ex.Message);
@@ -410,6 +411,7 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 
             return Result<SpeechResult, string>.Failure("Speech synthesis failed");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<SpeechResult, string>.Failure($"Azure TTS error: {ex.Message}");
@@ -581,6 +583,7 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 
             return Result<SpeechChunk, string>.Failure("Speech synthesis failed");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<SpeechChunk, string>.Failure($"Azure TTS error: {ex.Message}");

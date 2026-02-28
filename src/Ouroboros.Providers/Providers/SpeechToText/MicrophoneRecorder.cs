@@ -69,7 +69,11 @@ public static class MicrophoneRecorder
         {
             return Result<string, string>.Failure("Recording cancelled");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
+        {
+            return Result<string, string>.Failure($"Recording failed: {ex.Message}");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<string, string>.Failure($"Recording failed: {ex.Message}");
         }
@@ -147,7 +151,11 @@ public static class MicrophoneRecorder
         {
             return Result<string, string>.Failure("Recording cancelled");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
+        {
+            return Result<string, string>.Failure($"Recording failed: {ex.Message}");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<string, string>.Failure($"Recording failed: {ex.Message}");
         }
@@ -179,14 +187,14 @@ public static class MicrophoneRecorder
                     {
                         File.Delete(path);
                     }
-                    catch
+                    catch (IOException)
                     {
                         // Ignore cleanup errors
                     }
 
                     return Result<byte[], string>.Success(data);
                 }
-                catch (Exception ex)
+                catch (IOException ex)
                 {
                     return Result<byte[], string>.Failure($"Failed to read recording: {ex.Message}");
                 }
@@ -495,7 +503,11 @@ public static class MicrophoneRecorder
 
             return string.IsNullOrEmpty(output) ? error : output;
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
+        {
+            return $"Error: {ex.Message}";
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return $"Error: {ex.Message}";
         }

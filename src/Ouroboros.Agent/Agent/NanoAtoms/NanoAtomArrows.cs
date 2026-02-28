@@ -136,6 +136,7 @@ public static class NanoAtomArrows
                 var result = await NanoReasoningArrow(nanoModel, config)(branch);
                 return Result<PipelineBranch, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Nano reasoning failed: {ex.Message}");

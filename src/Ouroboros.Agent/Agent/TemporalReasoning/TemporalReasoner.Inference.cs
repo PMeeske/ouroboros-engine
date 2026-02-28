@@ -38,6 +38,7 @@ public sealed partial class TemporalReasoner
 
             return Result<IReadOnlyList<CausalRelation>, string>.Success(causalRelations);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IReadOnlyList<CausalRelation>, string>.Failure($"Causal inference failed: {ex.Message}");
@@ -73,6 +74,7 @@ public sealed partial class TemporalReasoner
             IReadOnlyList<PredictedEvent> predictions = this.PredictWithPatterns(history, horizon);
             return Result<IReadOnlyList<PredictedEvent>, string>.Success(predictions);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IReadOnlyList<PredictedEvent>, string>.Failure($"Prediction failed: {ex.Message}");
@@ -118,6 +120,7 @@ public sealed partial class TemporalReasoner
 
             return Task.FromResult(Result<bool, string>.Success(satisfiable));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Task.FromResult(Result<bool, string>.Failure($"Constraint checking failed: {ex.Message}"));

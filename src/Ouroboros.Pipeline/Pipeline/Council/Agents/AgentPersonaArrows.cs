@@ -33,6 +33,7 @@ public static class AgentPersonaArrows
                 var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
                 return Result<AgentContribution, string>.Success(new AgentContribution(agentName, response));
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<AgentContribution, string>.Failure($"[{agentName}] Proposal generation failed: {ex.Message}");
@@ -62,6 +63,7 @@ public static class AgentPersonaArrows
                 var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
                 return Result<AgentContribution, string>.Success(new AgentContribution(agentName, response));
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<AgentContribution, string>.Failure($"[{agentName}] Challenge generation failed: {ex.Message}");
@@ -91,6 +93,7 @@ public static class AgentPersonaArrows
                 var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
                 return Result<AgentContribution, string>.Success(new AgentContribution(agentName, response));
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<AgentContribution, string>.Failure($"[{agentName}] Refinement generation failed: {ex.Message}");
@@ -125,6 +128,7 @@ public static class AgentPersonaArrows
                 var vote = voteParser(agentName, response, expertiseWeight);
                 return Result<AgentVote, string>.Success(vote);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<AgentVote, string>.Failure($"[{agentName}] Vote generation failed: {ex.Message}");

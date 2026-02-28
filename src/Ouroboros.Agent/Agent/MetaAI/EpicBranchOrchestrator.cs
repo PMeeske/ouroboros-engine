@@ -66,6 +66,7 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
 
             return Result<Epic, string>.Success(epic);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Epic, string>.Failure($"Failed to register epic: {ex.Message}");
@@ -132,6 +133,7 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
             await Task.CompletedTask; // For async compliance
             return Result<SubIssueAssignment, string>.Success(assignment);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<SubIssueAssignment, string>.Failure($"Failed to assign sub-issue: {ex.Message}");
@@ -182,6 +184,7 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
             _assignments[key] = updatedAssignment;
             return Result<SubIssueAssignment, string>.Success(updatedAssignment);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<SubIssueAssignment, string>.Failure($"Failed to update status: {ex.Message}");
@@ -230,6 +233,7 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
                 return result;
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             UpdateSubIssueStatus(epicNumber, subIssueNumber, SubIssueStatus.Failed, ex.Message);

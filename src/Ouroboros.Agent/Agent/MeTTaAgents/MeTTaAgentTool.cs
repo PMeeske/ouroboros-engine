@@ -97,6 +97,7 @@ public sealed partial class MeTTaAgentTool : ITool
         {
             return Result<string, string>.Failure($"Invalid JSON input: {ex.Message}");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<string, string>.Failure($"Agent tool error: {ex.Message}");

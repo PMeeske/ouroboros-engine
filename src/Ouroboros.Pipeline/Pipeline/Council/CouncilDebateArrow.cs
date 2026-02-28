@@ -74,6 +74,7 @@ public static class CouncilDebateArrow
                         branch.WithEvent(CouncilDecisionEvent.Create(topic, decision))),
                     error => Result<PipelineBranch, string>.Failure(error));
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Council debate exception: {ex.Message}");

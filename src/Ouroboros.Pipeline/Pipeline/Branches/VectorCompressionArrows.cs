@@ -72,6 +72,7 @@ public static class VectorCompressionArrows
 
             return Result<(IReadOnlyList<byte[]>, PipelineBranch)>.Success((compressedData, updatedBranch));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<(IReadOnlyList<byte[]>, PipelineBranch)>.Failure($"Batch compression failed: {ex.Message}");

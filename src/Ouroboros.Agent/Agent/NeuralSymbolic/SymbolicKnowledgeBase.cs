@@ -51,6 +51,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
 
             return Result<Unit, string>.Success(Unit.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Failed to add rule: {ex.Message}");
@@ -74,6 +75,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
 
             return Result<List<SymbolicRule>, string>.Success(matchingRules);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<List<SymbolicRule>, string>.Failure($"Failed to query rules: {ex.Message}");
@@ -91,6 +93,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
             var result = await _mettaEngine.ExecuteQueryAsync(query, ct);
             return result;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<string, string>.Failure($"Failed to execute MeTTa query: {ex.Message}");
@@ -139,6 +142,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
 
             return Result<List<string>, string>.Success(inferred);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<List<string>, string>.Failure($"Failed to perform inference: {ex.Message}");

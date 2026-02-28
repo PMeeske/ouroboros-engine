@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Reactive.Linq;
 using Polly;
 using Polly.Retry;
@@ -285,6 +285,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
 
                 observer.OnCompleted();
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 observer.OnError(ex);

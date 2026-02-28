@@ -51,6 +51,7 @@ public sealed partial class OuroborosOrchestrator
                     ["self_reflection_included"] = true,
                 });
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             sw.Stop();

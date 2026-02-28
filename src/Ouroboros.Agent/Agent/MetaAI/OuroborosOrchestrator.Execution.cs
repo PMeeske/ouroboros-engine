@@ -63,6 +63,7 @@ public sealed partial class OuroborosOrchestrator
                     ["steps_completed"] = allStepsSucceeded ? steps.Count : steps.Count - 1,
                 });
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             sw.Stop();
@@ -137,6 +138,7 @@ public sealed partial class OuroborosOrchestrator
                     ["meets_quality_threshold"] = meetsQualityThreshold,
                 });
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             sw.Stop();
@@ -265,6 +267,7 @@ Provide verification in JSON format:
                 string llmResponse = await _llm.GenerateTextAsync($"Process this step: {step}", ct);
                 return Result<string, string>.Success(llmResponse);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<string, string>.Failure($"LLM processing failed: {ex.Message}");

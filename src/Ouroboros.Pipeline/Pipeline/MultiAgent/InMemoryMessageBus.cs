@@ -1,4 +1,4 @@
-﻿using System.Threading.Channels;
+using System.Threading.Channels;
 
 namespace Ouroboros.Pipeline.MultiAgent;
 
@@ -289,6 +289,7 @@ public sealed class InMemoryMessageBus : IMessageBus, IDisposable
         {
             await subscription.Handler(message).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception)
         {
             // Log error in production; for now, we silently handle to prevent one handler from affecting others

@@ -147,6 +147,7 @@ public sealed class SymbolicRetrievalStep
 
             return Result<HybridRetrievalResult, string>.Success(hybridResult);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<HybridRetrievalResult, string>.Failure(

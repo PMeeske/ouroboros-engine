@@ -92,6 +92,7 @@ public static class WalCompactor
 
                 return Result<Unit, string>.Success(Unit.Value);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 // Clean up temp file if it exists
@@ -110,6 +111,7 @@ public static class WalCompactor
                 return Result<Unit, string>.Failure($"Compaction failed: {ex.Message}");
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Compaction failed: {ex.Message}");

@@ -115,6 +115,7 @@ public sealed class TapoGatewayManager : IAsyncDisposable
             _logger?.LogInformation("Gateway ready on port {Port}", Port);
             return true;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to start gateway process");
@@ -176,6 +177,7 @@ public sealed class TapoGatewayManager : IAsyncDisposable
                 await _process.WaitForExitAsync();
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Error stopping gateway process");
