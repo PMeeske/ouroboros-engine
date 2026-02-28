@@ -447,43 +447,83 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
 
     // The ITheoryOfMind interface is bound to Ouroboros.Abstractions.Domain placeholder types,
     // while this class operates on the richer Ouroboros.Agent.TheoryOfMind types.
-    // These explicit implementations return failures with guidance instead of throwing.
+    // These explicit implementations adapt the placeholder types and delegate to the typed overloads.
 
     /// <inheritdoc />
-    Task<Result<Ouroboros.Abstractions.Domain.BeliefState, string>> ITheoryOfMind.InferBeliefsAsync(
+    async Task<Result<Ouroboros.Abstractions.Domain.BeliefState, string>> ITheoryOfMind.InferBeliefsAsync(
         string agentId,
         IReadOnlyList<Ouroboros.Abstractions.Domain.AgentObservation> observations,
-        CancellationToken ct) =>
-        Task.FromResult(Result<Ouroboros.Abstractions.Domain.BeliefState, string>.Failure(
-            "Use the overload accepting Ouroboros.Agent.TheoryOfMind.AgentObservation types."));
+        CancellationToken ct)
+    {
+        // Adapt placeholder observations to typed observations.
+        // Placeholder AgentObservation has no fields, so we create generic observations
+        // that capture the fact that the agent was observed.
+        var typedObservations = observations
+            .Select((_, i) => AgentObservation.Action(
+                agentId,
+                $"Observation {i + 1} (from abstraction layer)"))
+            .ToList();
+
+        var result = await InferBeliefsAsync(agentId, typedObservations, ct);
+        return result.Map(_ => new Ouroboros.Abstractions.Domain.BeliefState());
+    }
 
     /// <inheritdoc />
-    Task<Result<Ouroboros.Abstractions.Domain.IntentionPrediction, string>> ITheoryOfMind.PredictIntentionAsync(
+    async Task<Result<Ouroboros.Abstractions.Domain.IntentionPrediction, string>> ITheoryOfMind.PredictIntentionAsync(
         string agentId,
         Ouroboros.Abstractions.Domain.BeliefState beliefs,
-        CancellationToken ct) =>
-        Task.FromResult(Result<Ouroboros.Abstractions.Domain.IntentionPrediction, string>.Failure(
-            "Use the overload accepting Ouroboros.Agent.TheoryOfMind.BeliefState types."));
+        CancellationToken ct)
+    {
+        // The placeholder BeliefState has no fields. Use any existing typed beliefs
+        // from the internal model, or fall back to an empty belief state.
+        AgentModel? existingModel = GetAgentModel(agentId);
+        BeliefState typedBeliefs = existingModel?.Beliefs ?? BeliefState.Empty(agentId);
+
+        var result = await PredictIntentionAsync(agentId, typedBeliefs, ct);
+        return result.Map(_ => new Ouroboros.Abstractions.Domain.IntentionPrediction());
+    }
 
     /// <inheritdoc />
-    Task<Result<Ouroboros.Abstractions.Domain.ActionPrediction, string>> ITheoryOfMind.PredictNextActionAsync(
+    async Task<Result<Ouroboros.Abstractions.Domain.ActionPrediction, string>> ITheoryOfMind.PredictNextActionAsync(
         string agentId,
         Ouroboros.Abstractions.Domain.BeliefState beliefs,
         IReadOnlyList<Ouroboros.Abstractions.Domain.EmbodiedAction> availableActions,
-        CancellationToken ct) =>
-        Task.FromResult(Result<Ouroboros.Abstractions.Domain.ActionPrediction, string>.Failure(
-            "Use the overload accepting Ouroboros.Agent.TheoryOfMind types."));
+        CancellationToken ct)
+    {
+        // Adapt placeholder types to typed equivalents.
+        AgentModel? existingModel = GetAgentModel(agentId);
+        BeliefState typedBeliefs = existingModel?.Beliefs ?? BeliefState.Empty(agentId);
+
+        // Placeholder EmbodiedAction has no fields; create NoOp actions to preserve count.
+        var typedActions = availableActions
+            .Select((_, i) => EmbodiedAction.NoOp())
+            .ToList();
+
+        var result = await PredictNextActionAsync(agentId, typedBeliefs, typedActions, ct);
+        return result.Map(_ => new Ouroboros.Abstractions.Domain.ActionPrediction());
+    }
 
     /// <inheritdoc />
-    Task<Result<Unit, string>> ITheoryOfMind.UpdateAgentModelAsync(
+    async Task<Result<Unit, string>> ITheoryOfMind.UpdateAgentModelAsync(
         string agentId,
         Ouroboros.Abstractions.Domain.AgentObservation observation,
-        CancellationToken ct) =>
-        Task.FromResult(Result<Unit, string>.Failure(
-            "Use the overload accepting Ouroboros.Agent.TheoryOfMind.AgentObservation types."));
+        CancellationToken ct)
+    {
+        // Adapt the placeholder observation to a typed observation.
+        var typedObservation = AgentObservation.Action(
+            agentId,
+            "Observation from abstraction layer");
+
+        return await UpdateAgentModelAsync(agentId, typedObservation, ct);
+    }
 
     /// <inheritdoc />
-    Ouroboros.Abstractions.Domain.AgentModel? ITheoryOfMind.GetAgentModel(string agentId) => null;
+    Ouroboros.Abstractions.Domain.AgentModel? ITheoryOfMind.GetAgentModel(string agentId)
+    {
+        // Return a placeholder AgentModel if an internal model exists for this agent.
+        AgentModel? model = GetAgentModel(agentId);
+        return model != null ? new Ouroboros.Abstractions.Domain.AgentModel() : null;
+    }
 
     #endregion
 }

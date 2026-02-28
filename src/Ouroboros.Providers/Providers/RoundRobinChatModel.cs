@@ -126,14 +126,17 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
             {
                 int idx = _currentIndex;
                 var (model, config, stats) = _providers[idx];
-                _currentIndex = (_currentIndex + 1) % _providers.Count;
                 attempts++;
 
-                // Skip disabled, unhealthy, or excluded providers
-                if (!config.Enabled) continue;
-                if (!stats.IsHealthy && _failoverEnabled) continue;
-                if (excludeIndices?.Contains(idx) == true) continue;
+                // Check exclusion BEFORE using the provider
+                if (!config.Enabled || (!stats.IsHealthy && _failoverEnabled) || excludeIndices?.Contains(idx) == true)
+                {
+                    _currentIndex = (_currentIndex + 1) % _providers.Count;
+                    continue;
+                }
 
+                // Advance pointer AFTER selecting a valid provider
+                _currentIndex = (_currentIndex + 1) % _providers.Count;
                 return (model, config, stats, idx);
             }
 

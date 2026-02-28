@@ -425,18 +425,8 @@ public sealed partial class EpisodicMemoryEngine
 
         await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct);
 
-        // Delete source episodes that were consolidated into the meta-episode
-        var idsToDelete = episodes
-            .Where(e => e.Id != Guid.Empty)
-            .Select(e => new PointId { Uuid = e.Id.ToString() })
-            .ToList();
-        if (idsToDelete.Count > 0)
-        {
-            await _qdrantClient.DeleteAsync(_collectionName, idsToDelete, cancellationToken: ct);
-        }
-
         _logger?.LogInformation(
-            "Stored abstracted meta-episode {MetaId} with {PatternCount} patterns from {EpisodeCount} source episodes",
+            "Stored abstracted meta-episode {MetaId} with {PatternCount} patterns from {EpisodeCount} source episodes (originals preserved)",
             metaEpisodeId,
             patterns.Count,
             episodes.Count);
@@ -467,7 +457,7 @@ public sealed partial class EpisodicMemoryEngine
     {
         // Build abstraction hierarchies from specific to general
         var hierarchyLevels = episodes
-            .GroupBy(ep => ep.SuccessScore >= 0.7 ? "successful" : "failed")
+            .GroupBy(ep => ep.SuccessScore > 0.5 ? "successful" : "failed")
             .ToList();
 
         _logger?.LogInformation(
@@ -531,8 +521,37 @@ public sealed partial class EpisodicMemoryEngine
 
             await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct);
 
+            // Link children to parent by updating their metadata with parent reference
+            foreach (var child in levelEpisodes)
+            {
+                var childContext = child.Context
+                    .SetItem("parent_episode_id", (object)parentId.ToString())
+                    .SetItem("hierarchy_level", (object)"child");
+
+                var childPoint = new PointStruct
+                {
+                    Id = new PointId { Uuid = child.Id.ToString() },
+                    Vectors = child.Embedding,
+                    Payload =
+                    {
+                        ["goal"] = child.Goal,
+                        ["timestamp"] = child.Timestamp.ToString("o"),
+                        ["success"] = child.Result.Success,
+                        ["success_score"] = child.SuccessScore,
+                        ["duration_ms"] = child.Result.Duration.TotalMilliseconds,
+                        ["output"] = child.Result.Output,
+                        ["errors"] = JsonSerializer.Serialize(child.Result.Errors),
+                        ["lessons_learned"] = JsonSerializer.Serialize(child.LessonsLearned),
+                        ["branch_json"] = SerializePipelineBranch(child.ReasoningTrace),
+                        ["context"] = JsonSerializer.Serialize(childContext),
+                    },
+                };
+
+                await _qdrantClient.UpsertAsync(_collectionName, new[] { childPoint }, cancellationToken: ct);
+            }
+
             _logger?.LogInformation(
-                "Created hierarchical parent episode {ParentId} ({ParentGoal}) summarizing {ChildCount} children with {LessonCount} lessons",
+                "Created hierarchical parent episode {ParentId} ({ParentGoal}) summarizing {ChildCount} children with {LessonCount} lessons, children linked",
                 parentId,
                 parentGoal,
                 levelEpisodes.Count,

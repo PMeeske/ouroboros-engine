@@ -216,7 +216,11 @@ public static class CouncilOrchestratorArrows
         }
     }
 
-    private static async Task<Result<DebateRound, string>> ExecuteProposalPhaseAsync(
+    /// <summary>
+    /// Executes the proposal phase with parallel agent execution.
+    /// Shared by both <see cref="CouncilOrchestrator"/> and <see cref="CouncilOrchestratorArrows"/>.
+    /// </summary>
+    internal static async Task<Result<DebateRound, string>> ExecuteProposalPhaseAsync(
         ToolAwareChatModel llm,
         IReadOnlyList<IAgentPersona> agents,
         CouncilTopic topic,
@@ -245,7 +249,11 @@ public static class CouncilOrchestratorArrows
             Timestamp: DateTime.UtcNow));
     }
 
-    private static async Task<Result<DebateRound, string>> ExecuteChallengePhaseAsync(
+    /// <summary>
+    /// Executes the challenge phase with parallel agent execution.
+    /// Shared by both <see cref="CouncilOrchestrator"/> and <see cref="CouncilOrchestratorArrows"/>.
+    /// </summary>
+    internal static async Task<Result<DebateRound, string>> ExecuteChallengePhaseAsync(
         ToolAwareChatModel llm,
         IReadOnlyList<IAgentPersona> agents,
         CouncilTopic topic,
@@ -271,6 +279,11 @@ public static class CouncilOrchestratorArrows
         var results = await Task.WhenAll(tasks);
         var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
 
+        if (contributions.Count == 0)
+        {
+            return Result<DebateRound, string>.Failure("No contributions received from challenge phase.");
+        }
+
         return Result<DebateRound, string>.Success(new DebateRound(
             Phase: DebatePhase.Challenge,
             RoundNumber: 1,
@@ -278,7 +291,11 @@ public static class CouncilOrchestratorArrows
             Timestamp: DateTime.UtcNow));
     }
 
-    private static async Task<Result<DebateRound, string>> ExecuteRefinementPhaseAsync(
+    /// <summary>
+    /// Executes the refinement phase with parallel agent execution.
+    /// Shared by both <see cref="CouncilOrchestrator"/> and <see cref="CouncilOrchestratorArrows"/>.
+    /// </summary>
+    internal static async Task<Result<DebateRound, string>> ExecuteRefinementPhaseAsync(
         ToolAwareChatModel llm,
         IReadOnlyList<IAgentPersona> agents,
         CouncilTopic topic,
@@ -303,6 +320,11 @@ public static class CouncilOrchestratorArrows
         var results = await Task.WhenAll(tasks);
         var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
 
+        if (contributions.Count == 0)
+        {
+            return Result<DebateRound, string>.Failure("No contributions received from refinement phase.");
+        }
+
         return Result<DebateRound, string>.Success(new DebateRound(
             Phase: DebatePhase.Refinement,
             RoundNumber: 1,
@@ -310,7 +332,11 @@ public static class CouncilOrchestratorArrows
             Timestamp: DateTime.UtcNow));
     }
 
-    private static async Task<Result<(Dictionary<string, AgentVote> Votes, DebateRound Round), string>> ExecuteVotingPhaseAsync(
+    /// <summary>
+    /// Executes the voting phase with parallel agent execution.
+    /// Shared by both <see cref="CouncilOrchestrator"/> and <see cref="CouncilOrchestratorArrows"/>.
+    /// </summary>
+    internal static async Task<Result<(Dictionary<string, AgentVote> Votes, DebateRound Round), string>> ExecuteVotingPhaseAsync(
         ToolAwareChatModel llm,
         IReadOnlyList<IAgentPersona> agents,
         CouncilTopic topic,
@@ -428,7 +454,11 @@ public static class CouncilOrchestratorArrows
         return Result<CouncilDecision, string>.Success(decision);
     }
 
-    private static string BuildSynthesisPrompt(
+    /// <summary>
+    /// Builds the LLM prompt for decision synthesis.
+    /// Shared by both <see cref="CouncilOrchestrator"/> and <see cref="CouncilOrchestratorArrows"/>.
+    /// </summary>
+    internal static string BuildSynthesisPrompt(
         CouncilTopic topic,
         List<DebateRound> transcript,
         Dictionary<string, AgentVote> votes,

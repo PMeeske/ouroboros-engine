@@ -2,6 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using System.Text.RegularExpressions;
 using Ouroboros.Abstractions;
 using Ouroboros.Domain;
 using Ouroboros.Tools.MeTTa;
@@ -43,7 +44,7 @@ public sealed record FeedbackResult(
 /// Analyzes vector field properties, feeds results to MeTTa for symbolic reasoning,
 /// applies suggested modifications, and re-embeds updated nodes.
 /// </summary>
-public sealed class VectorGraphFeedbackLoop
+public sealed partial class VectorGraphFeedbackLoop
 {
     private const int DefaultEmbeddingDimension = 384;
 
@@ -270,11 +271,183 @@ public sealed class VectorGraphFeedbackLoop
     {
         var modifications = new List<GraphModification>();
 
-        // Simple parsing of MeTTa results
-        // In a real implementation, this would be more sophisticated
-        // For now, just return empty list as baseline
+        if (string.IsNullOrWhiteSpace(mettaResult))
+        {
+            return modifications;
+        }
+
+        // Normalize: strip outer Python-style list brackets (e.g. "[[...]]" or "[...]")
+        var normalized = mettaResult.Trim();
+        while (normalized.StartsWith('[') && normalized.EndsWith(']'))
+        {
+            normalized = normalized[1..^1].Trim();
+        }
+
+        // Empty result after stripping brackets, or just "()"
+        if (string.IsNullOrWhiteSpace(normalized) || normalized == "()")
+        {
+            return modifications;
+        }
+
+        // Extract all top-level S-expression forms: (operation arg1 arg2 ...)
+        // Handles both space-separated S-exprs (HyperonMeTTaEngine) and
+        // comma-separated results from Python subprocess output.
+        foreach (Match match in SExpressionPattern().Matches(normalized))
+        {
+            var sExpr = match.Value.Trim();
+            var parsed = ParseSingleModification(sExpr);
+            if (parsed != null)
+            {
+                modifications.AddRange(parsed);
+            }
+        }
+
         return modifications;
     }
+
+    /// <summary>
+    /// Parses a single S-expression modification directive into one or more
+    /// <see cref="GraphModification"/> entries.
+    /// </summary>
+    /// <remarks>
+    /// Supported forms (matching the MeTTa rules defined in FeedAnalysisToMeTTaAsync):
+    ///   (strengthen "source-guid" "target-guid")
+    ///   (strengthen-edge "source-guid" "target-guid")
+    ///   (weaken-outgoing-edges "node-guid")
+    ///   (merge-sinks "sink1-guid" "sink2-guid")
+    /// GUIDs may appear with or without surrounding double-quotes.
+    /// </remarks>
+    private static List<GraphModification>? ParseSingleModification(string sExpr)
+    {
+        if (string.IsNullOrWhiteSpace(sExpr))
+        {
+            return null;
+        }
+
+        // Strip outer parens
+        var inner = sExpr.Trim();
+        if (inner.StartsWith('(') && inner.EndsWith(')'))
+        {
+            inner = inner[1..^1].Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(inner))
+        {
+            return null;
+        }
+
+        // Tokenize: split on whitespace, but keep quoted strings intact
+        var tokens = TokenizeSExpression(inner);
+        if (tokens.Count < 2)
+        {
+            return null;
+        }
+
+        var operation = tokens[0].ToLowerInvariant();
+        var guidArgs = new List<Guid>();
+
+        for (int i = 1; i < tokens.Count; i++)
+        {
+            var raw = tokens[i].Trim('"');
+            if (Guid.TryParse(raw, out var guid))
+            {
+                guidArgs.Add(guid);
+            }
+        }
+
+        if (guidArgs.Count == 0)
+        {
+            return null;
+        }
+
+        var results = new List<GraphModification>();
+
+        switch (operation)
+        {
+            case "strengthen":
+            case "strengthen-edge":
+                // Both source and target nodes are affected
+                foreach (var guid in guidArgs)
+                {
+                    results.Add(new GraphModification(guid, "strengthen"));
+                }
+
+                break;
+
+            case "weaken-outgoing-edges":
+            case "weaken":
+                // The single node whose outgoing edges should be weakened
+                results.Add(new GraphModification(guidArgs[0], "weaken"));
+                break;
+
+            case "merge-sinks":
+            case "merge":
+                // Both sink nodes participate in the merge
+                foreach (var guid in guidArgs)
+                {
+                    results.Add(new GraphModification(guid, "merge"));
+                }
+
+                break;
+
+            default:
+                // Unknown operation type -- still record the nodes so the
+                // feedback loop can track them as modified.
+                foreach (var guid in guidArgs)
+                {
+                    results.Add(new GraphModification(guid, operation));
+                }
+
+                break;
+        }
+
+        return results.Count > 0 ? results : null;
+    }
+
+    /// <summary>
+    /// Tokenizes a MeTTa S-expression body, splitting on whitespace while
+    /// preserving quoted string tokens (e.g. "some-guid") as single tokens.
+    /// </summary>
+    private static List<string> TokenizeSExpression(string input)
+    {
+        var tokens = new List<string>();
+        var current = new System.Text.StringBuilder();
+        bool inQuote = false;
+
+        foreach (char c in input)
+        {
+            if (c == '"')
+            {
+                inQuote = !inQuote;
+                current.Append(c);
+            }
+            else if (char.IsWhiteSpace(c) && !inQuote)
+            {
+                if (current.Length > 0)
+                {
+                    tokens.Add(current.ToString());
+                    current.Clear();
+                }
+            }
+            else
+            {
+                current.Append(c);
+            }
+        }
+
+        if (current.Length > 0)
+        {
+            tokens.Add(current.ToString());
+        }
+
+        return tokens;
+    }
+
+    /// <summary>
+    /// Matches top-level parenthesized S-expressions, handling nested parens.
+    /// </summary>
+    [GeneratedRegex(@"\([^()]*(?:\([^()]*\))*[^()]*\)")]
+    private static partial Regex SExpressionPattern();
 
     private async Task ApplyModificationsAsync(
         MerkleDag dag,

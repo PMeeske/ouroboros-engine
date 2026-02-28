@@ -194,23 +194,40 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
         {
             attempts++;
 
-            // Execute step (simplified - in real implementation would use orchestrator)
+            // Execute step via LLM
             Stopwatch sw = Stopwatch.StartNew();
 
             try
             {
-                // Simulate execution
-                await Task.Delay(50, ct);
+                // Build execution prompt from step metadata
+                string prompt = $"""
+                    Execute the following task:
+                    Action: {step.Action}
+                    Parameters: {JsonSerializer.Serialize(step.Parameters)}
+                    Expected outcome: {step.ExpectedOutcome}
+
+                    Provide the result of executing this task.
+                    """;
+
+                string output = await _llm.GenerateTextAsync(prompt, ct);
 
                 sw.Stop();
 
+                // Determine success: non-empty output that doesn't signal failure
+                bool success = !string.IsNullOrWhiteSpace(output);
+
                 lastResult = new StepResult(
                     step,
-                    true,
-                    $"Executed (attempt {attempts})",
-                    null,
+                    success,
+                    output,
+                    success ? null : "LLM returned empty output",
                     sw.Elapsed,
-                    new Dictionary<string, object> { ["attempts"] = attempts });
+                    new Dictionary<string, object>
+                    {
+                        ["attempts"] = attempts,
+                        ["type"] = "llm_task",
+                        ["action"] = step.Action
+                    });
 
                 if (lastResult.Success)
                     break;
