@@ -10,7 +10,7 @@ namespace Ouroboros.Pipeline.MultiAgent;
 /// Orchestrates multiple agents to collaboratively execute goals through task decomposition and delegation.
 /// Follows functional programming principles with immutable state and monadic error handling.
 /// </summary>
-public sealed class AgentCoordinator : IAgentCoordinator
+public sealed class AgentCoordinator : IAgentCoordinator, IDisposable
 {
     private AgentTeam _team;
     private readonly IMessageBus _messageBus;
@@ -255,6 +255,12 @@ public sealed class AgentCoordinator : IAgentCoordinator
         }
 
         return tasks;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _agentSelectionLock.Dispose();
     }
 
     /// <summary>

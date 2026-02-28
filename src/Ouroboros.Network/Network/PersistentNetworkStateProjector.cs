@@ -33,7 +33,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
     private readonly object _stateLock = new();
     private readonly ILogger _logger;
     private long _currentEpoch;
-    private bool _initialized;
+    private volatile bool _initialized;
     private int _detectedVectorDimension;
 
     /// <summary>
@@ -220,7 +220,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
 
         await PersistSnapshotAsync(state, ct);
 
-        _currentEpoch++;
+        Interlocked.Increment(ref _currentEpoch);
         return state;
     }
 
