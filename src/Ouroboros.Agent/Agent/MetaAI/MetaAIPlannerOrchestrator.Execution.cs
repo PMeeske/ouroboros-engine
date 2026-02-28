@@ -22,7 +22,7 @@ public sealed partial class MetaAIPlannerOrchestrator
 
         // Check if parallel execution is beneficial
         ParallelExecutor parallelExecutor = new ParallelExecutor(_safety, ExecuteStepAsync);
-        double estimatedSpeedup = parallelExecutor.EstimateSpeedup(plan);
+        double estimatedSpeedup = ParallelExecutor.EstimateSpeedup(plan);
 
         List<StepResult> stepResults;
         bool overallSuccess;
@@ -40,7 +40,7 @@ public sealed partial class MetaAIPlannerOrchestrator
                 // Sequential execution
                 stepResults = new List<StepResult>();
                 overallSuccess = true;
-                finalOutput = "";
+                var finalOutputBuilder = new System.Text.StringBuilder();
 
                 foreach (PlanStep step in plan.Steps)
                 {
@@ -60,10 +60,10 @@ public sealed partial class MetaAIPlannerOrchestrator
                         // Continue with remaining steps even if one fails
                     }
 
-                    finalOutput += stepResult.Output + "\n";
+                    finalOutputBuilder.Append(stepResult.Output).Append('\n');
                 }
 
-                finalOutput = finalOutput.Trim();
+                finalOutput = finalOutputBuilder.ToString().Trim();
             }
 
             stopwatch.Stop();
@@ -211,7 +211,7 @@ public sealed partial class MetaAIPlannerOrchestrator
         }
     }
 
-    private string BuildVerificationPrompt(PlanExecutionResult execution)
+    private static string BuildVerificationPrompt(PlanExecutionResult execution)
     {
         return $@"Verify the following execution result:
 
@@ -241,7 +241,7 @@ Provide:
 ";
     }
 
-    private PlanVerificationResult ParseVerification(PlanExecutionResult execution, string verificationText)
+    private static PlanVerificationResult ParseVerification(PlanExecutionResult execution, string verificationText)
     {
         bool verified = verificationText.Contains("VERIFIED: yes", StringComparison.OrdinalIgnoreCase);
 

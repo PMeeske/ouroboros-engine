@@ -23,18 +23,18 @@ public sealed partial class TemporalReasoner
         if (this.llm == null)
         {
             // Without LLM, use simple temporal correlation
-            IReadOnlyList<CausalRelation> simpleCausality = this.InferSimpleCausality(events);
+            IReadOnlyList<CausalRelation> simpleCausality = InferSimpleCausality(events);
             return Result<IReadOnlyList<CausalRelation>, string>.Success(simpleCausality);
         }
 
         try
         {
             // Build prompt for LLM
-            var prompt = this.BuildCausalInferencePrompt(events);
+            var prompt = BuildCausalInferencePrompt(events);
             var response = await this.llm.GenerateTextAsync(prompt, ct);
 
             // Parse causal relations from response
-            IReadOnlyList<CausalRelation> causalRelations = this.ParseCausalRelations(response, events);
+            IReadOnlyList<CausalRelation> causalRelations = ParseCausalRelations(response, events);
 
             return Result<IReadOnlyList<CausalRelation>, string>.Success(causalRelations);
         }
@@ -71,7 +71,7 @@ public sealed partial class TemporalReasoner
             }
 
             // Fallback to pattern-based prediction
-            IReadOnlyList<PredictedEvent> predictions = this.PredictWithPatterns(history, horizon);
+            IReadOnlyList<PredictedEvent> predictions = PredictWithPatterns(history, horizon);
             return Result<IReadOnlyList<PredictedEvent>, string>.Success(predictions);
         }
         catch (OperationCanceledException) { throw; }
@@ -116,7 +116,7 @@ public sealed partial class TemporalReasoner
             }
 
             // Check for consistency using path consistency
-            var satisfiable = this.CheckPathConsistency(constraintMap);
+            var satisfiable = CheckPathConsistency(constraintMap);
 
             return Task.FromResult(Result<bool, string>.Success(satisfiable));
         }
@@ -127,7 +127,7 @@ public sealed partial class TemporalReasoner
         }
     }
 
-    private IReadOnlyList<CausalRelation> InferSimpleCausality(IReadOnlyList<TemporalEvent> events)
+    private static IReadOnlyList<CausalRelation> InferSimpleCausality(IReadOnlyList<TemporalEvent> events)
     {
         var causalRelations = new List<CausalRelation>();
         var sortedEvents = events.OrderBy(e => e.StartTime).ToList();
@@ -156,7 +156,7 @@ public sealed partial class TemporalReasoner
         return causalRelations;
     }
 
-    private string BuildCausalInferencePrompt(IReadOnlyList<TemporalEvent> events)
+    private static string BuildCausalInferencePrompt(IReadOnlyList<TemporalEvent> events)
     {
         var eventDescriptions = events
             .OrderBy(e => e.StartTime)
@@ -187,7 +187,7 @@ CONFOUNDS: [comma-separated factors or 'none']
 Provide multiple causal relationships if they exist.";
     }
 
-    private IReadOnlyList<CausalRelation> ParseCausalRelations(string response, IReadOnlyList<TemporalEvent> events)
+    private static IReadOnlyList<CausalRelation> ParseCausalRelations(string response, IReadOnlyList<TemporalEvent> events)
     {
         var relations = new List<CausalRelation>();
         var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -274,13 +274,13 @@ Provide multiple causal relationships if they exist.";
         TimeSpan horizon,
         CancellationToken ct)
     {
-        var prompt = this.BuildPredictionPrompt(history, horizon);
+        var prompt = BuildPredictionPrompt(history, horizon);
         var response = await this.llm!.GenerateTextAsync(prompt, ct);
-        IReadOnlyList<PredictedEvent> predictions = this.ParsePredictions(response, history);
+        IReadOnlyList<PredictedEvent> predictions = ParsePredictions(response, history);
         return Result<IReadOnlyList<PredictedEvent>, string>.Success(predictions);
     }
 
-    private string BuildPredictionPrompt(IReadOnlyList<TemporalEvent> history, TimeSpan horizon)
+    private static string BuildPredictionPrompt(IReadOnlyList<TemporalEvent> history, TimeSpan horizon)
     {
         var eventDescriptions = history
             .OrderBy(e => e.StartTime)
@@ -313,7 +313,7 @@ REASONING: [explanation]
 ---";
     }
 
-    private IReadOnlyList<PredictedEvent> ParsePredictions(string response, IReadOnlyList<TemporalEvent> history)
+    private static IReadOnlyList<PredictedEvent> ParsePredictions(string response, IReadOnlyList<TemporalEvent> history)
     {
         var predictions = new List<PredictedEvent>();
         var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -393,7 +393,7 @@ REASONING: [explanation]
         return predictions;
     }
 
-    private IReadOnlyList<PredictedEvent> PredictWithPatterns(IReadOnlyList<TemporalEvent> history, TimeSpan horizon)
+    private static IReadOnlyList<PredictedEvent> PredictWithPatterns(IReadOnlyList<TemporalEvent> history, TimeSpan horizon)
     {
         var predictions = new List<PredictedEvent>();
 
@@ -421,7 +421,7 @@ REASONING: [explanation]
             var avgInterval = TimeSpan.FromTicks((long)intervals.Average(t => t.Ticks));
 
             // Predict next occurrence
-            var lastEvent = groupEvents.Last();
+            var lastEvent = groupEvents[groupEvents.Count - 1];
             var predictedTime = (lastEvent.EndTime ?? lastEvent.StartTime) + avgInterval;
 
             if (predictedTime <= targetTime)
@@ -439,7 +439,7 @@ REASONING: [explanation]
         return predictions;
     }
 
-    private bool CheckPathConsistency(Dictionary<(string, string), TemporalRelation> constraints)
+    private static bool CheckPathConsistency(Dictionary<(string, string), TemporalRelation> constraints)
     {
         // Check for direct contradictions
         foreach (var key in constraints.Keys)

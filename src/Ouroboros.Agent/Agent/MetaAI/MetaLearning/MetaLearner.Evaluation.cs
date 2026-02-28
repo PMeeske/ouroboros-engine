@@ -155,7 +155,7 @@ APPLICABLE_TO: [task types, comma-separated]";
         }
     }
 
-    private double CalculateLearningSpeedTrend(List<LearningEpisode> orderedEpisodes)
+    private static double CalculateLearningSpeedTrend(List<LearningEpisode> orderedEpisodes)
     {
         if (orderedEpisodes.Count < 2)
             return 0.0;
@@ -171,7 +171,7 @@ APPLICABLE_TO: [task types, comma-separated]";
         return trend;
     }
 
-    private Task<List<string>> IdentifyBottlenecksAsync(
+    private static Task<List<string>> IdentifyBottlenecksAsync(
         List<LearningEpisode> episodes,
         CancellationToken ct)
     {
@@ -206,7 +206,7 @@ APPLICABLE_TO: [task types, comma-separated]";
         return Task.FromResult(bottlenecks);
     }
 
-    private Task<List<string>> GenerateRecommendationsAsync(
+    private static Task<List<string>> GenerateRecommendationsAsync(
         List<LearningEpisode> episodes,
         double successRate,
         double learningSpeedTrend,

@@ -164,12 +164,9 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
             .OrderByDescending(g => g.Count())
             .Take(5);
 
-        foreach (var wordGroup in titleWords)
+        foreach (var wordGroup in titleWords.Where(wg => wg.Count() >= 2))
         {
-            if (wordGroup.Count() >= 2)
-            {
-                observations.Add($"The term '{wordGroup.Key}' appears frequently across {wordGroup.Count()} papers");
-            }
+            observations.Add($"The term '{wordGroup.Key}' appears frequently across {wordGroup.Count()} papers");
         }
 
         // If LLM available, generate deeper observations
@@ -177,19 +174,6 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
         {
             try
             {
-                string abstractsContext = string.Join("\n\n", papers.Take(5).Select(p =>
-                    $"Title: {p.Title}\nAbstract: {p.Abstract.Substring(0, Math.Min(500, p.Abstract.Length))}..."));
-
-                string prompt = $@"Analyze these research paper abstracts and identify 3-5 key observations about trends, patterns, or emerging themes:
-
-{abstractsContext}
-
-Return observations as a simple list, one per line. Focus on:
-- Common methodologies or approaches
-- Recurring findings or claims
-- Connections between papers
-- Emerging research directions";
-
                 // Note: Using the chat model if available
                 // This would need to be adapted to your specific LLM interface
                 observations.Add("Papers show convergence toward transformer-based architectures");

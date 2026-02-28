@@ -1,6 +1,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Text;
 using Ouroboros.Core.Hyperon;
 using Ouroboros.Core.LawsOfForm;
 using Unit = Ouroboros.Abstractions.Unit;
@@ -58,30 +59,31 @@ public sealed partial class MeTTaOrchestrator
         List<Experience> pastExperiences,
         List<Skill> matchingSkills)
     {
-        string prompt = $"Create a detailed plan to accomplish: {goal}\n\n";
+        StringBuilder prompt = new StringBuilder();
+        prompt.Append($"Create a detailed plan to accomplish: {goal}\n\n");
 
         if (context?.Any() == true)
         {
-            prompt += "Context:\n";
+            prompt.Append("Context:\n");
             foreach (KeyValuePair<string, object> item in context)
-                prompt += $"- {item.Key}: {item.Value}\n";
-            prompt += "\n";
+                prompt.Append($"- {item.Key}: {item.Value}\n");
+            prompt.Append('\n');
         }
 
-        prompt += "Available tools:\n";
+        prompt.Append("Available tools:\n");
         foreach (ITool tool in _tools.All)
-            prompt += $"- {tool.Name}: {tool.Description}\n";
-        prompt += "\n";
+            prompt.Append($"- {tool.Name}: {tool.Description}\n");
+        prompt.Append('\n');
 
         if (pastExperiences.Count > 0)
         {
-            prompt += "Relevant past experiences:\n";
+            prompt.Append("Relevant past experiences:\n");
             foreach (Experience? exp in pastExperiences.Take(3))
-                prompt += $"- {exp.Goal} (success: {exp.Verification.Verified}, quality: {exp.Verification.QualityScore:F2})\n";
-            prompt += "\n";
+                prompt.Append($"- {exp.Goal} (success: {exp.Verification.Verified}, quality: {exp.Verification.QualityScore:F2})\n");
+            prompt.Append('\n');
         }
 
-        prompt += @"Provide a plan as JSON array of steps:
+        prompt.Append(@"Provide a plan as JSON array of steps:
 [
   {
     ""action"": ""tool_name"",
@@ -98,12 +100,12 @@ CRITICAL PARAMETER RULES:
 - If you don't have a real value, SKIP that step or ask for it
 
 WRONG parameters: {""url"": ""URL of the search result"", ""query"": ""search for topic""}
-CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ouroboros mythology serpent""}";
+CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ouroboros mythology serpent""}");
 
-        return prompt;
+        return prompt.ToString();
     }
 
-    private Plan ParsePlan(string planText, string goal)
+    private static Plan ParsePlan(string planText, string goal)
     {
         List<PlanStep> steps = new List<PlanStep>();
         Dictionary<string, double> confidenceScores = new Dictionary<string, double>();
@@ -150,30 +152,31 @@ CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ourobor
         return new Plan(goal, steps, confidenceScores, DateTime.UtcNow);
     }
 
-    private string BuildVerificationPrompt(PlanExecutionResult execution)
+    private static string BuildVerificationPrompt(PlanExecutionResult execution)
     {
-        string prompt = $"Verify the execution of plan: {execution.Plan.Goal}\n\n";
-        prompt += $"Success: {execution.Success}\n";
-        prompt += $"Duration: {execution.Duration.TotalSeconds:F2}s\n\n";
+        StringBuilder prompt = new StringBuilder();
+        prompt.Append($"Verify the execution of plan: {execution.Plan.Goal}\n\n");
+        prompt.Append($"Success: {execution.Success}\n");
+        prompt.Append($"Duration: {execution.Duration.TotalSeconds:F2}s\n\n");
 
-        prompt += "Steps executed:\n";
+        prompt.Append("Steps executed:\n");
         foreach (StepResult result in execution.StepResults)
         {
-            prompt += $"- {result.Step.Action}: {(result.Success ? "✓" : "✗")} {result.Output}\n";
+            prompt.Append($"- {result.Step.Action}: {(result.Success ? "✓" : "✗")} {result.Output}\n");
         }
 
-        prompt += "\nProvide verification in JSON format:\n";
-        prompt += @"{
+        prompt.Append("\nProvide verification in JSON format:\n");
+        prompt.Append(@"{
   ""verified"": true/false,
   ""quality_score"": 0.0-1.0,
   ""issues"": [""issue1"", ""issue2""],
   ""improvements"": [""suggestion1"", ""suggestion2""]
-}";
+}");
 
-        return prompt;
+        return prompt.ToString();
     }
 
-    private PlanVerificationResult ParseVerification(PlanExecutionResult execution, string verificationText)
+    private static PlanVerificationResult ParseVerification(PlanExecutionResult execution, string verificationText)
     {
         try
         {
@@ -215,7 +218,7 @@ CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ourobor
         }
     }
 
-    private string FormatPlanForMeTTa(Plan plan)
+    private static string FormatPlanForMeTTa(Plan plan)
     {
         string steps = string.Join(" ", plan.Steps.Select((s, i) => $"(step {i} {s.Action})"));
         return $"(plan {steps})";

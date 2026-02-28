@@ -224,8 +224,7 @@ STEP 2: ...";
 
         // Increase exploration if we haven't explored much recently
         int recentExplorations = _explorationHistory
-            .Where(e => e.when > DateTime.UtcNow.AddHours(-24))
-            .Count();
+            .Count(e => e.when > DateTime.UtcNow.AddHours(-24));
 
         if (recentExplorations < 5)
         {

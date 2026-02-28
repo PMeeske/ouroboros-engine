@@ -48,8 +48,6 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
             // Get all capabilities
             List<AgentCapability> capabilities = await _capabilities.GetCapabilitiesAsync(ct);
             IReadOnlyList<Skill> skills = _skills.GetAllSkills().ToSkills();
-            IReadOnlyDictionary<string, PerformanceMetrics> metrics = _orchestrator.GetMetrics();
-
             // Calculate capability scores
             Dictionary<string, double> capabilityScores = capabilities.ToDictionary(
                 c => c.Name,

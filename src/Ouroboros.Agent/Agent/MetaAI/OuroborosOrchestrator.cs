@@ -130,8 +130,6 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
             // PRE-CYCLE: Affective state update (Psi-theory)
             _urgeSystem?.Tick();
             Affect.AffectiveState? affect = _valenceMonitor?.GetCurrentState();
-            double selectionThreshold = affect != null ? CalculateSelectionThreshold(affect) : 0.5;
-            double resolutionLevel = affect != null ? GetEffectiveResolutionLevel(affect) : 0.5;
             Affect.Urge? dominantUrge = _urgeSystem?.GetDominantUrge();
 
             if (affect != null && dominantUrge != null)

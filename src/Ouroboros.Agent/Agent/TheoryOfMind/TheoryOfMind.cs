@@ -320,7 +320,7 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
 
     // Private helper methods
 
-    private BeliefState ParseBeliefStateFromLLM(string agentId, string llmResponse, BeliefState existingBeliefs)
+    private static BeliefState ParseBeliefStateFromLLM(string agentId, string llmResponse, BeliefState existingBeliefs)
     {
         try
         {
@@ -356,7 +356,7 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
         }
     }
 
-    private IntentionPrediction ParseIntentionFromLLM(string agentId, string llmResponse)
+    private static IntentionPrediction ParseIntentionFromLLM(string agentId, string llmResponse)
     {
         try
         {
@@ -386,7 +386,7 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
         }
     }
 
-    private ActionPrediction ParseActionFromLLM(
+    private static ActionPrediction ParseActionFromLLM(
         string agentId,
         string llmResponse,
         IReadOnlyList<EmbodiedAction>? availableActions)
@@ -399,10 +399,6 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
             int actionIndex = root.TryGetProperty("action_index", out JsonElement indexElement)
                 ? indexElement.GetInt32()
                 : -1;
-
-            string actionName = root.TryGetProperty("action_name", out JsonElement nameElement)
-                ? nameElement.GetString() ?? "Unknown"
-                : "Unknown";
 
             double confidence = root.GetProperty("confidence").GetDouble();
             string reasoning = root.GetProperty("reasoning").GetString() ?? "";
@@ -426,7 +422,7 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
         }
     }
 
-    private double CalculateRecencyScore(DateTime lastInteraction)
+    private static double CalculateRecencyScore(DateTime lastInteraction)
     {
         TimeSpan timeSinceInteraction = DateTime.UtcNow - lastInteraction;
         double hoursSince = timeSinceInteraction.TotalHours;

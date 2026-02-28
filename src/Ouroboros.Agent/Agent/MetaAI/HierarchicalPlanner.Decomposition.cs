@@ -64,12 +64,9 @@ public sealed partial class HierarchicalPlanner
 
                     foreach (var decomposition in decompositions)
                     {
-                        foreach (var subTask in decomposition.SubTasks)
+                        foreach (var subTask in decomposition.SubTasks.Where(s => !visitedTasks.Contains(s)))
                         {
-                            if (!visitedTasks.Contains(subTask))
-                            {
-                                taskQueue.Enqueue(subTask);
-                            }
+                            taskQueue.Enqueue(subTask);
                         }
                     }
                 }
@@ -88,7 +85,7 @@ public sealed partial class HierarchicalPlanner
         }
     }
 
-    private async Task<List<ConcretePlan>> GenerateRefinementsAsync(
+    private static async Task<List<ConcretePlan>> GenerateRefinementsAsync(
         string goal,
         List<AbstractTask> abstractTasks,
         Dictionary<string, TaskDecomposition> taskNetwork,

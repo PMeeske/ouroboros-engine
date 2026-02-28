@@ -79,28 +79,28 @@ public sealed partial class GoalHierarchy
         return subgoals.Take(_config.MaxSubgoalsPerGoal).ToList();
     }
 
-    private bool IsComplexGoal(Goal goal)
+    private static bool IsComplexGoal(Goal goal)
     {
         // Goals with lower priority or instrumental type are less complex
         return goal.Priority > 0.7 || goal.Type == GoalType.Primary;
     }
 
-    private bool HasDirectConflict(Goal goal1, Goal goal2)
+    private static bool HasDirectConflict(Goal goal1, Goal goal2)
     {
         // Check constraint conflicts
         foreach (KeyValuePair<string, object> constraint1 in goal1.Constraints)
         {
-            if (goal2.Constraints.TryGetValue(constraint1.Key, out object? value2))
+            if (goal2.Constraints.TryGetValue(constraint1.Key, out object? value2) &&
+                !constraint1.Value.Equals(value2))
             {
-                if (!constraint1.Value.Equals(value2))
-                    return true;
+                return true;
             }
         }
 
         return false;
     }
 
-    private bool HasResourceConflict(Goal goal1, Goal goal2)
+    private static bool HasResourceConflict(Goal goal1, Goal goal2)
     {
         // Simple heuristic: high-priority goals may compete
         return goal1.Priority > 0.8 && goal2.Priority > 0.8 &&

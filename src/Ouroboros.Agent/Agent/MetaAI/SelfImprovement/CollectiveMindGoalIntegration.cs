@@ -62,12 +62,6 @@ public sealed class CollectiveMindGoalIntegration
     {
         ArgumentNullException.ThrowIfNull(goal);
 
-        // Convert to SubGoal to get routing metadata
-        var subGoal = Pipeline.Planning.SubGoalExtensions.ToSubGoal(goal);
-
-        // Route based on recommended tier
-        var tier = subGoal.PreferredTier;
-
         // Execute with CollectiveMind (it handles pathway selection internally)
         return await _mind.GenerateWithThinkingAsync(goal.Description, ct);
     }

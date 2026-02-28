@@ -409,7 +409,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
     /// <summary>
     /// Estimates complexity of a prompt.
     /// </summary>
-    private int EstimateComplexity(string prompt)
+    private static int EstimateComplexity(string prompt)
     {
         int length = prompt.Length;
         int sentences = prompt.Split('.', '!', '?').Length;

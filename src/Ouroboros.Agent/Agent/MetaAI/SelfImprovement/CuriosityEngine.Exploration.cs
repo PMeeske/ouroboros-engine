@@ -110,7 +110,7 @@ INFO_GAIN: [0-1]
 
     // Private helper methods
 
-    private double CalculateActionSimilarity(Plan plan1, Plan plan2)
+    private static double CalculateActionSimilarity(Plan plan1, Plan plan2)
     {
         if (plan1.Steps.Count == 0 || plan2.Steps.Count == 0)
             return 0.0;
@@ -145,7 +145,7 @@ INFO_GAIN: [0-1]
         return result.Value.ToList();
     }
 
-    private List<PlanStep> ParseExploratorySteps(string response)
+    private static List<PlanStep> ParseExploratorySteps(string response)
     {
         List<PlanStep> steps = new List<PlanStep>();
         string[] lines = response.Split('\n');

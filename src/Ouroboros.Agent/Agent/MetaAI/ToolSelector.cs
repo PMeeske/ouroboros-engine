@@ -105,7 +105,7 @@ public sealed class ToolSelector
     /// <summary>
     /// Parses the LLM response to extract tool selection and arguments.
     /// </summary>
-    private ToolSelection? ParseToolSelectionResponse(string response)
+    private static ToolSelection? ParseToolSelectionResponse(string response)
     {
         if (string.IsNullOrWhiteSpace(response))
         {

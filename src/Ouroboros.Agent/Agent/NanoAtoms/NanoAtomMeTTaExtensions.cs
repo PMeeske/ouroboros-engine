@@ -74,7 +74,6 @@ public static class NanoAtomMeTTaExtensions
         try
         {
             StringBuilder sb = new();
-            string fragmentId = $"frag_{fragment.Id:N}";
             string content = EscapeMeTTa(fragment.Content.Length > 200
                 ? fragment.Content[..200] + "..."
                 : fragment.Content);

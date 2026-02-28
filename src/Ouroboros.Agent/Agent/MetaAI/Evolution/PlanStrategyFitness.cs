@@ -61,7 +61,6 @@ public sealed class PlanStrategyFitness : IFitnessFunction<PlanStrategyGene>
             double planningDepth = strategyChromosome.GetGene("PlanningDepth")?.Weight ?? 0.5;
             double toolWeight = strategyChromosome.GetGene("ToolVsLLMWeight")?.Weight ?? 0.5;
             double verificationStrictness = strategyChromosome.GetGene("VerificationStrictness")?.Weight ?? 0.5;
-            double decompositionGranularity = strategyChromosome.GetGene("DecompositionGranularity")?.Weight ?? 0.5;
 
             // Evaluate success rate component
             double successRate = CalculateSuccessRate(experiences);
