@@ -193,10 +193,28 @@ public sealed partial class EpisodicMemoryEngine
             {
                 _logger?.LogInformation("Creating collection: {CollectionName}", _collectionName);
 
-                // Create collection with appropriate vector size (assuming 768 for typical embeddings)
+                // Probe actual embedding dimension from the model
+                uint vectorSize = 768;
+                try
+                {
+                    float[] probe = await _embeddingModel.CreateEmbeddingsAsync("probe", ct);
+                    vectorSize = (uint)probe.Length;
+                    _logger?.LogInformation(
+                        "Probed embedding dimension: {VectorSize} for collection {CollectionName}",
+                        vectorSize, _collectionName);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(
+                        ex,
+                        "Failed to probe embedding dimension, falling back to default size {DefaultSize}",
+                        vectorSize);
+                }
+
                 await _qdrantClient.CreateCollectionAsync(
                     _collectionName,
-                    new VectorParams { Size = 768, Distance = Distance.Cosine },
+                    new VectorParams { Size = vectorSize, Distance = Distance.Cosine },
                     cancellationToken: ct);
             }
 

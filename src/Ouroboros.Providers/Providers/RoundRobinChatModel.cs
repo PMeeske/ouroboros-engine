@@ -356,9 +356,10 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
             if (_providers.Count == 0)
                 return "No providers configured";
 
+            var activeCount = _providers.Count(p => p.Config.Enabled && p.Stats.IsHealthy);
             var lines = new List<string>
             {
-                $"Round-Robin Pool: {_providers.Count} providers ({ActiveProviderCount} healthy)",
+                $"Round-Robin Pool: {_providers.Count} providers ({activeCount} healthy)",
                 ""
             };
 

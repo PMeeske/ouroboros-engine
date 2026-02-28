@@ -193,6 +193,11 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
         var results = await Task.WhenAll(tasks);
         var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
 
+        if (contributions.Count == 0)
+        {
+            return Result<DebateRound, string>.Failure("No contributions received from challenge phase.");
+        }
+
         return Result<DebateRound, string>.Success(new DebateRound(
             Phase: DebatePhase.Challenge,
             RoundNumber: 1,
@@ -222,6 +227,11 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
 
         var results = await Task.WhenAll(tasks);
         var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
+
+        if (contributions.Count == 0)
+        {
+            return Result<DebateRound, string>.Failure("No contributions received from refinement phase.");
+        }
 
         return Result<DebateRound, string>.Success(new DebateRound(
             Phase: DebatePhase.Refinement,
