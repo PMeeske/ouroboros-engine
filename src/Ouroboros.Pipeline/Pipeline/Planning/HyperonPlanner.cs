@@ -4,8 +4,6 @@
 
 using Ouroboros.Abstractions;
 
-#pragma warning disable IDE0007 // Use implicit type
-
 namespace Ouroboros.Pipeline.Planning;
 
 using Ouroboros.Core.Hyperon;

@@ -262,10 +262,8 @@ public static class TapoServiceCollectionExtensions
         if (string.IsNullOrWhiteSpace(cameraName))
             throw new ArgumentException("Camera name is required", nameof(cameraName));
 
-        // Add base embodiment
-#pragma warning disable CS0618 // Type or member is obsolete
-        services.AddTapoEmbodiment(baseAddress);
-#pragma warning restore CS0618
+        // Add base embodiment using the non-obsolete provider API
+        services.AddTapoEmbodimentProvider(baseAddress);
 
         // Configure the camera with strong vision model as default
         var cameraConfig = new TapoCameraConfig(
