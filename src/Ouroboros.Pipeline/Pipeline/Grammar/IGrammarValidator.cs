@@ -84,4 +84,42 @@ public interface IGrammarValidator
     /// <param name="ct">Cancellation token.</param>
     /// <returns>True if the service is healthy.</returns>
     Task<bool> IsHealthyAsync(CancellationToken ct = default);
+
+    // --- Logic Transfer Object (LTO) Operations ---
+    // These methods accept MeTTa atoms as formal specifications and convert/validate/correct
+    // them via the Hyperon sidecar. MeTTa atoms are "Logic Transfer Objects" — they carry
+    // formally verifiable logic over the wire, not just data.
+
+    /// <summary>
+    /// Converts MeTTa grammar spec atoms to an ANTLR4 .g4 grammar string.
+    /// The atoms use MkGrammar, MkProduction, MkTerminal, and MkRegexTerminal constructors.
+    /// </summary>
+    /// <param name="mettaAtoms">MeTTa source containing grammar spec atoms.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Success flag, the generated .g4 grammar, and conversion notes.</returns>
+    Task<(bool Success, string GrammarG4, IReadOnlyList<string> Notes)> AtomsToGrammarAsync(
+        string mettaAtoms,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Validates MeTTa grammar spec atoms against structural rules in the AtomSpace.
+    /// </summary>
+    /// <param name="mettaAtoms">MeTTa source containing grammar spec atoms.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Validation result with issues and notes.</returns>
+    Task<(GrammarValidationResult Result, IReadOnlyList<string> ValidationNotes)> ValidateAtomsAsync(
+        string mettaAtoms,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Corrects MeTTa grammar spec atoms by applying symbolic rewriting rules.
+    /// </summary>
+    /// <param name="mettaAtoms">MeTTa source containing grammar spec atoms.</param>
+    /// <param name="knownIssues">Issues discovered during atom validation.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Success flag, corrected MeTTa atoms, corrections applied, and remaining issues.</returns>
+    Task<(bool Success, string CorrectedMeTTaAtoms, IReadOnlyList<string> CorrectionsApplied, IReadOnlyList<GrammarIssue> RemainingIssues)> CorrectAtomsAsync(
+        string mettaAtoms,
+        IReadOnlyList<GrammarIssue> knownIssues,
+        CancellationToken ct = default);
 }

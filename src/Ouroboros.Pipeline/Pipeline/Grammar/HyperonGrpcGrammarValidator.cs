@@ -181,6 +181,66 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
         }
     }
 
+    // --- Logic Transfer Object (LTO) Operations ---
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string GrammarG4, IReadOnlyList<string> Notes)> AtomsToGrammarAsync(
+        string mettaAtoms,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(mettaAtoms);
+
+        var request = new AtomsToGrammarRequest { MettaAtoms = mettaAtoms };
+        var response = await _client.AtomsToGrammarAsync(request, cancellationToken: ct);
+
+        return (response.Success, response.GrammarG4, response.Notes.ToList());
+    }
+
+    /// <inheritdoc/>
+    public async Task<(GrammarValidationResult Result, IReadOnlyList<string> ValidationNotes)> ValidateAtomsAsync(
+        string mettaAtoms,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(mettaAtoms);
+
+        var request = new ValidateAtomsRequest { MettaAtoms = mettaAtoms };
+        var response = await _client.ValidateAtomsAsync(request, cancellationToken: ct);
+
+        var issues = response.Issues.Select(MapIssue).ToList();
+        var result = new GrammarValidationResult(response.IsValid, issues);
+
+        return (result, response.ValidationNotes.ToList());
+    }
+
+    /// <inheritdoc/>
+    public async Task<(bool Success, string CorrectedMeTTaAtoms, IReadOnlyList<string> CorrectionsApplied, IReadOnlyList<GrammarIssue> RemainingIssues)> CorrectAtomsAsync(
+        string mettaAtoms,
+        IReadOnlyList<GrammarIssue> knownIssues,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(mettaAtoms);
+
+        var request = new CorrectAtomsRequest { MettaAtoms = mettaAtoms };
+        foreach (var issue in knownIssues)
+        {
+            request.KnownIssues.Add(new Grpc.GrammarIssue
+            {
+                Severity = MapSeverityToGrpc(issue.Severity),
+                RuleName = issue.RuleName,
+                Description = issue.Description,
+                Kind = MapKindToGrpc(issue.Kind),
+            });
+        }
+
+        var response = await _client.CorrectAtomsAsync(request, cancellationToken: ct);
+
+        return (
+            response.Success,
+            response.CorrectedMettaAtoms,
+            response.CorrectionsApplied.ToList(),
+            response.RemainingIssues.Select(MapIssue).ToList());
+    }
+
     /// <inheritdoc/>
     public void Dispose()
     {

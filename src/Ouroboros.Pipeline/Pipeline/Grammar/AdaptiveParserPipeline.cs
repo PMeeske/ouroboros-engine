@@ -11,20 +11,21 @@ using LangChain.Providers;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Orchestrates the full grammar evolution pipeline: LLM generation → MeTTa validation
-/// → ANTLR compilation → parse attempt → feedback loop on failure.
+/// Orchestrates the full grammar evolution pipeline using Logic Transfer Objects (LTOs):
+/// LLM → MeTTa spec atoms → wire → Hyperon validates+converts → .g4 → ANTLR+Roslyn → working parser.
 /// </summary>
 /// <remarks>
-/// This is the main entry point for the dynamic parser system. Given a natural language
-/// description and sample input, it produces a working parser through an iterative
-/// refinement process:
+/// This is the main entry point for the dynamic parser system. The LLM generates formal
+/// MeTTa atom specifications (Logic Transfer Objects) rather than raw .g4 text. These atoms
+/// carry verifiable logic over the gRPC wire to the Hyperon sidecar, which validates,
+/// corrects, and deterministically converts them to ANTLR grammars.
 /// <list type="number">
 /// <item>Check for a previously proven grammar matching the description.</item>
-/// <item>If none found, generate candidates via Ollama (LLM).</item>
-/// <item>Validate and correct grammar through MeTTa (Hyperon sidecar).</item>
-/// <item>Compile grammar via ANTLR + Roslyn.</item>
+/// <item>If none found, instruct LLM to generate MeTTa grammar spec atoms.</item>
+/// <item>Send atoms over wire → ValidateAtoms → CorrectAtoms → AtomsToGrammar.</item>
+/// <item>Compile resulting .g4 via ANTLR + Roslyn.</item>
 /// <item>Attempt to parse the input.</item>
-/// <item>On parse failure, feed error back to MeTTa for grammar refinement.</item>
+/// <item>On parse failure, feed error back as atoms for refinement.</item>
 /// <item>Repeat until success or max attempts exhausted.</item>
 /// </list>
 /// </remarks>
@@ -95,6 +96,7 @@ public sealed class AdaptiveParserPipeline : IDisposable
             }
         }
 
+        string? currentMeTTaAtoms = null;
         string? currentGrammar = null;
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++)
@@ -107,32 +109,57 @@ public sealed class AdaptiveParserPipeline : IDisposable
                 maxAttempts,
                 description);
 
-            // Step 2: Generate grammar via LLM
-            if (currentGrammar == null)
+            // Step 2: Generate MeTTa grammar spec atoms via LLM (Logic Transfer Objects)
+            if (currentMeTTaAtoms == null)
             {
-                currentGrammar = await GenerateGrammarAsync(description, sampleInput, ct);
+                currentMeTTaAtoms = await GenerateMeTTaAtomsAsync(description, sampleInput, ct);
             }
 
-            // Step 3: Validate via Hyperon sidecar
-            var validation = await _validator.ValidateAsync(currentGrammar, ct);
-            if (!validation.IsValid)
+            // Step 3: Validate atoms via Hyperon sidecar
+            var (atomValidation, validationNotes) = await _validator.ValidateAtomsAsync(currentMeTTaAtoms, ct);
+            foreach (var note in validationNotes)
+            {
+                _logger?.LogDebug("Atom validation note: {Note}", note);
+            }
+
+            if (!atomValidation.IsValid)
             {
                 _logger?.LogInformation(
-                    "Grammar has {IssueCount} issue(s), attempting correction",
-                    validation.Issues.Count);
+                    "Atom spec has {IssueCount} issue(s), attempting correction",
+                    atomValidation.Issues.Count);
 
-                var correction = await _validator.CorrectAsync(currentGrammar, validation.Issues, ct);
-                if (correction.Success)
+                var (corrSuccess, correctedAtoms, corrections, _) =
+                    await _validator.CorrectAtomsAsync(currentMeTTaAtoms, atomValidation.Issues, ct);
+
+                if (corrSuccess)
                 {
-                    currentGrammar = correction.CorrectedGrammarG4;
-                    foreach (var c in correction.CorrectionsApplied)
+                    currentMeTTaAtoms = correctedAtoms;
+                    foreach (var c in corrections)
                     {
-                        _logger?.LogInformation("Applied correction: {Correction}", c);
+                        _logger?.LogInformation("Atom correction: {Correction}", c);
                     }
                 }
             }
 
-            // Step 4: Compile
+            // Step 3b: Convert validated atoms to .g4 grammar over the wire
+            var (convertSuccess, g4Grammar, convertNotes) =
+                await _validator.AtomsToGrammarAsync(currentMeTTaAtoms, ct);
+
+            foreach (var note in convertNotes)
+            {
+                _logger?.LogDebug("Atoms→.g4 note: {Note}", note);
+            }
+
+            if (!convertSuccess || string.IsNullOrWhiteSpace(g4Grammar))
+            {
+                _logger?.LogWarning("Atom-to-grammar conversion failed, regenerating atoms");
+                currentMeTTaAtoms = null;
+                continue;
+            }
+
+            currentGrammar = g4Grammar;
+
+            // Step 4: Compile .g4 via ANTLR + Roslyn
             CompiledGrammar compiled;
             try
             {
@@ -142,9 +169,10 @@ public sealed class AdaptiveParserPipeline : IDisposable
             {
                 _logger?.LogWarning(
                     ex,
-                    "Compilation failed at stage {Stage}, regenerating grammar",
+                    "Compilation failed at stage {Stage}, regenerating atoms",
                     ex.Stage);
-                currentGrammar = null; // Force regeneration
+                currentMeTTaAtoms = null;
+                currentGrammar = null;
                 continue;
             }
 
@@ -160,7 +188,7 @@ public sealed class AdaptiveParserPipeline : IDisposable
 
                     _compilerFactory.ReleaseGrammar(compiled);
 
-                    // Feed failure back to MeTTa for refinement
+                    // Feed failure back to MeTTa for .g4-level refinement
                     var refinement = await _validator.RefineAsync(
                         currentGrammar,
                         parseResult.Failure!,
@@ -170,10 +198,13 @@ public sealed class AdaptiveParserPipeline : IDisposable
                     {
                         currentGrammar = refinement.RefinedGrammarG4;
                         _logger?.LogInformation("Refinement: {Explanation}", refinement.Explanation);
+                        // Clear atoms to force re-generation with refined feedback
+                        currentMeTTaAtoms = null;
                     }
                     else
                     {
-                        currentGrammar = null; // Force full regeneration
+                        currentMeTTaAtoms = null;
+                        currentGrammar = null;
                     }
 
                     continue;
@@ -207,34 +238,40 @@ public sealed class AdaptiveParserPipeline : IDisposable
         _compilerFactory.Dispose();
     }
 
-    private async Task<string> GenerateGrammarAsync(
+    private async Task<string> GenerateMeTTaAtomsAsync(
         string description,
         string? sampleInput,
         CancellationToken ct)
     {
-        string prompt = BuildGenerationPrompt(description, sampleInput);
+        string prompt = BuildMeTTaGenerationPrompt(description, sampleInput);
 
         var response = await _llm.GenerateAsync(prompt, cancellationToken: ct);
         string generated = response.ToString();
 
-        // Extract .g4 content from LLM response (may be wrapped in markdown code blocks)
-        return ExtractG4FromResponse(generated);
+        return ExtractMeTTaFromResponse(generated);
     }
 
-    private static string BuildGenerationPrompt(string description, string? sampleInput)
+    private static string BuildMeTTaGenerationPrompt(string description, string? sampleInput)
     {
         var prompt = $"""
-            Generate a complete ANTLR4 grammar (.g4 format) for the following language:
+            Generate a MeTTa grammar specification for the following language:
 
             {description}
 
-            Requirements:
-            - The grammar must be a single, complete .g4 file
-            - Start with "grammar <Name>;" declaration
-            - Include both parser rules (lowercase) and lexer rules (UPPERCASE)
-            - Handle whitespace appropriately (typically skip WS)
-            - Avoid left recursion where possible
-            - Use clear, descriptive rule names
+            You must output MeTTa atoms using these constructors:
+
+            - (MkTerminal "NAME") — for literal token definitions
+            - (MkRegexTerminal "NAME" "regex-pattern") — for regex-based token definitions
+            - (MkProduction "ruleName" (Cons (Cons "sym1" (Cons "sym2" Nil)) (Cons (Cons "sym3" Nil) Nil))) — parser rule with alternatives
+              Each alternative is a Cons-list of symbol names. Multiple alternatives are a Cons-list of alternatives.
+            - (MkGrammar "GrammarName" "startRule" (Cons prod1 (Cons prod2 Nil))) — wraps all productions
+
+            Rules:
+            - Parser rule names must be lowercase (e.g., "expr", "statement")
+            - Terminal/lexer rule names must be UPPERCASE (e.g., "NUMBER", "PLUS")
+            - The start rule is the first parser rule
+            - Avoid left recursion: use "exprPrime" patterns instead
+            - Include all necessary terminals for the language
             """;
 
         if (!string.IsNullOrEmpty(sampleInput))
@@ -248,17 +285,31 @@ public sealed class AdaptiveParserPipeline : IDisposable
                 """;
         }
 
-        prompt += "\n\nRespond with ONLY the .g4 grammar content, no explanations.";
+        prompt += """
+
+            Example for a simple arithmetic language:
+            ```metta
+            (MkRegexTerminal "NUMBER" "[0-9]+")
+            (MkTerminal "PLUS")
+            (MkTerminal "STAR")
+            (MkProduction "expr" (Cons (Cons "term" (Cons "exprPrime" Nil)) Nil))
+            (MkProduction "exprPrime" (Cons (Cons "PLUS" (Cons "term" (Cons "exprPrime" Nil))) (Cons Nil Nil)))
+            (MkProduction "term" (Cons (Cons "NUMBER" Nil) Nil))
+            (MkGrammar "Arithmetic" "expr" (Cons (MkProduction "expr" ...) ...))
+            ```
+
+            Respond with ONLY the MeTTa atoms, no explanations.
+            """;
 
         return prompt;
     }
 
-    private static string ExtractG4FromResponse(string response)
+    private static string ExtractMeTTaFromResponse(string response)
     {
         // Try to extract from markdown code block
         var codeBlockMatch = System.Text.RegularExpressions.Regex.Match(
             response,
-            @"```(?:antlr|g4|antlr4)?\s*\n(.*?)```",
+            @"```(?:metta|lisp|scheme)?\s*\n(.*?)```",
             System.Text.RegularExpressions.RegexOptions.Singleline);
 
         if (codeBlockMatch.Success)
@@ -266,18 +317,17 @@ public sealed class AdaptiveParserPipeline : IDisposable
             return codeBlockMatch.Groups[1].Value.Trim();
         }
 
-        // Try to find grammar declaration directly
-        var grammarMatch = System.Text.RegularExpressions.Regex.Match(
-            response,
-            @"(grammar\s+\w+\s*;.*)",
-            System.Text.RegularExpressions.RegexOptions.Singleline);
+        // Try to find MeTTa atoms directly (lines starting with '(')
+        var atomLines = response.Split('\n')
+            .Where(l => l.TrimStart().StartsWith('('))
+            .ToList();
 
-        if (grammarMatch.Success)
+        if (atomLines.Count > 0)
         {
-            return grammarMatch.Groups[1].Value.Trim();
+            return string.Join("\n", atomLines).Trim();
         }
 
-        // Return as-is, hope for the best
+        // Return as-is
         return response.Trim();
     }
 
