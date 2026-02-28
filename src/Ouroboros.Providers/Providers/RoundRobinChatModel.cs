@@ -235,7 +235,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
             }
         }
 
-        throw new AggregateException($"All {retries} providers failed", lastException!);
+        throw new InvalidOperationException($"All {retries} providers failed", lastException!);
     }
 
     /// <inheritdoc/>

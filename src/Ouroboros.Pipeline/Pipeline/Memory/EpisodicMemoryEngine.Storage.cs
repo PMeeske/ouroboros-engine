@@ -425,6 +425,16 @@ public sealed partial class EpisodicMemoryEngine
 
         await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct);
 
+        // Delete source episodes that were consolidated into the meta-episode
+        var idsToDelete = episodes
+            .Where(e => e.Id != Guid.Empty)
+            .Select(e => new PointId { Uuid = e.Id.ToString() })
+            .ToList();
+        if (idsToDelete.Count > 0)
+        {
+            await _qdrantClient.DeleteAsync(_collectionName, idsToDelete, cancellationToken: ct);
+        }
+
         _logger?.LogInformation(
             "Stored abstracted meta-episode {MetaId} with {PatternCount} patterns from {EpisodeCount} source episodes",
             metaEpisodeId,

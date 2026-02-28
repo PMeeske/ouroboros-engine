@@ -351,14 +351,23 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
                 },
             };
 
-            var results = await _qdrantClient.ScrollAsync(
-                _learningsCollectionName,
-                filter: filter,
-                limit: DefaultScrollLimit,
-                cancellationToken: ct);
+            var allPoints = new List<RetrievedPoint>();
+            PointId? nextOffset = null;
+            do
+            {
+                var response = await _qdrantClient.ScrollAsync(
+                    _learningsCollectionName,
+                    filter: filter,
+                    limit: DefaultScrollLimit,
+                    offset: nextOffset,
+                    cancellationToken: ct);
+                allPoints.AddRange(response.Result);
+                nextOffset = response.Result.Count == DefaultScrollLimit ? response.NextPageOffset : null;
+            }
+            while (nextOffset != null);
 
             var learnings = new List<Learning>();
-            foreach (var point in results.Result)
+            foreach (var point in allPoints)
             {
                 if (point.Payload.TryGetValue("learning_json", out var jsonValue))
                 {
