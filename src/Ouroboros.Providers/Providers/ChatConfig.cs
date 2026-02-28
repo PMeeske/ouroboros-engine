@@ -57,7 +57,7 @@ public static class ChatConfig
         [ChatEndpointType.Replicate] = "https://api.replicate.com",
         [ChatEndpointType.HuggingFace] = "https://api-inference.huggingface.co",
         [ChatEndpointType.GitHubModels] = "https://models.inference.ai.azure.com",
-        [ChatEndpointType.OllamaLocal] = DefaultEndpoints.Ollama,
+        [ChatEndpointType.OllamaLocal] = Configuration.DefaultEndpoints.Ollama,
     };
 
     /// <summary>

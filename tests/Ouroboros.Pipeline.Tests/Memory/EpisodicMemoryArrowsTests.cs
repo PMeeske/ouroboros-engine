@@ -33,9 +33,9 @@ public class EpisodicMemoryArrowsTests
         return new PipelineBranch("test", store, dataSource);
     }
 
-    private static Ouroboros.Pipeline.Memory.ExecutionContext CreateTestContext()
+    private static Ouroboros.Pipeline.Memory.PipelineExecutionContext CreateTestContext()
     {
-        return new Ouroboros.Pipeline.Memory.ExecutionContext(
+        return new Ouroboros.Pipeline.Memory.PipelineExecutionContext(
             "Test goal",
             ImmutableDictionary<string, object>.Empty);
     }

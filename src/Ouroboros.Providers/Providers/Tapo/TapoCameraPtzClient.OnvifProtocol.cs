@@ -5,6 +5,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace Ouroboros.Providers.Tapo;
 

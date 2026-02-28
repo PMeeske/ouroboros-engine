@@ -73,7 +73,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
         _embeddingFunc = embeddingFunc ?? throw new ArgumentNullException(nameof(embeddingFunc));
         _snapshotCollectionName = "network_state_snapshots";
         _learningsCollectionName = "network_learnings";
-        var normalizedEndpoint = NormalizeEndpoint(qdrantEndpoint, DefaultEndpoints.QdrantGrpc);
+        var normalizedEndpoint = NormalizeEndpoint(qdrantEndpoint, Ouroboros.Core.Configuration.DefaultEndpoints.QdrantGrpc);
         var endpointUri = new Uri(normalizedEndpoint, UriKind.Absolute);
         var host = endpointUri.Host;
         var port = endpointUri.Port > 0 ? endpointUri.Port : 6334;

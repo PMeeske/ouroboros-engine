@@ -1,4 +1,4 @@
-﻿using ExecutionContext = Ouroboros.Pipeline.Memory.ExecutionContext;
+﻿using ExecutionContext = Ouroboros.Pipeline.Memory.PipelineExecutionContext;
 
 namespace Ouroboros.Tests.Pipeline.Memory;
 
