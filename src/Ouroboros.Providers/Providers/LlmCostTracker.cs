@@ -91,7 +91,7 @@ public sealed class LlmCostTracker
 
     // Global tracker for cross-session statistics
     private static readonly LlmCostTracker GlobalTracker = new("*global*", "*all*");
-    private static readonly Dictionary<string, LlmCostTracker> ProviderTrackers = new();
+    private static readonly ConcurrentDictionary<string, LlmCostTracker> ProviderTrackers = new();
 
     public LlmCostTracker(string model, string? provider = null)
     {

@@ -11,104 +11,8 @@ namespace Ouroboros.Agent.ConsolidatedMind;
 /// Analyzes tasks to determine optimal routing within the ConsolidatedMind.
 /// Uses pattern matching and heuristics for fast, local analysis.
 /// </summary>
-public static class TaskAnalyzer
+public static partial class TaskAnalyzer
 {
-    // Pattern definitions for task classification
-    private static readonly Dictionary<SpecializedRole, (Regex[] Patterns, string[] Keywords)> RolePatterns = new()
-    {
-        [SpecializedRole.CodeExpert] = (
-            new[]
-            {
-                new Regex(@"```[\w]*\s*[\s\S]*?```", RegexOptions.Compiled),
-                new Regex(@"\b(def|class|function|const|let|var|import|export|public|private|async|await)\s+\w+", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(implement|code|program|debug|fix|refactor|optimize)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(neural|embedding|vector|tensor|model)\s*(architecture|layer|network)", RegexOptions.Compiled | RegexOptions.IgnoreCase)
-            },
-            new[] { "code", "implement", "function", "class", "method", "debug", "fix", "refactor", "programming", "syntax", "compile", "api", "library", "bug", "error", "exception", "neural", "embedding", "vector", "tensor", "architecture", "pipeline", "codebase" }
-        ),
-
-        [SpecializedRole.DeepReasoning] = (
-            new[]
-            {
-                new Regex(@"\b(why|how come|explain why|reason)\b.*\?", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(analyze|evaluate|assess|consider)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(frequency|spectrum|harmonic|waveform|acoustic)\s*(analysis|pattern)", RegexOptions.Compiled | RegexOptions.IgnoreCase)
-            },
-            new[] { "reason", "why", "because", "therefore", "analyze", "evaluate", "explain", "logic", "think", "understand", "deduce", "infer", "consequence", "implication", "cognitive", "consciousness", "metacognition", "self-aware", "introspect" }
-        ),
-
-        [SpecializedRole.Mathematical] = (
-            new[]
-            {
-                new Regex(@"[\d]+\s*[\+\-\*\/\^]\s*[\d]+", RegexOptions.Compiled),
-                new Regex(@"\b(calculate|compute|solve|equation|formula)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\$.*\$", RegexOptions.Compiled), // LaTeX math
-                new Regex(@"\b(\d+)\s*(hz|khz|mhz|ghz|db|decibel)", RegexOptions.Compiled | RegexOptions.IgnoreCase), // Frequency/audio measurements
-                new Regex(@"\b(dimension|vector|matrix|768|384|1536)\s*(dimension|embed)?", RegexOptions.Compiled | RegexOptions.IgnoreCase)
-            },
-            new[] { "calculate", "compute", "math", "equation", "formula", "solve", "proof", "theorem", "algebra", "calculus", "statistics", "probability", "derivative", "integral", "frequency", "hertz", "hz", "decibel", "db", "spectrum", "fourier", "transform", "dimension" }
-        ),
-
-        [SpecializedRole.Creative] = (
-            new[]
-            {
-                new Regex(@"\b(write|create|generate|compose)\s+(a|an|the)?\s*(story|poem|song|essay|article)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(imagine|creative|brainstorm)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(soundscape|ambient|atmosphere|mood)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase)
-            },
-            new[] { "create", "write", "story", "poem", "creative", "imagine", "brainstorm", "ideate", "generate", "compose", "narrative", "fiction", "artistic", "soundscape", "ambient", "atmosphere", "mood", "aesthetic" }
-        ),
-
-        [SpecializedRole.Planner] = (
-            new[]
-            {
-                new Regex(@"\b(plan|steps|how to|strategy)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(break down|decompose|outline)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(improve|enhance|upgrade|level up|optimize)\s*(my|the|your)?", RegexOptions.Compiled | RegexOptions.IgnoreCase)
-            },
-            new[] { "plan", "steps", "strategy", "approach", "decompose", "break down", "outline", "roadmap", "schedule", "procedure", "workflow", "architecture", "design", "improve", "enhance", "upgrade", "level up", "optimize", "better" }
-        ),
-
-        [SpecializedRole.Synthesizer] = (
-            new[]
-            {
-                new Regex(@"\b(summarize|summary|tldr|brief)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(key points|main ideas|overview)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(remember|recall|memory|memories)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase)
-            },
-            new[] { "summarize", "summary", "brief", "tldr", "overview", "condense", "extract", "key points", "main ideas", "essence", "remember", "recall", "memory", "memories", "context", "history" }
-        ),
-
-        [SpecializedRole.Analyst] = (
-            new[]
-            {
-                new Regex(@"\b(analyze|analyse|critique|review|evaluate)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(pros and cons|strengths and weaknesses)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(acoustic|audio|sound|signal)\s*(analysis|processing|pattern)", RegexOptions.Compiled | RegexOptions.IgnoreCase)
-            },
-            new[] { "analyze", "critique", "review", "evaluate", "assess", "examine", "pros", "cons", "strengths", "weaknesses", "comparison", "acoustic", "audio", "sound", "signal", "urban", "noise", "pattern" }
-        ),
-
-        [SpecializedRole.Verifier] = (
-            new[]
-            {
-                new Regex(@"\b(verify|check|validate|confirm)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(is it true|fact check|correct)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase)
-            },
-            new[] { "verify", "check", "validate", "confirm", "fact-check", "correct", "accurate", "true", "false" }
-        ),
-
-        [SpecializedRole.MetaCognitive] = (
-            new[]
-            {
-                new Regex(@"\b(self|yourself|your own)\s*(improve|enhance|modify|change)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(capabilities|abilities|features)\b", RegexOptions.Compiled | RegexOptions.IgnoreCase),
-                new Regex(@"\b(memory|collection|vector\s*store)\s*(system|database)?", RegexOptions.Compiled | RegexOptions.IgnoreCase)
-            },
-            new[] { "self-improve", "capabilities", "abilities", "features", "memory", "collection", "vector store", "neural", "model", "personality", "behavior", "mode", "configuration", "settings" }
-        )
-    };
-
     // Complexity indicators
     private static readonly string[] HighComplexityIndicators = new[]
     {
@@ -120,6 +24,200 @@ public static class TaskAnalyzer
     {
         "simple", "quick", "brief", "short", "basic", "easy", "straightforward"
     };
+
+    // Pattern definitions for task classification - built lazily using [GeneratedRegex] methods
+    private static readonly Dictionary<SpecializedRole, (Func<string, bool>[] Patterns, string[] Keywords)> RolePatterns = new()
+    {
+        [SpecializedRole.CodeExpert] = (
+            new Func<string, bool>[]
+            {
+                s => CodeBlockPattern().IsMatch(s),
+                s => CodeKeywordsPattern().IsMatch(s),
+                s => CodeTaskPattern().IsMatch(s),
+                s => NeuralArchPattern().IsMatch(s),
+            },
+            new[] { "code", "implement", "function", "class", "method", "debug", "fix", "refactor", "programming", "syntax", "compile", "api", "library", "bug", "error", "exception", "neural", "embedding", "vector", "tensor", "architecture", "pipeline", "codebase" }
+        ),
+
+        [SpecializedRole.DeepReasoning] = (
+            new Func<string, bool>[]
+            {
+                s => WhyQuestionPattern().IsMatch(s),
+                s => AnalyzePattern().IsMatch(s),
+                s => FrequencyAnalysisPattern().IsMatch(s),
+            },
+            new[] { "reason", "why", "because", "therefore", "analyze", "evaluate", "explain", "logic", "think", "understand", "deduce", "infer", "consequence", "implication", "cognitive", "consciousness", "metacognition", "self-aware", "introspect" }
+        ),
+
+        [SpecializedRole.Mathematical] = (
+            new Func<string, bool>[]
+            {
+                s => MathExpressionPattern().IsMatch(s),
+                s => MathKeywordsPattern().IsMatch(s),
+                s => LatexMathPattern().IsMatch(s),
+                s => FrequencyMeasurePattern().IsMatch(s),
+                s => DimensionPattern().IsMatch(s),
+            },
+            new[] { "calculate", "compute", "math", "equation", "formula", "solve", "proof", "theorem", "algebra", "calculus", "statistics", "probability", "derivative", "integral", "frequency", "hertz", "hz", "decibel", "db", "spectrum", "fourier", "transform", "dimension" }
+        ),
+
+        [SpecializedRole.Creative] = (
+            new Func<string, bool>[]
+            {
+                s => CreativeWritePattern().IsMatch(s),
+                s => ImaginativePattern().IsMatch(s),
+                s => SoundscapePattern().IsMatch(s),
+            },
+            new[] { "create", "write", "story", "poem", "creative", "imagine", "brainstorm", "ideate", "generate", "compose", "narrative", "fiction", "artistic", "soundscape", "ambient", "atmosphere", "mood", "aesthetic" }
+        ),
+
+        [SpecializedRole.Planner] = (
+            new Func<string, bool>[]
+            {
+                s => PlanPattern().IsMatch(s),
+                s => DecomposePattern().IsMatch(s),
+                s => ImprovePattern().IsMatch(s),
+            },
+            new[] { "plan", "steps", "strategy", "approach", "decompose", "break down", "outline", "roadmap", "schedule", "procedure", "workflow", "architecture", "design", "improve", "enhance", "upgrade", "level up", "optimize", "better" }
+        ),
+
+        [SpecializedRole.Synthesizer] = (
+            new Func<string, bool>[]
+            {
+                s => SummarizePattern().IsMatch(s),
+                s => KeyPointsPattern().IsMatch(s),
+                s => MemoryPattern().IsMatch(s),
+            },
+            new[] { "summarize", "summary", "brief", "tldr", "overview", "condense", "extract", "key points", "main ideas", "essence", "remember", "recall", "memory", "memories", "context", "history" }
+        ),
+
+        [SpecializedRole.Analyst] = (
+            new Func<string, bool>[]
+            {
+                s => AnalysePattern().IsMatch(s),
+                s => ProsConsPattern().IsMatch(s),
+                s => AudioAnalysisPattern().IsMatch(s),
+            },
+            new[] { "analyze", "critique", "review", "evaluate", "assess", "examine", "pros", "cons", "strengths", "weaknesses", "comparison", "acoustic", "audio", "sound", "signal", "urban", "noise", "pattern" }
+        ),
+
+        [SpecializedRole.Verifier] = (
+            new Func<string, bool>[]
+            {
+                s => VerifyPattern().IsMatch(s),
+                s => FactCheckPattern().IsMatch(s),
+            },
+            new[] { "verify", "check", "validate", "confirm", "fact-check", "correct", "accurate", "true", "false" }
+        ),
+
+        [SpecializedRole.MetaCognitive] = (
+            new Func<string, bool>[]
+            {
+                s => SelfImprovePattern().IsMatch(s),
+                s => CapabilitiesPattern().IsMatch(s),
+                s => VectorStorePattern().IsMatch(s),
+            },
+            new[] { "self-improve", "capabilities", "abilities", "features", "memory", "collection", "vector store", "neural", "model", "personality", "behavior", "mode", "configuration", "settings" }
+        )
+    };
+
+    // ================================================================
+    // [GeneratedRegex] partial methods
+    // ================================================================
+
+    [GeneratedRegex(@"```[\w]*\s*[\s\S]*?```")]
+    private static partial Regex CodeBlockPattern();
+
+    [GeneratedRegex(@"\b(def|class|function|const|let|var|import|export|public|private|async|await)\s+\w+", RegexOptions.IgnoreCase)]
+    private static partial Regex CodeKeywordsPattern();
+
+    [GeneratedRegex(@"\b(implement|code|program|debug|fix|refactor|optimize)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex CodeTaskPattern();
+
+    [GeneratedRegex(@"\b(neural|embedding|vector|tensor|model)\s*(architecture|layer|network)", RegexOptions.IgnoreCase)]
+    private static partial Regex NeuralArchPattern();
+
+    [GeneratedRegex(@"\b(why|how come|explain why|reason)\b.*\?", RegexOptions.IgnoreCase)]
+    private static partial Regex WhyQuestionPattern();
+
+    [GeneratedRegex(@"\b(analyze|evaluate|assess|consider)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex AnalyzePattern();
+
+    [GeneratedRegex(@"\b(frequency|spectrum|harmonic|waveform|acoustic)\s*(analysis|pattern)", RegexOptions.IgnoreCase)]
+    private static partial Regex FrequencyAnalysisPattern();
+
+    [GeneratedRegex(@"[\d]+\s*[\+\-\*\/\^]\s*[\d]+")]
+    private static partial Regex MathExpressionPattern();
+
+    [GeneratedRegex(@"\b(calculate|compute|solve|equation|formula)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex MathKeywordsPattern();
+
+    [GeneratedRegex(@"\$.*\$")]
+    private static partial Regex LatexMathPattern();
+
+    [GeneratedRegex(@"\b(\d+)\s*(hz|khz|mhz|ghz|db|decibel)", RegexOptions.IgnoreCase)]
+    private static partial Regex FrequencyMeasurePattern();
+
+    [GeneratedRegex(@"\b(dimension|vector|matrix|768|384|1536)\s*(dimension|embed)?", RegexOptions.IgnoreCase)]
+    private static partial Regex DimensionPattern();
+
+    [GeneratedRegex(@"\b(write|create|generate|compose)\s+(a|an|the)?\s*(story|poem|song|essay|article)", RegexOptions.IgnoreCase)]
+    private static partial Regex CreativeWritePattern();
+
+    [GeneratedRegex(@"\b(imagine|creative|brainstorm)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex ImaginativePattern();
+
+    [GeneratedRegex(@"\b(soundscape|ambient|atmosphere|mood)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SoundscapePattern();
+
+    [GeneratedRegex(@"\b(plan|steps|how to|strategy)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex PlanPattern();
+
+    [GeneratedRegex(@"\b(break down|decompose|outline)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex DecomposePattern();
+
+    [GeneratedRegex(@"\b(improve|enhance|upgrade|level up|optimize)\s*(my|the|your)?", RegexOptions.IgnoreCase)]
+    private static partial Regex ImprovePattern();
+
+    [GeneratedRegex(@"\b(summarize|summary|tldr|brief)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SummarizePattern();
+
+    [GeneratedRegex(@"\b(key points|main ideas|overview)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex KeyPointsPattern();
+
+    [GeneratedRegex(@"\b(remember|recall|memory|memories)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex MemoryPattern();
+
+    [GeneratedRegex(@"\b(analyze|analyse|critique|review|evaluate)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex AnalysePattern();
+
+    [GeneratedRegex(@"\b(pros and cons|strengths and weaknesses)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex ProsConsPattern();
+
+    [GeneratedRegex(@"\b(acoustic|audio|sound|signal)\s*(analysis|processing|pattern)", RegexOptions.IgnoreCase)]
+    private static partial Regex AudioAnalysisPattern();
+
+    [GeneratedRegex(@"\b(verify|check|validate|confirm)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex VerifyPattern();
+
+    [GeneratedRegex(@"\b(is it true|fact check|correct)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex FactCheckPattern();
+
+    [GeneratedRegex(@"\b(self|yourself|your own)\s*(improve|enhance|modify|change)", RegexOptions.IgnoreCase)]
+    private static partial Regex SelfImprovePattern();
+
+    [GeneratedRegex(@"\b(capabilities|abilities|features)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex CapabilitiesPattern();
+
+    [GeneratedRegex(@"\b(memory|collection|vector\s*store)\s*(system|database)?", RegexOptions.IgnoreCase)]
+    private static partial Regex VectorStorePattern();
+
+    [GeneratedRegex(@"\b(first|second|third|then|next|finally)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex MultiStepPattern();
+
+    // ================================================================
+    // Public API
+    // ================================================================
 
     /// <summary>
     /// Analyzes a prompt to determine optimal routing.
@@ -143,7 +241,6 @@ public static class TaskAnalyzer
         string lowerPrompt = prompt.ToLowerInvariant();
         int promptLength = prompt.Length;
 
-        // Score each role
         var roleScores = new Dictionary<SpecializedRole, double>();
         var matchedCapabilities = new HashSet<string>();
 
@@ -151,16 +248,14 @@ public static class TaskAnalyzer
         {
             double score = 0.0;
 
-            // Check patterns (higher weight)
             foreach (var pattern in patterns)
             {
-                if (pattern.IsMatch(prompt))
+                if (pattern(prompt))
                 {
                     score += 2.0;
                 }
             }
 
-            // Check keywords
             foreach (var keyword in keywords)
             {
                 if (lowerPrompt.Contains(keyword))
@@ -176,13 +271,11 @@ public static class TaskAnalyzer
             }
         }
 
-        // Determine primary role
         SpecializedRole primaryRole;
         double confidence;
 
         if (roleScores.Count == 0)
         {
-            // No specific patterns matched - use QuickResponse for short, DeepReasoning for long
             primaryRole = promptLength < 200 ? SpecializedRole.QuickResponse : SpecializedRole.DeepReasoning;
             confidence = 0.5;
         }
@@ -195,7 +288,6 @@ public static class TaskAnalyzer
             confidence = Math.Min(1.0, maxScore / Math.Max(totalScore * 0.5, 1.0));
         }
 
-        // Determine secondary roles
         var secondaryRoles = roleScores
             .Where(kvp => kvp.Key != primaryRole && kvp.Value > 1.0)
             .OrderByDescending(kvp => kvp.Value)
@@ -203,16 +295,13 @@ public static class TaskAnalyzer
             .Select(kvp => kvp.Key)
             .ToArray();
 
-        // Estimate complexity
         double complexity = EstimateComplexity(prompt, lowerPrompt, promptLength);
 
-        // Determine if thinking mode is needed
         bool requiresThinking = complexity > 0.6 ||
             primaryRole == SpecializedRole.DeepReasoning ||
             primaryRole == SpecializedRole.Mathematical ||
             primaryRole == SpecializedRole.Planner;
 
-        // Determine if verification is needed
         bool requiresVerification = complexity > 0.7 ||
             primaryRole == SpecializedRole.CodeExpert ||
             primaryRole == SpecializedRole.Mathematical ||
@@ -237,10 +326,8 @@ public static class TaskAnalyzer
     {
         double complexity = 0.0;
 
-        // Length-based complexity
         complexity += Math.Min(0.3, length / 2000.0);
 
-        // High complexity indicators
         foreach (var indicator in HighComplexityIndicators)
         {
             if (lowerPrompt.Contains(indicator))
@@ -249,7 +336,6 @@ public static class TaskAnalyzer
             }
         }
 
-        // Low complexity indicators (reduce)
         foreach (var indicator in LowComplexityIndicators)
         {
             if (lowerPrompt.Contains(indicator))
@@ -258,21 +344,18 @@ public static class TaskAnalyzer
             }
         }
 
-        // Question marks indicate queries (usually simpler)
         int questionMarks = prompt.Count(c => c == '?');
         if (questionMarks == 1 && length < 100)
         {
             complexity -= 0.1;
         }
 
-        // Multiple steps indicated
         if (lowerPrompt.Contains("and then") || lowerPrompt.Contains("after that") ||
-            Regex.IsMatch(lowerPrompt, @"\b(first|second|third|then|next|finally)\b"))
+            MultiStepPattern().IsMatch(lowerPrompt))
         {
             complexity += 0.2;
         }
 
-        // Code blocks increase complexity
         if (prompt.Contains("```"))
         {
             complexity += 0.2;

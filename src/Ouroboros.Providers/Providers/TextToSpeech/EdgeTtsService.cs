@@ -34,22 +34,24 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             BreakDuration = TimeSpan.FromMinutes(5), // Stay broken for 5 min if blocked
             OnOpened = args =>
             {
-                IsCircuitOpen = true;
+                _isCircuitOpen = true;
                 System.Diagnostics.Trace.TraceWarning("[TTS] Edge TTS circuit OPEN - disabled for 5 minutes (likely blocked by Microsoft)");
                 return default;
             },
             OnClosed = args =>
             {
-                IsCircuitOpen = false;
+                _isCircuitOpen = false;
                 return default;
             },
         })
         .Build();
 
+    private static volatile bool _isCircuitOpen;
+
     /// <summary>
     /// Gets whether the Edge TTS circuit breaker is open (service blocked/unavailable).
     /// </summary>
-    public static bool IsCircuitOpen { get; private set; }
+    public static bool IsCircuitOpen => _isCircuitOpen;
 
     /// <summary>
     /// Available Edge TTS neural voices.
