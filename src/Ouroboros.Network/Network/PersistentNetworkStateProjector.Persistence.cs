@@ -53,57 +53,81 @@ public sealed partial class PersistentNetworkStateProjector
     {
         try
         {
-            var scrollResult = await _qdrantClient.ScrollAsync(
-                _snapshotCollectionName,
-                limit: DefaultScrollLimit,
-                cancellationToken: ct);
-
             GlobalNetworkState? latestSnapshot = null;
             long maxEpoch = -1;
 
-            foreach (var point in scrollResult.Result)
+            // Paginated scroll through all snapshots
+            PointId? snapshotOffset = null;
+            while (true)
             {
-                if (point.Payload.TryGetValue("snapshot_json", out var jsonValue))
+                var scrollResult = await _qdrantClient.ScrollAsync(
+                    _snapshotCollectionName,
+                    limit: DefaultScrollLimit,
+                    offset: snapshotOffset,
+                    cancellationToken: ct);
+
+                foreach (var point in scrollResult.Result)
                 {
-                    var snapshot = JsonSerializer.Deserialize<GlobalNetworkState>(jsonValue.StringValue);
-                    if (snapshot != null)
+                    if (point.Payload.TryGetValue("snapshot_json", out var jsonValue))
                     {
-                        _snapshots.Add(snapshot);
-                        if (snapshot.Epoch > maxEpoch)
+                        var snapshot = JsonSerializer.Deserialize<GlobalNetworkState>(jsonValue.StringValue);
+                        if (snapshot != null)
                         {
-                            maxEpoch = snapshot.Epoch;
-                            latestSnapshot = snapshot;
+                            lock (_stateLock) { _snapshots.Add(snapshot); }
+                            if (snapshot.Epoch > maxEpoch)
+                            {
+                                maxEpoch = snapshot.Epoch;
+                                latestSnapshot = snapshot;
+                            }
                         }
                     }
                 }
+
+                snapshotOffset = scrollResult.NextPageOffset;
+                if (snapshotOffset is null || scrollResult.Result.Count == 0)
+                    break;
             }
 
             if (latestSnapshot != null)
             {
                 _currentEpoch = latestSnapshot.Epoch + 1;
-                _logger.LogInformation("Resumed from epoch {Epoch} ({SnapshotCount} snapshots loaded)", latestSnapshot.Epoch, _snapshots.Count);
+                int snapshotCount;
+                lock (_stateLock) { snapshotCount = _snapshots.Count; }
+                _logger.LogInformation("Resumed from epoch {Epoch} ({SnapshotCount} snapshots loaded)", latestSnapshot.Epoch, snapshotCount);
             }
 
-            var learningsResult = await _qdrantClient.ScrollAsync(
-                _learningsCollectionName,
-                limit: DefaultScrollLimit,
-                cancellationToken: ct);
-
-            foreach (var point in learningsResult.Result)
+            // Paginated scroll through all learnings
+            PointId? learningsOffset = null;
+            while (true)
             {
-                if (point.Payload.TryGetValue("learning_json", out var jsonValue))
+                var learningsResult = await _qdrantClient.ScrollAsync(
+                    _learningsCollectionName,
+                    limit: DefaultScrollLimit,
+                    offset: learningsOffset,
+                    cancellationToken: ct);
+
+                foreach (var point in learningsResult.Result)
                 {
-                    var learning = JsonSerializer.Deserialize<Learning>(jsonValue.StringValue);
-                    if (learning != null)
+                    if (point.Payload.TryGetValue("learning_json", out var jsonValue))
                     {
-                        _recentLearnings.Add(learning);
+                        var learning = JsonSerializer.Deserialize<Learning>(jsonValue.StringValue);
+                        if (learning != null)
+                        {
+                            lock (_stateLock) { _recentLearnings.Add(learning); }
+                        }
                     }
                 }
+
+                learningsOffset = learningsResult.NextPageOffset;
+                if (learningsOffset is null || learningsResult.Result.Count == 0)
+                    break;
             }
 
-            if (_recentLearnings.Count > 0)
+            int learningCount;
+            lock (_stateLock) { learningCount = _recentLearnings.Count; }
+            if (learningCount > 0)
             {
-                _logger.LogInformation("Loaded {LearningCount} previous learnings", _recentLearnings.Count);
+                _logger.LogInformation("Loaded {LearningCount} previous learnings", learningCount);
             }
         }
         catch (OperationCanceledException) { throw; }

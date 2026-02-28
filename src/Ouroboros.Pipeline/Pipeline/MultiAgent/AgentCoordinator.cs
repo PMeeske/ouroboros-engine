@@ -14,7 +14,7 @@ public sealed class AgentCoordinator : IAgentCoordinator
 {
     private AgentTeam _team;
     private readonly IMessageBus _messageBus;
-    private IDelegationStrategy _delegationStrategy;
+    private volatile IDelegationStrategy _delegationStrategy;
     private readonly ITaskExecutor _taskExecutor;
     private readonly object _teamLock = new();
     private readonly SemaphoreSlim _agentSelectionLock = new(1, 1);

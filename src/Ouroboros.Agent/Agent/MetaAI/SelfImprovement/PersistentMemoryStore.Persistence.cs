@@ -180,8 +180,9 @@ public sealed partial class PersistentMemoryStore
 
             return Result<IReadOnlyList<Experience>, string>.Success(experiences);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            System.Diagnostics.Trace.TraceWarning($"Vector similarity search failed, falling back: {ex.Message}");
             // Fallback to simple retrieval
             List<Experience> fallbackExperiences = _experiences.Values
                 .Select(e => e.experience)
@@ -221,9 +222,9 @@ public sealed partial class PersistentMemoryStore
             await File.WriteAllTextAsync(tempPath, json, ct);
             File.Move(tempPath, _persistencePath, overwrite: true);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to persist memories: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning($"Failed to persist memories: {ex.Message}");
         }
     }
 
@@ -265,9 +266,9 @@ public sealed partial class PersistentMemoryStore
                 }
             }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Silent failure - if we can't load, start fresh
+            System.Diagnostics.Trace.TraceWarning($"Failed to load memories from disk: {ex.Message}");
         }
     }
 }

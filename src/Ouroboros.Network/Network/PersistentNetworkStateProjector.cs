@@ -30,6 +30,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
     private readonly Func<string, CancellationToken, Task<float[]>> _embeddingFunc;
     private readonly List<GlobalNetworkState> _snapshots;
     private readonly List<Learning> _recentLearnings;
+    private readonly object _stateLock = new();
     private readonly ILogger _logger;
     private long _currentEpoch;
     private bool _initialized;
@@ -129,7 +130,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
     /// <summary>
     /// Gets all loaded snapshots.
     /// </summary>
-    public IReadOnlyList<GlobalNetworkState> Snapshots => _snapshots;
+    public IReadOnlyList<GlobalNetworkState> Snapshots { get { lock (_stateLock) { return _snapshots.ToList(); } } }
 
     /// <summary>
     /// Gets the current epoch number.
@@ -139,7 +140,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
     /// <summary>
     /// Gets recent learnings (from current session + loaded from Qdrant).
     /// </summary>
-    public IReadOnlyList<Learning> RecentLearnings => _recentLearnings;
+    public IReadOnlyList<Learning> RecentLearnings { get { lock (_stateLock) { return _recentLearnings.ToList(); } } }
 
     /// <summary>
     /// Initializes the persistent projector by loading previous state from Qdrant.
@@ -215,7 +216,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
             totalProcessingTime,
             metadata);
 
-        _snapshots.Add(state);
+        lock (_stateLock) { _snapshots.Add(state); }
 
         await PersistSnapshotAsync(state, ct);
 
@@ -252,7 +253,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
             Epoch: _currentEpoch,
             Timestamp: DateTimeOffset.UtcNow);
 
-        _recentLearnings.Add(learning);
+        lock (_stateLock) { _recentLearnings.Add(learning); }
 
         await PersistLearningAsync(learning, ct);
     }

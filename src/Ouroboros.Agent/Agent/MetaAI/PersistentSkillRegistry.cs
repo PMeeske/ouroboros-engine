@@ -23,7 +23,7 @@ public sealed partial class PersistentSkillRegistry : ISkillRegistry, IAsyncDisp
     private readonly TrackedVectorStore? _vectorStore;
     private readonly PersistentSkillConfig _config;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
-    private bool _isDirty;
+    private volatile bool _isDirty;
     private bool _isInitialized;
 
     private static readonly JsonSerializerOptions JsonOptions = new()

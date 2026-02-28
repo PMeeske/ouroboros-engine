@@ -288,6 +288,8 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
             return Result<CouncilDecision, string>.Failure("No weighted votes received");
 
         var majorityPosition = voteGroups.OrderByDescending(g => g.Value).FirstOrDefault();
+        if (majorityPosition.Key == null)
+            return Result<CouncilDecision, string>.Failure("No positions found in votes");
 
         // Check for consensus
         var consensusReached = majorityPosition.Value >= totalWeight * config.ConsensusThreshold;
