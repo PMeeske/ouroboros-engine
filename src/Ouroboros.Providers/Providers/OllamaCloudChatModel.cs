@@ -130,7 +130,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             if (!response.IsSuccessStatusCode)
             {
                 System.Diagnostics.Trace.TraceWarning("[OllamaCloudChatModel] HTTP {0}: {1}", (int)response.StatusCode, rawContent);
-                return $"[ollama-cloud-fallback:{_model}] {prompt}";
+                return $"[ollama-cloud-fallback:{_model}]";
             }
 
             using var doc = System.Text.Json.JsonDocument.Parse(rawContent);
@@ -165,7 +165,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
         {
             s_cloudConcurrency.Release();
         }
-        return $"[ollama-cloud-fallback:{_model}] {prompt}";
+        return $"[ollama-cloud-fallback:{_model}]";
     }
 
     /// <inheritdoc/>

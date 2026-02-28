@@ -246,6 +246,7 @@ public sealed partial class CollectiveMind
         _thoughtStream.OnNext("🔄 Sequential mode: round-robin with failover...");
 
         var triedPathways = new HashSet<NeuralPathway>();
+        var errors = new List<string>();
 
         while (triedPathways.Count < _pathways.Count)
         {
@@ -273,21 +274,25 @@ public sealed partial class CollectiveMind
                 }
 
                 pathway.RecordInhibition();
+                errors.Add($"{pathway.Name}: empty/fallback response");
                 _thoughtStream.OnNext($"⚠ '{pathway.Name}' returned empty/fallback response");
             }
             catch (BrokenCircuitException)
             {
+                errors.Add($"{pathway.Name}: circuit open");
                 _thoughtStream.OnNext($"⏸️ '{pathway.Name}' circuit is open, skipping...");
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) // Intentional: circuit-breaker fallback across provider types
             {
                 pathway.RecordInhibition();
+                errors.Add($"{pathway.Name}: {ex.Message}");
                 _thoughtStream.OnNext($"✗ '{pathway.Name}' failed: {ex.Message}");
             }
         }
 
-        throw new InvalidOperationException("All neural pathways exhausted without successful response");
+        var detail = errors.Count > 0 ? " (" + string.Join("; ", errors) + ")" : "";
+        throw new InvalidOperationException($"All neural pathways exhausted without successful response{detail}");
     }
 
     /// <summary>
