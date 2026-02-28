@@ -16,7 +16,7 @@ namespace Ouroboros.Agent;
 /// based on use case classification and performance metrics.
 /// Implements functional programming patterns with monadic error handling.
 /// </summary>
-public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
+public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDisposable
 {
     private const double TypeMatchWeight = 0.35;
     private const double CapabilityWeight = 0.25;
@@ -159,7 +159,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
         string lowerPrompt = prompt.ToLowerInvariant();
 
         // Code generation patterns
-        if (Regex.IsMatch(lowerPrompt, @"\b(code|implement|function|class|method|debug|fix|refactor)\b"))
+        if (SmcoCodePattern().IsMatch(lowerPrompt))
         {
             int complexity = EstimateComplexity(prompt);
             return new UseCase(
@@ -171,7 +171,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
         }
 
         // Reasoning patterns
-        if (Regex.IsMatch(lowerPrompt, @"\b(analyze|reason|explain|why|how|cause|logic|deduce)\b"))
+        if (SmcoReasoningPattern().IsMatch(lowerPrompt))
         {
             int complexity = EstimateComplexity(prompt);
             return new UseCase(

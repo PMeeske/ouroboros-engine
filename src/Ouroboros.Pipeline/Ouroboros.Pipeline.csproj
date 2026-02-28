@@ -30,7 +30,7 @@
     <PackageReference Include="System.Reactive" Version="6.1.0" />
     <!-- Dynamic grammar compilation: ANTLR + Roslyn -->
     <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.2" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
     <!-- gRPC client for Hyperon sidecar -->
     <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
     <PackageReference Include="Google.Protobuf" Version="3.31.0" />
