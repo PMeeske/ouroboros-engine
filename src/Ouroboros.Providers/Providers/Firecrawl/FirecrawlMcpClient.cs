@@ -32,7 +32,7 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
         }
 
         _options = options;
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
         _httpClient.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/'));
         _httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", options.ResolveApiKey());

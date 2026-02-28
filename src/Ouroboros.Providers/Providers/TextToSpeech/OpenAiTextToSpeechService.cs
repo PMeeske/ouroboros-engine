@@ -52,7 +52,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
         _endpoint = endpoint ?? "https://api.openai.com/v1";
         _defaultModel = model;
         _ownsClient = httpClient == null;
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
     }
 
     /// <inheritdoc/>

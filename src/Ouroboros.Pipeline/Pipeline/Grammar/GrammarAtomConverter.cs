@@ -8,6 +8,7 @@
 namespace Ouroboros.Pipeline.Grammar;
 
 using Ouroboros.Core.Hyperon;
+using Ouroboros.Tools.MeTTa;
 
 /// <summary>
 /// Converts between .NET grammar types and MeTTa atom representations

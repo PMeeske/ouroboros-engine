@@ -8,7 +8,7 @@
 namespace Ouroboros.Pipeline.Grammar;
 
 using System.Net.Http;
-using Grpc.Net.Client;
+using global::Grpc.Net.Client;
 using Ouroboros.Pipeline.Grammar.Grpc;
 using Microsoft.Extensions.Logging;
 

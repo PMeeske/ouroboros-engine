@@ -8,6 +8,7 @@
 namespace Ouroboros.Pipeline.Grammar;
 
 using Ouroboros.Core.Hyperon;
+using Ouroboros.Tools.MeTTa;
 using Microsoft.Extensions.Logging;
 
 /// <summary>

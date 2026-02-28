@@ -26,7 +26,7 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
     public DuckDuckGoMcpClient(DuckDuckGoMcpClientOptions? options = null, HttpClient? httpClient = null)
     {
         _options = options ?? new DuckDuckGoMcpClientOptions();
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(_options.UserAgent);
         _httpClient.Timeout = _options.Timeout;
     }

@@ -31,7 +31,7 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
         {
             CacheExpiration = TimeSpan.FromHours(1)
         };
-        _httpClient = httpClient ?? new HttpClient
+        _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) })
         {
             Timeout = TimeSpan.FromSeconds(_config.RequestTimeoutSeconds)
         };
