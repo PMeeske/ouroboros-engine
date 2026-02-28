@@ -20,7 +20,8 @@ internal sealed class DirectoryIngestionCache
                 }
             }
         }
-        catch { /* ignore cache load issues */ }
+        catch (IOException) { /* ignore cache load issues */ }
+        catch (System.Text.Json.JsonException) { /* ignore cache load issues */ }
     }
 
     public bool IsUnchanged(string file)
@@ -31,7 +32,7 @@ internal sealed class DirectoryIngestionCache
             if (_hashes.TryGetValue(file, out string? existing) && existing == h) return true;
             return false;
         }
-        catch { return false; }
+        catch (IOException) { return false; }
     }
 
     public void UpdateHash(string file)
@@ -42,7 +43,7 @@ internal sealed class DirectoryIngestionCache
             _hashes[file] = h;
             _dirty = true;
         }
-        catch { }
+        catch (IOException) { }
     }
 
     public void Persist()
@@ -54,7 +55,7 @@ internal sealed class DirectoryIngestionCache
             File.WriteAllText(_path, json);
             _dirty = false;
         }
-        catch { }
+        catch (IOException) { }
     }
 
     private static string ComputeHash(string file)

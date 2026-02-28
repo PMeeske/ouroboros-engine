@@ -344,7 +344,7 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
                     else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
                     {
                         System.Diagnostics.Debug.WriteLine($"[Azure TTS] Synthesis complete, {result.AudioData.Length} bytes");
-                        try { OnAudioSynthesized?.Invoke(result.AudioData); } catch { }
+                        try { OnAudioSynthesized?.Invoke(result.AudioData); } catch (Exception ex) when (ex is not OperationCanceledException) { }
                     }
                 }, ct);
             }, ct);

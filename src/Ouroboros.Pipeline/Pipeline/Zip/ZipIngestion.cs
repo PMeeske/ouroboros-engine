@@ -59,7 +59,7 @@ public static class ZipIngestion
                     if (IsLikelyText(buf.AsSpan(0, read)))
                         kind = ZipContentKind.Text;
                 }
-                catch { /* ignore heuristic failure */ }
+                catch (InvalidDataException) { /* ignore heuristic failure */ }
             }
             ZipArchiveEntry captured = entry; // capture entry while archive kept alive by registry
             Func<Stream> opener = () => captured.Open();

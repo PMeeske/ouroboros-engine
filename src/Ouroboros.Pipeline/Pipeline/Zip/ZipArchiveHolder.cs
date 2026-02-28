@@ -17,7 +17,7 @@ internal sealed class ZipArchiveHolder : IDisposable
     public int ReleaseRef() => Interlocked.Decrement(ref _refCount);
     public void Dispose()
     {
-        try { Archive.Dispose(); } catch { }
-        try { Stream.Dispose(); } catch { }
+        try { Archive.Dispose(); } catch (InvalidDataException) { }
+        try { Stream.Dispose(); } catch (IOException) { }
     }
 }

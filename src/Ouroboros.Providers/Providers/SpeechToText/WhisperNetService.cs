@@ -149,7 +149,12 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
                 Duration: durationSeconds,
                 Segments: segments));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (IOException ex)
+        {
+            return Result<TranscriptionResult, string>.Failure($"Transcription failed: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Transcription failed: {ex.Message}");
         }
@@ -157,7 +162,7 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
         {
             if (needsCleanup && File.Exists(wavPath))
             {
-                try { File.Delete(wavPath); } catch { }
+                try { File.Delete(wavPath); } catch (IOException) { }
             }
         }
     }
@@ -183,7 +188,7 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
         {
             if (File.Exists(tempPath))
             {
-                try { File.Delete(tempPath); } catch { }
+                try { File.Delete(tempPath); } catch (IOException) { }
             }
         }
     }
@@ -219,7 +224,7 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
             var result = await EnsureInitializedAsync(ct);
             return result.IsSuccess;
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return false;
         }
@@ -262,7 +267,12 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
                     await modelStream.CopyToAsync(fileStream, ct);
                     System.Diagnostics.Trace.TraceInformation("[whisper.net] Model downloaded to {0}", modelPath);
                 }
-                catch (Exception ex)
+                catch (OperationCanceledException) { throw; }
+                catch (HttpRequestException ex)
+                {
+                    return Result<bool, string>.Failure($"Failed to download model: {ex.Message}");
+                }
+                catch (IOException ex)
                 {
                     return Result<bool, string>.Failure($"Failed to download model: {ex.Message}");
                 }
@@ -280,7 +290,12 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
 
             return Result<bool, string>.Success(true);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (IOException ex)
+        {
+            return Result<bool, string>.Failure($"Failed to initialize Whisper.net: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
         {
             return Result<bool, string>.Failure($"Failed to initialize Whisper.net: {ex.Message}");
         }
@@ -308,7 +323,7 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
                 if (convertResult.IsSuccess)
                 {
                     var samples = await ReadAudioSamplesAsync(convertedPath, ct);
-                    try { File.Delete(convertedPath); } catch { }
+                    try { File.Delete(convertedPath); } catch (IOException) { }
                     return samples;
                 }
                 return null;
@@ -387,7 +402,7 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
 
             return null;
         }
-        catch
+        catch (IOException)
         {
             return null;
         }
@@ -457,7 +472,12 @@ public sealed class WhisperNetService : ISpeechToTextService, IDisposable
 
             return Result<string, string>.Success(outputPath);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
+        {
+            return Result<string, string>.Failure($"Conversion failed: {ex.Message}");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<string, string>.Failure($"Conversion failed: {ex.Message}");
         }

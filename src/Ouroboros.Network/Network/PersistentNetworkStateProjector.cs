@@ -296,7 +296,13 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
 
             return learnings;
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve learnings");
+            return new List<Learning>();
+        }
+        catch (JsonException ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve learnings");
             return new List<Learning>();
@@ -356,7 +362,13 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
 
             return learnings;
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve learnings by category");
+            return new List<Learning>();
+        }
+        catch (JsonException ex)
         {
             _logger.LogWarning(ex, "Failed to retrieve learnings by category");
             return new List<Learning>();
@@ -370,7 +382,8 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
             await EnsureCollectionWithDimensionAsync(_snapshotCollectionName, ct);
             await EnsureCollectionWithDimensionAsync(_learningsCollectionName, ct);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
         {
             _logger.LogWarning(ex, "Failed to create Qdrant collections");
         }
@@ -454,7 +467,12 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
                 _logger.LogInformation("Loaded {LearningCount} previous learnings", _recentLearnings.Count);
             }
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
+        {
+            _logger.LogWarning(ex, "Failed to load previous state");
+        }
+        catch (JsonException ex)
         {
             _logger.LogWarning(ex, "Failed to load previous state");
         }
@@ -483,7 +501,8 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
 
             await _qdrantClient.UpsertAsync(_snapshotCollectionName, new[] { point }, cancellationToken: ct);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
         {
             _logger.LogWarning(ex, "Failed to persist snapshot");
         }
@@ -514,7 +533,8 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
 
             await _qdrantClient.UpsertAsync(_learningsCollectionName, new[] { point }, cancellationToken: ct);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
         {
             _logger.LogWarning(ex, "Failed to persist learning");
         }
@@ -530,7 +550,7 @@ public sealed class PersistentNetworkStateProjector : IAsyncDisposable
                 await ProjectAndPersistAsync(
                     ImmutableDictionary<string, string>.Empty.Add("event", "shutdown"));
             }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // Ignore errors during disposal
             }

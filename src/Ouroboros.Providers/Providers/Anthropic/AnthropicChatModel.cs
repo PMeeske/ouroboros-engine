@@ -146,7 +146,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
         {
             throw; // propagate cleanly — let callers handle, don't return fallback
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             System.Diagnostics.Trace.TraceWarning("[AnthropicChatModel] Error: {0}: {1}", ex.GetType().Name, ex.Message);
         }
@@ -206,7 +206,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
                 // Deliberate cancellation — complete cleanly
                 observer.OnCompleted();
             }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
             {
                 observer.OnError(ex);
             }

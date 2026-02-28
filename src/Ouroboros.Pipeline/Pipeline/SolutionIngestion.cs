@@ -86,7 +86,7 @@ public static class SolutionIngestion
                 string meta = $"SOLUTION SUMMARY\nPath: {Path.GetFileName(solutionFile)}\nProject Count: {projectLines.Count}\nProjects:\n" + string.Join('\n', projectLines);
                 await EmbedSyntheticAsync(embed, vectors, meta, solutionFile + "#meta:solution", ct);
             }
-            catch { /* ignore meta failures */ }
+            catch (IOException) { /* ignore meta failures */ }
         }
 
         if (options.IncludeProjectMeta)
@@ -107,7 +107,7 @@ public static class SolutionIngestion
                     string meta = $"PROJECT SUMMARY\nName: {Path.GetFileName(csproj)}\nSDK: {sdk}\nTargetFramework(s): {string.Join(",", tfms)}\nPackages:\n" + string.Join('\n', pkgRefs);
                     await EmbedSyntheticAsync(embed, vectors, meta, csproj + "#meta:project", ct);
                 }
-                catch { }
+                catch (Exception ex) when (ex is not OperationCanceledException) { }
             }
         }
 
@@ -157,13 +157,13 @@ public static class SolutionIngestion
                         });
                         ci++;
                     }
-                    catch
+                    catch (Exception ex) when (ex is not OperationCanceledException)
                     {
                         // skip bad chunk
                     }
                 }
             }
-            catch { /* skip file */ }
+            catch (IOException) { /* skip file */ }
         }
 
         if (vectors.Count > 0)
@@ -185,7 +185,7 @@ public static class SolutionIngestion
                 Embedding = emb
             });
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Fallback deterministic embedding so downstream logic & tests still have a vector even without a live model.
             Dictionary<string, object?> meta = new Dictionary<string, object?> { ["type"] = "meta", ["fallback"] = true };

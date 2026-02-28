@@ -57,7 +57,7 @@ public static class ZipIngestionStreaming
                     int read = ps.Read(buf, 0, toRead);
                     if (ZipIngestionStreamingHelpers.IsLikelyText(buf.AsSpan(0, read))) kind = ZipContentKind.Text;
                 }
-                catch { }
+                catch (InvalidDataException) { }
             }
             ZipArchiveEntry captured = entry;
             Func<Stream> opener = () => captured.Open();

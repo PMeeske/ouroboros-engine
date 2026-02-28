@@ -351,7 +351,7 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
                 .SelectMany(a =>
                 {
                     try { return a.GetTypes(); }
-                    catch { return Array.Empty<Type>(); }
+                    catch (ReflectionTypeLoadException) { return Array.Empty<Type>(); }
                 })
                 .FirstOrDefault(t => t.FullName == "Antlr4.Runtime.AntlrInputStream");
 
@@ -370,7 +370,7 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
                 .SelectMany(a =>
                 {
                     try { return a.GetTypes(); }
-                    catch { return Array.Empty<Type>(); }
+                    catch (ReflectionTypeLoadException) { return Array.Empty<Type>(); }
                 })
                 .FirstOrDefault(t => t.FullName == "Antlr4.Runtime.CommonTokenStream");
 
@@ -426,7 +426,7 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
                 ex.InnerException.Message,
                 new ParseFailureInfo("unknown", "unknown", 0, 0, input));
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             return new ParseAttemptResult(
                 false,

@@ -76,7 +76,7 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
                         FileInfo info = new FileInfo(file);
                         if (info.Length > _maxFileBytes) continue;
                     }
-                    catch { /* ignore */ }
+                    catch (IOException) { /* ignore */ }
                 }
                 // Extension filter
                 if (_allowedExtensions is not null)

@@ -90,7 +90,7 @@ public sealed class OllamaVisionModel : IVisionModel
         {
             return Result<VisionAnalysisResult, string>.Failure($"Vision analysis timed out after {_timeout.TotalSeconds}s");
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Vision analysis failed with {Model}", _model);
             return Result<VisionAnalysisResult, string>.Failure($"Vision analysis failed: {ex.Message}");
@@ -137,7 +137,7 @@ public sealed class OllamaVisionModel : IVisionModel
             string response = await CallOllamaVisionAsync(base64Image, question, ct);
             return Result<string, string>.Success(response);
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Vision Q&A failed with {Model}", _model);
             return Result<string, string>.Failure($"Vision Q&A failed: {ex.Message}");
@@ -163,7 +163,7 @@ public sealed class OllamaVisionModel : IVisionModel
             List<DetectedObject> objects = ParseDetectedObjects(response, maxObjects);
             return Result<IReadOnlyList<DetectedObject>, string>.Success(objects);
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Object detection failed with {Model}", _model);
             return Result<IReadOnlyList<DetectedObject>, string>.Failure($"Object detection failed: {ex.Message}");
@@ -189,7 +189,7 @@ public sealed class OllamaVisionModel : IVisionModel
             List<DetectedFace> faces = ParseDetectedFaces(response, analyzeEmotion);
             return Result<IReadOnlyList<DetectedFace>, string>.Success(faces);
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Face detection failed with {Model}", _model);
             return Result<IReadOnlyList<DetectedFace>, string>.Failure($"Face detection failed: {ex.Message}");

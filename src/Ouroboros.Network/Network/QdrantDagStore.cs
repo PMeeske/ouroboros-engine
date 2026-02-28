@@ -93,7 +93,8 @@ public sealed class QdrantDagStore : IAsyncDisposable
 
             _initialized = true;
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
         {
             throw new InvalidOperationException($"Failed to initialize Qdrant collections: {ex.Message}", ex);
         }
@@ -139,7 +140,8 @@ public sealed class QdrantDagStore : IAsyncDisposable
             await _client.UpsertAsync(_config.NodesCollection, new[] { point }, cancellationToken: ct);
             return Result<MonadNode>.Success(node);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
         {
             return Result<MonadNode>.Failure($"Failed to save node: {ex.Message}");
         }
@@ -196,7 +198,8 @@ public sealed class QdrantDagStore : IAsyncDisposable
             await _client.UpsertAsync(_config.EdgesCollection, new[] { point }, cancellationToken: ct);
             return Result<TransitionEdge>.Success(edge);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
         {
             return Result<TransitionEdge>.Failure($"Failed to save edge: {ex.Message}");
         }
@@ -295,7 +298,8 @@ public sealed class QdrantDagStore : IAsyncDisposable
 
             return Result<MerkleDag>.Success(dag);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
         {
             return Result<MerkleDag>.Failure($"Failed to load DAG: {ex.Message}");
         }
@@ -342,7 +346,8 @@ public sealed class QdrantDagStore : IAsyncDisposable
 
             return Result<IReadOnlyList<ScoredNode>>.Success(scoredNodes);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
         {
             return Result<IReadOnlyList<ScoredNode>>.Failure($"Search failed: {ex.Message}");
         }
@@ -393,7 +398,8 @@ public sealed class QdrantDagStore : IAsyncDisposable
 
             return Result<IReadOnlyList<MonadNode>>.Success(nodes);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
         {
             return Result<IReadOnlyList<MonadNode>>.Failure($"Query failed: {ex.Message}");
         }
@@ -426,7 +432,7 @@ public sealed class QdrantDagStore : IAsyncDisposable
             var node = DeserializeNode(point.Payload);
             return node != null ? Option<MonadNode>.Some(node) : Option<MonadNode>.None();
         }
-        catch
+        catch (Grpc.Core.RpcException)
         {
             return Option<MonadNode>.None();
         }
@@ -452,7 +458,8 @@ public sealed class QdrantDagStore : IAsyncDisposable
 
             _initialized = false;
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
         {
             throw new InvalidOperationException($"Failed to clear DAG data: {ex.Message}", ex);
         }
@@ -532,7 +539,8 @@ public sealed class QdrantDagStore : IAsyncDisposable
 
             return Result<IReadOnlyList<MonadNode>>.Success(nodes);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
         {
             return Result<IReadOnlyList<MonadNode>>.Failure($"Failed to load nodes: {ex.Message}");
         }
@@ -568,7 +576,8 @@ public sealed class QdrantDagStore : IAsyncDisposable
 
             return Result<IReadOnlyList<TransitionEdge>>.Success(edges);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Grpc.Core.RpcException ex)
         {
             return Result<IReadOnlyList<TransitionEdge>>.Failure($"Failed to load edges: {ex.Message}");
         }
@@ -590,7 +599,11 @@ public sealed class QdrantDagStore : IAsyncDisposable
 
             return new MonadNode(id, typeName, payloadJson, createdAt, parentIds);
         }
-        catch
+        catch (FormatException)
+        {
+            return null;
+        }
+        catch (KeyNotFoundException)
         {
             return null;
         }
@@ -614,7 +627,11 @@ public sealed class QdrantDagStore : IAsyncDisposable
 
             return new TransitionEdge(id, inputIds, outputId, operationName, operationSpecJson, createdAt, confidence, durationMs);
         }
-        catch
+        catch (FormatException)
+        {
+            return null;
+        }
+        catch (KeyNotFoundException)
         {
             return null;
         }
