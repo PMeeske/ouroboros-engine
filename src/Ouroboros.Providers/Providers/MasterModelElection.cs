@@ -8,7 +8,7 @@ namespace Ouroboros.Providers;
 /// Uses a designated master model to evaluate and select the best response.
 /// Clean, functional design with monadic composition.
 /// </summary>
-public sealed class MasterModelElection : IDisposable
+public sealed partial class MasterModelElection : IDisposable
 {
     private readonly NeuralPathway? _masterPathway;
     private readonly Subject<ElectionEvent> _electionEvents = new();
@@ -215,7 +215,7 @@ public sealed class MasterModelElection : IDisposable
     private static List<double> ParseMasterScores(string response, int expectedCount)
     {
         var scores = new List<double>();
-        var matches = Regex.Matches(response, @"0?\.\d+|1\.0|0|1");
+        var matches = ScoreRegex().Matches(response);
         foreach (Match m in matches)
         {
             if (double.TryParse(m.Value, out double score))
@@ -366,7 +366,7 @@ public sealed class MasterModelElection : IDisposable
                 await _masterPathway.Model.GenerateTextAsync(decisionPrompt.ToString(), ct));
 
             // Parse the selected number
-            var match = Regex.Match(decision, @"\d+");
+            var match = DigitRegex().Match(decision);
             if (match.Success && int.TryParse(match.Value, out int selected) &&
                 selected >= 1 && selected <= candidates.Count)
             {
@@ -474,7 +474,7 @@ public sealed class MasterModelElection : IDisposable
         if (string.IsNullOrEmpty(text)) return 0;
 
         // Heuristics: sentence count, average length, punctuation
-        var sentences = Regex.Split(text, @"[.!?]+").Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+        var sentences = SentenceSplitRegex().Split(text).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
         if (sentences.Count == 0) return 0.3;
 
         double avgLength = sentences.Average(s => s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length);
@@ -519,7 +519,7 @@ public sealed class MasterModelElection : IDisposable
 
     private static HashSet<string> ExtractWords(string text)
     {
-        return Regex.Matches(text.ToLowerInvariant(), @"\b[a-z]{3,}\b")
+        return WordsRegex().Matches(text.ToLowerInvariant())
             .Cast<Match>()
             .Select(m => m.Value)
             .ToHashSet();
@@ -530,4 +530,16 @@ public sealed class MasterModelElection : IDisposable
         _electionEvents.OnCompleted();
         _electionEvents.Dispose();
     }
+
+    [GeneratedRegex(@"0?\.\d+|1\.0|0|1")]
+    private static partial Regex ScoreRegex();
+
+    [GeneratedRegex(@"[.!?]+")]
+    private static partial Regex SentenceSplitRegex();
+
+    [GeneratedRegex(@"\d+")]
+    private static partial Regex DigitRegex();
+
+    [GeneratedRegex(@"\b[a-z]{3,}\b")]
+    private static partial Regex WordsRegex();
 }

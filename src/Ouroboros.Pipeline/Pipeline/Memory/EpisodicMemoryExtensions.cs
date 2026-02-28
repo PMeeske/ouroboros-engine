@@ -49,7 +49,7 @@ public static class EpisodicMemoryExtensions
             var result = await step(branch);
 
             // Store episode (best effort - don't fail if storage fails)
-            var context = ExecutionContext.WithGoal(goal);
+            var context = PipelineExecutionContext.WithGoal(goal);
             var outcome = Outcome.Successful(
                 "Step executed",
                 stopwatch.Elapsed);

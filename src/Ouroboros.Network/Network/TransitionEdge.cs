@@ -4,6 +4,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using Ouroboros.Network.Json;
 
 namespace Ouroboros.Network;
 
@@ -113,10 +114,7 @@ public sealed record TransitionEdge
         double? confidence = null,
         long? durationMs = null)
     {
-        var specJson = JsonSerializer.Serialize(operationSpec, new JsonSerializerOptions
-        {
-            WriteIndented = false,
-        });
+        var specJson = JsonSerializer.Serialize(operationSpec, JsonDefaults.Default);
 
         return new TransitionEdge(
             Guid.NewGuid(),

@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Network.Json;
+
 namespace Ouroboros.Network;
 
 /// <summary>
@@ -78,7 +80,7 @@ public static class MerkleDagExtensions
                 e.DurationMs,
                 e.Hash)).ToArray());
 
-        return JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(data, JsonDefaults.Indented);
     }
 
     /// <summary>

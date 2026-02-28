@@ -50,7 +50,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                 PlanStep step = currentPlan.Steps[i];
 
                 // Create execution context
-                ExecutionContext context = new ExecutionContext(
+                PlanExecutionContext context = new PlanExecutionContext(
                     plan,
                     allStepResults,
                     step,
@@ -105,7 +105,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                 allStepResults.Add(stepResult);
 
                 // Check if we need to adapt after execution
-                ExecutionContext postContext = context with { CompletedSteps = allStepResults };
+                PlanExecutionContext postContext = context with { CompletedSteps = allStepResults };
                 AdaptationAction? postAdaptation = await EvaluateAdaptationAsync(postContext, ct);
 
                 if (postAdaptation?.Strategy == AdaptationStrategy.Replan && config.EnableAutoReplan)
@@ -162,7 +162,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
     /// Evaluates if adaptation is needed.
     /// </summary>
     public async Task<AdaptationAction?> EvaluateAdaptationAsync(
-        ExecutionContext context,
+        PlanExecutionContext context,
         CancellationToken ct = default)
     {
         // Check all registered triggers
@@ -239,7 +239,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
 
     private async Task<AdaptationAction?> CreateAdaptationActionAsync(
         AdaptationTrigger trigger,
-        ExecutionContext context,
+        PlanExecutionContext context,
         CancellationToken ct)
     {
         AdaptationStrategy strategy = trigger.Strategy;

@@ -16,7 +16,7 @@ namespace Ouroboros.Agent.ConsolidatedMind;
 /// specialists are unavailable. While responses may be less fluent than LLM output,
 /// they provide deterministic, logic-based answers that don't require external services.
 /// </summary>
-public sealed class SymbolicReasonerAdapter : Ouroboros.Abstractions.Core.IChatCompletionModel
+public sealed partial class SymbolicReasonerAdapter : Ouroboros.Abstractions.Core.IChatCompletionModel
 {
     private readonly INeuralSymbolicBridge? _bridge;
     private readonly IMeTTaEngine? _engine;
@@ -97,8 +97,8 @@ public sealed class SymbolicReasonerAdapter : Ouroboros.Abstractions.Core.IChatC
     private static string ExtractQueryFromPrompt(string prompt)
     {
         // Remove common question words and punctuation
-        var cleaned = Regex.Replace(prompt, @"^(what|how|why|when|where|who|which|can|is|are|do|does)\s+", "", RegexOptions.IgnoreCase);
-        cleaned = Regex.Replace(cleaned, @"[?!.,;:]", "");
+        var cleaned = QuestionWordRegex().Replace(prompt, "");
+        cleaned = PunctuationRegex().Replace(cleaned, "");
 
         // Extract key terms (words longer than 3 characters)
         var terms = cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries)
@@ -163,4 +163,10 @@ As the ultimate fallback system, I can acknowledge your request but cannot provi
 
 Please try again later or check your system configuration.";
     }
+
+    [GeneratedRegex(@"^(what|how|why|when|where|who|which|can|is|are|do|does)\s+", RegexOptions.IgnoreCase)]
+    private static partial Regex QuestionWordRegex();
+
+    [GeneratedRegex(@"[?!.,;:]")]
+    private static partial Regex PunctuationRegex();
 }

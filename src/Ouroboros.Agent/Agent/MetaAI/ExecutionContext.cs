@@ -3,7 +3,7 @@
 /// <summary>
 /// Represents execution context for adaptation decisions.
 /// </summary>
-public sealed record ExecutionContext(
+public sealed record PlanExecutionContext(
     Plan OriginalPlan,
     List<StepResult> CompletedSteps,
     PlanStep CurrentStep,

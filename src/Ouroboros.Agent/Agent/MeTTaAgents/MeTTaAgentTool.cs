@@ -4,6 +4,7 @@
 // </copyright>
 
 using System.Text.Json;
+using Ouroboros.Agent.Json;
 
 namespace Ouroboros.Agent.MeTTaAgents;
 
@@ -11,7 +12,7 @@ namespace Ouroboros.Agent.MeTTaAgents;
 /// Tool that allows the orchestrating LLM to define, spawn, and task sub-agents
 /// by writing MeTTa atoms. The LLM speaks MeTTa to control agents.
 /// </summary>
-public sealed class MeTTaAgentTool : ITool
+public sealed partial class MeTTaAgentTool : ITool
 {
     private readonly MeTTaAgentRuntime _runtime;
     private readonly IMeTTaEngine _engine;
@@ -285,11 +286,7 @@ public sealed class MeTTaAgentTool : ITool
         if (statuses.Count == 0)
             return Result<string, string>.Success("No agents spawned.");
 
-        var json = JsonSerializer.Serialize(statuses, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
+        var json = JsonSerializer.Serialize(statuses, JsonDefaults.Indented);
         return Result<string, string>.Success(json);
     }
 
@@ -318,8 +315,7 @@ public sealed class MeTTaAgentTool : ITool
     {
         var agents = new List<string>();
         // Match quoted strings inside (Pipeline ...) expression
-        var matches = System.Text.RegularExpressions.Regex.Matches(
-            mettaOutput, @"""([^""]+)""");
+        var matches = QuotedStringRegex().Matches(mettaOutput);
         foreach (System.Text.RegularExpressions.Match match in matches)
         {
             agents.Add(match.Groups[1].Value);
@@ -334,8 +330,7 @@ public sealed class MeTTaAgentTool : ITool
             return defs;
 
         // Use shared pattern from MeTTaParsingHelpers
-        var matches = System.Text.RegularExpressions.Regex.Matches(
-            mettaOutput, MeTTaParsingHelpers.AgentDefPattern);
+        var matches = AgentDefRegex().Matches(mettaOutput);
 
         foreach (System.Text.RegularExpressions.Match match in matches)
         {
@@ -359,4 +354,10 @@ public sealed class MeTTaAgentTool : ITool
 
         return defs;
     }
+
+    [GeneratedRegex(@"""([^""]+)""")]
+    private static partial Regex QuotedStringRegex();
+
+    [GeneratedRegex(MeTTaParsingHelpers.AgentDefPattern)]
+    private static partial Regex AgentDefRegex();
 }

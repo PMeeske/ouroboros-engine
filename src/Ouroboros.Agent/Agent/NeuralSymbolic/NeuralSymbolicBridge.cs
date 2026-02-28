@@ -13,7 +13,7 @@ using Ouroboros.Agent.MetaAI;
 /// <summary>
 /// Implementation of neural-symbolic bridge for hybrid reasoning.
 /// </summary>
-public sealed class NeuralSymbolicBridge : INeuralSymbolicBridge
+public sealed partial class NeuralSymbolicBridge : INeuralSymbolicBridge
 {
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ISymbolicKnowledgeBase _knowledgeBase;
@@ -407,13 +407,13 @@ EFFECTS: <effect1>, <effect2>, ...
         var cleaned = response.Trim();
         
         // Extract S-expression
-        var match = Regex.Match(cleaned, @"\([^)]+\)");
+        var match = SExpressionRegex().Match(cleaned);
         var rawExpression = match.Success ? match.Value : cleaned;
 
         // Parse symbols and variables
         var symbols = new List<string>();
         var variables = new List<string>();
-        var tokens = Regex.Matches(rawExpression, @"\$\w+|\w+");
+        var tokens = TokenRegex().Matches(rawExpression);
         
         foreach (Match token in tokens)
         {
@@ -522,7 +522,7 @@ MISSING: <missing prerequisites, if any>";
         var missing = new List<string>();
 
         // Extract conflicts
-        var conflictsMatch = Regex.Match(response, @"CONFLICTS:\s*(.+?)(?=MISSING:|$)", RegexOptions.Singleline);
+        var conflictsMatch = ConflictsRegex().Match(response);
         if (conflictsMatch.Success)
         {
             var conflictText = conflictsMatch.Groups[1].Value.Trim();
@@ -539,7 +539,7 @@ MISSING: <missing prerequisites, if any>";
         }
 
         // Extract missing prerequisites
-        var missingMatch = Regex.Match(response, @"MISSING:\s*(.+?)$", RegexOptions.Singleline);
+        var missingMatch = MissingRegex().Match(response);
         if (missingMatch.Success)
         {
             var missingText = missingMatch.Groups[1].Value.Trim();
@@ -578,6 +578,18 @@ MISSING: <missing prerequisites, if any>";
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .ToList();
     }
+
+    [GeneratedRegex(@"\([^)]+\)")]
+    private static partial Regex SExpressionRegex();
+
+    [GeneratedRegex(@"\$\w+|\w+")]
+    private static partial Regex TokenRegex();
+
+    [GeneratedRegex(@"CONFLICTS:\s*(.+?)(?=MISSING:|$)", RegexOptions.Singleline)]
+    private static partial Regex ConflictsRegex();
+
+    [GeneratedRegex(@"MISSING:\s*(.+?)$", RegexOptions.Singleline)]
+    private static partial Regex MissingRegex();
 
     #endregion
 }

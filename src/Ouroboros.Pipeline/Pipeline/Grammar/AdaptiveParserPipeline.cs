@@ -29,7 +29,7 @@ using Microsoft.Extensions.Logging;
 /// <item>Repeat until success or max attempts exhausted.</item>
 /// </list>
 /// </remarks>
-public sealed class AdaptiveParserPipeline : IDisposable
+public sealed partial class AdaptiveParserPipeline : IDisposable
 {
     private readonly IChatModel _llm;
     private readonly IGrammarValidator _validator;
@@ -307,10 +307,7 @@ public sealed class AdaptiveParserPipeline : IDisposable
     private static string ExtractMeTTaFromResponse(string response)
     {
         // Try to extract from markdown code block
-        var codeBlockMatch = System.Text.RegularExpressions.Regex.Match(
-            response,
-            @"```(?:metta|lisp|scheme)?\s*\n(.*?)```",
-            System.Text.RegularExpressions.RegexOptions.Singleline);
+        var codeBlockMatch = CodeBlockRegex().Match(response);
 
         if (codeBlockMatch.Success)
         {
@@ -439,4 +436,7 @@ public sealed class AdaptiveParserPipeline : IDisposable
     }
 
     private sealed record ParseAttemptResult(bool Success, string? Error, ParseFailureInfo? Failure);
+
+    [GeneratedRegex(@"```(?:metta|lisp|scheme)?\s*\n(.*?)```", RegexOptions.Singleline)]
+    private static partial Regex CodeBlockRegex();
 }

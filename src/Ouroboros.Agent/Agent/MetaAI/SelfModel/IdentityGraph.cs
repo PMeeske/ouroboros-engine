@@ -6,6 +6,7 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Ouroboros.Agent.Json;
 
 namespace Ouroboros.Agent.MetaAI.SelfModel;
 
@@ -187,7 +188,7 @@ public sealed class IdentityGraph : IIdentityGraph
             return;
 
         AgentIdentityState state = await GetStateAsync(ct);
-        string json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
+        string json = JsonSerializer.Serialize(state, JsonDefaults.Indented);
         
         string directory = Path.GetDirectoryName(_persistencePath)!;
         if (!string.IsNullOrEmpty(directory))

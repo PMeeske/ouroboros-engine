@@ -11,7 +11,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// <summary>
 /// Implementation of transfer learning for cross-domain skill adaptation.
 /// </summary>
-public sealed class TransferLearner : ITransferLearner
+public sealed partial class TransferLearner : ITransferLearner
 {
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ISkillRegistry _skills;
@@ -147,7 +147,7 @@ Respond with just the number.";
             string response = await _llm.GenerateTextAsync(prompt, ct);
 
             // Extract numeric score
-            Match scoreMatch = Regex.Match(response, @"0?\.\d+|1\.0");
+            Match scoreMatch = TransferScoreRegex().Match(response);
             if (scoreMatch.Success && double.TryParse(scoreMatch.Value, out double score))
             {
                 return Math.Clamp(score, 0.0, 1.0);
@@ -212,9 +212,7 @@ database_query -> library_search (confidence: 0.8)
 
             foreach (string line in lines)
             {
-                Match match = Regex.Match(
-                    line,
-                    @"(.+?)\s*->\s*(.+?)\s*\(confidence:\s*(0?\.\d+|1\.0)\)");
+                Match match = AnalogyRegex().Match(line);
 
                 if (match.Success)
                 {
@@ -379,4 +377,9 @@ EXPECTED: [expected outcome]
         return adaptations.Take(5).ToList();
     }
 
+    [GeneratedRegex(@"0?\.\d+|1\.0")]
+    private static partial Regex TransferScoreRegex();
+
+    [GeneratedRegex(@"(.+?)\s*->\s*(.+?)\s*\(confidence:\s*(0?\.\d+|1\.0)\)")]
+    private static partial Regex AnalogyRegex();
 }

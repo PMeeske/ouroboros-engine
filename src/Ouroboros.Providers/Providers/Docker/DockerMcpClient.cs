@@ -5,6 +5,7 @@
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using Ouroboros.Providers.Json;
 
 namespace Ouroboros.Providers.Docker;
 
@@ -33,12 +34,7 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
         _options = options;
         _httpClient = httpClient ?? CreateHttpClient(options);
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true,
-            WriteIndented = false
-        };
+        _jsonOptions = JsonDefaults.CamelCase;
     }
 
     /// <inheritdoc/>

@@ -5,5 +5,5 @@
 /// </summary>
 public sealed record AdaptationTrigger(
     string Name,
-    Func<ExecutionContext, bool> Condition,
+    Func<PlanExecutionContext, bool> Condition,
     AdaptationStrategy Strategy);

@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using LangChain.Databases;
 using Ouroboros.Abstractions;
+using Ouroboros.Agent.Json;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -503,10 +504,7 @@ public sealed class PersistentMemoryStore : IMemoryStore
                 Importance = v.importance
             }).ToList();
 
-            string json = JsonSerializer.Serialize(data, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+            string json = JsonSerializer.Serialize(data, JsonDefaults.Indented);
 
             await File.WriteAllTextAsync(_persistencePath, json, ct);
         }

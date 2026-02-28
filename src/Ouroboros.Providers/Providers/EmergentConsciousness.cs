@@ -7,7 +7,7 @@ namespace Ouroboros.Providers;
 /// Emergent consciousness state that unifies multiple neural pathways into one coherent mind.
 /// Tracks attention, arousal, valence, meta-cognitive awareness, and IIT Φ.
 /// </summary>
-public sealed class EmergentConsciousness
+public sealed partial class EmergentConsciousness
 {
     private readonly Subject<ConsciousnessEvent> _events = new();
     private readonly ConcurrentDictionary<string, double> _attention = new();
@@ -161,7 +161,7 @@ public sealed class EmergentConsciousness
     private static string[] ExtractKeywords(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return Array.Empty<string>();
-        return Regex.Matches(text.ToLowerInvariant(), @"\b[a-z]{4,}\b")
+        return KeywordRegex().Matches(text.ToLowerInvariant())
             .Cast<Match>()
             .Select(m => m.Value)
             .Distinct()
@@ -177,4 +177,7 @@ public sealed class EmergentConsciousness
         _events.OnCompleted();
         _events.Dispose();
     }
+
+    [GeneratedRegex(@"\b[a-z]{4,}\b")]
+    private static partial Regex KeywordRegex();
 }

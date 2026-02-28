@@ -5,6 +5,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Ouroboros.Providers.Json;
 
 namespace Ouroboros.Providers.Firecrawl;
 
@@ -40,12 +41,7 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
             new MediaTypeWithQualityHeaderValue("application/json"));
         _httpClient.Timeout = options.Timeout;
 
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true,
-            WriteIndented = false
-        };
+        _jsonOptions = JsonDefaults.CamelCase;
     }
 
     /// <inheritdoc/>

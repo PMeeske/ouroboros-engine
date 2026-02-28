@@ -26,7 +26,7 @@ public static class EpisodicMemoryArrows
     public static Step<PipelineBranch, PipelineBranch> StoreEpisodeArrow(
         QdrantClient qdrantClient,
         IEmbeddingModel embeddingModel,
-        ExecutionContext context,
+        PipelineExecutionContext context,
         Outcome result,
         ImmutableDictionary<string, object> metadata,
         string collectionName = "episodic_memory")
@@ -73,7 +73,7 @@ public static class EpisodicMemoryArrows
     public static KleisliResult<PipelineBranch, PipelineBranch, string> SafeStoreEpisodeArrow(
         QdrantClient qdrantClient,
         IEmbeddingModel embeddingModel,
-        ExecutionContext context,
+        PipelineExecutionContext context,
         Outcome result,
         ImmutableDictionary<string, object> metadata,
         string collectionName = "episodic_memory")
@@ -265,7 +265,7 @@ public static class EpisodicMemoryArrows
         QdrantClient qdrantClient,
         IEmbeddingModel embeddingModel,
         PipelineBranch branch,
-        ExecutionContext context,
+        PipelineExecutionContext context,
         Outcome result,
         ImmutableDictionary<string, object> metadata,
         string collectionName,

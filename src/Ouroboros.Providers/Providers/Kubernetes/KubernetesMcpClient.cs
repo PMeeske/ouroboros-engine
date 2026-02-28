@@ -5,6 +5,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Ouroboros.Providers.Json;
 
 namespace Ouroboros.Providers.Kubernetes;
 
@@ -33,12 +34,7 @@ public sealed class KubernetesMcpClient : IKubernetesMcpClient, IDisposable
 
         _options = options;
         _httpClient = httpClient ?? CreateHttpClient(options);
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true,
-            WriteIndented = false
-        };
+        _jsonOptions = JsonDefaults.CamelCase;
     }
 
     /// <inheritdoc/>

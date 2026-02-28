@@ -12,7 +12,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// Implementation of automatic skill extraction from successful executions.
 /// Analyzes execution patterns and creates reusable skills with confidence scoring.
 /// </summary>
-public sealed class SkillExtractor : ISkillExtractor
+public sealed partial class SkillExtractor : ISkillExtractor
 {
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ISkillRegistry _skillRegistry;
@@ -354,10 +354,10 @@ Write a 1-2 sentence description of this skill's capability:";
         name = name.ToLowerInvariant();
 
         // Replace spaces and special chars with underscores
-        name = Regex.Replace(name, @"[^a-z0-9_]", "_");
+        name = NonAlphanumericRegex().Replace(name, "_");
 
         // Remove duplicate underscores
-        name = Regex.Replace(name, @"_+", "_");
+        name = DuplicateUnderscoreRegex().Replace(name, "_");
 
         // Remove leading/trailing underscores
         name = name.Trim('_');
@@ -384,4 +384,9 @@ Write a 1-2 sentence description of this skill's capability:";
         return $"{sanitized}_{timestamp}";
     }
 
+    [GeneratedRegex(@"[^a-z0-9_]")]
+    private static partial Regex NonAlphanumericRegex();
+
+    [GeneratedRegex(@"_+")]
+    private static partial Regex DuplicateUnderscoreRegex();
 }

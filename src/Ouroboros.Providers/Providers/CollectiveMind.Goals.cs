@@ -104,7 +104,7 @@ public sealed partial class CollectiveMind
 
         try
         {
-            var jsonMatch = Regex.Match(json, @"\[[\s\S]*\]");
+            var jsonMatch = JsonArrayRegex().Match(json);
             if (!jsonMatch.Success)
             {
                 _thoughtStream.OnNext("⚠️ No JSON array found in decomposition response");
@@ -163,8 +163,8 @@ public sealed partial class CollectiveMind
     private SubGoalComplexity EstimateComplexity(string text)
     {
         var length = text.Length;
-        var questionCount = Regex.Matches(text, @"\?").Count;
-        var hasMultipleSteps = Regex.IsMatch(text, @"\b(then|next|after|finally|also|and then)\b", RegexOptions.IgnoreCase);
+        var questionCount = QuestionMarkRegex().Matches(text).Count;
+        var hasMultipleSteps = GoalMultipleStepsRegex().IsMatch(text);
 
         if (length < 50 && questionCount <= 1) return SubGoalComplexity.Simple;
         if (length < 200 && !hasMultipleSteps) return SubGoalComplexity.Moderate;
@@ -176,17 +176,17 @@ public sealed partial class CollectiveMind
     {
         var lower = text.ToLowerInvariant();
 
-        if (Regex.IsMatch(lower, @"\b(code|program|function|class|implement|debug|refactor)\b"))
+        if (GoalCodingKeywordsRegex().IsMatch(lower))
             return SubGoalType.Coding;
-        if (Regex.IsMatch(lower, @"\b(calculate|compute|solve|equation|formula|math)\b"))
+        if (GoalMathKeywordsRegex().IsMatch(lower))
             return SubGoalType.Math;
-        if (Regex.IsMatch(lower, @"\b(write|create|compose|generate|story|poem|creative)\b"))
+        if (GoalCreativeKeywordsRegex().IsMatch(lower))
             return SubGoalType.Creative;
-        if (Regex.IsMatch(lower, @"\b(analyze|compare|evaluate|reason|explain why)\b"))
+        if (GoalReasoningKeywordsRegex().IsMatch(lower))
             return SubGoalType.Reasoning;
-        if (Regex.IsMatch(lower, @"\b(convert|transform|format|translate|summarize)\b"))
+        if (GoalTransformKeywordsRegex().IsMatch(lower))
             return SubGoalType.Transform;
-        if (Regex.IsMatch(lower, @"\b(find|search|lookup|what is|who is|when)\b"))
+        if (GoalRetrievalKeywordsRegex().IsMatch(lower))
             return SubGoalType.Retrieval;
 
         return SubGoalType.Reasoning;
@@ -355,6 +355,33 @@ public sealed partial class CollectiveMind
 
     private static string TruncateForContext(string text, int maxLength)
         => text.Length <= maxLength ? text : text.Substring(0, maxLength) + "...";
+
+    [GeneratedRegex(@"\[[\s\S]*\]")]
+    private static partial Regex JsonArrayRegex();
+
+    [GeneratedRegex(@"\?")]
+    private static partial Regex QuestionMarkRegex();
+
+    [GeneratedRegex(@"\b(then|next|after|finally|also|and then)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex GoalMultipleStepsRegex();
+
+    [GeneratedRegex(@"\b(code|program|function|class|implement|debug|refactor)\b")]
+    private static partial Regex GoalCodingKeywordsRegex();
+
+    [GeneratedRegex(@"\b(calculate|compute|solve|equation|formula|math)\b")]
+    private static partial Regex GoalMathKeywordsRegex();
+
+    [GeneratedRegex(@"\b(write|create|compose|generate|story|poem|creative)\b")]
+    private static partial Regex GoalCreativeKeywordsRegex();
+
+    [GeneratedRegex(@"\b(analyze|compare|evaluate|reason|explain why)\b")]
+    private static partial Regex GoalReasoningKeywordsRegex();
+
+    [GeneratedRegex(@"\b(convert|transform|format|translate|summarize)\b")]
+    private static partial Regex GoalTransformKeywordsRegex();
+
+    [GeneratedRegex(@"\b(find|search|lookup|what is|who is|when)\b")]
+    private static partial Regex GoalRetrievalKeywordsRegex();
 
     private async Task<ThinkingResponse> SynthesizeResultsAsync(
         NeuralPathway synthesizer,

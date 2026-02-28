@@ -5,6 +5,7 @@
 // ==========================================================
 
 using System.Text.Json;
+using Ouroboros.Agent.Json;
 using Ouroboros.Agent.MetaAI;
 
 namespace Ouroboros.Tools;
@@ -105,11 +106,7 @@ public sealed class NextNodeTool : ITool
                 Timestamp = DateTime.UtcNow
             };
 
-            return Result<string, string>.Success(JsonSerializer.Serialize(response, new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            }));
+            return Result<string, string>.Success(JsonSerializer.Serialize(response, JsonDefaults.Indented));
         }
         catch (Exception ex)
         {

@@ -17,7 +17,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// Enables symbolic reasoning over orchestration flow.
 /// Supports Laws of Form integration for distinction-gated planning.
 /// </summary>
-public sealed class MeTTaRepresentation
+public sealed partial class MeTTaRepresentation
 {
     private readonly IMeTTaEngine _engine;
     private readonly FormMeTTaBridge? _formBridge;
@@ -311,10 +311,7 @@ public sealed class MeTTaRepresentation
         string[] lines = mettaOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         foreach (string line in lines)
         {
-            Match match = Regex.Match(
-                line,
-                @"\(cons\s+(\S+)\s+""?([^""]+)""?\)"
-            );
+            Match match = ConsExpressionRegex().Match(line);
 
             if (match.Success)
             {
@@ -350,4 +347,7 @@ public sealed class MeTTaRepresentation
     {
         return text.Replace("\"", "\\\"").Replace("\n", "\\n");
     }
+
+    [GeneratedRegex(@"\(cons\s+(\S+)\s+""?([^""]+)""?\)")]
+    private static partial Regex ConsExpressionRegex();
 }
