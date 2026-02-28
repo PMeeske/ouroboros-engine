@@ -82,6 +82,9 @@ public sealed partial class PersistentMemoryStore
     /// </summary>
     private async Task ForgetLowImportanceMemoriesAsync()
     {
+        int excessCount = _experiences.Count - _config.LongTermCapacity;
+        if (excessCount <= 0) return;
+
         List<(Experience experience, MemoryType type, double importance)> toForget = _experiences.Values
             .Where(e => e.importance < _config.ForgettingThreshold)
             .OrderBy(e => e.importance)
@@ -146,8 +149,6 @@ public sealed partial class PersistentMemoryStore
 
         try
         {
-            float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.ContextSimilarity, ct);
-
             IReadOnlyCollection<LangChain.DocumentLoaders.Document> searchResults = await _vectorStore.GetSimilarDocuments(
                 _embedding,
                 query.ContextSimilarity,

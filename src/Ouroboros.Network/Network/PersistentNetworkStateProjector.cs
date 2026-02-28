@@ -31,6 +31,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
     private readonly List<GlobalNetworkState> _snapshots;
     private readonly List<Learning> _recentLearnings;
     private readonly object _stateLock = new();
+    private readonly SemaphoreSlim _initLock = new(1, 1);
     private readonly ILogger _logger;
     private long _currentEpoch;
     private volatile bool _initialized;
@@ -148,18 +149,22 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
     /// <param name="ct">Cancellation token.</param>
     public async Task InitializeAsync(CancellationToken ct = default)
     {
-        if (_initialized)
+        if (_initialized) return;
+
+        await _initLock.WaitAsync(ct);
+        try
         {
-            return;
+            if (_initialized) return;
+
+            // Detect embedding dimension from the actual model
+            var probe = await _embeddingFunc("dimension probe", ct);
+            _detectedVectorDimension = probe.Length;
+
+            await EnsureCollectionsExistAsync(ct);
+            await LoadPreviousStateAsync(ct);
+            _initialized = true;
         }
-
-        // Detect embedding dimension from the actual model
-        var probe = await _embeddingFunc("dimension probe", ct);
-        _detectedVectorDimension = probe.Length;
-
-        await EnsureCollectionsExistAsync(ct);
-        await LoadPreviousStateAsync(ct);
-        _initialized = true;
+        finally { _initLock.Release(); }
     }
 
     /// <summary>

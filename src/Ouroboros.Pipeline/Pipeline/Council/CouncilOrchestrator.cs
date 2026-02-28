@@ -284,6 +284,9 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
 
         var totalWeight = voteGroups.Values.Sum();
 
+        if (votes.Count == 0)
+            return Result<CouncilDecision, string>.Failure("No votes received from council members");
+
         if (totalWeight <= 0)
             return Result<CouncilDecision, string>.Failure("No weighted votes received");
 

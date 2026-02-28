@@ -318,7 +318,8 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
         // Final save
         if (_isDirty)
         {
-            _saveLock.Wait();
+            if (!_saveLock.Wait(TimeSpan.FromSeconds(5)))
+                return;
             try
             {
                 var snapshot = new Dictionary<string, PerformanceMetrics>(_metrics);

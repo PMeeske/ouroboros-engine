@@ -221,5 +221,7 @@ public sealed partial class PersistentNetworkStateProjector
 
         if (_disposeClient)
             _qdrantClient.Dispose();
+
+        _initLock.Dispose();
     }
 }
