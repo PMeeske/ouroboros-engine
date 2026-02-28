@@ -216,7 +216,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
         }
 
         // Tool use patterns
-        if (Regex.IsMatch(lowerPrompt, @"\[TOOL:|use.*tool|invoke|execute"))
+        if (SmcoToolUsePattern().IsMatch(lowerPrompt))
         {
             return new UseCase(
                 UseCaseType.ToolUse,
@@ -414,10 +414,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
     {
         int length = prompt.Length;
         int sentences = prompt.Split('.', '!', '?').Length;
-        int technicalTerms = Regex.Matches(
-            prompt,
-            @"\b(algorithm|architecture|implement|optimize|performance|system)\b",
-            RegexOptions.IgnoreCase).Count;
+        int technicalTerms = SmcoTechnicalTermsPattern().Matches(prompt).Count;
 
         return (length / 100) + sentences + (technicalTerms * 2);
     }
@@ -518,4 +515,29 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
         // Dispose metrics store if it implements IDisposable
         (_metricsStore as IDisposable)?.Dispose();
     }
+
+    // ================================================================
+    // [GeneratedRegex] source-generated regex patterns
+    // ================================================================
+
+    [GeneratedRegex(@"\b(code|implement|function|class|method|debug|fix|refactor)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoCodePattern();
+
+    [GeneratedRegex(@"\b(analyze|reason|explain|why|how|cause|logic|deduce)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoReasoningPattern();
+
+    [GeneratedRegex(@"\b(create|generate|write|story|poem|creative|imagine)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoCreativePattern();
+
+    [GeneratedRegex(@"\b(summarize|brief|tldr|overview|condense)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoSummarizePattern();
+
+    [GeneratedRegex(@"\b(vision|visual|image|camera|cam|see|look|photo|picture|screenshot|snapshot|frame|capture|pan|tilt|ptz|rotate.*camera|turn.*camera|move.*camera|patrol|sweep)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoVisionPattern();
+
+    [GeneratedRegex(@"\[TOOL:|use.*tool|invoke|execute", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoToolUsePattern();
+
+    [GeneratedRegex(@"\b(algorithm|architecture|implement|optimize|performance|system)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoTechnicalTermsPattern();
 }
