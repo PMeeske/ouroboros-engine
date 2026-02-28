@@ -18,6 +18,7 @@ public sealed class AgentCoordinator : IAgentCoordinator, IDisposable
     private readonly ITaskExecutor _taskExecutor;
     private readonly object _teamLock = new();
     private readonly SemaphoreSlim _agentSelectionLock = new(1, 1);
+    private volatile bool _disposed;
 
     /// <inheritdoc />
     public AgentTeam Team
@@ -73,6 +74,7 @@ public sealed class AgentCoordinator : IAgentCoordinator, IDisposable
     /// <inheritdoc />
     public async Task<Result<CoordinationResult, string>> ExecuteAsync(Goal goal, CancellationToken ct = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, nameof(AgentCoordinator));
         ArgumentNullException.ThrowIfNull(goal);
 
         DateTime startTime = DateTime.UtcNow;
@@ -143,6 +145,7 @@ public sealed class AgentCoordinator : IAgentCoordinator, IDisposable
     /// <inheritdoc />
     public async Task<Result<CoordinationResult, string>> ExecuteParallelAsync(IReadOnlyList<Goal> goals, CancellationToken ct = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, nameof(AgentCoordinator));
         ArgumentNullException.ThrowIfNull(goals);
 
         if (goals.Count == 0)
@@ -260,6 +263,7 @@ public sealed class AgentCoordinator : IAgentCoordinator, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        _disposed = true;
         _agentSelectionLock.Dispose();
     }
 

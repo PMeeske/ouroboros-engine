@@ -23,6 +23,7 @@ public sealed partial class EpisodicMemoryEngine : IEpisodicMemoryEngine, IAsync
     private readonly ILogger<EpisodicMemoryEngine>? _logger;
     private readonly string _collectionName;
     private readonly bool _disposeClient;
+    private readonly SemaphoreSlim _collectionInitLock = new(1, 1);
     private bool _collectionInitialized;
 
     /// <summary>
@@ -97,6 +98,8 @@ public sealed partial class EpisodicMemoryEngine : IEpisodicMemoryEngine, IAsync
         {
             _qdrantClient?.Dispose();
         }
+
+        _collectionInitLock.Dispose();
 
         await Task.CompletedTask;
     }

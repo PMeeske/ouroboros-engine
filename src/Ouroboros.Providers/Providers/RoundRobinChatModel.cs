@@ -111,8 +111,9 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
 
     /// <summary>
     /// Gets the next provider using weighted round-robin selection.
+    /// Returns the provider tuple and its index within the providers list.
     /// </summary>
-    private (Ouroboros.Abstractions.Core.IChatCompletionModel Model, ProviderConfig Config, ProviderStats Stats)? GetNextProvider(HashSet<int>? excludeIndices = null)
+    private (Ouroboros.Abstractions.Core.IChatCompletionModel Model, ProviderConfig Config, ProviderStats Stats, int Index)? GetNextProvider(HashSet<int>? excludeIndices = null)
     {
         lock (_lock)
         {
@@ -133,14 +134,15 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 if (!stats.IsHealthy && _failoverEnabled) continue;
                 if (excludeIndices?.Contains(idx) == true) continue;
 
-                return (model, config, stats);
+                return (model, config, stats, idx);
             }
 
             // If failover is disabled or all providers are unhealthy, try any enabled provider
-            foreach (var provider in _providers)
+            for (int i = 0; i < _providers.Count; i++)
             {
-                if (provider.Config.Enabled && excludeIndices?.Contains(_providers.IndexOf(provider)) != true)
-                    return provider;
+                var provider = _providers[i];
+                if (provider.Config.Enabled && excludeIndices?.Contains(i) != true)
+                    return (provider.Model, provider.Config, provider.Stats, i);
             }
 
             return null;
@@ -169,8 +171,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 throw new InvalidOperationException("No available providers in round-robin pool");
             }
 
-            var (model, config, stats) = provider.Value;
-            int providerIndex = _providers.IndexOf(provider.Value);
+            var (model, config, stats, providerIndex) = provider.Value;
             triedIndices.Add(providerIndex);
 
             try
@@ -260,8 +261,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                     return;
                 }
 
-                var (model, config, stats) = provider.Value;
-                int providerIndex = _providers.IndexOf(provider.Value);
+                var (model, config, stats, providerIndex) = provider.Value;
                 triedIndices.Add(providerIndex);
 
                 try

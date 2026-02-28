@@ -178,8 +178,14 @@ public sealed partial class EpisodicMemoryEngine
             return;
         }
 
+        await _collectionInitLock.WaitAsync(ct);
         try
         {
+            if (_collectionInitialized)
+            {
+                return;
+            }
+
             // Check if collection exists
             var exists = await _qdrantClient.CollectionExistsAsync(_collectionName, ct);
 
@@ -201,6 +207,10 @@ public sealed partial class EpisodicMemoryEngine
         {
             _logger?.LogError(ex, "Failed to initialize collection");
             throw;
+        }
+        finally
+        {
+            _collectionInitLock.Release();
         }
     }
 

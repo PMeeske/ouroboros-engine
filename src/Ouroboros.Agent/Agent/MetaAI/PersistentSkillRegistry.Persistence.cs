@@ -15,11 +15,11 @@ public sealed partial class PersistentSkillRegistry
     /// </summary>
     public async Task SaveSkillsAsync(CancellationToken ct = default)
     {
-        if (!_isDirty) return;
-
         await _saveLock.WaitAsync(ct);
         try
         {
+            if (!_isDirty) return;
+
             var serializableSkills = _skills.Values.Select(ToSerializable).ToList();
             string json = JsonSerializer.Serialize(serializableSkills, JsonOptions);
 
