@@ -2,7 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Qdrant-backed Skill Registry Implementation
 // Stores skills in Qdrant vector database for persistence

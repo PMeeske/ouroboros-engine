@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Meta-AI Layer v3.0 - MeTTa-First Orchestrator
 // Integrates symbolic reasoning with neural planning

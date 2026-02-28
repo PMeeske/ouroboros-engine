@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Goal Hierarchy Implementation
 // Hierarchical goal decomposition with value alignment

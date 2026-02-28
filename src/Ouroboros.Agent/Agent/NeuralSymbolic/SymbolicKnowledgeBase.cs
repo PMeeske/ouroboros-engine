@@ -1,6 +1,5 @@
 using Unit = Ouroboros.Abstractions.Unit;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Symbolic Knowledge Base Implementation
 // Manages symbolic rules and executes MeTTa queries

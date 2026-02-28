@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Persistent Memory Store - Persistence and Internal Helpers
 // Importance scoring, consolidation, forgetting, vector store, and disk I/O

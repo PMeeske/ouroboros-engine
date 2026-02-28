@@ -4,8 +4,6 @@
 
 using Ouroboros.Abstractions;
 
-#pragma warning disable SA1309 // Field names should not begin with underscore
-#pragma warning disable SA1101 // Prefix local calls with this
 #pragma warning disable IDE0007 // Use implicit type
 
 namespace Ouroboros.Pipeline.Planning;

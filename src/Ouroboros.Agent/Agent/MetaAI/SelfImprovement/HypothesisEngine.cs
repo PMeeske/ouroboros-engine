@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Hypothesis Engine Implementation
 // Scientific reasoning, hypothesis generation and testing

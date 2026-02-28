@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // External Knowledge Source - Research Database Integration
 // Feeds real-world research data into the emergence pipeline

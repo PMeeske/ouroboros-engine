@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Homeostasis Policy Implementation
 // Phase 3: Affective Dynamics - SLA regulation & corrective triggers

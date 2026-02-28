@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Persistent Skill Registry Implementation
 // Stores skills to disk/vector store for persistence across restarts

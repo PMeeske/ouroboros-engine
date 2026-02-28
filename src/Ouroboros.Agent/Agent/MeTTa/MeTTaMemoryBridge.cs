@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using Ouroboros.Abstractions;
 using Ouroboros.Agent.MetaAI;
 using MetaAIMemoryStatistics = Ouroboros.Agent.MetaAI.MemoryStatistics;

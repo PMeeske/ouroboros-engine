@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Neural-Symbolic Bridge Interface
 // Bridges neural (LLM) and symbolic (MeTTa) reasoning
