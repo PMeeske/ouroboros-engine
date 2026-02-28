@@ -175,7 +175,9 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
                 Metrics: snapshot);
 
             string json = JsonSerializer.Serialize(wrapper, JsonOptions);
-            await File.WriteAllTextAsync(_filePath, json, ct);
+            var tempPath = _filePath + ".tmp";
+            await File.WriteAllTextAsync(tempPath, json, ct);
+            File.Move(tempPath, _filePath, overwrite: true);
 
             _isDirty = false;
         }
@@ -319,7 +321,9 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
                     Metrics: snapshot);
 
                 string json = JsonSerializer.Serialize(wrapper, JsonOptions);
-                File.WriteAllText(_filePath, json);
+                var tempPath = _filePath + ".tmp";
+                File.WriteAllText(tempPath, json);
+                File.Move(tempPath, _filePath, overwrite: true);
             }
             finally
             {

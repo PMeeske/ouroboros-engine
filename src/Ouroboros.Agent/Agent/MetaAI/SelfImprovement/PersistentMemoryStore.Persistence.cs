@@ -217,11 +217,13 @@ public sealed partial class PersistentMemoryStore
 
             string json = JsonSerializer.Serialize(data, JsonDefaults.Indented);
 
-            await File.WriteAllTextAsync(_persistencePath, json, ct);
+            var tempPath = _persistencePath + ".tmp";
+            await File.WriteAllTextAsync(tempPath, json, ct);
+            File.Move(tempPath, _persistencePath, overwrite: true);
         }
-        catch
+        catch (Exception ex)
         {
-            // Silent failure - persistence is optional
+            System.Diagnostics.Debug.WriteLine($"Failed to persist memories: {ex.Message}");
         }
     }
 

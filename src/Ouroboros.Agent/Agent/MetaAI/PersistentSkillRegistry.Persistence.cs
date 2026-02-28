@@ -30,7 +30,9 @@ public sealed partial class PersistentSkillRegistry
                 Directory.CreateDirectory(directory);
             }
 
-            await File.WriteAllTextAsync(fullPath, json, ct);
+            var tempPath = fullPath + ".tmp";
+            await File.WriteAllTextAsync(tempPath, json, ct);
+            File.Move(tempPath, fullPath, overwrite: true);
             _isDirty = false;
         }
         finally

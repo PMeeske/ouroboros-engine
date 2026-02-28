@@ -223,20 +223,15 @@ public static class CouncilOrchestratorArrows
         CouncilConfig config,
         CancellationToken ct)
     {
-        var contributions = new List<AgentContribution>();
-
-        foreach (var agent in agents)
+        var tasks = agents.Select(async agent =>
         {
-            ct.ThrowIfCancellationRequested();
-            var result = await agent.GenerateProposalAsync(topic, llm, ct);
-            if (result.IsFailure)
-            {
-                // Log but continue - graceful degradation
-                continue;
-            }
+            try { return await agent.GenerateProposalAsync(topic, llm, ct); }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return Result<AgentContribution, string>.Failure(ex.Message); }
+        });
 
-            contributions.Add(result.Value);
-        }
+        var results = await Task.WhenAll(tasks);
+        var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
 
         if (contributions.Count == 0)
         {
@@ -258,24 +253,23 @@ public static class CouncilOrchestratorArrows
         CouncilConfig config,
         CancellationToken ct)
     {
-        var contributions = new List<AgentContribution>();
-
-        foreach (var agent in agents)
+        var tasks = agents.Select(async agent =>
         {
-            ct.ThrowIfCancellationRequested();
-            var otherProposals = proposals
-                .Where(p => p.Key != agent.Name)
-                .Select(p => p.Value)
-                .ToList();
-
-            var result = await agent.GenerateChallengeAsync(topic, otherProposals, llm, ct);
-            if (result.IsFailure)
+            try
             {
-                continue;
-            }
+                var otherProposals = proposals
+                    .Where(p => p.Key != agent.Name)
+                    .Select(p => p.Value)
+                    .ToList();
 
-            contributions.Add(result.Value);
-        }
+                return await agent.GenerateChallengeAsync(topic, otherProposals, llm, ct);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return Result<AgentContribution, string>.Failure(ex.Message); }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
 
         return Result<DebateRound, string>.Success(new DebateRound(
             Phase: DebatePhase.Challenge,
@@ -293,24 +287,21 @@ public static class CouncilOrchestratorArrows
         CouncilConfig config,
         CancellationToken ct)
     {
-        var contributions = new List<AgentContribution>();
-
-        foreach (var agent in agents)
-        {
-            ct.ThrowIfCancellationRequested();
-            if (!proposals.TryGetValue(agent.Name, out var ownProposal))
+        var tasks = agents
+            .Where(agent => proposals.ContainsKey(agent.Name))
+            .Select(async agent =>
             {
-                continue;
-            }
+                try
+                {
+                    var ownProposal = proposals[agent.Name];
+                    return await agent.GenerateRefinementAsync(topic, challenges, ownProposal, llm, ct);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex) { return Result<AgentContribution, string>.Failure(ex.Message); }
+            });
 
-            var result = await agent.GenerateRefinementAsync(topic, challenges, ownProposal, llm, ct);
-            if (result.IsFailure)
-            {
-                continue;
-            }
-
-            contributions.Add(result.Value);
-        }
+        var results = await Task.WhenAll(tasks);
+        var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
 
         return Result<DebateRound, string>.Success(new DebateRound(
             Phase: DebatePhase.Refinement,
@@ -327,21 +318,28 @@ public static class CouncilOrchestratorArrows
         CouncilConfig config,
         CancellationToken ct)
     {
+        var tasks = agents.Select(async agent =>
+        {
+            try { return (agent.Name, Result: await agent.GenerateVoteAsync(topic, transcript, llm, ct)); }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return (agent.Name, Result: Result<AgentVote, string>.Failure(ex.Message)); }
+        });
+
+        var results = await Task.WhenAll(tasks);
+
         var votes = new Dictionary<string, AgentVote>();
         var contributions = new List<AgentContribution>();
 
-        foreach (var agent in agents)
+        foreach (var (name, result) in results)
         {
-            ct.ThrowIfCancellationRequested();
-            var result = await agent.GenerateVoteAsync(topic, transcript, llm, ct);
             if (result.IsFailure)
             {
                 continue;
             }
 
-            votes[agent.Name] = result.Value;
+            votes[name] = result.Value;
             contributions.Add(new AgentContribution(
-                agent.Name,
+                name,
                 $"VOTE: {result.Value.Position} - {result.Value.Rationale}"));
         }
 

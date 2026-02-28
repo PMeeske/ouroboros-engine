@@ -123,14 +123,15 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
 
             while (attempts < _providers.Count)
             {
-                var (model, config, stats) = _providers[_currentIndex];
+                int idx = _currentIndex;
+                var (model, config, stats) = _providers[idx];
                 _currentIndex = (_currentIndex + 1) % _providers.Count;
                 attempts++;
 
                 // Skip disabled, unhealthy, or excluded providers
                 if (!config.Enabled) continue;
                 if (!stats.IsHealthy && _failoverEnabled) continue;
-                if (excludeIndices?.Contains(_currentIndex) == true) continue;
+                if (excludeIndices?.Contains(idx) == true) continue;
 
                 return (model, config, stats);
             }
@@ -174,7 +175,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
 
             try
             {
-                stats.TotalRequests++;
+                Interlocked.Increment(ref stats.TotalRequests);
                 _aggregateCostTracker.StartRequest();
 
                 ThinkingResponse result;
@@ -195,8 +196,8 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 }
 
                 // Success
-                stats.SuccessfulRequests++;
-                stats.ConsecutiveFailures = 0;
+                Interlocked.Increment(ref stats.SuccessfulRequests);
+                Interlocked.Exchange(ref stats.ConsecutiveFailures, 0);
                 stats.LastSuccess = DateTime.UtcNow;
 
                 // Track costs from provider's tracker
@@ -219,8 +220,8 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                stats.FailedRequests++;
-                stats.ConsecutiveFailures++;
+                Interlocked.Increment(ref stats.FailedRequests);
+                Interlocked.Increment(ref stats.ConsecutiveFailures);
                 stats.LastFailure = DateTime.UtcNow;
                 lastException = ex;
 
@@ -265,7 +266,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
 
                 try
                 {
-                    stats.TotalRequests++;
+                    Interlocked.Increment(ref stats.TotalRequests);
 
                     if (model is IStreamingThinkingChatModel streamingThinking)
                     {
@@ -279,8 +280,8 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
 
                         if (hasContent)
                         {
-                            stats.SuccessfulRequests++;
-                            stats.ConsecutiveFailures = 0;
+                            Interlocked.Increment(ref stats.SuccessfulRequests);
+                            Interlocked.Exchange(ref stats.ConsecutiveFailures, 0);
                             stats.LastSuccess = DateTime.UtcNow;
                             observer.OnCompleted();
                             return;
@@ -292,8 +293,8 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                         string result = await model.GenerateTextAsync(prompt, token);
                         if (!result.Contains("-fallback:"))
                         {
-                            stats.SuccessfulRequests++;
-                            stats.ConsecutiveFailures = 0;
+                            Interlocked.Increment(ref stats.SuccessfulRequests);
+                            Interlocked.Exchange(ref stats.ConsecutiveFailures, 0);
                             stats.LastSuccess = DateTime.UtcNow;
                             observer.OnNext((false, result));
                             observer.OnCompleted();
@@ -311,8 +312,8 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
-                    stats.FailedRequests++;
-                    stats.ConsecutiveFailures++;
+                    Interlocked.Increment(ref stats.FailedRequests);
+                    Interlocked.Increment(ref stats.ConsecutiveFailures);
                     stats.LastFailure = DateTime.UtcNow;
 
                     System.Diagnostics.Trace.TraceWarning("[RoundRobinChatModel] Provider '{0}' streaming failed: {1}", config.Name, ex.Message);
@@ -340,7 +341,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
         {
             foreach (var (_, _, stats) in _providers)
             {
-                stats.ConsecutiveFailures = 0;
+                Interlocked.Exchange(ref stats.ConsecutiveFailures, 0);
             }
         }
     }

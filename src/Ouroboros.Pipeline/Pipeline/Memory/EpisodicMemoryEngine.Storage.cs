@@ -265,10 +265,71 @@ public sealed partial class EpisodicMemoryEngine
 
         foreach (var group in groupedByGoal)
         {
-            if (group.Count() > 1)
+            var groupList = group.ToList();
+
+            // Only compress groups with more than 3 episodes
+            if (groupList.Count > 3)
             {
-                // Could implement: merge similar episodes into a single compressed representation
-                _logger?.LogDebug("Group '{Goal}' has {Count} episodes to compress", group.Key, group.Count());
+                _logger?.LogDebug("Group '{Goal}' has {Count} episodes to compress", group.Key, groupList.Count);
+
+                // Keep the highest-scoring episode as the representative
+                var representative = groupList.OrderByDescending(ep => ep.SuccessScore).First();
+                var toMerge = groupList.Where(ep => ep.Id != representative.Id).ToList();
+
+                // Merge lessons from other episodes into the representative
+                var mergedLessons = representative.LessonsLearned
+                    .AddRange(toMerge.SelectMany(ep => ep.LessonsLearned))
+                    .Distinct()
+                    .ToImmutableList();
+
+                // Update context metadata to note this is a compressed summary
+                var updatedContext = representative.Context
+                    .SetItem("consolidated", (object)"compressed")
+                    .SetItem("merged_episode_count", (object)groupList.Count)
+                    .SetItem("merged_episode_ids", (object)string.Join(",", toMerge.Select(ep => ep.Id)));
+
+                // Re-create the representative episode with merged data
+                var compressedEpisode = representative with
+                {
+                    LessonsLearned = mergedLessons,
+                    Context = updatedContext,
+                };
+
+                // Upsert the updated representative
+                var point = new PointStruct
+                {
+                    Id = new PointId { Uuid = compressedEpisode.Id.ToString() },
+                    Vectors = compressedEpisode.Embedding,
+                    Payload =
+                    {
+                        ["goal"] = compressedEpisode.Goal,
+                        ["timestamp"] = compressedEpisode.Timestamp.ToString("o"),
+                        ["success"] = compressedEpisode.Result.Success,
+                        ["success_score"] = compressedEpisode.SuccessScore,
+                        ["duration_ms"] = compressedEpisode.Result.Duration.TotalMilliseconds,
+                        ["output"] = compressedEpisode.Result.Output,
+                        ["errors"] = JsonSerializer.Serialize(compressedEpisode.Result.Errors),
+                        ["lessons_learned"] = JsonSerializer.Serialize(mergedLessons),
+                        ["branch_json"] = SerializePipelineBranch(compressedEpisode.ReasoningTrace),
+                        ["context"] = JsonSerializer.Serialize(updatedContext),
+                    },
+                };
+
+                await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct);
+
+                // Delete the merged (non-representative) episodes
+                var pointIdsToDelete = toMerge
+                    .Select(ep => new PointId { Uuid = ep.Id.ToString() })
+                    .ToList();
+
+                await _qdrantClient.DeleteAsync(_collectionName, pointIdsToDelete, cancellationToken: ct);
+
+                _logger?.LogInformation(
+                    "Compressed group '{Goal}': kept episode {RepId}, merged {MergedCount} episodes, {LessonCount} total lessons",
+                    group.Key,
+                    representative.Id,
+                    toMerge.Count,
+                    mergedLessons.Count);
             }
         }
 
@@ -291,7 +352,57 @@ public sealed partial class EpisodicMemoryEngine
             patterns.Count,
             episodes.Count);
 
-        // Patterns could be stored as high-level abstract episodes
+        if (patterns.Count == 0)
+        {
+            return Result<Unit, string>.Success(Unit.Value);
+        }
+
+        // Create a meta-episode containing the top patterns
+        var metaEpisodeId = Guid.NewGuid();
+        var patternLessons = patterns
+            .Select(p => $"[freq={p.Frequency}] {p.Pattern}")
+            .ToImmutableList();
+
+        var patternContent = string.Join("\n", patterns.Select(p => $"{p.Pattern} (frequency: {p.Frequency})"));
+
+        // Generate embedding from the pattern content
+        var embeddingText = $"abstracted_patterns\n{patternContent}";
+        var embedding = await _embeddingModel.CreateEmbeddingsAsync(embeddingText, ct);
+
+        var metaContext = ImmutableDictionary<string, object>.Empty
+            .Add("consolidated", (object)"abstracted")
+            .Add("source_episode_count", (object)episodes.Count)
+            .Add("pattern_frequencies", (object)JsonSerializer.Serialize(
+                patterns.ToDictionary(p => p.Pattern, p => p.Frequency)));
+
+        // Upsert the meta-episode to the collection
+        var point = new PointStruct
+        {
+            Id = new PointId { Uuid = metaEpisodeId.ToString() },
+            Vectors = embedding,
+            Payload =
+            {
+                ["goal"] = "abstracted_patterns",
+                ["timestamp"] = DateTime.UtcNow.ToString("o"),
+                ["success"] = true,
+                ["success_score"] = 1.0,
+                ["duration_ms"] = 0.0,
+                ["output"] = patternContent,
+                ["errors"] = "[]",
+                ["lessons_learned"] = JsonSerializer.Serialize(patternLessons),
+                ["branch_json"] = "{}",
+                ["context"] = JsonSerializer.Serialize(metaContext),
+            },
+        };
+
+        await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct);
+
+        _logger?.LogInformation(
+            "Stored abstracted meta-episode {MetaId} with {PatternCount} patterns from {EpisodeCount} source episodes",
+            metaEpisodeId,
+            patterns.Count,
+            episodes.Count);
+
         return Result<Unit, string>.Success(Unit.Value);
     }
 
@@ -326,7 +437,70 @@ public sealed partial class EpisodicMemoryEngine
             hierarchyLevels.Count,
             episodes.Count);
 
-        // Could implement: create abstract parent episodes that summarize children
+        foreach (var level in hierarchyLevels)
+        {
+            var levelEpisodes = level.ToList();
+            if (levelEpisodes.Count == 0)
+            {
+                continue;
+            }
+
+            var isSuccess = level.Key == "successful";
+            var parentGoal = isSuccess ? "successful_strategies" : "failure_patterns";
+
+            // Summarize child goals and lessons
+            var childGoals = levelEpisodes.Select(ep => ep.Goal).Distinct().ToList();
+            var childLessons = levelEpisodes
+                .SelectMany(ep => ep.LessonsLearned)
+                .Distinct()
+                .ToImmutableList();
+            var childIds = levelEpisodes.Select(ep => ep.Id.ToString()).ToList();
+
+            var summaryContent = $"{parentGoal}: {string.Join("; ", childGoals.Take(20))}";
+
+            // Generate embedding from the summary
+            var embeddingText = $"{parentGoal}\n{summaryContent}";
+            var embedding = await _embeddingModel.CreateEmbeddingsAsync(embeddingText, ct);
+
+            var parentId = Guid.NewGuid();
+            var parentContext = ImmutableDictionary<string, object>.Empty
+                .Add("consolidated", (object)"hierarchical")
+                .Add("hierarchy_level", (object)"parent")
+                .Add("child_episode_ids", (object)string.Join(",", childIds))
+                .Add("child_count", (object)levelEpisodes.Count);
+
+            // Calculate average success score for the parent
+            var avgScore = levelEpisodes.Average(ep => ep.SuccessScore);
+
+            var point = new PointStruct
+            {
+                Id = new PointId { Uuid = parentId.ToString() },
+                Vectors = embedding,
+                Payload =
+                {
+                    ["goal"] = parentGoal,
+                    ["timestamp"] = DateTime.UtcNow.ToString("o"),
+                    ["success"] = isSuccess,
+                    ["success_score"] = avgScore,
+                    ["duration_ms"] = 0.0,
+                    ["output"] = summaryContent,
+                    ["errors"] = "[]",
+                    ["lessons_learned"] = JsonSerializer.Serialize(childLessons),
+                    ["branch_json"] = "{}",
+                    ["context"] = JsonSerializer.Serialize(parentContext),
+                },
+            };
+
+            await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct);
+
+            _logger?.LogInformation(
+                "Created hierarchical parent episode {ParentId} ({ParentGoal}) summarizing {ChildCount} children with {LessonCount} lessons",
+                parentId,
+                parentGoal,
+                levelEpisodes.Count,
+                childLessons.Count);
+        }
+
         return Result<Unit, string>.Success(Unit.Value);
     }
 }

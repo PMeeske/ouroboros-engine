@@ -26,7 +26,8 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
 
     private readonly MerkleDag _dag;
     private readonly QdrantClient _qdrantClient;
-    private readonly Func<string, Task<float[]>> _embeddingFunc;
+    private readonly bool _disposeClient;
+    private readonly Func<string, CancellationToken, Task<float[]>> _embeddingFunc;
     private readonly List<GlobalNetworkState> _snapshots;
     private readonly List<Learning> _recentLearnings;
     private readonly ILogger _logger;
@@ -41,11 +42,12 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
         MerkleDag dag,
         QdrantClient client,
         IQdrantCollectionRegistry registry,
-        Func<string, Task<float[]>> embeddingFunc,
+        Func<string, CancellationToken, Task<float[]>> embeddingFunc,
         ILogger<PersistentNetworkStateProjector>? logger = null)
     {
         _dag = dag ?? throw new ArgumentNullException(nameof(dag));
         _qdrantClient = client ?? throw new ArgumentNullException(nameof(client));
+        _disposeClient = false;
         ArgumentNullException.ThrowIfNull(registry);
         _embeddingFunc = embeddingFunc ?? throw new ArgumentNullException(nameof(embeddingFunc));
         _logger = logger ?? NullLogger<PersistentNetworkStateProjector>.Instance;
@@ -67,7 +69,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
     public PersistentNetworkStateProjector(
         MerkleDag dag,
         string qdrantEndpoint,
-        Func<string, Task<float[]>> embeddingFunc)
+        Func<string, CancellationToken, Task<float[]>> embeddingFunc)
     {
         _dag = dag ?? throw new ArgumentNullException(nameof(dag));
         _embeddingFunc = embeddingFunc ?? throw new ArgumentNullException(nameof(embeddingFunc));
@@ -79,6 +81,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
         var port = endpointUri.Port > 0 ? endpointUri.Port : 6334;
         var useHttps = endpointUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
         _qdrantClient = new QdrantClient(host, port, useHttps);
+        _disposeClient = true;
         _snapshots = new List<GlobalNetworkState>();
         _recentLearnings = new List<Learning>();
         _currentEpoch = 0;
@@ -150,7 +153,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
         }
 
         // Detect embedding dimension from the actual model
-        var probe = await _embeddingFunc("dimension probe");
+        var probe = await _embeddingFunc("dimension probe", ct);
         _detectedVectorDimension = probe.Length;
 
         await EnsureCollectionsExistAsync(ct);
@@ -273,7 +276,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
 
         try
         {
-            var embedding = await _embeddingFunc(context);
+            var embedding = await _embeddingFunc(context, ct);
 
             var results = await _qdrantClient.SearchAsync(
                 _learningsCollectionName,

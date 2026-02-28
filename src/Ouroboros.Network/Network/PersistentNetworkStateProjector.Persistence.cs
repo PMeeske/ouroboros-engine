@@ -122,7 +122,7 @@ public sealed partial class PersistentNetworkStateProjector
         try
         {
             var json = JsonSerializer.Serialize(state);
-            var embedding = await _embeddingFunc($"network state epoch {state.Epoch} nodes {state.TotalNodes} transitions {state.TotalTransitions}");
+            var embedding = await _embeddingFunc($"network state epoch {state.Epoch} nodes {state.TotalNodes} transitions {state.TotalTransitions}", ct);
 
             var point = new PointStruct
             {
@@ -152,7 +152,7 @@ public sealed partial class PersistentNetworkStateProjector
         try
         {
             var json = JsonSerializer.Serialize(learning);
-            var embedding = await _embeddingFunc($"{learning.Category}: {learning.Content}");
+            var embedding = await _embeddingFunc($"{learning.Category}: {learning.Content}", ct);
 
             var point = new PointStruct
             {
@@ -195,6 +195,7 @@ public sealed partial class PersistentNetworkStateProjector
             }
         }
 
-        _qdrantClient.Dispose();
+        if (_disposeClient)
+            _qdrantClient.Dispose();
     }
 }
