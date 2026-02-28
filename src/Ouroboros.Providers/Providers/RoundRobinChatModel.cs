@@ -304,9 +304,9 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
 
                     throw new InvalidOperationException($"Provider {config.Name} returned empty or fallback response");
                 }
-                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                catch (OperationCanceledException ex) when (token.IsCancellationRequested)
                 {
-                    observer.OnCompleted(); // deliberate cancellation — don't retry
+                    observer.OnError(ex); // deliberate cancellation — signal error, don't retry
                     return;
                 }
                 catch (OperationCanceledException) { throw; }

@@ -24,7 +24,7 @@ public sealed partial class EpisodicMemoryEngine : IEpisodicMemoryEngine, IAsync
     private readonly string _collectionName;
     private readonly bool _disposeClient;
     private readonly SemaphoreSlim _collectionInitLock = new(1, 1);
-    private bool _collectionInitialized;
+    private volatile bool _collectionInitialized;
 
     /// <summary>
     /// Initializes a new instance using the DI-provided client and collection registry.
