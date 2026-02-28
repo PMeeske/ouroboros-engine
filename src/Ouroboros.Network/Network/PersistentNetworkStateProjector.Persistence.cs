@@ -206,17 +206,25 @@ public sealed partial class PersistentNetworkStateProjector
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        if (_initialized && _dag.NodeCount > 0)
+        await _initLock.WaitAsync();
+        try
         {
-            try
+            if (_initialized && _dag.NodeCount > 0)
             {
-                await ProjectAndPersistAsync(
-                    ImmutableDictionary<string, string>.Empty.Add("event", "shutdown"));
+                try
+                {
+                    await ProjectAndPersistAsync(
+                        ImmutableDictionary<string, string>.Empty.Add("event", "shutdown"));
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // Ignore errors during disposal
+                }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                // Ignore errors during disposal
-            }
+        }
+        finally
+        {
+            _initLock.Release();
         }
 
         if (_disposeClient)
