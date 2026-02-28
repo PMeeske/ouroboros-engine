@@ -78,6 +78,8 @@ public static class AudioPlayer
                 return Result<bool, string>.Failure("No suitable audio player found on this system");
             }
 
+            // SECURITY: safe — GetPlayerStartInfo uses hardcoded commands
+            // (powershell, afplay, mpv, ffplay, aplay) with ArgumentList.
             using Process? process = Process.Start(startInfo);
             if (process == null)
             {
@@ -211,12 +213,13 @@ public static class AudioPlayer
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = "which",
-                Arguments = command,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 CreateNoWindow = true,
             };
+            startInfo.ArgumentList.Add(command);
 
+            // SECURITY: safe — hardcoded "which" with internally-sourced command names
             using Process? process = Process.Start(startInfo);
             process?.WaitForExit(1000);
             return process?.ExitCode == 0;

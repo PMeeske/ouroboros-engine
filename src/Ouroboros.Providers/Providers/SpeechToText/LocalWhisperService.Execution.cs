@@ -24,18 +24,18 @@ public sealed partial class LocalWhisperService
         }
 
         // Fall back to native whisper CLI
-        string args = BuildWhisperArguments(filePath, options);
-
         ProcessStartInfo startInfo = new ProcessStartInfo
         {
             FileName = _whisperPath,
-            Arguments = args,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true,
         };
+        BuildWhisperArgumentList(startInfo, filePath, options);
 
+        // SECURITY: validated — ArgumentList prevents injection from file paths
+        // and model paths. UseShellExecute = false prevents shell interpretation.
         using Process process = new Process { StartInfo = startInfo };
 
         try
@@ -77,23 +77,34 @@ public sealed partial class LocalWhisperService
         string python = FindPythonExecutable();
         string? scriptPath = FindWhisperPythonScript();
 
-        List<string> args = new List<string>();
+        ProcessStartInfo startInfo = new ProcessStartInfo
+        {
+            FileName = python,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
 
         if (!string.IsNullOrEmpty(scriptPath))
         {
-            args.Add($"\"{scriptPath}\"");
-            args.Add($"\"{filePath}\"");
-            args.Add($"--model {_modelSize}");
-            args.Add("--output json");
+            startInfo.ArgumentList.Add(scriptPath);
+            startInfo.ArgumentList.Add(filePath);
+            startInfo.ArgumentList.Add("--model");
+            startInfo.ArgumentList.Add(_modelSize);
+            startInfo.ArgumentList.Add("--output");
+            startInfo.ArgumentList.Add("json");
 
             if (!string.IsNullOrEmpty(options.Language))
             {
-                args.Add($"--language {options.Language}");
+                startInfo.ArgumentList.Add("--language");
+                startInfo.ArgumentList.Add(options.Language);
             }
 
             if (options.Prompt?.Contains("--translate") == true)
             {
-                args.Add("--task translate");
+                startInfo.ArgumentList.Add("--task");
+                startInfo.ArgumentList.Add("translate");
             }
         }
         else
@@ -116,20 +127,12 @@ output = {{
 }}
 print(json.dumps(output, ensure_ascii=False))
 ";
-            args.Add("-c");
-            args.Add($"\"{pythonCode.Replace("\"", "\\\"").Replace("\n", " ")}\"");
+            startInfo.ArgumentList.Add("-c");
+            startInfo.ArgumentList.Add(pythonCode);
         }
 
-        ProcessStartInfo startInfo = new ProcessStartInfo
-        {
-            FileName = python,
-            Arguments = string.Join(" ", args),
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
+        // SECURITY: validated — ArgumentList prevents injection from file paths
+        // and model names. Python -c code uses hardcoded template with escaped file path.
         using Process process = new Process { StartInfo = startInfo };
 
         try
@@ -163,43 +166,45 @@ print(json.dumps(output, ensure_ascii=False))
         }
     }
 
-    private string BuildWhisperArguments(string filePath, TranscriptionOptions options)
+    private void BuildWhisperArgumentList(ProcessStartInfo psi, string filePath, TranscriptionOptions options)
     {
-        List<string> args = new List<string>();
-
-        args.Add($"\"{filePath}\"");
+        psi.ArgumentList.Add(filePath);
 
         if (!string.IsNullOrEmpty(_modelPath))
         {
-            args.Add($"--model \"{_modelPath}\"");
+            psi.ArgumentList.Add("--model");
+            psi.ArgumentList.Add(_modelPath);
         }
         else
         {
-            args.Add($"--model {_modelSize}");
+            psi.ArgumentList.Add("--model");
+            psi.ArgumentList.Add(_modelSize);
         }
 
         if (!string.IsNullOrEmpty(options.Language))
         {
-            args.Add($"--language {options.Language}");
+            psi.ArgumentList.Add("--language");
+            psi.ArgumentList.Add(options.Language);
         }
 
         if (options.ResponseFormat == "json" || options.ResponseFormat == "verbose_json")
         {
-            args.Add("--output_format json");
+            psi.ArgumentList.Add("--output_format");
+            psi.ArgumentList.Add("json");
         }
 
         if (options.Prompt?.Contains("--translate") == true)
         {
-            args.Add("--task translate");
+            psi.ArgumentList.Add("--task");
+            psi.ArgumentList.Add("translate");
         }
 
         string? cleanPrompt = options.Prompt?.Replace("--translate", string.Empty).Trim();
         if (!string.IsNullOrEmpty(cleanPrompt))
         {
-            args.Add($"--initial_prompt \"{cleanPrompt}\"");
+            psi.ArgumentList.Add("--initial_prompt");
+            psi.ArgumentList.Add(cleanPrompt);
         }
-
-        return string.Join(" ", args);
     }
 
     private sealed class WhisperJsonOutput

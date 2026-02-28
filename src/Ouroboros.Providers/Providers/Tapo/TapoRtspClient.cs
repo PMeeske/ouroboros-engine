@@ -114,6 +114,8 @@ public sealed class TapoRtspClient : IDisposable
             startInfo.ArgumentList.Add("mjpeg");
             startInfo.ArgumentList.Add("-");
 
+            // SECURITY: safe — hardcoded "ffmpeg" with ArgumentList; RTSP URL uses
+            // Uri.EscapeDataString for credentials, preventing injection.
             using var process = new Process { StartInfo = startInfo };
             process.Start();
 
@@ -209,6 +211,7 @@ public sealed class TapoRtspClient : IDisposable
 
         try
         {
+            // SECURITY: safe — hardcoded "ffmpeg" with ArgumentList for RTSP streaming
             _ffmpegProcess.Start();
 
             var buffer = new byte[1024 * 1024]; // 1MB buffer
@@ -354,6 +357,7 @@ public sealed class TapoRtspClient : IDisposable
             startInfo.ArgumentList.Add("-v");
             startInfo.ArgumentList.Add("quiet");
 
+            // SECURITY: safe — hardcoded "ffprobe" with ArgumentList for connection test
             using var process = new Process { StartInfo = startInfo };
             process.Start();
 

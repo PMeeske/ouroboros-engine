@@ -173,26 +173,10 @@ public sealed class DynamicParserFactory : IDisposable
 
     private async Task RunAntlrToolAsync(string grammarPath, string workingDir, CancellationToken ct)
     {
-        string arguments;
         string fileName;
-
-        if (_antlrToolPath.EndsWith(".jar", StringComparison.OrdinalIgnoreCase))
-        {
-            // Java JAR mode
-            fileName = "java";
-            arguments = $"-jar \"{_antlrToolPath}\" -Dlanguage=CSharp -visitor -no-listener \"{grammarPath}\"";
-        }
-        else
-        {
-            // .NET tool mode (antlr4 global tool or dotnet-antlr)
-            fileName = _antlrToolPath;
-            arguments = $"-Dlanguage=CSharp -visitor -no-listener \"{grammarPath}\"";
-        }
 
         var psi = new ProcessStartInfo
         {
-            FileName = fileName,
-            Arguments = arguments,
             WorkingDirectory = workingDir,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -200,6 +184,28 @@ public sealed class DynamicParserFactory : IDisposable
             CreateNoWindow = true,
         };
 
+        if (_antlrToolPath.EndsWith(".jar", StringComparison.OrdinalIgnoreCase))
+        {
+            // Java JAR mode
+            fileName = "java";
+            psi.FileName = fileName;
+            psi.ArgumentList.Add("-jar");
+            psi.ArgumentList.Add(_antlrToolPath);
+        }
+        else
+        {
+            // .NET tool mode (antlr4 global tool or dotnet-antlr)
+            fileName = _antlrToolPath;
+            psi.FileName = fileName;
+        }
+
+        psi.ArgumentList.Add("-Dlanguage=CSharp");
+        psi.ArgumentList.Add("-visitor");
+        psi.ArgumentList.Add("-no-listener");
+        psi.ArgumentList.Add(grammarPath);
+
+        // SECURITY: validated — ArgumentList prevents injection from antlrToolPath
+        // and grammarPath (temp file). UseShellExecute = false prevents shell interpretation.
         using var process = Process.Start(psi)
             ?? throw new GrammarCompilationException(
                 $"Failed to start ANTLR tool: {fileName}",

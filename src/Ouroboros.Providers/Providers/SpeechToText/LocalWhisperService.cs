@@ -255,6 +255,7 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
             startInfo.ArgumentList.Add("-c");
             startInfo.ArgumentList.Add("import whisper; print('ok')");
 
+            // SECURITY: safe — hardcoded python with ArgumentList for import check
             using Process? process = Process.Start(startInfo);
             if (process == null)
             {

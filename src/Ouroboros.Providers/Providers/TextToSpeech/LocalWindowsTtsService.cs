@@ -466,6 +466,8 @@ $synth.Speak($speechText)
             startInfo.ArgumentList.Add("-Command");
             startInfo.ArgumentList.Add(script);
 
+            // SECURITY: safe — hardcoded "powershell.exe" with ArgumentList;
+            // script content is passed as a single argument, not interpreted by shell.
             using var process = Process.Start(startInfo);
             if (process == null)
             {

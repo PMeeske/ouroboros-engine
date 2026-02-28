@@ -65,21 +65,27 @@ public sealed class TapoGatewayManager : IAsyncDisposable
         var startInfo = new ProcessStartInfo
         {
             FileName = pythonPath,
-            Arguments = string.Join(" ",
-                $"\"{_gatewayScriptPath}\"",
-                $"--port {port}",
-                $"--tapo-username \"{tapoUsername}\"",
-                $"--tapo-password \"{tapoPassword}\"",
-                $"--server-password \"{serverPassword}\"",
-                $"--broadcast-addr \"{broadcastAddr}\""),
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
+        startInfo.ArgumentList.Add(_gatewayScriptPath);
+        startInfo.ArgumentList.Add("--port");
+        startInfo.ArgumentList.Add(port.ToString());
+        startInfo.ArgumentList.Add("--tapo-username");
+        startInfo.ArgumentList.Add(tapoUsername);
+        startInfo.ArgumentList.Add("--tapo-password");
+        startInfo.ArgumentList.Add(tapoPassword);
+        startInfo.ArgumentList.Add("--server-password");
+        startInfo.ArgumentList.Add(serverPassword);
+        startInfo.ArgumentList.Add("--broadcast-addr");
+        startInfo.ArgumentList.Add(broadcastAddr);
 
         try
         {
+            // SECURITY: validated — ArgumentList prevents injection from credentials
+            // and configuration parameters. UseShellExecute = false prevents shell interpretation.
             _process = Process.Start(startInfo);
             if (_process == null)
             {
@@ -209,6 +215,7 @@ public sealed class TapoGatewayManager : IAsyncDisposable
                 };
                 psi.ArgumentList.Add("--version");
 
+                // SECURITY: safe — hardcoded python candidates with ArgumentList
                 using var proc = Process.Start(psi);
                 if (proc == null) continue;
 
