@@ -183,7 +183,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
         }
 
         // Creative patterns
-        if (Regex.IsMatch(lowerPrompt, @"\b(create|generate|write|story|poem|creative|imagine)\b"))
+        if (SmcoCreativePattern().IsMatch(lowerPrompt))
         {
             return new UseCase(
                 UseCaseType.Creative,
@@ -194,7 +194,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
         }
 
         // Summarization patterns
-        if (Regex.IsMatch(lowerPrompt, @"\b(summarize|brief|tldr|overview|condense)\b") || prompt.Length > 1000)
+        if (SmcoSummarizePattern().IsMatch(lowerPrompt) || prompt.Length > 1000)
         {
             return new UseCase(
                 UseCaseType.Summarization,
@@ -205,7 +205,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
         }
 
         // Vision/camera patterns - routes to Analysis model type (vision sub-model)
-        if (Regex.IsMatch(lowerPrompt, @"\b(vision|visual|image|camera|cam|see|look|photo|picture|screenshot|snapshot|frame|capture|pan|tilt|ptz|rotate.*camera|turn.*camera|move.*camera|patrol|sweep)\b"))
+        if (SmcoVisionPattern().IsMatch(lowerPrompt))
         {
             return new UseCase(
                 UseCaseType.Analysis,
