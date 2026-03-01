@@ -78,7 +78,7 @@ public sealed class ParallelExecutor
     /// <summary>
     /// Estimates the speedup from parallel execution.
     /// </summary>
-    public double EstimateSpeedup(Plan plan)
+    public static double EstimateSpeedup(Plan plan)
     {
         StepDependencyGraph dependencyGraph = new StepDependencyGraph(plan.Steps);
         List<List<int>> parallelGroups = dependencyGraph.GetParallelGroups();

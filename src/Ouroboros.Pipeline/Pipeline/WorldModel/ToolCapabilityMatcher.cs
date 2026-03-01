@@ -111,7 +111,7 @@ public sealed class ToolCapabilityMatcher
     /// <param name="tool">The tool to score.</param>
     /// <param name="goalDescription">The goal description.</param>
     /// <returns>A relevance score between 0.0 and 1.0.</returns>
-    public double ScoreToolRelevance(ITool tool, string goalDescription)
+    public static double ScoreToolRelevance(ITool tool, string goalDescription)
     {
         ArgumentNullException.ThrowIfNull(tool);
         ArgumentNullException.ThrowIfNull(goalDescription);
@@ -126,7 +126,7 @@ public sealed class ToolCapabilityMatcher
     /// </summary>
     /// <param name="goalDescription">The goal description to analyze.</param>
     /// <returns>List of capability keywords extracted from the description.</returns>
-    public IReadOnlyList<string> GetRequiredCapabilities(string goalDescription)
+    public static IReadOnlyList<string> GetRequiredCapabilities(string goalDescription)
     {
         ArgumentNullException.ThrowIfNull(goalDescription);
 
@@ -236,7 +236,7 @@ public sealed class ToolCapabilityMatcher
         return goalSet.Intersect(toolSet, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
-    private ToolMatch ScoreAndMatchTool(ITool tool, string goalDescription, IReadOnlyList<string> goalKeywords)
+    private static ToolMatch ScoreAndMatchTool(ITool tool, string goalDescription, IReadOnlyList<string> goalKeywords)
     {
         // Extract keywords from tool name and description
         IReadOnlyList<string> toolNameKeywords = ExtractKeywords(tool.Name);

@@ -85,7 +85,6 @@ public sealed class MemoryStore : IMemoryStore
             // If vector store available and context similarity specified, use semantic search
             if (_embedding != null && _vectorStore != null && !string.IsNullOrEmpty(query.ContextSimilarity))
             {
-                float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query.ContextSimilarity, ct);
                 IReadOnlyCollection<LangChain.DocumentLoaders.Document> similarDocs = await _vectorStore.GetSimilarDocuments(
                     _embedding,
                     query.ContextSimilarity,

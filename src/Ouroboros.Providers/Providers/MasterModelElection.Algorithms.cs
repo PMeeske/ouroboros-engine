@@ -15,7 +15,8 @@ public sealed partial class MasterModelElection
     private static (ResponseCandidate<ThinkingResponse> Winner, Dictionary<string, double> Votes, string Rationale)
         ElectByMajority(List<ResponseCandidate<ThinkingResponse>> candidates)
     {
-        var winner = candidates.OrderByDescending(c => c.Score).First();
+        var ranked = candidates.OrderByDescending(c => c.Score).ToList();
+        var winner = ranked[0];
         var votes = candidates.ToDictionary(c => c.Source, c => c.Score);
         return (winner, votes, $"Highest score: {winner.Score:F3}");
     }
@@ -31,7 +32,8 @@ public sealed partial class MasterModelElection
             return (Candidate: c, WeightedScore: weightedScore);
         }).ToList();
 
-        var winner = weighted.OrderByDescending(w => w.WeightedScore).First();
+        var rankedWeighted = weighted.OrderByDescending(w => w.WeightedScore).ToList();
+        var winner = rankedWeighted[0];
         var votes = weighted.ToDictionary(w => w.Candidate.Source, w => w.WeightedScore);
         return (winner.Candidate, votes, $"Weighted score: {winner.WeightedScore:F3} (reliability factored)");
     }
@@ -48,11 +50,11 @@ public sealed partial class MasterModelElection
             votes[ranked[i].Source] = n - i; // Borda points: n for 1st, n-1 for 2nd, etc.
         }
 
-        var winner = ranked.First();
+        var winner = ranked[0];
         return (winner, votes, $"Borda count winner with {n} points");
     }
 
-    private async Task<(ResponseCandidate<ThinkingResponse> Winner, Dictionary<string, double> Votes, string Rationale)>
+    private static async Task<(ResponseCandidate<ThinkingResponse> Winner, Dictionary<string, double> Votes, string Rationale)>
         ElectByCondorcetAsync(List<ResponseCandidate<ThinkingResponse>> candidates, string prompt, CancellationToken ct)
     {
         // Simplified Condorcet: use scores for pairwise comparison
@@ -69,8 +71,9 @@ public sealed partial class MasterModelElection
             }
         }
 
-        var winnerSource = wins.OrderByDescending(kv => kv.Value).First().Key;
-        var winner = candidates.First(c => c.Source == winnerSource);
+        var rankedWins = wins.OrderByDescending(kv => kv.Value).ToList();
+        var winnerSource = rankedWins[0].Key;
+        var winner = candidates.Find(c => c.Source == winnerSource)!;
         var votes = wins.ToDictionary(kv => kv.Key, kv => (double)kv.Value);
 
         return (winner, votes, $"Condorcet winner with {wins[winnerSource]} pairwise wins");
@@ -86,7 +89,7 @@ public sealed partial class MasterModelElection
         while (remaining.Count > 1)
         {
             rounds++;
-            var lowest = remaining.OrderBy(c => c.Score).First();
+            var lowest = remaining.OrderBy(c => c.Score).ToList()[0];
             remaining.Remove(lowest);
 
             if (remaining.Count > 0)
@@ -96,7 +99,7 @@ public sealed partial class MasterModelElection
             }
         }
 
-        var winner = remaining.First();
+        var winner = remaining[0];
         return (winner, votes, $"IRV winner after {rounds} elimination rounds");
     }
 
@@ -112,7 +115,8 @@ public sealed partial class MasterModelElection
             approved = candidates.OrderByDescending(c => c.Score).Take(1).ToList();
         }
 
-        var winner = approved.OrderByDescending(c => c.Score).First();
+        var rankedApproved = approved.OrderByDescending(c => c.Score).ToList();
+        var winner = rankedApproved[0];
         return (winner, votes, $"Approval voting: {approved.Count} candidates above threshold {threshold}");
     }
 

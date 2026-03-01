@@ -53,7 +53,7 @@ public sealed partial class CognitiveIntrospector
             return report.WithObservation("No attention distribution data available.");
         }
 
-        var totalAttention = state.AttentionDistribution.Values.Sum();
+        _ = state.AttentionDistribution.Values.Sum();
         report = report.WithObservation($"Attention distributed across {state.AttentionDistribution.Count} areas.");
 
         // Check for attention fragmentation

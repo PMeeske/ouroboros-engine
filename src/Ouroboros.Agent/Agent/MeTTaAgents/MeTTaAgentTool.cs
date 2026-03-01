@@ -333,23 +333,22 @@ public sealed partial class MeTTaAgentTool : ITool
         // Use shared pattern from MeTTaParsingHelpers
         var matches = AgentDefRegex().Matches(mettaOutput);
 
-        foreach (System.Text.RegularExpressions.Match match in matches)
+        foreach (var groups in matches.Cast<System.Text.RegularExpressions.Match>()
+            .Where(match => match.Groups.Count >= 8)
+            .Select(match => match.Groups))
         {
-            if (match.Groups.Count >= 8)
-            {
-                string agentId = match.Groups[1].Value;
-                string provider = match.Groups[2].Value;
-                string model = match.Groups[3].Value;
-                string role = match.Groups[4].Value;
-                string prompt = match.Groups[5].Value;
+            string agentId = groups[1].Value;
+            string provider = groups[2].Value;
+            string model = groups[3].Value;
+            string role = groups[4].Value;
+            string prompt = groups[5].Value;
 
-                if (int.TryParse(match.Groups[6].Value, out int maxTokens) &&
-                    float.TryParse(match.Groups[7].Value, System.Globalization.CultureInfo.InvariantCulture, out float temperature))
-                {
-                    defs.Add(new MeTTaAgentDef(
-                        agentId, provider, model, role, prompt,
-                        maxTokens, temperature));
-                }
+            if (int.TryParse(groups[6].Value, out int maxTokens) &&
+                float.TryParse(groups[7].Value, System.Globalization.CultureInfo.InvariantCulture, out float temperature))
+            {
+                defs.Add(new MeTTaAgentDef(
+                    agentId, provider, model, role, prompt,
+                    maxTokens, temperature));
             }
         }
 

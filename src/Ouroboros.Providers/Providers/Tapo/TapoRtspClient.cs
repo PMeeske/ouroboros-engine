@@ -214,7 +214,6 @@ public sealed class TapoRtspClient : IDisposable
             // SECURITY: safe — hardcoded "ffmpeg" with ArgumentList for RTSP streaming
             _ffmpegProcess.Start();
 
-            var buffer = new byte[1024 * 1024]; // 1MB buffer
             var stream = _ffmpegProcess.StandardOutput.BaseStream;
 
             while (!ct.IsCancellationRequested && !_ffmpegProcess.HasExited)
@@ -361,7 +360,7 @@ public sealed class TapoRtspClient : IDisposable
             using var process = new Process { StartInfo = startInfo };
             process.Start();
 
-            var outputTask = process.StandardOutput.ReadToEndAsync(ct);
+            _ = process.StandardOutput.ReadToEndAsync(ct);
             var errorTask = process.StandardError.ReadToEndAsync(ct);
 
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);

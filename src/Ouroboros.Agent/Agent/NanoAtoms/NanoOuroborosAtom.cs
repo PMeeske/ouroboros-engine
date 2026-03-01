@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
-using System.Diagnostics;
+
 using Ouroboros.Core.Monads;
 
 namespace Ouroboros.Agent.NanoAtoms;
@@ -64,8 +64,6 @@ public sealed class NanoOuroborosAtom : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(fragment);
-
-        var stopwatch = Stopwatch.StartNew();
 
         try
         {

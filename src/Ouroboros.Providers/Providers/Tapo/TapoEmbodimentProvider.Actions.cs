@@ -21,7 +21,7 @@ public sealed partial class TapoEmbodimentProvider
         if (_disposed) return Result<ActionOutcome>.Failure("Provider is disposed");
         if (!_isConnected) return Result<ActionOutcome>.Failure("Not connected");
 
-        if (!_actuators.TryGetValue(actuatorId, out var actuator))
+        if (!_actuators.ContainsKey(actuatorId))
         {
             return Result<ActionOutcome>.Failure($"Actuator '{actuatorId}' not found");
         }

@@ -41,6 +41,6 @@ public sealed class WeightedRandomStrategy : IProviderSelectionStrategy
                 return id;
         }
 
-        return healthyProviders.Last();
+        return healthyProviders[^1];
     }
 }

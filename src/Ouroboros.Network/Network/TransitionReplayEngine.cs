@@ -139,7 +139,7 @@ public sealed class TransitionReplayEngine
 
         // For simplicity, follow the first incoming edge
         // In a more complex scenario, you might want to follow all paths
-        var edge = incomingEdges.First();
+        var edge = incomingEdges[0];
         path.Add(edge);
 
         // Continue from the first input node
@@ -154,7 +154,7 @@ public sealed class TransitionReplayEngine
         var outgoingEdges = _dag.GetOutgoingEdges(nodeId).ToList();
         if (outgoingEdges.Count > 0)
         {
-            var edge = outgoingEdges.First();
+            var edge = outgoingEdges[0];
             chain.Add(edge);
             ExtendChain(chain, edge.OutputId);
         }

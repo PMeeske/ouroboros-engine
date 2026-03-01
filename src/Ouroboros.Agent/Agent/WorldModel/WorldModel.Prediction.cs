@@ -30,7 +30,7 @@ public sealed partial class WorldModel
             .ToList();
     }
 
-    private double CalculateSimilarity(
+    private static double CalculateSimilarity(
         SensorState state,
         EmbodiedAction action,
         StateTransition transition)
@@ -43,26 +43,26 @@ public sealed partial class WorldModel
         return (0.4 * positionSim) + (0.3 * actionSim) + (0.2 * velocitySim) + (0.1 * visualSim);
     }
 
-    private double PositionSimilarity(Vector3 a, Vector3 b)
+    private static double PositionSimilarity(Vector3 a, Vector3 b)
     {
         var distance = (a - b).Magnitude();
         return Math.Exp(-distance / 10.0);
     }
 
-    private double VelocitySimilarity(Vector3 a, Vector3 b)
+    private static double VelocitySimilarity(Vector3 a, Vector3 b)
     {
         var distance = (a - b).Magnitude();
         return Math.Exp(-distance / 5.0);
     }
 
-    private double ActionSimilarity(EmbodiedAction a, EmbodiedAction b)
+    private static double ActionSimilarity(EmbodiedAction a, EmbodiedAction b)
     {
         var movementDist = (a.Movement - b.Movement).Magnitude();
         var rotationDist = (a.Rotation - b.Rotation).Magnitude();
         return Math.Exp(-(movementDist + rotationDist) / 2.0);
     }
 
-    private double VisualSimilarity(float[] a, float[] b)
+    private static double VisualSimilarity(float[] a, float[] b)
     {
         if (a.Length == 0 || b.Length == 0 || a.Length != b.Length)
         {
@@ -84,7 +84,7 @@ public sealed partial class WorldModel
         return denominator > 0 ? (dotProduct / denominator + 1.0) / 2.0 : 0.5;
     }
 
-    private (SensorState state, double reward, bool terminal) AggregatePredictions(
+    private static (SensorState state, double reward, bool terminal) AggregatePredictions(
         List<(StateTransition transition, double similarity)> neighbors,
         SensorState currentState,
         EmbodiedAction action)
@@ -129,7 +129,7 @@ public sealed partial class WorldModel
         return (predictedState, weightedReward, weightedTerminal > 0.5);
     }
 
-    private SensorState ProjectForward(SensorState current, EmbodiedAction action)
+    private static SensorState ProjectForward(SensorState current, EmbodiedAction action)
     {
         var newPosition = current.Position + action.Movement;
         var newVelocity = action.Movement;
@@ -237,7 +237,7 @@ public sealed partial class WorldModel
         }
     }
 
-    private string QuantizeAction(EmbodiedAction action)
+    private static string QuantizeAction(EmbodiedAction action)
     {
         var mx = Math.Round(action.Movement.X, 1);
         var my = Math.Round(action.Movement.Y, 1);
@@ -258,7 +258,7 @@ public sealed partial class WorldModel
         _accuracyTracker[key] = (predictions + 1, correct + 1);
     }
 
-    private double CalculateVariance(List<double> values)
+    private static double CalculateVariance(List<double> values)
     {
         if (values.Count < 2)
         {

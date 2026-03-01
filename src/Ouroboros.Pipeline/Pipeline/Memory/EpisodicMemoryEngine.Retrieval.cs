@@ -150,7 +150,7 @@ public sealed partial class EpisodicMemoryEngine
             var output = payload["output"].StringValue;
             var errorsJson = payload["errors"].StringValue;
             var lessonsJson = payload["lessons_learned"].StringValue;
-            var branchJson = payload["branch_json"].StringValue;
+            _ = payload["branch_json"].StringValue; // S1481: read but unused; kept for forward-compat deserialization
             var contextJson = payload["context"].StringValue;
 
             var errors = JsonSerializer.Deserialize<ImmutableList<string>>(errorsJson) ?? ImmutableList<string>.Empty;
@@ -189,7 +189,7 @@ public sealed partial class EpisodicMemoryEngine
         }
     }
 
-    private string BuildPlanDescription(string goal, List<string> successPatterns, List<string> failurePatterns)
+    private static string BuildPlanDescription(string goal, List<string> successPatterns, List<string> failurePatterns)
     {
         var description = $"Plan for: {goal}\n\n";
 
@@ -209,7 +209,7 @@ public sealed partial class EpisodicMemoryEngine
         return description;
     }
 
-    private ImmutableList<PlanAction> GeneratePlanActions(string goal, ImmutableList<Episode> episodes)
+    private static ImmutableList<PlanAction> GeneratePlanActions(string goal, ImmutableList<Episode> episodes)
     {
         var actions = new List<PlanAction>();
 

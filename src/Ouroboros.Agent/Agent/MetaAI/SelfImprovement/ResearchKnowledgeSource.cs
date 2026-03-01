@@ -164,12 +164,9 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
             .OrderByDescending(g => g.Count())
             .Take(5);
 
-        foreach (var wordGroup in titleWords)
+        foreach (var wordGroup in titleWords.Where(wg => wg.Count() >= 2))
         {
-            if (wordGroup.Count() >= 2)
-            {
-                observations.Add($"The term '{wordGroup.Key}' appears frequently across {wordGroup.Count()} papers");
-            }
+            observations.Add($"The term '{wordGroup.Key}' appears frequently across {wordGroup.Count()} papers");
         }
 
         // If LLM available, generate deeper observations
@@ -177,19 +174,6 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
         {
             try
             {
-                string abstractsContext = string.Join("\n\n", papers.Take(5).Select(p =>
-                    $"Title: {p.Title}\nAbstract: {p.Abstract.Substring(0, Math.Min(500, p.Abstract.Length))}..."));
-
-                string prompt = $@"Analyze these research paper abstracts and identify 3-5 key observations about trends, patterns, or emerging themes:
-
-{abstractsContext}
-
-Return observations as a simple list, one per line. Focus on:
-- Common methodologies or approaches
-- Recurring findings or claims
-- Connections between papers
-- Emerging research directions";
-
                 // Note: Using the chat model if available
                 // This would need to be adapted to your specific LLM interface
                 observations.Add("Papers show convergence toward transformer-based architectures");
@@ -225,8 +209,6 @@ Return observations as a simple list, one per line. Focus on:
         List<ResearchPaper> papers = papersResult.Value;
 
         // Identify research gaps and novel directions
-        var categories = papers.Select(p => p.Category).Distinct().ToList();
-
         // Create exploration opportunities from underexplored areas
         var categoryGroups = papers.GroupBy(p => p.Category).OrderBy(g => g.Count());
 
@@ -241,19 +223,17 @@ Return observations as a simple list, one per line. Focus on:
         }
 
         // Add opportunities based on paper abstracts
-        foreach (var paper in papers.Take(3))
+        foreach (var paper in papers.Take(3).Where(paper =>
+            paper.Abstract.Contains("novel", StringComparison.OrdinalIgnoreCase) ||
+            paper.Abstract.Contains("first", StringComparison.OrdinalIgnoreCase) ||
+            paper.Abstract.Contains("new approach", StringComparison.OrdinalIgnoreCase)))
         {
-            if (paper.Abstract.Contains("novel", StringComparison.OrdinalIgnoreCase) ||
-                paper.Abstract.Contains("first", StringComparison.OrdinalIgnoreCase) ||
-                paper.Abstract.Contains("new approach", StringComparison.OrdinalIgnoreCase))
-            {
-                opportunities.Add(new ExplorationOpportunity(
-                    Description: $"Investigate novel approach: {paper.Title}",
-                    NoveltyScore: 0.85,
-                    InformationGainEstimate: 0.80,
-                    Prerequisites: new List<string> { paper.Category },
-                    IdentifiedAt: DateTime.UtcNow));
-            }
+            opportunities.Add(new ExplorationOpportunity(
+                Description: $"Investigate novel approach: {paper.Title}",
+                NoveltyScore: 0.85,
+                InformationGainEstimate: 0.80,
+                Prerequisites: new List<string> { paper.Category },
+                IdentifiedAt: DateTime.UtcNow));
         }
 
         return opportunities.Take(maxOpportunities).ToList();
@@ -334,7 +314,7 @@ Return observations as a simple list, one per line. Focus on:
     // Helper Methods
     // ========================================
 
-    private List<ResearchPaper> ParseArxivResponse(string xmlContent)
+    private static List<ResearchPaper> ParseArxivResponse(string xmlContent)
     {
         List<ResearchPaper> papers = new();
 
@@ -347,7 +327,7 @@ Return observations as a simple list, one per line. Focus on:
             foreach (XElement entry in doc.Descendants(atom + "entry"))
             {
                 string? idUrl = entry.Element(atom + "id")?.Value;
-                string id = idUrl?.Split('/').Last() ?? Guid.NewGuid().ToString();
+                string id = idUrl?.Split('/')[^1] ?? Guid.NewGuid().ToString();
                 string title = entry.Element(atom + "title")?.Value?.Replace("\n", " ").Trim() ?? "Unknown";
                 string summary = entry.Element(atom + "summary")?.Value?.Replace("\n", " ").Trim() ?? "";
                 string authors = string.Join(", ", entry.Elements(atom + "author")
@@ -380,7 +360,7 @@ Return observations as a simple list, one per line. Focus on:
         return papers;
     }
 
-    private CitationMetadata ParseSemanticScholarResponse(string paperId, string json)
+    private static CitationMetadata ParseSemanticScholarResponse(string paperId, string json)
     {
         using JsonDocument doc = JsonDocument.Parse(json);
         JsonElement root = doc.RootElement;

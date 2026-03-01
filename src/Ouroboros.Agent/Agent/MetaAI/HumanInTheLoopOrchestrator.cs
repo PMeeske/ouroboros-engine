@@ -200,7 +200,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
         }
     }
 
-    private bool IsCriticalStep(PlanStep step, HumanInTheLoopConfig config)
+    private static bool IsCriticalStep(PlanStep step, HumanInTheLoopConfig config)
     {
         string actionLower = step.Action.ToLowerInvariant();
 
@@ -235,7 +235,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
         return step with { Parameters = newParams };
     }
 
-    private PlanStep ParseStepFromFeedback(string feedback)
+    private static PlanStep ParseStepFromFeedback(string feedback)
     {
         // Simple parsing - in production use more sophisticated approach
         string[] parts = feedback.Split('|');

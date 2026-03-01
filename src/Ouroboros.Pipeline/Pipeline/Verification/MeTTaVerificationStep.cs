@@ -62,8 +62,8 @@ public sealed class MeTTaVerificationStep
 
             // Check the result
             bool isAllowed = result.Match(
-                success => this.ParseAllowedResult(success),
-                error => false); // If engine fails, treat as not allowed
+                ParseAllowedResult,
+                _ => false); // If engine fails, treat as not allowed
 
             if (!isAllowed)
             {
@@ -141,7 +141,7 @@ public sealed class MeTTaVerificationStep
     /// <summary>
     /// Parses the MeTTa result to determine if an action is allowed.
     /// </summary>
-    private bool ParseAllowedResult(string result)
+    private static bool ParseAllowedResult(string result)
     {
         if (string.IsNullOrWhiteSpace(result))
         {

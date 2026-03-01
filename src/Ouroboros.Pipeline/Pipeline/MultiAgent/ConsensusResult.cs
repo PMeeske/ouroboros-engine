@@ -69,21 +69,9 @@ public sealed record ConsensusResult(
     /// </summary>
     private static Dictionary<string, int> CalculateVoteCounts(IReadOnlyList<AgentVote> votes)
     {
-        Dictionary<string, int> counts = new Dictionary<string, int>(StringComparer.Ordinal);
-
-        foreach (AgentVote vote in votes)
-        {
-            if (counts.TryGetValue(vote.Option, out int count))
-            {
-                counts[vote.Option] = count + 1;
-            }
-            else
-            {
-                counts[vote.Option] = 1;
-            }
-        }
-
-        return counts;
+        return votes
+            .GroupBy(vote => vote.Option, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
     }
 
     /// <summary>

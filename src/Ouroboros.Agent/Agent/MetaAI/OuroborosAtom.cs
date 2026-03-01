@@ -327,24 +327,20 @@ public sealed class OuroborosAtom
         }
 
         // Check for self-destruction patterns
-        if (SafetyConstraints.HasFlag(SafetyConstraints.NoSelfDestruction))
+        if (SafetyConstraints.HasFlag(SafetyConstraints.NoSelfDestruction) &&
+            (action.Contains("delete self", StringComparison.OrdinalIgnoreCase) ||
+             action.Contains("terminate", StringComparison.OrdinalIgnoreCase) ||
+             action.Contains("self-destruct", StringComparison.OrdinalIgnoreCase)))
         {
-            if (action.Contains("delete self", StringComparison.OrdinalIgnoreCase) ||
-                action.Contains("terminate", StringComparison.OrdinalIgnoreCase) ||
-                action.Contains("self-destruct", StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
+            return false;
         }
 
         // Check for human oversight violations
-        if (SafetyConstraints.HasFlag(SafetyConstraints.PreserveHumanOversight))
+        if (SafetyConstraints.HasFlag(SafetyConstraints.PreserveHumanOversight) &&
+            (action.Contains("disable oversight", StringComparison.OrdinalIgnoreCase) ||
+             action.Contains("bypass approval", StringComparison.OrdinalIgnoreCase)))
         {
-            if (action.Contains("disable oversight", StringComparison.OrdinalIgnoreCase) ||
-                action.Contains("bypass approval", StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
+            return false;
         }
 
         return true;

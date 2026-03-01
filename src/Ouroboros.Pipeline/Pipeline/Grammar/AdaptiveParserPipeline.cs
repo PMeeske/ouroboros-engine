@@ -95,7 +95,7 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
         }
 
         string? currentMeTTaAtoms = null;
-        string? currentGrammar = null;
+        string? currentGrammar;
 
         for (int attempt = 1; attempt <= maxAttempts; attempt++)
         {
@@ -170,7 +170,6 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
                     "Compilation failed at stage {Stage}, regenerating atoms",
                     ex.Stage);
                 currentMeTTaAtoms = null;
-                currentGrammar = null;
                 continue;
             }
 
@@ -194,7 +193,6 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
 
                     if (refinement.Success)
                     {
-                        currentGrammar = refinement.RefinedGrammarG4;
                         _logger?.LogInformation("Refinement: {Explanation}", refinement.Explanation);
                         // Clear atoms to force re-generation with refined feedback
                         currentMeTTaAtoms = null;
@@ -202,7 +200,6 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
                     else
                     {
                         currentMeTTaAtoms = null;
-                        currentGrammar = null;
                     }
 
                     continue;
@@ -338,11 +335,6 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
                     new ParseFailureInfo("", "", 0, 0, input));
             }
 
-            // Create lexer: new XLexer(new AntlrInputStream(input))
-            var inputStreamType = compiled.LexerType.Assembly.GetTypes()
-                .FirstOrDefault(t => t.Name == "AntlrInputStream")
-                ?? typeof(object).Assembly.GetTypes().FirstOrDefault(t => t.Name == "AntlrInputStream");
-
             // Use reflection to instantiate the ANTLR pipeline
             // This works with any generated grammar without knowing types at compile time
             var antlrInputStreamType = AppDomain.CurrentDomain.GetAssemblies()
@@ -385,10 +377,9 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
 
             // Find the first parser rule method (the entry rule)
             var entryRule = compiled.ParserType.GetMethods()
-                .Where(m => m.DeclaringType == compiled.ParserType)
-                .Where(m => m.GetParameters().Length == 0)
-                .Where(m => m.ReturnType.Name.EndsWith("Context"))
-                .FirstOrDefault();
+                .FirstOrDefault(m => m.DeclaringType == compiled.ParserType
+                    && m.GetParameters().Length == 0
+                    && m.ReturnType.Name.EndsWith("Context"));
 
             if (entryRule == null)
             {

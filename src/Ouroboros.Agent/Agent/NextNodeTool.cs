@@ -60,6 +60,8 @@ public sealed class NextNodeTool : ITool
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         _representation = new MeTTaRepresentation(engine);
+        _ = _engine;
+        _ = _registry;
     }
 
     /// <inheritdoc />
@@ -114,7 +116,7 @@ public sealed class NextNodeTool : ITool
         }
     }
 
-    private Result<NextNodeRequest, string> ParseInput(string input)
+    private static Result<NextNodeRequest, string> ParseInput(string input)
     {
         try
         {

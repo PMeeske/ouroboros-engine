@@ -51,6 +51,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
         string fallbackModel = "default")
     {
         _baseTools = baseTools ?? throw new ArgumentNullException(nameof(baseTools));
+        _ = _baseTools;
         _toolSelector = new DynamicToolSelector(baseTools);
         _metricsStore = metricsStore;
         _fallbackModel = fallbackModel;
@@ -264,7 +265,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
                 "No suitable models found for use case");
         }
 
-        var best = scoredModels.First();
+        var best = scoredModels[0];
 
         // Get model instance or create fallback
         if (!_models.TryGetValue(best.Capability.ModelName, out Ouroboros.Abstractions.Core.IChatCompletionModel? model))
@@ -409,7 +410,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
     /// <summary>
     /// Estimates complexity of a prompt.
     /// </summary>
-    private int EstimateComplexity(string prompt)
+    private static int EstimateComplexity(string prompt)
     {
         int length = prompt.Length;
         int sentences = prompt.Split('.', '!', '?').Length;

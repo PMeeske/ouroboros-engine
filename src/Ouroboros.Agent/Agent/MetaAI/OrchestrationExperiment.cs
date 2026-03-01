@@ -130,7 +130,7 @@ public sealed class OrchestrationExperiment : IOrchestrationExperiment
         return _runningExperiments.ContainsKey(experimentId);
     }
 
-    private async Task<VariantResult> EvaluateVariantAsync(
+    private static async Task<VariantResult> EvaluateVariantAsync(
         string variantId,
         IModelOrchestrator orchestrator,
         List<string> testPrompts,
@@ -204,12 +204,11 @@ public sealed class OrchestrationExperiment : IOrchestrationExperiment
         return sorted[Math.Max(0, Math.Min(index, sorted.Count - 1))];
     }
 
-    private StatisticalAnalysis CalculateStatisticalAnalysis(List<VariantResult> variants)
+    private static StatisticalAnalysis CalculateStatisticalAnalysis(List<VariantResult> variants)
     {
         if (variants.Count < 2) return new StatisticalAnalysis(0, false, "Insufficient variants");
 
         var latencies = variants.Select(v => v.Metrics.AverageLatencyMs).ToList();
-        var successRates = variants.Select(v => v.Metrics.SuccessRate).ToList();
 
         // Calculate effect size (Cohen's d) for latency
         double effectSize = CalculateEffectSize(latencies);

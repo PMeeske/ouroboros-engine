@@ -431,17 +431,13 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
         var tools = new List<string>();
         var matches = StepChainRegex().Matches(result);
 
-        foreach (System.Text.RegularExpressions.Match match in matches)
-        {
-            if (match.Groups[1].Success)
-            {
-                tools.Add(match.Groups[1].Value);
-            }
-            else if (match.Groups[2].Success)
-            {
-                tools.AddRange(match.Groups[2].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries));
-            }
-        }
+        tools.AddRange(matches
+            .Cast<System.Text.RegularExpressions.Match>()
+            .SelectMany(match => match.Groups[1].Success
+                ? new[] { match.Groups[1].Value }
+                : match.Groups[2].Success
+                    ? match.Groups[2].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    : Array.Empty<string>()));
 
         // Fallback: try to find tool names directly
         if (tools.Count == 0)

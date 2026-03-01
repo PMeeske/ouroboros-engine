@@ -27,6 +27,7 @@ public sealed partial class GoalHierarchy : IGoalHierarchy
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
+        _ = _safety;
         _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
         _config = config ?? new GoalHierarchyConfig();
     }

@@ -24,6 +24,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
         double humanOversightThreshold = 0.5)
     {
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        _ = _orchestrator;
         _minConfidenceThreshold = Math.Clamp(minConfidenceThreshold, 0.0, 1.0);
         _humanOversightThreshold = Math.Clamp(humanOversightThreshold, 0.0, 1.0);
     }
@@ -154,7 +155,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
         return await Task.FromResult(FallbackStrategy.UseConservativeApproach);
     }
 
-    private double CalculateRiskLevel(string context, string proposedAction)
+    private static double CalculateRiskLevel(string context, string proposedAction)
     {
         double risk = 0.5; // Base risk level
 
@@ -174,7 +175,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
         return Math.Clamp(risk, 0.0, 1.0);
     }
 
-    private List<string> GenerateAlternatives(string proposedAction, double confidence, FallbackStrategy strategy)
+    private static List<string> GenerateAlternatives(string proposedAction, double confidence, FallbackStrategy strategy)
     {
         List<string> alternatives = new();
 

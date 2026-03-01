@@ -128,13 +128,10 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
                 {
                     // Parse results and add to inferred list
                     var results = ParseMeTTaResults(queryResult.Value);
-                    foreach (var result in results)
+                    foreach (var result in results.Where(result => visited.Add(result)))
                     {
-                        if (visited.Add(result))
-                        {
-                            inferred.Add(result);
-                            queue.Enqueue((result, depth + 1));
-                        }
+                        inferred.Add(result);
+                        queue.Enqueue((result, depth + 1));
                     }
                 }
             }

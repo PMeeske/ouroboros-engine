@@ -15,12 +15,10 @@ public sealed partial class SmartToolSelector
     private static double EstimateToolCost(ITool tool, WorldState state)
     {
         // Check if cost information is available in world state
-        if (state.Observations.TryGetValue($"tool.{tool.Name}.cost", out Observation? costObs))
+        if (state.Observations.TryGetValue($"tool.{tool.Name}.cost", out Observation? costObs)
+            && costObs.Value is double cost)
         {
-            if (costObs.Value is double cost)
-            {
-                return Math.Clamp(cost, 0.0, 1.0);
-            }
+            return Math.Clamp(cost, 0.0, 1.0);
         }
 
         // Default cost estimation based on tool complexity (schema presence indicates complexity)
@@ -30,12 +28,10 @@ public sealed partial class SmartToolSelector
     private static double EstimateToolSpeed(ITool tool, WorldState state)
     {
         // Check if speed information is available in world state
-        if (state.Observations.TryGetValue($"tool.{tool.Name}.speed", out Observation? speedObs))
+        if (state.Observations.TryGetValue($"tool.{tool.Name}.speed", out Observation? speedObs)
+            && speedObs.Value is double speed)
         {
-            if (speedObs.Value is double speed)
-            {
-                return Math.Clamp(speed, 0.0, 1.0);
-            }
+            return Math.Clamp(speed, 0.0, 1.0);
         }
 
         // Default speed estimation

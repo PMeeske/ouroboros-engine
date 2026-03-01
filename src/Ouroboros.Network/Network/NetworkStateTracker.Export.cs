@@ -81,14 +81,8 @@ public sealed partial class NetworkStateTracker
             }
         }
 
-        foreach (var branchName in _branchReifiers.Keys)
-        {
-            if (_branchReifiers.TryGetValue(branchName, out var reifier))
-            {
-                // Note: Branch export requires the PipelineBranch instance.
-                // Use ExportToMeTTaAsync(branch) for individual branches.
-            }
-        }
+        // Note: Branch export requires the PipelineBranch instance.
+        // Use ExportToMeTTaAsync(branch) for individual branches.
 
         return Result<int>.Success(totalAdded);
     }

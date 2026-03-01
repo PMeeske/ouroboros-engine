@@ -267,7 +267,7 @@ public sealed partial class VectorGraphFeedbackLoop
         return await _mettaEngine.ExecuteQueryAsync(query, ct);
     }
 
-    private List<GraphModification> ParseModifications(string mettaResult)
+    private static List<GraphModification> ParseModifications(string mettaResult)
     {
         var modifications = new List<GraphModification>();
 

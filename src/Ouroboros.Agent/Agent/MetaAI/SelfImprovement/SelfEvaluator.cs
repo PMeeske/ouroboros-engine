@@ -34,6 +34,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        _ = _orchestrator;
         _config = config ?? new SelfEvaluatorConfig();
     }
 
@@ -48,8 +49,6 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
             // Get all capabilities
             List<AgentCapability> capabilities = await _capabilities.GetCapabilitiesAsync(ct);
             IReadOnlyList<Skill> skills = _skills.GetAllSkills().ToSkills();
-            IReadOnlyDictionary<string, PerformanceMetrics> metrics = _orchestrator.GetMetrics();
-
             // Calculate capability scores
             Dictionary<string, double> capabilityScores = capabilities.ToDictionary(
                 c => c.Name,
@@ -355,7 +354,7 @@ DURATION: [days/weeks]";
 
     // Private helper methods
 
-    private double CalculateSkillAcquisitionRate(IReadOnlyList<Skill> skills)
+    private static double CalculateSkillAcquisitionRate(IReadOnlyList<Skill> skills)
     {
         if (!skills.Any())
             return 0.0;
@@ -420,7 +419,7 @@ What patterns do you observe? Provide one concise insight.";
         }
     }
 
-    private ImprovementPlan ParseImprovementPlan(string response)
+    private static ImprovementPlan ParseImprovementPlan(string response)
     {
         string[] lines = response.Split('\n');
         string goal = "Improve overall performance";

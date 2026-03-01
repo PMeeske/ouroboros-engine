@@ -137,38 +137,39 @@ public sealed partial class MetaAIPlannerOrchestrator
         List<Experience> pastExperiences,
         List<Skill> matchingSkills)
     {
-        string prompt = $@"You are an AI planner. Create a detailed plan to accomplish this goal:
+        var sb = new System.Text.StringBuilder();
+        sb.Append($@"You are an AI planner. Create a detailed plan to accomplish this goal:
 
 GOAL: {goal}
 
-";
+");
 
         if (context != null && context.Any())
         {
-            prompt += $"CONTEXT: {JsonSerializer.Serialize(context)}\n\n";
+            sb.Append($"CONTEXT: {JsonSerializer.Serialize(context)}\n\n");
         }
 
         if (matchingSkills.Any())
         {
-            prompt += "AVAILABLE SKILLS:\n";
+            sb.Append("AVAILABLE SKILLS:\n");
             foreach (Skill? skill in matchingSkills.Take(3))
             {
-                prompt += $"- {skill.Name}: {skill.Description} (Success rate: {skill.SuccessRate:P0})\n";
+                sb.Append($"- {skill.Name}: {skill.Description} (Success rate: {skill.SuccessRate:P0})\n");
             }
-            prompt += "\n";
+            sb.Append('\n');
         }
 
         if (pastExperiences.Any())
         {
-            prompt += "PAST EXPERIENCE:\n";
+            sb.Append("PAST EXPERIENCE:\n");
             foreach (Experience? exp in pastExperiences.Take(3))
             {
-                prompt += $"- Goal: {exp.Goal}, Quality: {exp.Verification.QualityScore:P0}, Verified: {exp.Verification.Verified}\n";
+                sb.Append($"- Goal: {exp.Goal}, Quality: {exp.Verification.QualityScore:P0}, Verified: {exp.Verification.Verified}\n");
             }
-            prompt += "\n";
+            sb.Append('\n');
         }
 
-        prompt += $@"AVAILABLE TOOLS:
+        sb.Append($@"AVAILABLE TOOLS:
 {string.Join("\n", _tools.All.Select(t => $"- {t.Name}: {t.Description}"))}
 
 Create a plan with specific steps. For each step, specify:
@@ -193,12 +194,12 @@ EXPECTED: [outcome]
 CONFIDENCE: [0-1]
 
 STEP 2: ...
-";
+");
 
-        return prompt;
+        return sb.ToString();
     }
 
-    private Plan ParsePlan(string planText, string goal)
+    private static Plan ParsePlan(string planText, string goal)
     {
         List<PlanStep> steps = new List<PlanStep>();
         Dictionary<string, double> confidenceScores = new Dictionary<string, double>();

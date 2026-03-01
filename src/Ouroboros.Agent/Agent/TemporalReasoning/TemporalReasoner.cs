@@ -67,7 +67,7 @@ public sealed partial class TemporalReasoner : ITemporalReasoner
             {
                 for (int j = i + 1; j < Math.Min(i + 1 + TemporalReasoningConstants.MaxRelationLookahead, sortedEvents.Count); j++)
                 {
-                    var relType = this.ComputeAllenRelation(sortedEvents[i], sortedEvents[j]);
+                    var relType = ComputeAllenRelation(sortedEvents[i], sortedEvents[j]);
                     relations.Add(new TemporalRelationEdge(sortedEvents[i], sortedEvents[j], relType, 1.0));
                 }
             }

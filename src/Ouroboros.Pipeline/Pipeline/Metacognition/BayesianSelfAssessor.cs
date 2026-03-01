@@ -135,7 +135,7 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
         {
             var updatedBelief = _capabilityBeliefs.AddOrUpdate(
                 capability,
-                _ => CapabilityBelief.Uninformative(capability).WithBayesianUpdate(evidence),
+                key => CapabilityBelief.Uninformative(key).WithBayesianUpdate(evidence),
                 (_, existing) => existing.WithBayesianUpdate(evidence));
 
             return Result<CapabilityBelief, string>.Success(updatedBelief);

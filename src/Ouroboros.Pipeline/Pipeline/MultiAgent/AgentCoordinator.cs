@@ -137,7 +137,6 @@ public sealed class AgentCoordinator : IAgentCoordinator, IDisposable
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            TimeSpan duration = DateTime.UtcNow - startTime;
             return Result<CoordinationResult, string>.Failure($"Coordination failed: {ex.Message}");
         }
     }
@@ -210,7 +209,6 @@ public sealed class AgentCoordinator : IAgentCoordinator, IDisposable
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            TimeSpan duration = DateTime.UtcNow - startTime;
             return Result<CoordinationResult, string>.Failure($"Parallel coordination failed: {ex.Message}");
         }
     }

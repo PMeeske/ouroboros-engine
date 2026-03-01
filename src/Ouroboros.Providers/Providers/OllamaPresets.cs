@@ -230,7 +230,6 @@ public static class OllamaPresets
         get
         {
             int cores = MachineCapabilities.CpuCores;
-            long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
             OllamaChatSettings settings = new OllamaChatSettings
@@ -262,7 +261,6 @@ public static class OllamaPresets
         get
         {
             int cores = MachineCapabilities.CpuCores;
-            long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
             // Reserve threads for parallel execution - each instance gets fewer threads

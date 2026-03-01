@@ -205,15 +205,11 @@ public static class SolutionIngestion
     {
         // basic ignore heuristics (bin/obj, hidden, .git, node_modules)
         string[] segments = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        foreach (string s in segments)
-        {
-            if (s.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
-                s.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
-                s.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
-                s.Equals(".vs", StringComparison.OrdinalIgnoreCase) ||
-                s.Equals("node_modules", StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-        return false;
+        return segments.Any(s =>
+            s.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+            s.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
+            s.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
+            s.Equals(".vs", StringComparison.OrdinalIgnoreCase) ||
+            s.Equals("node_modules", StringComparison.OrdinalIgnoreCase));
     }
 }

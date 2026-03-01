@@ -182,15 +182,7 @@ public static class TaskDetector
     /// </summary>
     private static int CountKeywordMatches(string normalizedPrompt, HashSet<string> keywords)
     {
-        int count = 0;
-        foreach (string keyword in keywords)
-        {
-            if (normalizedPrompt.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-            {
-                count++;
-            }
-        }
-        return count;
+        return keywords.Count(keyword => normalizedPrompt.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -206,15 +198,7 @@ public static class TaskDetector
             "=>", "->", "=>", "func ", "proc ", "sub ",
         };
 
-        foreach (string pattern in syntaxPatterns)
-        {
-            if (prompt.Contains(pattern, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return syntaxPatterns.Any(pattern => prompt.Contains(pattern, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -231,9 +215,9 @@ public static class TaskDetector
             if (trimmed.StartsWith("1.") ||
                 trimmed.StartsWith("2.") ||
                 trimmed.StartsWith("3.") ||
-                trimmed.StartsWith("-") ||
-                trimmed.StartsWith("*") ||
-                trimmed.StartsWith("•"))
+                trimmed.StartsWith('-') ||
+                trimmed.StartsWith('*') ||
+                trimmed.StartsWith('\u2022'))
             {
                 listItems++;
             }
@@ -247,13 +231,6 @@ public static class TaskDetector
     /// </summary>
     private static bool ContainsPhrase(string prompt, params string[] phrases)
     {
-        foreach (string phrase in phrases)
-        {
-            if (prompt.Contains(phrase, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-        return false;
+        return phrases.Any(phrase => prompt.Contains(phrase, StringComparison.OrdinalIgnoreCase));
     }
 }

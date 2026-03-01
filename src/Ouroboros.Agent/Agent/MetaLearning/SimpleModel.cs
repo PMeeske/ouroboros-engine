@@ -110,7 +110,7 @@ public class SimpleModel : IModel
 
         foreach (var (key, value) in _parameters)
         {
-            if (value is double doubleValue)
+            if (value is double)
             {
                 // Mock gradient: random small value
                 gradients[key] = Random.Shared.NextDouble() * 0.01;

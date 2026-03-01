@@ -45,7 +45,7 @@ public static class RetentionEvaluator
             // Ensure at least one snapshot is kept if required
             if (policy.KeepAtLeastOne && afterCountFilter.Count == 0 && branchSnapshots.Count > 0)
             {
-                afterCountFilter = [branchSnapshots.First()];
+                afterCountFilter = [branchSnapshots[0]];
             }
 
             toKeep.AddRange(afterCountFilter);

@@ -161,7 +161,7 @@ public sealed partial class CollectiveMind
         _ => SubGoalType.Reasoning
     };
 
-    private SubGoalComplexity EstimateComplexity(string text)
+    private static SubGoalComplexity EstimateComplexity(string text)
     {
         var length = text.Length;
         var questionCount = QuestionMarkRegex().Matches(text).Count;
@@ -339,7 +339,7 @@ public sealed partial class CollectiveMind
         }
     }
 
-    private string BuildDependencyContext(SubGoal goal, ConcurrentDictionary<string, SubGoalResult> results)
+    private static string BuildDependencyContext(SubGoal goal, ConcurrentDictionary<string, SubGoalResult> results)
     {
         if (goal.Dependencies.Count == 0)
             return "";

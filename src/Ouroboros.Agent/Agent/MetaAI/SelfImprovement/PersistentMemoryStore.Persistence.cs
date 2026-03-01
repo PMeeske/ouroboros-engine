@@ -18,7 +18,7 @@ public sealed partial class PersistentMemoryStore
     /// Calculates importance score for an experience.
     /// Based on success, recency, and tag diversity.
     /// </summary>
-    private double CalculateImportance(Experience experience)
+    private static double CalculateImportance(Experience experience)
     {
         // Base importance from success
         double successScore = experience.Success ? 0.7 : 0.3;

@@ -59,7 +59,7 @@ public sealed class StreamingPipeline
         _transformations.Add(stream =>
             stream.Buffer(window)
                 .Where(b => b.Count > 0)
-                .Select(b => (b.Last().IsThinking, string.Concat(b.Select(c => c.Chunk)))));
+                .Select(b => (b[^1].IsThinking, string.Concat(b.Select(c => c.Chunk)))));
         return this;
     }
 

@@ -81,6 +81,7 @@ public sealed class Phase2OrchestratorBuilder
     public Phase2OrchestratorBuilder WithSkillExtractionConfig(SkillExtractionConfig config)
     {
         _skillConfig = config ?? throw new ArgumentNullException(nameof(config));
+        _ = _skillConfig;
         return this;
     }
 

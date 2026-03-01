@@ -222,7 +222,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
         }
     }
 
-    private bool CheckAllApproved(ReviewState state, StakeholderReviewConfig config)
+    private static bool CheckAllApproved(ReviewState state, StakeholderReviewConfig config)
     {
         int approvedCount = state.Reviews.Count(r => r.Approved);
 
@@ -238,7 +238,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
         }
     }
 
-    private ReviewStatus DetermineReviewStatus(
+    private static ReviewStatus DetermineReviewStatus(
         List<ReviewDecision> reviews,
         List<ReviewComment> comments,
         StakeholderReviewConfig config)
@@ -267,7 +267,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
         return ReviewStatus.AwaitingReview;
     }
 
-    private string GenerateResolution(string commentContent)
+    private static string GenerateResolution(string commentContent)
     {
         // Simple resolution generation
         // In production, this could use an LLM to generate proper responses

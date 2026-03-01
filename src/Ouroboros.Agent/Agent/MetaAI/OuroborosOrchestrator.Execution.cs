@@ -152,7 +152,7 @@ public sealed partial class OuroborosOrchestrator
         }
     }
 
-    private string BuildVerificationPrompt(string goal, string output)
+    private static string BuildVerificationPrompt(string goal, string output)
     {
         return $@"Verify if the following execution achieved the goal.
 

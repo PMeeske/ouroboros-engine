@@ -34,7 +34,9 @@ public sealed partial class MetaLearner : IMetaLearner
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _skillRegistry = skillRegistry ?? throw new ArgumentNullException(nameof(skillRegistry));
+        _ = _skillRegistry;
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        _ = _memory;
         _config = config ?? new MetaLearnerConfig();
     }
 

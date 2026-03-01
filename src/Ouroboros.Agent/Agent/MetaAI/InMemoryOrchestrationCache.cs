@@ -202,8 +202,6 @@ public sealed class InMemoryOrchestrationCache : IOrchestrationCache, IDisposabl
         public OrchestratorDecision Decision { get; }
         public DateTime ExpiresAt { get; }
         public DateTime LastAccessedAt { get; private set; }
-        public int AccessCount => _accessCount;
-
         public CacheEntry(OrchestratorDecision decision, DateTime expiresAt)
         {
             Decision = decision;

@@ -259,7 +259,7 @@ public class WorldModelEngineTests
         var action = CreateTestAction();
 
         // Act
-        var result = await engine.PredictNextStateAsync(state, action, model, CancellationToken.None);
+        var result = await WorldModelEngine.PredictNextStateAsync(state, action, model, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -279,7 +279,7 @@ public class WorldModelEngineTests
         var action = CreateTestAction();
 
         // Act
-        var result = await engine.PredictNextStateAsync(null!, action, model, CancellationToken.None);
+        var result = await WorldModelEngine.PredictNextStateAsync(null!, action, model, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -295,7 +295,7 @@ public class WorldModelEngineTests
         var state = CreateTestState();
 
         // Act
-        var result = await engine.PredictNextStateAsync(state, null!, model, CancellationToken.None);
+        var result = await WorldModelEngine.PredictNextStateAsync(state, null!, model, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -311,7 +311,7 @@ public class WorldModelEngineTests
         var action = CreateTestAction();
 
         // Act
-        var result = await engine.PredictNextStateAsync(state, action, null!, CancellationToken.None);
+        var result = await WorldModelEngine.PredictNextStateAsync(state, action, null!, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -392,7 +392,7 @@ public class WorldModelEngineTests
         var testSet = CreateTestTransitions(count: 5);
 
         // Act
-        var result = await engine.EvaluateModelAsync(model, testSet, CancellationToken.None);
+        var result = await WorldModelEngine.EvaluateModelAsync(model, testSet, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -413,7 +413,7 @@ public class WorldModelEngineTests
         var emptyTestSet = new List<Transition>();
 
         // Act
-        var result = await engine.EvaluateModelAsync(model, emptyTestSet, CancellationToken.None);
+        var result = await WorldModelEngine.EvaluateModelAsync(model, emptyTestSet, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();

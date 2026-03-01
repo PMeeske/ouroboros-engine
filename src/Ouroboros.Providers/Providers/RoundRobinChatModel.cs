@@ -119,7 +119,6 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
         {
             if (_providers.Count == 0) return null;
 
-            int startIndex = _currentIndex;
             int attempts = 0;
 
             while (attempts < _providers.Count)

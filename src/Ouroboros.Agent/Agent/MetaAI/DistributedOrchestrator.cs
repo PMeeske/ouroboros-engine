@@ -78,7 +78,6 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
             IEnumerable<Task<StepResult>> tasks = assignments.Select(async assignment =>
             {
                 AgentInfo agent = _agents[assignment.AgentId];
-                PlanStep step = assignment.Step;
 
                 // Mark agent as busy
                 _agents[assignment.AgentId] = agent with { Status = AgentStatus.Busy };
@@ -200,7 +199,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
         return assignments;
     }
 
-    private AgentInfo? FindSuitableAgent(PlanStep step, List<AgentInfo> agents)
+    private static AgentInfo? FindSuitableAgent(PlanStep step, List<AgentInfo> agents)
     {
         // Find agent with matching capabilities
         return agents.FirstOrDefault(a => a.Capabilities.Contains(step.Action)) ?? agents.FirstOrDefault();

@@ -306,7 +306,7 @@ public sealed partial class MeTTaRepresentation
         );
     }
 
-    private List<NextNodeCandidate> ParseNextNodeCandidates(string mettaOutput)
+    private static List<NextNodeCandidate> ParseNextNodeCandidates(string mettaOutput)
     {
         List<NextNodeCandidate> candidates = new List<NextNodeCandidate>();
 
@@ -329,7 +329,7 @@ public sealed partial class MeTTaRepresentation
         return candidates;
     }
 
-    private List<string> ParseToolList(string mettaOutput)
+    private static List<string> ParseToolList(string mettaOutput)
     {
         List<string> tools = new List<string>();
         string[] lines = mettaOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -346,7 +346,7 @@ public sealed partial class MeTTaRepresentation
         return tools;
     }
 
-    private string EscapeMeTTa(string text)
+    private static string EscapeMeTTa(string text)
     {
         return text.Replace("\"", "\\\"").Replace("\n", "\\n");
     }

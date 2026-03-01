@@ -84,9 +84,9 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
                     if (!_allowedExtensions.Contains(ext)) continue;
                 }
                 bool skipByCache = false;
-                if (_useCache && _cache is not null)
+                if (_useCache && _cache is not null && _cache.IsUnchanged(file))
                 {
-                    if (_cache.IsUnchanged(file)) { stats.SkippedUnchanged++; if (debug) Console.WriteLine($"[ingest] skip unchanged {file}"); continue; }
+                    stats.SkippedUnchanged++; if (debug) Console.WriteLine($"[ingest] skip unchanged {file}"); continue;
                 }
                 try
                 {

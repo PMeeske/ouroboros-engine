@@ -22,19 +22,6 @@ public sealed partial class MetacognitiveReasoner : IReflectiveReasoner
             .Add("Confirmation Bias Pattern", HasConfirmationBiasPattern)
             .Add("Hasty Generalization", HasHastyGeneralization);
 
-    /// <summary>
-    /// Known cognitive biases and their detection heuristics.
-    /// </summary>
-    private static readonly ImmutableList<string> KnownBiases = ImmutableList.Create(
-        "Confirmation Bias",
-        "Anchoring Bias",
-        "Availability Heuristic",
-        "Dunning-Kruger Effect",
-        "Hindsight Bias",
-        "Status Quo Bias",
-        "Sunk Cost Fallacy",
-        "Bandwagon Effect");
-
     /// <inheritdoc/>
     public Guid StartTrace()
     {
@@ -223,9 +210,9 @@ public sealed partial class MetacognitiveReasoner : IReflectiveReasoner
         }
 
         // Check dependency chains
-        var isolatedSteps = trace.Steps.Where(s =>
+        var isolatedSteps = trace.Steps.Count(s =>
             s.StepType != ReasoningStepType.Observation &&
-            s.Dependencies.Count == 0).Count();
+            s.Dependencies.Count == 0);
         if (isolatedSteps > 1)
         {
             suggestions.Add("Ensure non-observation steps reference their supporting evidence.");
@@ -235,7 +222,7 @@ public sealed partial class MetacognitiveReasoner : IReflectiveReasoner
         var conclusions = trace.GetStepsByType(ReasoningStepType.Conclusion).ToList();
         if (conclusions.Count > 0)
         {
-            var lastConclusion = conclusions.Last();
+            var lastConclusion = conclusions[^1];
             if (lastConclusion.Dependencies.Count < 2)
             {
                 suggestions.Add("Strengthen conclusions by explicitly referencing multiple supporting steps.");

@@ -17,7 +17,7 @@ public sealed partial class CausalGraph
         int maxDepth = 5,
         double minProbability = 0.01)
     {
-        if (!_nodes.TryGetValue(actionNodeId, out CausalNode? actionNode))
+        if (!_nodes.TryGetValue(actionNodeId, out CausalNode? _))
         {
             return Result<IReadOnlyList<PredictedEffect>, string>.Failure(
                 $"Node with ID {actionNodeId} does not exist in the graph.");
@@ -243,13 +243,7 @@ public sealed partial class CausalGraph
             }
         }
 
-        foreach (CausalEdge edge in _edges)
-        {
-            if (nodeIdSet.Contains(edge.SourceId) && nodeIdSet.Contains(edge.TargetId))
-            {
-                subgraphEdges.Add(edge);
-            }
-        }
+        subgraphEdges.AddRange(_edges.Where(edge => nodeIdSet.Contains(edge.SourceId) && nodeIdSet.Contains(edge.TargetId)));
 
         return Create(subgraphNodes, subgraphEdges);
     }
@@ -272,15 +266,10 @@ public sealed partial class CausalGraph
         visited.Add(nodeId);
         recursionStack.Add(nodeId);
 
-        if (_outgoingEdges.TryGetValue(nodeId, out ImmutableList<CausalEdge>? outgoing))
+        if (_outgoingEdges.TryGetValue(nodeId, out ImmutableList<CausalEdge>? outgoing)
+            && outgoing.Any(edge => HasCycleUtil(edge.TargetId, visited, recursionStack)))
         {
-            foreach (CausalEdge edge in outgoing)
-            {
-                if (HasCycleUtil(edge.TargetId, visited, recursionStack))
-                {
-                    return true;
-                }
-            }
+            return true;
         }
 
         recursionStack.Remove(nodeId);

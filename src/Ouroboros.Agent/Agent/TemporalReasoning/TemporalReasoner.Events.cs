@@ -34,7 +34,7 @@ public sealed partial class TemporalReasoner
             }
 
             // Compute Allen interval relation
-            var relationType = this.ComputeAllenRelation(event1, event2);
+            var relationType = ComputeAllenRelation(event1, event2);
 
             // Cache the result
             this.relationCache[cacheKey] = relationType;
@@ -102,7 +102,7 @@ public sealed partial class TemporalReasoner
             {
                 events = events.Where(e =>
                 {
-                    var relation = this.ComputeAllenRelation(e, relatedEvent);
+                    var relation = ComputeAllenRelation(e, relatedEvent);
                     return relation != TemporalRelationType.Before && relation != TemporalRelationType.After;
                 });
             }
@@ -117,7 +117,7 @@ public sealed partial class TemporalReasoner
         }
     }
 
-    private TemporalRelationType ComputeAllenRelation(TemporalEvent event1, TemporalEvent event2)
+    private static TemporalRelationType ComputeAllenRelation(TemporalEvent event1, TemporalEvent event2)
     {
         var start1 = event1.StartTime;
         var end1 = event1.EndTime ?? event1.StartTime;

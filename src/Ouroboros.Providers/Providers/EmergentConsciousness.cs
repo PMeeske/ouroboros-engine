@@ -18,8 +18,6 @@ public sealed partial class EmergentConsciousness
     private double _coherence = 1.0;
     private double _phi = 0.0;
     private string _currentFocus = "";
-    private DateTime _lastUpdate = DateTime.UtcNow;
-    private readonly IITPhiCalculator _phiCalculator = new();
 
     /// <summary>Observable stream of consciousness events.</summary>
     public IObservable<ConsciousnessEvent> Events => _events.AsObservable();
@@ -60,12 +58,9 @@ public sealed partial class EmergentConsciousness
         IReadOnlyList<NeuralPathway>? allPathways = null)
     {
         var now = DateTime.UtcNow;
-        var deltaT = (now - _lastUpdate).TotalSeconds;
-        _lastUpdate = now;
 
         // Update arousal based on activity and response complexity
         double responseComplexity = Math.Min(1.0, response.Content.Length / 1000.0);
-        double latencyFactor = Math.Max(0, 1 - latency.TotalSeconds / 10);
         _arousal = Lerp(_arousal, 0.5 + responseComplexity * 0.3, 0.1);
 
         // Update valence based on success/failure patterns
@@ -84,15 +79,13 @@ public sealed partial class EmergentConsciousness
             _attention.AddOrUpdate(kw, 1.0, (_, v) => Math.Min(1.0, v + 0.1));
         }
 
-        // Decay old attention
-        foreach (var key in _attention.Keys.ToList())
+        // Decay old attention (snapshot Keys via ToArray to avoid concurrent modification)
+        foreach (var key in _attention.Keys.ToArray())
         {
-            if (!keywords.Contains(key))
-            {
-                _attention.AddOrUpdate(key, 0, (_, v) => v * 0.95);
-                if (_attention[key] < 0.01)
-                    _attention.TryRemove(key, out _);
-            }
+            if (keywords.Contains(key)) continue;
+            _attention.AddOrUpdate(key, 0, (_, v) => v * 0.95);
+            if (_attention[key] < 0.01)
+                _attention.TryRemove(key, out _);
         }
 
         // Update focus
@@ -126,7 +119,7 @@ public sealed partial class EmergentConsciousness
         // Φ is expensive (2^n bipartitions), so it is only recalculated on demand.
         if (allPathways != null && allPathways.Count >= 2)
         {
-            var phiResult = _phiCalculator.Compute(allPathways);
+            var phiResult = IITPhiCalculator.Compute(allPathways);
             _phi = phiResult.Phi;
         }
 

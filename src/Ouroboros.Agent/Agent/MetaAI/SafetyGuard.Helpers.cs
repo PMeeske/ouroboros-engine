@@ -12,7 +12,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// </summary>
 public sealed partial class SafetyGuard
 {
-    private string SanitizeString(string value)
+    private static string SanitizeString(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return value;
@@ -77,7 +77,7 @@ public sealed partial class SafetyGuard
         RegisterPermissionPolicy("qdrant_admin", PermissionLevel.Write, "Qdrant vector database administration");
     }
 
-    private bool ContainsDangerousPatterns(string operation, IReadOnlyDictionary<string, object> parameters)
+    private static bool ContainsDangerousPatterns(string operation, IReadOnlyDictionary<string, object> parameters)
     {
         string[] dangerousPatterns = new[]
         {
@@ -91,7 +91,7 @@ public sealed partial class SafetyGuard
         return dangerousPatterns.Any(pattern => lowerCombined.Contains(pattern));
     }
 
-    private bool ContainsInjectionPatterns(string value)
+    private static bool ContainsInjectionPatterns(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return false;

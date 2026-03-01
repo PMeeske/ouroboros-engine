@@ -193,12 +193,10 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
             "faster-whisper.exe",
         ];
 
-        foreach (string candidate in candidates)
+        string? foundCandidate = candidates.FirstOrDefault(candidate => CanFindInPath(candidate));
+        if (foundCandidate != null)
         {
-            if (CanFindInPath(candidate))
-            {
-                return candidate;
-            }
+            return foundCandidate;
         }
 
         // Check if Python whisper is available
@@ -278,12 +276,10 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
         // Check common Python locations
         string[] pythonCandidates = ["python", "python3", "py"];
 
-        foreach (string candidate in pythonCandidates)
+        string? foundPython = pythonCandidates.FirstOrDefault(candidate => CanFindInPath(candidate));
+        if (foundPython != null)
         {
-            if (CanFindInPath(candidate))
-            {
-                return candidate;
-            }
+            return foundPython;
         }
 
         // Check Windows-specific Python installation paths
@@ -297,12 +293,10 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
                 Path.Combine(localAppData, "Programs", "Python", "Python310", "python.exe"),
             ];
 
-            foreach (string path in windowsPaths)
+            string? foundPath = windowsPaths.FirstOrDefault(path => File.Exists(path));
+            if (foundPath != null)
             {
-                if (File.Exists(path))
-                {
-                    return path;
-                }
+                return foundPath;
             }
         }
 

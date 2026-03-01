@@ -58,16 +58,13 @@ public sealed partial class SafetyGuard : ISafetyGuard
         List<string> violations = new();
 
         // Step 1: Check with OuroborosAtom.IsSafeAction() if available in context
-        if (context is OuroborosAtom atom)
+        if (context is OuroborosAtom atom && !atom.IsSafeAction(actionName))
         {
-            if (!atom.IsSafeAction(actionName))
-            {
-                violations.Add("Action rejected by OuroborosAtom safety constraints");
-                return SafetyCheckResult.Denied(
-                    "Action violates Ouroboros safety constraints",
-                    violations,
-                    1.0);
-            }
+            violations.Add("Action rejected by OuroborosAtom safety constraints");
+            return SafetyCheckResult.Denied(
+                "Action violates Ouroboros safety constraints",
+                violations,
+                1.0);
         }
 
         // Check for dangerous patterns

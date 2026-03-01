@@ -285,7 +285,7 @@ public sealed partial class SmartToolSelector
         }
 
         // Fallback: compute basic fit score
-        double fitScore = _capabilityMatcher.ScoreToolRelevance(tool, goal.Description);
+        double fitScore = ToolCapabilityMatcher.ScoreToolRelevance(tool, goal.Description);
 
         return new ToolCandidate(
             Tool: tool,
@@ -304,7 +304,7 @@ public sealed partial class SmartToolSelector
     /// <param name="currentWorldState">The current world state.</param>
     /// <param name="match">The pre-computed match result.</param>
     /// <returns>A tool candidate with computed fit scores.</returns>
-    public ToolCandidate EvaluateToolFit(
+    public static ToolCandidate EvaluateToolFit(
         ITool tool,
         Goal goal,
         WorldState currentWorldState,
@@ -321,20 +321,16 @@ public sealed partial class SmartToolSelector
         double qualityScore = EstimateToolQuality(tool, fitScore);
 
         // Adjust scores based on world state observations
-        if (currentWorldState.Observations.TryGetValue($"tool.{tool.Name}.performance", out Observation? perfObs))
+        if (currentWorldState.Observations.TryGetValue($"tool.{tool.Name}.performance", out Observation? perfObs)
+            && perfObs.Value is double performanceMultiplier)
         {
-            if (perfObs.Value is double performanceMultiplier)
-            {
-                speedScore = Math.Clamp(speedScore * performanceMultiplier, 0.0, 1.0);
-            }
+            speedScore = Math.Clamp(speedScore * performanceMultiplier, 0.0, 1.0);
         }
 
-        if (currentWorldState.Observations.TryGetValue($"tool.{tool.Name}.reliability", out Observation? reliabilityObs))
+        if (currentWorldState.Observations.TryGetValue($"tool.{tool.Name}.reliability", out Observation? reliabilityObs)
+            && reliabilityObs.Value is double reliabilityMultiplier)
         {
-            if (reliabilityObs.Value is double reliabilityMultiplier)
-            {
-                qualityScore = Math.Clamp(qualityScore * reliabilityMultiplier, 0.0, 1.0);
-            }
+            qualityScore = Math.Clamp(qualityScore * reliabilityMultiplier, 0.0, 1.0);
         }
 
         return new ToolCandidate(
@@ -352,7 +348,7 @@ public sealed partial class SmartToolSelector
     /// <param name="candidates">The list of candidates to filter.</param>
     /// <param name="constraints">The constraints to apply.</param>
     /// <returns>A filtered list of candidates that pass all constraints.</returns>
-    public List<ToolCandidate> ApplyConstraints(
+    public static List<ToolCandidate> ApplyConstraints(
         IReadOnlyList<ToolCandidate> candidates,
         IReadOnlyList<Constraint> constraints)
     {
@@ -414,15 +410,7 @@ public sealed partial class SmartToolSelector
         }
 
         // Check if tool is blocked by any constraint
-        foreach (Constraint constraint in _worldState.Constraints)
-        {
-            if (IsToolBlockedByConstraint(tool, constraint))
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return !_worldState.Constraints.Any(constraint => IsToolBlockedByConstraint(tool, constraint));
     }
 
 }

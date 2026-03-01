@@ -137,7 +137,7 @@ public sealed class DynamicToolSelector
         return new List<ToolCategory> { ToolCategory.General, ToolCategory.Utility };
     }
 
-    private Dictionary<UseCaseType, List<ToolCategory>> InitializeUseCaseMappings()
+    private static Dictionary<UseCaseType, List<ToolCategory>> InitializeUseCaseMappings()
     {
         return new Dictionary<UseCaseType, List<ToolCategory>>
         {
@@ -182,7 +182,7 @@ public sealed class DynamicToolSelector
         };
     }
 
-    private Dictionary<ToolCategory, List<ITool>> CategorizeTools(ToolRegistry registry)
+    private static Dictionary<ToolCategory, List<ITool>> CategorizeTools(ToolRegistry registry)
     {
         var categorized = new Dictionary<ToolCategory, List<ITool>>();
 
@@ -202,7 +202,7 @@ public sealed class DynamicToolSelector
         return categorized;
     }
 
-    private ToolCategory GetToolCategory(ITool tool)
+    private static ToolCategory GetToolCategory(ITool tool)
     {
         var nameLower = tool.Name.ToLowerInvariant();
         var descLower = tool.Description?.ToLowerInvariant() ?? string.Empty;
@@ -272,18 +272,12 @@ public sealed class DynamicToolSelector
 
     private static bool ContainsAny(string name, string description, params string[] keywords)
     {
-        foreach (var keyword in keywords)
-        {
-            if (name.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
-                description.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-        return false;
+        return keywords.Any(keyword =>
+            name.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+            description.Contains(keyword, StringComparison.OrdinalIgnoreCase));
     }
 
-    private List<ToolCategory> DetectCategoriesFromPrompt(string prompt)
+    private static List<ToolCategory> DetectCategoriesFromPrompt(string prompt)
     {
         var categories = new HashSet<ToolCategory>();
         var promptLower = prompt.ToLowerInvariant();
@@ -361,30 +355,24 @@ public sealed class DynamicToolSelector
 
         // Check if tool name words appear in prompt
         var nameWords = nameLower.Split('_', ' ', '-');
-        foreach (var word in nameWords.Where(w => w.Length > 2))
+        foreach (var word in nameWords.Where(w => w.Length > 2).Where(word => promptLower.Contains(word)))
         {
-            if (promptLower.Contains(word))
-            {
-                score += 0.2;
-            }
+            score += 0.2;
         }
 
         // Check if description keywords appear in prompt
         var descWords = descLower.Split(' ', '.', ',')
             .Where(w => w.Length > 3)
             .Take(10);
-        foreach (var word in descWords)
+        foreach (var word in descWords.Where(word => promptLower.Contains(word)))
         {
-            if (promptLower.Contains(word))
-            {
-                score += 0.1;
-            }
+            score += 0.1;
         }
 
         return Math.Min(score, 1.0);
     }
 
-    private ToolRegistry ApplyContextFilter(ToolRegistry tools, ToolSelectionContext context)
+    private static ToolRegistry ApplyContextFilter(ToolRegistry tools, ToolSelectionContext context)
     {
         var filtered = new ToolRegistry();
 
@@ -419,12 +407,9 @@ public sealed class DynamicToolSelector
             }
 
             // Apply required tool names filter
-            if (context.RequiredToolNames?.Count > 0)
+            if (context.RequiredToolNames?.Count > 0 && !context.RequiredToolNames.Contains(tool.Name))
             {
-                if (!context.RequiredToolNames.Contains(tool.Name))
-                {
-                    include = false;
-                }
+                include = false;
             }
 
             if (include)

@@ -27,7 +27,6 @@ public sealed class EvaluationHarness
     {
         ArgumentNullException.ThrowIfNull(testCase);
 
-        DateTime startTime = DateTime.UtcNow;
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         try
@@ -192,7 +191,7 @@ public sealed class EvaluationHarness
     /// </summary>
     public void ClearResults() => _results.Clear();
 
-    private EvaluationResults AggregateResults(List<EvaluationMetrics> results)
+    private static EvaluationResults AggregateResults(List<EvaluationMetrics> results)
     {
         int total = results.Count;
         int successful = results.Count(r => r.Success);
