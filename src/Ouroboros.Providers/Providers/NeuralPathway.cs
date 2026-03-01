@@ -16,7 +16,7 @@ public sealed class NeuralPathway
     /// <summary>
     /// The capability tier of this pathway for routing purposes.
     /// </summary>
-    public PathwayTier Tier { get; init; } = PathwayTier.CloudLight;
+    public PathwayTier Tier { get; set; } = PathwayTier.CloudLight;
 
     /// <summary>
     /// Specialized capabilities this pathway excels at.

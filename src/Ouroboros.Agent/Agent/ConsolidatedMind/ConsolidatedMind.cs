@@ -270,12 +270,12 @@ public sealed partial class ConsolidatedMind : Ouroboros.Abstractions.Core.IChat
                         WasVerified: false,
                         Confidence: analysis.Confidence * 0.7); // Reduced confidence for fallback
                 }
-                catch (Exception) when (ex is not OperationCanceledException)
+                catch (Exception ex2) when (ex2 is not OperationCanceledException)
                 {
                     // First fallback also failed — try next in chain
                     var secondaryFallback = GetFallbackSpecialist(fallback.Role);
-                    if (secondaryFallback != null 
-                        && secondaryFallback.Role != primarySpecialist.Role 
+                    if (secondaryFallback != null
+                        && secondaryFallback.Role != primarySpecialist.Role
                         && secondaryFallback.Role != fallback.Role)
                     {
                         try
@@ -291,7 +291,7 @@ public sealed partial class ConsolidatedMind : Ouroboros.Abstractions.Core.IChat
                                 WasVerified: false,
                                 Confidence: 0.3); // Lower confidence for deep fallback
                         }
-                        catch (Exception) when (ex is not OperationCanceledException)
+                        catch (Exception ex3) when (ex3 is not OperationCanceledException)
                         {
                             // Final fallback also failed - fall through to throw
                         }

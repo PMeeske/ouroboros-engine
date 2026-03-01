@@ -95,8 +95,9 @@ public sealed class TripleExtractionStep
             from Match match in triplePattern.Matches(llmOutput)
             where match.Groups.Count == 4
             let predicate = match.Groups[1].Value
+            let subject = match.Groups[2].Value.Trim().Trim('"')
             let obj = match.Groups[3].Value.Trim().Trim('"')
-            select new SemanticTriple(documentId, predicate, obj));
+            select new SemanticTriple(subject, predicate, obj));
 
         // Also try alternative format: Relation: Object
         Regex simplePattern = new(@"(\w+):\s*(.+)", RegexOptions.Compiled);

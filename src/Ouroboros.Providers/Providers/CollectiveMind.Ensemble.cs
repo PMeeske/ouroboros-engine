@@ -39,6 +39,7 @@ public sealed partial class CollectiveMind
 
                 return ResponseCandidate<ThinkingResponse>.Create(result, pathway.Name, sw.Elapsed);
             }
+            catch (OperationCanceledException) { throw; }
             catch
             {
                 pathway.RecordInhibition();

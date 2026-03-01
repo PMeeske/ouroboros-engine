@@ -34,11 +34,12 @@ public static class WalCompactor
         try
         {
             // Step 1: Restore the DAG from the existing WAL
-            await using var sourcePersistence = new FileWalPersistence(walPath);
+            var sourcePersistence = new FileWalPersistence(walPath);
             var restoreResult = await PersistentMerkleDag.RestoreAsync(sourcePersistence, ct).ConfigureAwait(false);
 
             if (restoreResult.IsFailure)
             {
+                await sourcePersistence.DisposeAsync().ConfigureAwait(false);
                 return Result<Unit, string>.Failure($"Failed to restore DAG for compaction: {restoreResult.Error}");
             }
 
@@ -48,12 +49,14 @@ public static class WalCompactor
             var tempWalPath = walPath + ".compact.tmp";
             try
             {
-                await using var targetPersistence = new FileWalPersistence(tempWalPath);
+                var targetPersistence = new FileWalPersistence(tempWalPath);
 
                 // Step 3: Write all nodes in topological order
                 var sortResult = restoredDag.TopologicalSort();
                 if (sortResult.IsFailure)
                 {
+                    await targetPersistence.DisposeAsync().ConfigureAwait(false);
+                    await restoredDag.DisposeAsync().ConfigureAwait(false);
                     return Result<Unit, string>.Failure($"Topological sort failed: {sortResult.Error}");
                 }
 

@@ -413,7 +413,7 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
     private static string SanitizeForMeTTa(string input)
     {
         if (string.IsNullOrEmpty(input)) return "unknown";
-        return input
+        var sanitized = input
             .Replace(" ", "_")
             .Replace(".", "_")
             .Replace("-", "_")
@@ -421,8 +421,8 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
             .Replace("'", "")
             .Replace("\"", "")
             .Replace(",", "")
-            .ToLower()
-            .Substring(0, Math.Min(30, input.Length));
+            .ToLower();
+        return sanitized.Substring(0, Math.Min(30, sanitized.Length));
     }
 
     private static double CalculateNoveltyFromPaperCount(int groupCount, int totalCount)

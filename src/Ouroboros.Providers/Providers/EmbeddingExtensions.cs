@@ -30,6 +30,7 @@ public static class EmbeddingExtensions
                 Telemetry.RecordEmbeddingSuccess(embedding.Length);
                 Telemetry.RecordVectors(1);
             }
+            catch (OperationCanceledException) { throw; }
             catch
             {
                 Telemetry.RecordEmbeddingFailure();
