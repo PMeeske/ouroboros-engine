@@ -358,7 +358,7 @@ public sealed partial class CollectiveMind
     private static string TruncateForContext(string text, int maxLength)
         => text.Length <= maxLength ? text : text.Substring(0, maxLength) + "...";
 
-    [GeneratedRegex(@"\[[\s\S]*\]")]
+    [GeneratedRegex(@"\[[\s\S]*?\]")]
     private static partial Regex JsonArrayRegex();
 
     [GeneratedRegex(@"\?")]

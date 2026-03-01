@@ -219,7 +219,7 @@ database_query -> library_search (confidence: 0.8)
                 {
                     string source = match.Groups[1].Value.Trim();
                     string target = match.Groups[2].Value.Trim();
-                    double confidence = double.Parse(match.Groups[3].Value);
+                    double confidence = double.Parse(match.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture);
 
                     analogies.Add((source, target, confidence));
                 }

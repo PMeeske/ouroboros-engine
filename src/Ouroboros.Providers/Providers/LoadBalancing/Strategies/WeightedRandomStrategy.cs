@@ -31,7 +31,7 @@ public sealed class WeightedRandomStrategy : IProviderSelectionStrategy
         if (totalWeight <= 0)
             return healthyProviders[RandomNumberGenerator.GetInt32(healthyProviders.Count)];
 
-        double randomValue = RandomNumberGenerator.GetInt32(256) * totalWeight;
+        double randomValue = (RandomNumberGenerator.GetInt32(256) / 256.0) * totalWeight;
         double cumulative = 0;
 
         foreach (var (weight, id) in weights)

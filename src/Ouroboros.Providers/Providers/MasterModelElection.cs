@@ -238,7 +238,7 @@ public sealed partial class MasterModelElection : IDisposable
         _electionEvents.Dispose();
     }
 
-    [GeneratedRegex(@"0?\.\d+|1\.0|0|1")]
+    [GeneratedRegex(@"\b(0?\.\d+|1\.0)\b")]
     private static partial Regex ScoreRegex();
 
     [GeneratedRegex(@"[.!?]+")]

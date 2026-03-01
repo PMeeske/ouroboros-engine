@@ -56,13 +56,7 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
             if (char.IsSurrogate(c)) continue;
             if (char.IsControl(c) && c != '\n' && c != '\r' && c != '\t') continue;
 
-            // Skip emoji and other high Unicode (above BMP can cause issues)
-            if (c > 0xFFFF || (c >= 0xD800 && c <= 0xDFFF)) continue;
-
-            // Skip common problematic ranges
-            if (c >= 0x1F600 && c <= 0x1F64F) continue; // Emoticons
-            if (c >= 0x1F300 && c <= 0x1F5FF) continue; // Misc symbols
-            if (c >= 0x1F680 && c <= 0x1F6FF) continue; // Transport
+            // Skip BMP symbols that commonly cause encoding issues with embedding APIs
             if (c >= 0x2600 && c <= 0x26FF) continue;   // Misc symbols
             if (c >= 0x2700 && c <= 0x27BF) continue;   // Dingbats
 

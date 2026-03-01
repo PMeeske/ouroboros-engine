@@ -176,9 +176,10 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     private void AggregateCosts(NeuralPathway pathway)
     {
         var metrics = pathway.CostTracker.GetSessionMetrics();
+        var current = _collectiveCostTracker.GetSessionMetrics();
         _collectiveCostTracker.EndRequest(
-            (int)(metrics.TotalInputTokens - _collectiveCostTracker.GetSessionMetrics().TotalInputTokens),
-            (int)(metrics.TotalOutputTokens - _collectiveCostTracker.GetSessionMetrics().TotalOutputTokens));
+            (int)(metrics.TotalInputTokens - current.TotalInputTokens),
+            (int)(metrics.TotalOutputTokens - current.TotalOutputTokens));
     }
 
     /// <inheritdoc/>
@@ -289,6 +290,8 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
         _election?.Dispose();
         _thoughtStream.OnCompleted();
         _thoughtStream.Dispose();
+        _subGoalStream.OnCompleted();
+        _subGoalStream.Dispose();
 
         lock (_lock)
         {

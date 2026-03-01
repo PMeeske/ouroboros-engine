@@ -86,13 +86,13 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
         // Update cooldown status before returning
         foreach (var kvp in _healthStatus)
         {
-            if (kvp.Value.IsInCooldown && kvp.Value.CooldownUntil <= DateTime.UtcNow
-                && kvp.Value.ConsecutiveFailures == 0)
+            if (kvp.Value.IsInCooldown && kvp.Value.CooldownUntil <= DateTime.UtcNow)
             {
-                // Cooldown expired, restore health if no other issues
+                // Cooldown expired, restore health and reset failure count
                 _healthStatus[kvp.Key] = kvp.Value with
                 {
                     IsHealthy = true,
+                    ConsecutiveFailures = 0,
                     CooldownUntil = null
                 };
             }

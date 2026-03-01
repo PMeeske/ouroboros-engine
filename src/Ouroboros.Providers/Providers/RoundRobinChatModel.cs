@@ -181,6 +181,15 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 Interlocked.Increment(ref stats.TotalRequests);
                 _aggregateCostTracker.StartRequest();
 
+                // Capture pre-request token counts for delta calculation
+                long preInputTokens = 0, preOutputTokens = 0;
+                if (model is ICostAwareChatModel costAwarePre && costAwarePre.CostTracker != null)
+                {
+                    var preMetrics = costAwarePre.CostTracker.GetSessionMetrics();
+                    preInputTokens = preMetrics.TotalInputTokens;
+                    preOutputTokens = preMetrics.TotalOutputTokens;
+                }
+
                 ThinkingResponse result;
                 if (model is IThinkingChatModel thinkingModel)
                 {
@@ -203,11 +212,13 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 Interlocked.Exchange(ref stats.ConsecutiveFailures, 0);
                 stats.LastSuccess = DateTime.UtcNow;
 
-                // Track costs from provider's tracker
+                // Track costs from provider's tracker (delta, not cumulative)
                 if (model is ICostAwareChatModel costAware && costAware.CostTracker != null)
                 {
-                    var metrics = costAware.CostTracker.GetSessionMetrics();
-                    _aggregateCostTracker.EndRequest((int)metrics.TotalInputTokens, (int)metrics.TotalOutputTokens);
+                    var postMetrics = costAware.CostTracker.GetSessionMetrics();
+                    _aggregateCostTracker.EndRequest(
+                        (int)(postMetrics.TotalInputTokens - preInputTokens),
+                        (int)(postMetrics.TotalOutputTokens - preOutputTokens));
                 }
                 else
                 {

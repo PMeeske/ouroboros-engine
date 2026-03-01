@@ -80,11 +80,12 @@ public sealed partial class CollectiveMind
             var pathway = _pathways.FirstOrDefault(p => p.Name.Equals(pathwayName, StringComparison.OrdinalIgnoreCase));
             if (pathway != null)
             {
+                pathway.Tier = tier;
                 foreach (var spec in specializations)
                 {
                     pathway.Specializations.Add(spec);
                 }
-                _thoughtStream.OnNext($"⚙️ Configured pathway '{pathwayName}' with {specializations.Length} specializations");
+                _thoughtStream.OnNext($"⚙️ Configured pathway '{pathwayName}' tier={tier} with {specializations.Length} specializations");
             }
         }
         return this;

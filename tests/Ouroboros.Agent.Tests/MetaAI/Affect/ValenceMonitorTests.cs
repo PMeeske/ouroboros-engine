@@ -50,19 +50,21 @@ public class ValenceMonitorTests
     [Fact]
     public void UpdateConfidence_AdjustsOnSuccess()
     {
+        var stateBefore = _monitor.GetCurrentState();
         _monitor.UpdateConfidence("task1", true);
 
         var state = _monitor.GetCurrentState();
-        state.Confidence.Should().BeGreaterThanOrEqualTo(0.0);
+        state.Confidence.Should().BeGreaterThanOrEqualTo(stateBefore.Confidence);
     }
 
     [Fact]
     public void UpdateConfidence_AdjustsOnFailure()
     {
+        var stateBefore = _monitor.GetCurrentState();
         _monitor.UpdateConfidence("task1", false);
 
         var state = _monitor.GetCurrentState();
-        state.Confidence.Should().BeLessThanOrEqualTo(1.0);
+        state.Confidence.Should().BeLessThanOrEqualTo(stateBefore.Confidence);
     }
 
     [Fact]
@@ -72,7 +74,7 @@ public class ValenceMonitorTests
         _monitor.UpdateCuriosity(0.9, "novel-context");
         var stateAfter = _monitor.GetCurrentState();
 
-        stateAfter.Curiosity.Should().BeGreaterThanOrEqualTo(0.0);
+        stateAfter.Curiosity.Should().BeGreaterThan(stateBefore.Curiosity);
     }
 
     [Fact]

@@ -218,8 +218,9 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
     public async Task<Result<TranscriptionResult, string>> TranscribeStreamAsync(
         Stream audioStream, string fileName, TranscriptionOptions? options = null, CancellationToken ct = default)
     {
-        var bytes = new byte[audioStream.Length];
-        _ = await audioStream.ReadAsync(bytes, ct);
+        using var ms = new MemoryStream();
+        await audioStream.CopyToAsync(ms, ct);
+        var bytes = ms.ToArray();
         return await TranscribeBytesAsync(bytes, fileName, options, ct);
     }
 
