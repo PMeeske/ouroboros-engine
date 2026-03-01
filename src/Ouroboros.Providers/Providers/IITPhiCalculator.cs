@@ -99,7 +99,7 @@ public sealed class IITPhiCalculator
     /// </summary>
     /// <param name="pathways">Snapshot of pathways from <see cref="CollectiveMind"/>.</param>
     /// <returns>A <see cref="PhiResult"/> containing Φ and the minimum information partition.</returns>
-    public static PhiResult Compute(IReadOnlyList<NeuralPathway> pathways)
+    public PhiResult Compute(IReadOnlyList<NeuralPathway> pathways)
     {
         int n = pathways.Count;
         if (n == 0) return PhiResult.Empty;
