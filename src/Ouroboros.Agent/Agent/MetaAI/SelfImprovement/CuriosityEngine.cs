@@ -219,7 +219,7 @@ STEP 2: ...";
             return false;
 
         // Calculate exploration probability using epsilon-greedy strategy
-        Random random = new Random();
+        Random random = Random.Shared;
         double explorationProbability = 1.0 - _config.ExploitationBias;
 
         // Increase exploration if we haven't explored much recently
@@ -299,8 +299,8 @@ STEP 2: ...";
             return;
 
         _explorationHistory.Add((plan, actualNovelty, DateTime.UtcNow));
-        _totalExplorations++;
-        _sessionExplorations++;
+        Interlocked.Increment(ref _totalExplorations);
+        Interlocked.Increment(ref _sessionExplorations);
     }
 
     /// <summary>

@@ -312,7 +312,10 @@ Format each cause on a new line starting with '- '";
 
         // Calculate confidence based on variance
         double variance = history.Average(v => Math.Pow(v - mean, 2));
-        double confidence = variance > 0 ? Math.Max(0.3, 1.0 - (Math.Sqrt(variance) / mean)) : 0.7;
+        double absMean = Math.Abs(mean);
+        double confidence = variance > 0 && absMean > 1e-9
+            ? Math.Max(0.3, 1.0 - (Math.Sqrt(variance) / absMean))
+            : 0.7;
 
         Forecast forecast = CreateForecast(
             $"Forecast for {metricName} at {horizon.TotalHours:F1} hours ahead",
