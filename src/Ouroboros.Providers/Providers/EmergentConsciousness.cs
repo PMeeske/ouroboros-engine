@@ -119,7 +119,7 @@ public sealed partial class EmergentConsciousness
         // Φ is expensive (2^n bipartitions), so it is only recalculated on demand.
         if (allPathways != null && allPathways.Count >= 2)
         {
-            var phiResult = IITPhiCalculator.Compute(allPathways);
+            var phiResult = new IITPhiCalculator().Compute(allPathways);
             _phi = phiResult.Phi;
         }
 

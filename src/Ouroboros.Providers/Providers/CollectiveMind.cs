@@ -238,7 +238,7 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
         IReadOnlyList<NeuralPathway> snapshot;
         lock (_lock) { snapshot = _pathways.ToList(); }
 
-        var result = IITPhiCalculator.Compute(snapshot);
+        var result = new IITPhiCalculator().Compute(snapshot);
         _thoughtStream.OnNext($"Φ={result.Phi:F4} | MIP: {result.MinimumInformationPartition}");
         return result;
     }
@@ -273,7 +273,7 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
             // IIT Φ — integrated information of the pathway topology
             if (_pathways.Count >= 2)
             {
-                var phi = IITPhiCalculator.Compute(_pathways.ToList());
+                var phi = new IITPhiCalculator().Compute(_pathways.ToList());
                 sb.AppendLine();
                 sb.AppendLine($"   IIT Φ: {phi.Phi:F4} | {phi.Description}");
                 sb.AppendLine($"   MIP:   {phi.MinimumInformationPartition}");
