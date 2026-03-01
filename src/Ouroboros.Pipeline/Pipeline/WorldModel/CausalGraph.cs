@@ -289,4 +289,76 @@ public sealed partial class CausalGraph
             .ToImmutableList();
     }
 
+    /// <summary>
+    /// Determines whether the graph contains a cycle using depth-first search.
+    /// </summary>
+    /// <returns>True if a cycle exists; otherwise false.</returns>
+    public bool HasCycle()
+    {
+        var visited = new HashSet<Guid>();
+        var inStack = new HashSet<Guid>();
+
+        foreach (Guid nodeId in _nodes.Keys)
+        {
+            if (!visited.Contains(nodeId) && HasCycleDfs(nodeId, visited, inStack))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool HasCycleDfs(Guid nodeId, HashSet<Guid> visited, HashSet<Guid> inStack)
+    {
+        visited.Add(nodeId);
+        inStack.Add(nodeId);
+
+        if (_outgoingEdges.TryGetValue(nodeId, out ImmutableList<CausalEdge>? outgoing))
+        {
+            foreach (CausalEdge edge in outgoing)
+            {
+                if (inStack.Contains(edge.TargetId))
+                    return true;
+                if (!visited.Contains(edge.TargetId) && HasCycleDfs(edge.TargetId, visited, inStack))
+                    return true;
+            }
+        }
+
+        inStack.Remove(nodeId);
+        return false;
+    }
+
+    /// <summary>
+    /// Gets all nodes that have no incoming edges (root nodes).
+    /// </summary>
+    /// <returns>A list of nodes with no incoming edges.</returns>
+    public IReadOnlyList<CausalNode> GetRootNodes()
+    {
+        return _nodes.Values
+            .Where(n => !_incomingEdges.TryGetValue(n.Id, out ImmutableList<CausalEdge>? incoming) || incoming.Count == 0)
+            .ToImmutableList();
+    }
+
+    /// <summary>
+    /// Gets all nodes that have no outgoing edges (leaf nodes).
+    /// </summary>
+    /// <returns>A list of nodes with no outgoing edges.</returns>
+    public IReadOnlyList<CausalNode> GetLeafNodes()
+    {
+        return _nodes.Values
+            .Where(n => !_outgoingEdges.TryGetValue(n.Id, out ImmutableList<CausalEdge>? outgoing) || outgoing.Count == 0)
+            .ToImmutableList();
+    }
+
+    /// <summary>
+    /// Gets all nodes of the specified type.
+    /// </summary>
+    /// <param name="type">The node type to filter by.</param>
+    /// <returns>A list of nodes matching the specified type.</returns>
+    public IReadOnlyList<CausalNode> GetNodesByType(CausalNodeType type)
+    {
+        return _nodes.Values
+            .Where(n => n.NodeType == type)
+            .ToImmutableList();
+    }
+
 }
