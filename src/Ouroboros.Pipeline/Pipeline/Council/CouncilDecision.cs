@@ -27,7 +27,7 @@ public sealed record CouncilDecision(
         get
         {
             var values = Votes.Values;
-            if (values.Count == 0) return false;
+            if (!values.Any()) return false;
             var firstPosition = values.First().Position;
             return values.All(v => v.Position == firstPosition);
         }
