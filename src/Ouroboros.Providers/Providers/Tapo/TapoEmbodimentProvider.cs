@@ -54,8 +54,10 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
         TapoVisionModelConfig? visionConfig = null,
         ILogger<TapoEmbodimentProvider>? logger = null)
     {
-        _tapoClient = tapoClient ?? throw new ArgumentNullException(nameof(tapoClient));
-        ProviderId = providerId ?? throw new ArgumentNullException(nameof(providerId));
+        ArgumentNullException.ThrowIfNull(tapoClient);
+        ArgumentNullException.ThrowIfNull(providerId);
+        _tapoClient = tapoClient;
+        ProviderId = providerId;
         _visionModel = visionModel;
         _ttsModel = ttsModel;
         _visionConfig = visionConfig ?? TapoVisionModelConfig.CreateDefault();
@@ -83,8 +85,10 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
         string? username = null,
         string? password = null)
     {
-        _rtspClientFactory = rtspClientFactory ?? throw new ArgumentNullException(nameof(rtspClientFactory));
-        ProviderId = providerId ?? throw new ArgumentNullException(nameof(providerId));
+        ArgumentNullException.ThrowIfNull(rtspClientFactory);
+        ArgumentNullException.ThrowIfNull(providerId);
+        _rtspClientFactory = rtspClientFactory;
+        ProviderId = providerId;
         _visionModel = visionModel;
         _ttsModel = ttsModel;
         _visionConfig = visionConfig ?? TapoVisionModelConfig.CreateDefault();
@@ -124,7 +128,8 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
 
         _tapoClient = tapoClient;
         _rtspClientFactory = rtspClientFactory;
-        ProviderId = providerId ?? throw new ArgumentNullException(nameof(providerId));
+        ArgumentNullException.ThrowIfNull(providerId);
+        ProviderId = providerId;
         _visionModel = visionModel;
         _ttsModel = ttsModel;
         _visionConfig = visionConfig ?? TapoVisionModelConfig.CreateDefault();

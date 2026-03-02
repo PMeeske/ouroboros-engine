@@ -17,7 +17,8 @@ public sealed class QdrantStartupInitializer : IHostedService
         IQdrantCollectionRegistry registry,
         ILogger<QdrantStartupInitializer>? logger = null)
     {
-        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        ArgumentNullException.ThrowIfNull(registry);
+        _registry = registry;
         _logger = logger;
     }
 

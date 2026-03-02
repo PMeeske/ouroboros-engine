@@ -48,7 +48,7 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
     /// <param name="ollamaModel">Ollama chat model instance.</param>
     public DeepSeekChatModel(LangChain.Providers.Ollama.OllamaChatModel ollamaModel)
     {
-        if (ollamaModel == null) throw new ArgumentNullException(nameof(ollamaModel));
+        ArgumentNullException.ThrowIfNull(ollamaModel);
         _underlyingModel = new OllamaChatAdapter(ollamaModel);
     }
 

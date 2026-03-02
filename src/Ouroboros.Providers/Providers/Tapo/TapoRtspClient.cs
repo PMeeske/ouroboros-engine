@@ -37,9 +37,12 @@ public sealed class TapoRtspClient : IDisposable
         CameraStreamQuality quality = CameraStreamQuality.HD,
         ILogger<TapoRtspClient>? logger = null)
     {
-        _cameraIp = cameraIp ?? throw new ArgumentNullException(nameof(cameraIp));
-        _username = username ?? throw new ArgumentNullException(nameof(username));
-        _password = password ?? throw new ArgumentNullException(nameof(password));
+        ArgumentNullException.ThrowIfNull(cameraIp);
+        ArgumentNullException.ThrowIfNull(username);
+        ArgumentNullException.ThrowIfNull(password);
+        _cameraIp = cameraIp;
+        _username = username;
+        _password = password;
         _quality = quality;
         _logger = logger;
     }

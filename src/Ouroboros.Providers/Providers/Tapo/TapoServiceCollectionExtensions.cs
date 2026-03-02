@@ -19,8 +19,7 @@ public static class TapoServiceCollectionExtensions
         this IServiceCollection services,
         string baseAddress)
     {
-        if (services == null)
-            throw new ArgumentNullException(nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
         if (string.IsNullOrWhiteSpace(baseAddress))
             throw new ArgumentException("Base address is required", nameof(baseAddress));
@@ -46,11 +45,9 @@ public static class TapoServiceCollectionExtensions
         this IServiceCollection services,
         Action<HttpClient> configure)
     {
-        if (services == null)
-            throw new ArgumentNullException(nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
-        if (configure == null)
-            throw new ArgumentNullException(nameof(configure));
+        ArgumentNullException.ThrowIfNull(configure);
 
         services.AddHttpClient<TapoRestClient>(configure);
         services.AddTransient<TapoRestClient>();
@@ -74,8 +71,7 @@ public static class TapoServiceCollectionExtensions
         string providerId = "tapo",
         Func<TapoVisionModelConfig, TapoVisionModelConfig>? configureVision = null)
     {
-        if (services == null)
-            throw new ArgumentNullException(nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
         if (string.IsNullOrWhiteSpace(baseAddress))
             throw new ArgumentException("Base address is required", nameof(baseAddress));
@@ -129,8 +125,7 @@ public static class TapoServiceCollectionExtensions
         string providerId = "tapo-rtsp",
         Func<TapoVisionModelConfig, TapoVisionModelConfig>? configureVision = null)
     {
-        if (services == null)
-            throw new ArgumentNullException(nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
         // Add the RTSP camera factory
         services.AddTapoRtspCameras(cameras, username, password);
@@ -212,8 +207,7 @@ public static class TapoServiceCollectionExtensions
         string baseAddress,
         Func<TapoVisionModelConfig, TapoVisionModelConfig>? configureVision = null)
     {
-        if (services == null)
-            throw new ArgumentNullException(nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
         if (string.IsNullOrWhiteSpace(baseAddress))
             throw new ArgumentException("Base address is required", nameof(baseAddress));
@@ -298,8 +292,7 @@ public static class TapoServiceCollectionExtensions
         string password,
         CameraStreamQuality quality = CameraStreamQuality.HD)
     {
-        if (services == null)
-            throw new ArgumentNullException(nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
         if (string.IsNullOrWhiteSpace(cameraIp))
             throw new ArgumentException("Camera IP is required", nameof(cameraIp));
@@ -355,8 +348,7 @@ public static class TapoServiceCollectionExtensions
         this IServiceCollection services,
         string gatewayScriptPath)
     {
-        if (services == null)
-            throw new ArgumentNullException(nameof(services));
+        ArgumentNullException.ThrowIfNull(services);
 
         if (string.IsNullOrWhiteSpace(gatewayScriptPath))
             throw new ArgumentException("Gateway script path is required", nameof(gatewayScriptPath));

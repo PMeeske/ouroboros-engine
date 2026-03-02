@@ -50,7 +50,8 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
         string model = "whisper-1",
         HttpClient? httpClient = null)
     {
-        _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+        ArgumentNullException.ThrowIfNull(apiKey);
+        _apiKey = apiKey;
         _endpoint = endpoint ?? "https://api.openai.com/v1";
         _model = model;
         _ownsClient = httpClient == null;

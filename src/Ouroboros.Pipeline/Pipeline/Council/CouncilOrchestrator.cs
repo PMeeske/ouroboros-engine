@@ -12,6 +12,7 @@ namespace Ouroboros.Pipeline.Council;
 public sealed class CouncilOrchestrator : ICouncilOrchestrator
 {
     private readonly List<IAgentPersona> _agents = [];
+    private readonly object _agentsLock = new();
     private readonly ToolAwareChatModel _llm;
 
     /// <summary>
@@ -20,7 +21,8 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
     /// <param name="llm">The language model to use for agent interactions.</param>
     public CouncilOrchestrator(ToolAwareChatModel llm)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
     }
 
     /// <summary>
@@ -40,31 +42,40 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<IAgentPersona> Agents => _agents.AsReadOnly();
+    public IReadOnlyList<IAgentPersona> Agents
+    {
+        get { lock (_agentsLock) { return [.._agents]; } }
+    }
 
     /// <inheritdoc />
     public void AddAgent(IAgentPersona agent)
     {
         ArgumentNullException.ThrowIfNull(agent);
-        if (_agents.Any(a => a.Name == agent.Name))
+        lock (_agentsLock)
         {
-            throw new InvalidOperationException($"Agent with name '{agent.Name}' already exists in the council.");
-        }
+            if (_agents.Any(a => a.Name == agent.Name))
+            {
+                throw new InvalidOperationException($"Agent with name '{agent.Name}' already exists in the council.");
+            }
 
-        _agents.Add(agent);
+            _agents.Add(agent);
+        }
     }
 
     /// <inheritdoc />
     public bool RemoveAgent(string agentName)
     {
-        var agent = _agents.FirstOrDefault(a => a.Name == agentName);
-        if (agent is null)
+        lock (_agentsLock)
         {
-            return false;
-        }
+            var agent = _agents.FirstOrDefault(a => a.Name == agentName);
+            if (agent is null)
+            {
+                return false;
+            }
 
-        _agents.Remove(agent);
-        return true;
+            _agents.Remove(agent);
+            return true;
+        }
     }
 
     /// <inheritdoc />
@@ -79,7 +90,10 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
         CouncilConfig config,
         CancellationToken ct = default)
     {
-        if (_agents.Count == 0)
+        List<IAgentPersona> snapshot;
+        lock (_agentsLock) { snapshot = [.._agents]; }
+
+        if (snapshot.Count == 0)
         {
             return Result<CouncilDecision, string>.Failure("No agents registered in the council.");
         }
@@ -90,7 +104,7 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
         try
         {
             // Phase 1: Proposal
-            var proposalRound = await ExecuteProposalPhaseAsync(topic, config, ct);
+            var proposalRound = await ExecuteProposalPhaseAsync(snapshot, topic, config, ct);
             if (proposalRound.IsFailure)
             {
                 return Result<CouncilDecision, string>.Failure(proposalRound.Error);
@@ -103,7 +117,7 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
             }
 
             // Phase 2: Challenge
-            var challengeRound = await ExecuteChallengePhaseAsync(topic, agentProposals, config, ct);
+            var challengeRound = await ExecuteChallengePhaseAsync(snapshot, topic, agentProposals, config, ct);
             if (challengeRound.IsFailure)
             {
                 return Result<CouncilDecision, string>.Failure(challengeRound.Error);
@@ -113,7 +127,7 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
 
             // Phase 3: Refinement
             var refinementRound = await ExecuteRefinementPhaseAsync(
-                topic, agentProposals, challengeRound.Value.Contributions, config, ct);
+                snapshot, topic, agentProposals, challengeRound.Value.Contributions, config, ct);
             if (refinementRound.IsFailure)
             {
                 return Result<CouncilDecision, string>.Failure(refinementRound.Error);
@@ -122,7 +136,7 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
             transcript.Add(refinementRound.Value);
 
             // Phase 4: Voting
-            var votingResult = await ExecuteVotingPhaseAsync(topic, transcript, config, ct);
+            var votingResult = await ExecuteVotingPhaseAsync(snapshot, topic, transcript, config, ct);
             if (votingResult.IsFailure)
             {
                 return Result<CouncilDecision, string>.Failure(votingResult.Error);
@@ -146,23 +160,23 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
     // to eliminate duplication while preserving the instance-method API surface.
 
     private Task<Result<DebateRound, string>> ExecuteProposalPhaseAsync(
-        CouncilTopic topic, CouncilConfig config, CancellationToken ct)
-        => CouncilOrchestratorArrows.ExecuteProposalPhaseAsync(_llm, _agents, topic, config, ct);
+        List<IAgentPersona> agents, CouncilTopic topic, CouncilConfig config, CancellationToken ct)
+        => CouncilOrchestratorArrows.ExecuteProposalPhaseAsync(_llm, agents, topic, config, ct);
 
     private Task<Result<DebateRound, string>> ExecuteChallengePhaseAsync(
-        CouncilTopic topic, Dictionary<string, AgentContribution> proposals,
+        List<IAgentPersona> agents, CouncilTopic topic, Dictionary<string, AgentContribution> proposals,
         CouncilConfig config, CancellationToken ct)
-        => CouncilOrchestratorArrows.ExecuteChallengePhaseAsync(_llm, _agents, topic, proposals, config, ct);
+        => CouncilOrchestratorArrows.ExecuteChallengePhaseAsync(_llm, agents, topic, proposals, config, ct);
 
     private Task<Result<DebateRound, string>> ExecuteRefinementPhaseAsync(
-        CouncilTopic topic, Dictionary<string, AgentContribution> proposals,
+        List<IAgentPersona> agents, CouncilTopic topic, Dictionary<string, AgentContribution> proposals,
         IReadOnlyList<AgentContribution> challenges, CouncilConfig config, CancellationToken ct)
-        => CouncilOrchestratorArrows.ExecuteRefinementPhaseAsync(_llm, _agents, topic, proposals, challenges, config, ct);
+        => CouncilOrchestratorArrows.ExecuteRefinementPhaseAsync(_llm, agents, topic, proposals, challenges, config, ct);
 
     private Task<Result<(Dictionary<string, AgentVote> Votes, DebateRound Round), string>> ExecuteVotingPhaseAsync(
-        CouncilTopic topic, IReadOnlyList<DebateRound> transcript,
+        List<IAgentPersona> agents, CouncilTopic topic, IReadOnlyList<DebateRound> transcript,
         CouncilConfig config, CancellationToken ct)
-        => CouncilOrchestratorArrows.ExecuteVotingPhaseAsync(_llm, _agents, topic, transcript, config, ct);
+        => CouncilOrchestratorArrows.ExecuteVotingPhaseAsync(_llm, agents, topic, transcript, config, ct);
 
     private async Task<Result<CouncilDecision, string>> SynthesizeDecisionAsync(
         CouncilTopic topic,

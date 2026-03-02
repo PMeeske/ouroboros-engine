@@ -15,7 +15,8 @@ public sealed class TapoGatewayManager : IAsyncDisposable
 
     public TapoGatewayManager(string gatewayScriptPath, ILogger<TapoGatewayManager>? logger = null)
     {
-        _gatewayScriptPath = gatewayScriptPath ?? throw new ArgumentNullException(nameof(gatewayScriptPath));
+        ArgumentNullException.ThrowIfNull(gatewayScriptPath);
+        _gatewayScriptPath = gatewayScriptPath;
         _logger = logger;
     }
 

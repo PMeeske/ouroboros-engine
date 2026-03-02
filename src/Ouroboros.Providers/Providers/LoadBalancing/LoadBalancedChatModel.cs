@@ -42,7 +42,8 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
     /// <param name="loadBalancer">Custom load balancer instance.</param>
     public LoadBalancedChatModel(IProviderLoadBalancer<Ouroboros.Abstractions.Core.IChatCompletionModel> loadBalancer)
     {
-        _loadBalancer = loadBalancer ?? throw new ArgumentNullException(nameof(loadBalancer));
+        ArgumentNullException.ThrowIfNull(loadBalancer);
+        _loadBalancer = loadBalancer;
         _retryPolicy = CreateRetryPolicy();
     }
 

@@ -53,7 +53,8 @@ public sealed class TextToSpeechTool : ITool
     /// <param name="service">The text-to-speech service to use.</param>
     public TextToSpeechTool(ITextToSpeechService service)
     {
-        _service = service ?? throw new ArgumentNullException(nameof(service));
+        ArgumentNullException.ThrowIfNull(service);
+        _service = service;
     }
 
     /// <summary>

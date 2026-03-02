@@ -21,7 +21,8 @@ public sealed class HybridModelRouter : Ouroboros.Abstractions.Core.IChatComplet
     /// <param name="config">Routing configuration with model assignments.</param>
     public HybridModelRouter(HybridRoutingConfig config)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config;
 
         // Build task-to-model mapping
         _taskModels = new Dictionary<TaskType, Ouroboros.Abstractions.Core.IChatCompletionModel>

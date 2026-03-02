@@ -48,8 +48,10 @@ public sealed class TapoEmbodiment : IDisposable
         ITtsModel? ttsModel = null,
         ILogger<TapoEmbodiment>? logger = null)
     {
-        _tapoClient = tapoClient ?? throw new ArgumentNullException(nameof(tapoClient));
-        _virtualSelf = virtualSelf ?? throw new ArgumentNullException(nameof(virtualSelf));
+        ArgumentNullException.ThrowIfNull(tapoClient);
+        ArgumentNullException.ThrowIfNull(virtualSelf);
+        _tapoClient = tapoClient;
+        _virtualSelf = virtualSelf;
         _visionModel = visionModel;
         _ttsModel = ttsModel;
         _logger = logger;

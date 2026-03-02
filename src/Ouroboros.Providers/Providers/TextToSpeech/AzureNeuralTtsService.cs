@@ -107,8 +107,10 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     /// <param name="culture">Culture for language selection (e.g., "de-DE").</param>
     public AzureNeuralTtsService(string subscriptionKey, string region, string persona = "Ouroboros", string? culture = null)
     {
-        _subscriptionKey = subscriptionKey ?? throw new ArgumentNullException(nameof(subscriptionKey));
-        _region = region ?? throw new ArgumentNullException(nameof(region));
+        ArgumentNullException.ThrowIfNull(subscriptionKey);
+        ArgumentNullException.ThrowIfNull(region);
+        _subscriptionKey = subscriptionKey;
+        _region = region;
         _persona = persona;
         _culture = culture ?? "en-US";
 

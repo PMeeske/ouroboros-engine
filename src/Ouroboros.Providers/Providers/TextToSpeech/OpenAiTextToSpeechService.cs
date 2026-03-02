@@ -48,7 +48,8 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
         string model = "tts-1",
         HttpClient? httpClient = null)
     {
-        _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+        ArgumentNullException.ThrowIfNull(apiKey);
+        _apiKey = apiKey;
         _endpoint = endpoint ?? "https://api.openai.com/v1";
         _defaultModel = model;
         _ownsClient = httpClient == null;

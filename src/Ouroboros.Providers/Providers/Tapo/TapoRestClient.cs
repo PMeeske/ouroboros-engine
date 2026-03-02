@@ -28,7 +28,8 @@ public sealed class TapoRestClient : IDisposable
     /// <param name="logger">Optional logger for diagnostics.</param>
     public TapoRestClient(HttpClient httpClient, ILogger<TapoRestClient>? logger = null)
     {
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        ArgumentNullException.ThrowIfNull(httpClient);
+        _httpClient = httpClient;
         _logger = logger;
         _jsonOptions = new JsonSerializerOptions
         {

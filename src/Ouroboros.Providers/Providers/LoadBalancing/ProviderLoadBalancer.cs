@@ -51,8 +51,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
     {
         if (string.IsNullOrWhiteSpace(providerId))
             throw new ArgumentException("Provider ID cannot be empty", nameof(providerId));
-        if (provider == null)
-            throw new ArgumentNullException(nameof(provider));
+        ArgumentNullException.ThrowIfNull(provider);
 
         _providers[providerId] = provider;
         _healthStatus[providerId] = new ProviderHealthStatus(

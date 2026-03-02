@@ -13,7 +13,8 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
 
     public OllamaEmbeddingAdapter(OllamaEmbeddingModel model)
     {
-        _model = model ?? throw new ArgumentNullException(nameof(model));
+        ArgumentNullException.ThrowIfNull(model);
+        _model = model;
     }
 
     /// <inheritdoc/>

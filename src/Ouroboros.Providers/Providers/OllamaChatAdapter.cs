@@ -15,7 +15,8 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
 
     public OllamaChatAdapter(OllamaChatModel model, string? culture = null)
     {
-        _model = model ?? throw new ArgumentNullException(nameof(model));
+        ArgumentNullException.ThrowIfNull(model);
+        _model = model;
         _culture = culture;
     }
 
