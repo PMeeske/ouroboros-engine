@@ -28,6 +28,8 @@ internal sealed class SkToOuroborosAdapter : IAdvancedVectorStore
     /// </summary>
     internal SkToOuroborosAdapter(SkVectorStore skStore, string collectionName, int vectorDimension)
     {
+        ArgumentNullException.ThrowIfNull(skStore);
+        ArgumentException.ThrowIfNullOrWhiteSpace(collectionName);
         _skStore = skStore;
         _collectionName = collectionName;
         _vectorDimension = vectorDimension;

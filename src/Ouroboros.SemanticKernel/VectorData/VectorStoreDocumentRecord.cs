@@ -29,6 +29,7 @@ internal sealed class VectorStoreDocumentRecord
     /// <summary>
     /// Gets or sets the embedding vector.
     /// </summary>
+    // Note: Runtime dimension from BuildDefinition() takes precedence over this attribute value
     [VectorStoreVector(1536)]
     public ReadOnlyMemory<float> Embedding { get; set; }
 

@@ -19,6 +19,7 @@ public static class ToolRegistryPluginBridge
         string pluginName = "OuroborosTools")
     {
         ArgumentNullException.ThrowIfNull(registry);
+        ArgumentException.ThrowIfNullOrWhiteSpace(pluginName);
 
         var functions = new List<KernelFunction>();
         foreach (ITool tool in registry.All)

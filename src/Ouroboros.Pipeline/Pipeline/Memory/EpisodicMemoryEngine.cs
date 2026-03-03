@@ -50,6 +50,7 @@ public sealed partial class EpisodicMemoryEngine : IEpisodicMemoryEngine, IAsync
     /// <param name="embeddingModel">The embedding model for creating semantic vectors.</param>
     /// <param name="collectionName">Name of the Qdrant collection to use.</param>
     /// <param name="logger">Optional logger instance.</param>
+    [Obsolete("Use the constructor accepting QdrantClient and IQdrantCollectionRegistry.")]
     public EpisodicMemoryEngine(
         QdrantClient qdrantClient,
         IEmbeddingModel embeddingModel,

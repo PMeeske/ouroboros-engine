@@ -17,8 +17,10 @@ public sealed class EmbeddingModelGeneratorAdapter : IEmbeddingGenerator<string,
         _model = model;
     }
 
+    private static readonly EmbeddingGeneratorMetadata s_metadata = new(nameof(EmbeddingModelGeneratorAdapter));
+
     /// <inheritdoc/>
-    public EmbeddingGeneratorMetadata Metadata => new(nameof(EmbeddingModelGeneratorAdapter));
+    public EmbeddingGeneratorMetadata Metadata => s_metadata;
 
     /// <inheritdoc/>
     public async Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(
@@ -40,6 +42,8 @@ public sealed class EmbeddingModelGeneratorAdapter : IEmbeddingGenerator<string,
     /// <inheritdoc/>
     public object? GetService(Type serviceType, object? key = null)
     {
+        if (key is not null) return null;
+
         if (serviceType == typeof(IEmbeddingModel))
             return _model;
 

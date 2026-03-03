@@ -19,8 +19,10 @@ public sealed class CompletionModelChatClientAdapter : IChatClient
         _model = model;
     }
 
+    private static readonly ChatClientMetadata s_metadata = new(nameof(CompletionModelChatClientAdapter));
+
     /// <inheritdoc/>
-    public ChatClientMetadata Metadata => new(nameof(CompletionModelChatClientAdapter));
+    public ChatClientMetadata Metadata => s_metadata;
 
     /// <inheritdoc/>
     public async Task<ChatResponse> GetResponseAsync(
@@ -69,6 +71,8 @@ public sealed class CompletionModelChatClientAdapter : IChatClient
     /// <inheritdoc/>
     public object? GetService(Type serviceType, object? key = null)
     {
+        if (key is not null) return null;
+
         if (serviceType == typeof(IChatCompletionModel))
             return _model;
 

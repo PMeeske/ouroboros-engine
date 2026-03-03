@@ -60,6 +60,7 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
         _disposeClient = false;
     }
 
+    [Obsolete("Use the constructor accepting QdrantClient and IQdrantCollectionRegistry.")]
     public QdrantSkillRegistry(
         QdrantClient client,
         IEmbeddingModel? embedding = null,

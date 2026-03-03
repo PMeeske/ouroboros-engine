@@ -20,6 +20,7 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
     private readonly QdrantDagConfig _config;
     private readonly QdrantClient _client;
     private readonly Func<string, Task<float[]>>? _embeddingFunc;
+    private readonly bool _disposeClient;
     private bool _initialized;
     private bool _disposed;
 
@@ -35,6 +36,7 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
         _client = client ?? throw new ArgumentNullException(nameof(client));
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(settings);
+        _disposeClient = false;
         _embeddingFunc = embeddingFunc;
         _config = new QdrantDagConfig(
             Endpoint: settings.GrpcEndpoint,
@@ -295,7 +297,11 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
     {
         if (!_disposed)
         {
-            _client.Dispose();
+            if (_disposeClient)
+            {
+                _client.Dispose();
+            }
+
             _disposed = true;
         }
 

@@ -27,6 +27,7 @@ internal sealed class OuroborosToSkAdapter : SkVectorStore
     /// </summary>
     internal OuroborosToSkAdapter(IAdvancedVectorStore ouroStore, string collectionName)
     {
+        ArgumentNullException.ThrowIfNull(ouroStore);
         _ouroStore = ouroStore;
         _collectionName = collectionName;
     }
@@ -65,6 +66,10 @@ internal sealed class OuroborosToSkAdapter : SkVectorStore
         {
             info = await _ouroStore.GetInfoAsync(cancellationToken).ConfigureAwait(false);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception)
         {
             yield break;
@@ -88,6 +93,10 @@ internal sealed class OuroborosToSkAdapter : SkVectorStore
             var info = await _ouroStore.GetInfoAsync(cancellationToken).ConfigureAwait(false);
             return string.Equals(info.Status, "ready", StringComparison.OrdinalIgnoreCase)
                    || string.Equals(info.Status, "green", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception)
         {
