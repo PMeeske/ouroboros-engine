@@ -5,12 +5,14 @@
 
 namespace Ouroboros.Providers;
 
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using OllamaSharp;
 using OllamaSharp.Models;
 using Ouroboros.Core.Configuration;
 using Ouroboros.Domain.Autonomous;
 using Ouroboros.Domain.Vectors;
+using Ouroboros.Providers.Meai;
 using Ouroboros.Providers.SpeechToText;
 using Ouroboros.Providers.TextToSpeech;
 using Microsoft.Extensions.DependencyInjection;
@@ -85,6 +87,36 @@ public static class ServiceCollectionExtensions
             ToolRegistry registry = sp.GetRequiredService<ToolRegistry>();
             Ouroboros.Abstractions.Core.IChatCompletionModel chat = sp.GetRequiredService<Ouroboros.Abstractions.Core.IChatCompletionModel>();
             return new ToolAwareChatModel(chat, registry);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers a MEAI <see cref="IChatClient"/> in the container.
+    /// If the resolved <see cref="Ouroboros.Abstractions.Core.IChatCompletionModel"/>
+    /// implements <see cref="Ouroboros.Abstractions.Core.IChatClientBridge"/>
+    /// (e.g. <see cref="OllamaChatAdapter"/>), the native client is returned directly
+    /// for zero-overhead interop. Otherwise, a <see cref="CompletionModelChatClientAdapter"/> wraps the model.
+    /// </summary>
+    public static IServiceCollection AddMeaiChatClient(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddSingleton<IChatClient>(sp =>
+        {
+            var model = sp.GetRequiredService<Ouroboros.Abstractions.Core.IChatCompletionModel>();
+            return model is Ouroboros.Abstractions.Core.IChatClientBridge bridge
+                ? bridge.GetChatClient()
+                : new CompletionModelChatClientAdapter(model);
+        });
+
+        services.TryAddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(sp =>
+        {
+            var model = sp.GetRequiredService<IEmbeddingModel>();
+            return model is Ouroboros.Abstractions.Core.IEmbeddingGeneratorBridge bridge
+                ? bridge.GetEmbeddingGenerator()
+                : new EmbeddingModelGeneratorAdapter(model);
         });
 
         return services;

@@ -1,13 +1,17 @@
+using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OllamaSharp.Models;
+using Ouroboros.Abstractions.Core;
 
 namespace Ouroboros.Providers;
 
 /// <summary>
 /// Adapter that wraps the Ollama embedding API via OllamaSharp when available. If the daemon
 /// cannot be reached we fall back to deterministic embeddings.
+/// Implements <see cref="IEmbeddingGeneratorBridge"/> for zero-overhead MEAI interop
+/// (OllamaApiClient natively implements <see cref="IEmbeddingGenerator{String, Embedding}"/>).
 /// </summary>
-public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
+public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGeneratorBridge
 {
     private readonly OllamaApiClient _client;
     private readonly string _modelName;
@@ -108,4 +112,7 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
             return ascii.Length > 0 ? ascii.ToString() : "empty";
         }
     }
+
+    /// <inheritdoc/>
+    public IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator() => _client;
 }

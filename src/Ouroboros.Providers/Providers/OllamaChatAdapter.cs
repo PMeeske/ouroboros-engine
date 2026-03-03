@@ -1,7 +1,9 @@
 using System.Reactive.Linq;
 using System.Text;
+using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OllamaSharp.Models;
+using Ouroboros.Abstractions.Core;
 
 namespace Ouroboros.Providers;
 
@@ -9,8 +11,10 @@ namespace Ouroboros.Providers;
 /// Adapter for local Ollama models via OllamaSharp. We attempt to call the SDK when available,
 /// falling back to a deterministic stub when the local daemon is not reachable.
 /// Supports thinking mode for models like DeepSeek R1 that emit &lt;think&gt; tags.
+/// Implements <see cref="IChatClientBridge"/> for zero-overhead MEAI interop
+/// (OllamaApiClient natively implements <see cref="IChatClient"/>).
 /// </summary>
-public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
+public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClientBridge
 {
     private readonly OllamaApiClient _client;
     private readonly string _modelName;
@@ -211,4 +215,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
             }
         });
     }
+
+    /// <inheritdoc/>
+    public IChatClient GetChatClient() => _client;
 }
