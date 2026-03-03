@@ -17,7 +17,7 @@ public sealed class DelegationStrategyTests
 
     private static AgentIdentity CreateIdentity(
         string name = "Agent",
-        AgentRole role = AgentRole.Worker,
+        AgentRole role = AgentRole.Executor,
         params (string Name, double Proficiency)[] capabilities)
     {
         var caps = capabilities.Length > 0
@@ -230,7 +230,7 @@ public sealed class DelegationStrategyTests
     [Fact]
     public void CapabilityBased_AgentWithCapabilities_Scores()
     {
-        var agent = CreateIdentity("Skilled", AgentRole.Worker, ("coding", 0.9));
+        var agent = CreateIdentity("Skilled", AgentRole.Executor, ("coding", 0.9));
         var team = CreateTeamWithAgents(agent);
 
         var criteria = DefaultCriteria;

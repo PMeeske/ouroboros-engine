@@ -5,7 +5,7 @@
 using FluentAssertions;
 using Moq;
 using Xunit;
-using Ouroboros.Abstractions.Core;
+using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
 
 namespace Ouroboros.Tests;
 
@@ -14,7 +14,7 @@ public sealed class AgentFactoryTests
 {
     private readonly Mock<IChatCompletionModel> _chatMock = new();
 
-    private Agent.AgentInstance CreateInstance(
+    private Ouroboros.Agent.AgentInstance CreateInstance(
         string mode = "simple",
         bool debug = false,
         int maxSteps = 3,
@@ -23,87 +23,79 @@ public sealed class AgentFactoryTests
         bool jsonTools = false,
         bool stream = false)
     {
-        return Agent.AgentFactory.Create(
-            mode, _chatMock.Object, new Agent.ToolRegistry(), debug,
-            maxSteps, ragEnabled, embedModel, jsonTools, stream);
+        return Ouroboros.Agent.AgentFactory.Create(
+            mode, _chatMock.Object, new Ouroboros.Abstractions.Core.ToolRegistry(),
+            debug, maxSteps, ragEnabled, embedModel, jsonTools, stream);
     }
 
     [Fact]
     public void Create_SimpleMode_SetsMode()
     {
-        var agent = CreateInstance(mode: "simple");
+        CreateInstance(mode: "simple").Mode.Should().Be("simple");
+    }
+
+    [Fact]
+    public void Create_NullMode_DefaultsToSimple()
+    {
+        var agent = Ouroboros.Agent.AgentFactory.Create(
+            null!, _chatMock.Object, new Ouroboros.Abstractions.Core.ToolRegistry(),
+            false, 3, false, "", false, false);
         agent.Mode.Should().Be("simple");
     }
 
     [Fact]
-    public void Create_NullOrWhitespaceMode_DefaultsToSimple()
+    public void Create_WhitespaceMode_DefaultsToSimple()
     {
-        var agent = CreateInstance(mode: "  ");
-        agent.Mode.Should().Be("simple");
-    }
-
-    [Fact]
-    public void Create_EmptyMode_DefaultsToSimple()
-    {
-        var agent = CreateInstance(mode: "");
-        agent.Mode.Should().Be("simple");
+        CreateInstance(mode: "  ").Mode.Should().Be("simple");
     }
 
     [Fact]
     public void Create_CustomMode_SetsMode()
     {
-        var agent = CreateInstance(mode: "advanced");
-        agent.Mode.Should().Be("advanced");
+        CreateInstance(mode: "planner").Mode.Should().Be("planner");
     }
 
     [Fact]
-    public void Create_Debug_SetsDebugProperty()
+    public void Create_Debug_True()
     {
-        var agent = CreateInstance(debug: true);
-        agent.Debug.Should().BeTrue();
+        CreateInstance(debug: true).Debug.Should().BeTrue();
     }
 
     [Fact]
-    public void Create_DebugFalse_DefaultsFalse()
+    public void Create_Debug_False()
     {
-        var agent = CreateInstance(debug: false);
-        agent.Debug.Should().BeFalse();
+        CreateInstance(debug: false).Debug.Should().BeFalse();
     }
 
     [Fact]
-    public void Create_RagEnabled_SetsProperty()
+    public void Create_RagEnabled_True()
     {
-        var agent = CreateInstance(ragEnabled: true);
-        agent.RagEnabled.Should().BeTrue();
+        CreateInstance(ragEnabled: true).RagEnabled.Should().BeTrue();
     }
 
     [Fact]
-    public void Create_EmbedModelName_SetsProperty()
+    public void Create_EmbedModelName_Set()
     {
-        var agent = CreateInstance(embedModel: "text-embedding-ada-002");
-        agent.EmbedModelName.Should().Be("text-embedding-ada-002");
+        CreateInstance(embedModel: "text-embedding-3-small").EmbedModelName
+            .Should().Be("text-embedding-3-small");
     }
 
     [Fact]
-    public void Create_JsonTools_SetsProperty()
+    public void Create_JsonTools_True()
     {
-        var agent = CreateInstance(jsonTools: true);
-        agent.JsonTools.Should().BeTrue();
+        CreateInstance(jsonTools: true).JsonTools.Should().BeTrue();
     }
 
     [Fact]
-    public void Create_Stream_SetsProperty()
+    public void Create_Stream_True()
     {
-        var agent = CreateInstance(stream: true);
-        agent.Stream.Should().BeTrue();
+        CreateInstance(stream: true).Stream.Should().BeTrue();
     }
 
     [Fact]
     public void Create_MaxStepsZero_ClampsToOne()
     {
         var agent = CreateInstance(maxSteps: 0);
-        // The constructor clamps to Math.Max(1, maxSteps)
-        // We verify the agent was created successfully; the value is internal
         agent.Should().NotBeNull();
     }
 
@@ -112,5 +104,12 @@ public sealed class AgentFactoryTests
     {
         var agent = CreateInstance(maxSteps: -5);
         agent.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Create_ReturnsSameInstanceType()
+    {
+        var agent = CreateInstance();
+        agent.Should().BeOfType<Ouroboros.Agent.AgentInstance>();
     }
 }

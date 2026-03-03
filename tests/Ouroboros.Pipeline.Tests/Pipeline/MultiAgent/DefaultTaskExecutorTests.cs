@@ -4,6 +4,7 @@
 
 using System.Collections.Immutable;
 using FluentAssertions;
+using Ouroboros.Core.Monads;
 using Xunit;
 using Ouroboros.Pipeline.MultiAgent;
 using Ouroboros.Pipeline.Planning;
@@ -18,7 +19,7 @@ public sealed class DefaultTaskExecutorTests
     private static AgentState CreateAgentState(string name = "TestAgent")
     {
         var identity = new AgentIdentity(
-            Guid.NewGuid(), name, AgentRole.Worker,
+            Guid.NewGuid(), name, AgentRole.Executor,
             ImmutableList<AgentCapability>.Empty,
             ImmutableDictionary<string, object>.Empty,
             DateTime.UtcNow);
