@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+using OllamaSharp;
+using OllamaSharp.Models;
 using Polly;
 using Polly.Retry;
 
@@ -6,15 +7,16 @@ namespace Ouroboros.Providers;
 
 /// <summary>
 /// Embedding adapter specifically for Ollama Cloud API endpoints.
-/// Uses Ollama's native /api/embeddings endpoint and JSON format.
-/// Includes Polly exponential backoff retry policy to handle rate limiting.
+/// Uses OllamaSharp to call the Ollama embeddings API.
+/// Includes Polly exponential backoff retry policy to handle transient failures.
 /// </summary>
 public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
 {
     private readonly HttpClient _client;
+    private readonly OllamaApiClient _ollamaClient;
     private readonly string _model;
     private readonly DeterministicEmbeddingModel _fallback = new();
-    private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
+    private readonly AsyncRetryPolicy _retryPolicy;
 
     public OllamaCloudEmbeddingModel(string endpoint, string apiKey, string model)
     {
@@ -26,19 +28,20 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
             BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute)
         };
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        _ollamaClient = new OllamaApiClient(_client);
+        _ollamaClient.SelectedModel = model;
         _model = model;
 
-        // Create Polly retry policy with exponential backoff for rate limiting (429) and server errors (5xx)
+        // Create Polly retry policy with exponential backoff for transient failures
         _retryPolicy = Policy
-            .HandleResult<HttpResponseMessage>(r =>
-                (int)r.StatusCode == 429 || // Too Many Requests
-                (int)r.StatusCode >= 500)   // Server errors
+            .Handle<HttpRequestException>()
+            .Or<TaskCanceledException>()
             .WaitAndRetryAsync(
                 retryCount: 3,
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                onRetry: (outcome, timespan, retryCount, context) =>
+                onRetry: (exception, timespan, retryCount, context) =>
                 {
-                    System.Diagnostics.Trace.TraceInformation("[OllamaCloudEmbeddingModel] Retry {0} after {1}s due to {2}", retryCount, timespan.TotalSeconds, outcome.Result?.StatusCode);
+                    System.Diagnostics.Trace.TraceInformation("[OllamaCloudEmbeddingModel] Retry {0} after {1}s due to {2}", retryCount, timespan.TotalSeconds, exception.GetType().Name);
                 });
     }
 
@@ -47,36 +50,19 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
     {
         try
         {
-            // Use Ollama's native /api/embeddings endpoint and JSON format
-            using JsonContent payload = JsonContent.Create(new
+            EmbedResponse result = await _retryPolicy.ExecuteAsync(async () =>
             {
-                model = _model,
-                prompt = input
-            });
-
-            HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
-            {
-                return await _client.PostAsync("/api/embeddings", payload, ct).ConfigureAwait(false);
+                EmbedResponse response = await _ollamaClient.EmbedAsync(new EmbedRequest
+                {
+                    Model = _model,
+                    Input = [input],
+                }, ct).ConfigureAwait(false);
+                return response;
             }).ConfigureAwait(false);
 
-            response.EnsureSuccessStatusCode();
-
-            Dictionary<string, object?>? json = await response.Content.ReadFromJsonAsync<Dictionary<string, object?>>(cancellationToken: ct).ConfigureAwait(false);
-            if (json is not null && json.TryGetValue("embedding", out object? embeddingValue)
-                && embeddingValue is System.Text.Json.JsonElement jsonElement && jsonElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+            if (result?.Embeddings is { Count: > 0 } embeddings && embeddings[0]?.Length > 0)
             {
-                List<float> floats = new List<float>();
-                foreach (System.Text.Json.JsonElement element in jsonElement.EnumerateArray())
-                {
-                    if (element.TryGetSingle(out float value))
-                    {
-                        floats.Add(value);
-                    }
-                }
-                if (floats.Count > 0)
-                {
-                    return floats.ToArray();
-                }
+                return [.. embeddings[0]];
             }
         }
         catch

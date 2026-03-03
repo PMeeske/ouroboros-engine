@@ -4,6 +4,7 @@
 // </copyright>
 
 using System.Reactive.Linq;
+using OllamaSharp;
 
 namespace Ouroboros.Providers.DeepSeek;
 
@@ -45,11 +46,12 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
     /// <summary>
     /// Initializes a new instance of the <see cref="DeepSeekChatModel"/> class for local Ollama.
     /// </summary>
-    /// <param name="ollamaModel">Ollama chat model instance.</param>
-    public DeepSeekChatModel(LangChain.Providers.Ollama.OllamaChatModel ollamaModel)
+    /// <param name="client">OllamaSharp API client instance.</param>
+    /// <param name="modelName">The Ollama model name to use.</param>
+    public DeepSeekChatModel(OllamaApiClient client, string modelName)
     {
-        ArgumentNullException.ThrowIfNull(ollamaModel);
-        _underlyingModel = new OllamaChatAdapter(ollamaModel);
+        ArgumentNullException.ThrowIfNull(client);
+        _underlyingModel = new OllamaChatAdapter(client, modelName);
     }
 
     /// <summary>
@@ -75,15 +77,16 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
     /// <summary>
     /// Creates a local DeepSeek model using Ollama.
     /// </summary>
-    /// <param name="provider">Ollama provider instance.</param>
+    /// <param name="ollamaEndpoint">Ollama endpoint URI (defaults to <see cref="Configuration.DefaultEndpoints.Ollama"/>).</param>
     /// <param name="model">DeepSeek model name (default: deepseek-r1:8b).</param>
     /// <returns>Configured DeepSeek chat model for local inference.</returns>
     public static DeepSeekChatModel CreateLocal(
-        LangChain.Providers.Ollama.OllamaProvider provider,
+        string? ollamaEndpoint = null,
         string model = ModelDeepSeekR1_8B)
     {
-        var ollamaModel = new LangChain.Providers.Ollama.OllamaChatModel(provider, model);
-        return new DeepSeekChatModel(ollamaModel);
+        string endpoint = ollamaEndpoint ?? Configuration.DefaultEndpoints.Ollama;
+        var client = new OllamaApiClient(new Uri(endpoint), model);
+        return new DeepSeekChatModel(client, model);
     }
 
     /// <summary>

@@ -1,20 +1,24 @@
-﻿using LangChain.Providers.Ollama;
+using OllamaSharp;
+using OllamaSharp.Models;
 
 namespace Ouroboros.Providers;
 
 /// <summary>
-/// Adapter that wraps the Ollama embedding API when available. If the daemon
+/// Adapter that wraps the Ollama embedding API via OllamaSharp when available. If the daemon
 /// cannot be reached we fall back to deterministic embeddings.
 /// </summary>
 public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
 {
-    private readonly OllamaEmbeddingModel _model;
+    private readonly OllamaApiClient _client;
+    private readonly string _modelName;
     private readonly DeterministicEmbeddingModel _fallback = new();
 
-    public OllamaEmbeddingAdapter(OllamaEmbeddingModel model)
+    public OllamaEmbeddingAdapter(OllamaApiClient client, string modelName)
     {
-        ArgumentNullException.ThrowIfNull(model);
-        _model = model;
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelName);
+        _client = client;
+        _modelName = modelName;
     }
 
     /// <inheritdoc/>
@@ -24,15 +28,21 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
 
         try
         {
-            LangChain.Providers.EmbeddingResponse response = await _model.CreateEmbeddingsAsync(safeInput, cancellationToken: ct).ConfigureAwait(false);
-            if (TryExtractEmbedding(response, out float[]? vector))
+            EmbedResponse response = await _client.EmbedAsync(new EmbedRequest
             {
-                return vector;
+                Model = _modelName,
+                Input = [safeInput]
+            }, ct).ConfigureAwait(false);
+
+            if (response?.Embeddings is { Count: > 0 } embeddings
+                && embeddings[0] is { Length: > 0 } firstVector)
+            {
+                return firstVector;
             }
         }
         catch
         {
-            // LangChain encoding error - fall through to fallback
+            // OllamaSharp communication error - fall through to fallback
         }
 
         // Use deterministic fallback (hash-based embedding)
@@ -97,77 +107,5 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
             }
             return ascii.Length > 0 ? ascii.ToString() : "empty";
         }
-    }
-
-    private static bool TryExtractEmbedding(object? response, out float[] embedding)
-    {
-        embedding = Array.Empty<float>();
-        if (response is null)
-        {
-            return false;
-        }
-
-        switch (response)
-        {
-            case float[] floats:
-                embedding = floats;
-                return true;
-            case IReadOnlyList<float> roList:
-                embedding = roList.ToArray();
-                return true;
-            case IEnumerable<float> enumerable:
-                embedding = enumerable.ToArray();
-                return true;
-        }
-
-        Type type = response.GetType();
-
-        System.Reflection.PropertyInfo? vectorProperty = type.GetProperty("Vector");
-        if (vectorProperty?.GetValue(response) is IEnumerable<float> vectorEnum)
-        {
-            embedding = vectorEnum.ToArray();
-            return embedding.Length > 0;
-        }
-
-        System.Reflection.PropertyInfo? embeddingsProperty = type.GetProperty("Embeddings");
-        if (embeddingsProperty?.GetValue(response) is System.Collections.IEnumerable embeddingsEnum)
-        {
-            foreach (object? entry in embeddingsEnum)
-            {
-                if (entry is float[] entryArray)
-                {
-                    embedding = entryArray;
-                    return embedding.Length > 0;
-                }
-
-                if (entry is IEnumerable<float> direct)
-                {
-                    embedding = direct.ToArray();
-                    if (embedding.Length > 0)
-                    {
-                        return true;
-                    }
-                }
-                else if (entry is { })
-                {
-                    Type entryType = entry.GetType();
-                    IEnumerable<float>? vectorInner = entryType.GetProperty("Vector")?.GetValue(entry) as IEnumerable<float>;
-                    if (vectorInner is not null)
-                    {
-                        embedding = vectorInner.ToArray();
-                        return embedding.Length > 0;
-                    }
-
-                    IEnumerable<float>? inner = entryType.GetProperty("Embedding")?.GetValue(entry) as IEnumerable<float>;
-                    if (inner is not null)
-                    {
-                        embedding = inner.ToArray();
-                        return embedding.Length > 0;
-                    }
-                }
-            }
-        }
-
-        return false;
     }
 }

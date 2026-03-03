@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
-using LangChain.Providers.Ollama;
+using OllamaSharp;
 using Ouroboros.Providers;
 using Ouroboros.Providers.Configuration;
 
@@ -16,7 +16,7 @@ namespace Ouroboros.Agent.MeTTaAgents;
 public sealed class OllamaAgentProvider : IAgentProviderFactory
 {
     private readonly string _defaultEndpoint;
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, OllamaProvider> _providers = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, OllamaApiClient> _providers = new();
 
     /// <summary>
     /// Creates a new Ollama agent provider.
@@ -44,10 +44,9 @@ public sealed class OllamaAgentProvider : IAgentProviderFactory
                 return Task.FromResult(CreateCloudModel(agentDef, endpoint));
             }
 
-            // Local Ollama via LangChain adapter - cache per endpoint
-            var provider = _providers.GetOrAdd(endpoint, ep => new OllamaProvider(ep));
-            var langChainModel = new OllamaChatModel(provider, agentDef.Model);
-            var adapter = new OllamaChatAdapter(langChainModel);
+            // Local Ollama via OllamaSharp - cache client per endpoint
+            var client = _providers.GetOrAdd(endpoint, ep => new OllamaApiClient(new Uri(ep)));
+            var adapter = new OllamaChatAdapter(client, agentDef.Model);
             return Task.FromResult(
                 Result<Ouroboros.Abstractions.Core.IChatCompletionModel, string>.Success(adapter));
         }
@@ -64,14 +63,15 @@ public sealed class OllamaAgentProvider : IAgentProviderFactory
     public async Task<Result<ProviderHealthStatus, string>> HealthCheckAsync(
         CancellationToken ct = default)
     {
-        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         var sw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            var resp = await http.GetAsync($"{_defaultEndpoint}/api/tags", ct);
+            var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5), BaseAddress = new Uri(_defaultEndpoint) };
+            using var client = new OllamaApiClient(http);
+            await client.ListLocalModelsAsync(ct);
             sw.Stop();
             return Result<ProviderHealthStatus, string>.Success(
-                new ProviderHealthStatus("Ollama", resp.IsSuccessStatusCode, sw.ElapsedMilliseconds));
+                new ProviderHealthStatus("Ollama", true, sw.ElapsedMilliseconds));
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)

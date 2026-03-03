@@ -1,24 +1,47 @@
 using System.Reactive.Linq;
-using LangChain.Providers.Ollama;
+using System.Text;
+using OllamaSharp;
+using OllamaSharp.Models;
 
 namespace Ouroboros.Providers;
 
 /// <summary>
-/// Adapter for local Ollama models. We attempt to call the SDK when available,
+/// Adapter for local Ollama models via OllamaSharp. We attempt to call the SDK when available,
 /// falling back to a deterministic stub when the local daemon is not reachable.
 /// Supports thinking mode for models like DeepSeek R1 that emit &lt;think&gt; tags.
 /// </summary>
 public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
 {
-    private readonly OllamaChatModel _model;
+    private readonly OllamaApiClient _client;
+    private readonly string _modelName;
     private readonly string? _culture;
+    private RequestOptions? _options;
 
-    public OllamaChatAdapter(OllamaChatModel model, string? culture = null)
+    public OllamaChatAdapter(OllamaApiClient client, string modelName, string? culture = null)
     {
-        ArgumentNullException.ThrowIfNull(model);
-        _model = model;
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelName);
+        _client = client;
+        _modelName = modelName;
         _culture = culture;
     }
+
+    /// <summary>
+    /// Gets or sets the <see cref="RequestOptions"/> applied to every generate request.
+    /// </summary>
+    public RequestOptions? Options
+    {
+        get => _options;
+        set => _options = value;
+    }
+
+    /// <summary>
+    /// Gets or sets the optional KeepAlive duration applied to every generate request.
+    /// Uses Ollama duration format (e.g. "10m", "5m", "0" to unload immediately).
+    /// This is separate from <see cref="Options"/> because KeepAlive lives on
+    /// <see cref="GenerateRequest"/>, not on <see cref="RequestOptions"/>.
+    /// </summary>
+    public string? KeepAlive { get; set; }
 
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
@@ -26,29 +49,40 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
         try
         {
             string finalPrompt = _culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
-            IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(finalPrompt, cancellationToken: ct);
-            StringBuilder builder = new StringBuilder();
+            var sb = new StringBuilder();
 
-            await foreach (LangChain.Providers.ChatResponse? chunk in stream.WithCancellation(ct).ConfigureAwait(false))
+            var request = new GenerateRequest
             {
-                string text = ExtractResponseText(chunk);
-                if (!string.IsNullOrEmpty(text))
+                Model = _modelName,
+                Prompt = finalPrompt,
+                Stream = true,
+                Options = _options
+            };
+
+            if (KeepAlive is not null)
+            {
+                request.KeepAlive = KeepAlive;
+            }
+
+            await foreach (GenerateResponseStream? chunk in _client.GenerateAsync(request, ct).ConfigureAwait(false))
+            {
+                if (!string.IsNullOrEmpty(chunk?.Response))
                 {
-                    builder.Append(text);
+                    sb.Append(chunk.Response);
                 }
             }
 
-            if (builder.Length > 0)
+            if (sb.Length > 0)
             {
-                return builder.ToString();
+                return sb.ToString();
             }
 
-            return ExtractResponseText(null);
+            return string.Empty;
         }
         catch
         {
             // Deterministic fallback keeps the pipeline running in offline scenarios.
-            return $"[ollama-fallback:{_model.GetType().Name}] {prompt}";
+            return $"[ollama-fallback:{_modelName}] {prompt}";
         }
     }
 
@@ -67,14 +101,26 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
             try
             {
                 string finalPrompt = _culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
-                IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(finalPrompt, cancellationToken: token);
+
+                var request = new GenerateRequest
+                {
+                    Model = _modelName,
+                    Prompt = finalPrompt,
+                    Stream = true,
+                    Options = _options
+                };
+
+                if (KeepAlive is not null)
+                {
+                    request.KeepAlive = KeepAlive;
+                }
 
                 bool inThinking = false;
                 StringBuilder buffer = new();
 
-                await foreach (LangChain.Providers.ChatResponse? chunk in stream.WithCancellation(token).ConfigureAwait(false))
+                await foreach (GenerateResponseStream? chunk in _client.GenerateAsync(request, token).ConfigureAwait(false))
                 {
-                    string text = ExtractResponseText(chunk);
+                    string text = chunk?.Response ?? string.Empty;
                     if (string.IsNullOrEmpty(text)) continue;
 
                     buffer.Append(text);
@@ -134,10 +180,23 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
             try
             {
                 string finalPrompt = _culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
-                IAsyncEnumerable<LangChain.Providers.ChatResponse> stream = _model.GenerateAsync(finalPrompt, cancellationToken: token);
-                await foreach (LangChain.Providers.ChatResponse? chunk in stream.WithCancellation(token).ConfigureAwait(false))
+
+                var request = new GenerateRequest
                 {
-                    string text = ExtractResponseText(chunk);
+                    Model = _modelName,
+                    Prompt = finalPrompt,
+                    Stream = true,
+                    Options = _options
+                };
+
+                if (KeepAlive is not null)
+                {
+                    request.KeepAlive = KeepAlive;
+                }
+
+                await foreach (GenerateResponseStream? chunk in _client.GenerateAsync(request, token).ConfigureAwait(false))
+                {
+                    string text = chunk?.Response ?? string.Empty;
                     if (!string.IsNullOrEmpty(text))
                     {
                         observer.OnNext(text);
@@ -151,54 +210,5 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel
                 observer.OnError(ex);
             }
         });
-    }
-
-    private static string ExtractResponseText(object? response)
-    {
-        if (response is null) return string.Empty;
-
-        switch (response)
-        {
-            case string s:
-                return s;
-            case IEnumerable<string> strings:
-                return string.Join(Environment.NewLine, strings);
-        }
-
-        Type type = response.GetType();
-
-        System.Reflection.PropertyInfo? lastMessageProperty = type.GetProperty("LastMessageContent");
-        if (lastMessageProperty?.GetValue(response) is string last)
-        {
-            return last;
-        }
-
-        System.Reflection.PropertyInfo? contentProperty = type.GetProperty("Content");
-        if (contentProperty?.GetValue(response) is string content)
-        {
-            return content;
-        }
-
-        System.Reflection.PropertyInfo? messageProperty = type.GetProperty("Message");
-        if (messageProperty?.GetValue(response) is { } message)
-        {
-            if (message is string mString)
-            {
-                return mString;
-            }
-
-            if (message is IEnumerable<string> enumerable)
-            {
-                return string.Join(Environment.NewLine, enumerable);
-            }
-
-            string? nestedContent = message.GetType().GetProperty("Content")?.GetValue(message) as string;
-            if (!string.IsNullOrWhiteSpace(nestedContent))
-            {
-                return nestedContent!;
-            }
-        }
-
-        return response.ToString() ?? string.Empty;
     }
 }

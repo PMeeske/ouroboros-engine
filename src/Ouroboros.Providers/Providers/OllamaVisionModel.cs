@@ -5,6 +5,8 @@
 namespace Ouroboros.Providers;
 
 using System.Diagnostics;
+using OllamaSharp;
+using OllamaSharp.Models;
 using Ouroboros.Providers.Configuration;
 using System.Text;
 using System.Text.Json;
@@ -15,6 +17,7 @@ using Ouroboros.Core.Monads;
 /// <summary>
 /// Ollama-based implementation of <see cref="IVisionModel"/> that routes vision requests
 /// to multimodal models like qwen3-vl, llava, or minicpm-v via the Ollama API.
+/// Uses OllamaSharp for API communication.
 /// Integrates with the multi-model swarm for strong visual understanding.
 /// </summary>
 public sealed class OllamaVisionModel : IVisionModel
@@ -30,6 +33,7 @@ public sealed class OllamaVisionModel : IVisionModel
     public const string LightweightModel = "llava:7b";
 
     private readonly HttpClient _httpClient;
+    private readonly OllamaApiClient _ollamaClient;
     private readonly string _model;
     private readonly string _endpoint;
     private readonly TimeSpan _timeout;
@@ -57,6 +61,8 @@ public sealed class OllamaVisionModel : IVisionModel
             BaseAddress = new Uri(_endpoint, UriKind.Absolute),
             Timeout = _timeout,
         };
+        _ollamaClient = new OllamaApiClient(_httpClient);
+        _ollamaClient.SelectedModel = _model;
     }
 
     /// <inheritdoc/>
@@ -206,14 +212,8 @@ public sealed class OllamaVisionModel : IVisionModel
     {
         try
         {
-            HttpResponseMessage response = await _httpClient.GetAsync("/api/tags", ct);
-            if (!response.IsSuccessStatusCode)
-            {
-                return false;
-            }
-
-            string json = await response.Content.ReadAsStringAsync(ct);
-            return json.Contains(_model, StringComparison.OrdinalIgnoreCase);
+            var models = await _ollamaClient.ListLocalModelsAsync(ct);
+            return models.Any(m => m.Name.Contains(_model, StringComparison.OrdinalIgnoreCase));
         }
         catch
         {
@@ -223,31 +223,21 @@ public sealed class OllamaVisionModel : IVisionModel
 
     private async Task<string> CallOllamaVisionAsync(string base64Image, string prompt, CancellationToken ct)
     {
-        object requestBody = new
+        StringBuilder responseBuilder = new();
+        await foreach (var chunk in _ollamaClient.GenerateAsync(new GenerateRequest
         {
-            model = _model,
-            prompt = prompt,
-            images = new[] { base64Image },
-            stream = false,
-        };
-
-        StringContent content = new StringContent(
-            JsonSerializer.Serialize(requestBody),
-            Encoding.UTF8,
-            "application/json");
-
-        HttpResponseMessage response = await _httpClient.PostAsync("/api/generate", content, ct);
-
-        if (!response.IsSuccessStatusCode)
+            Model = _model,
+            Prompt = prompt,
+            Images = new[] { base64Image },
+            Stream = false,
+        }, ct))
         {
-            string error = await response.Content.ReadAsStringAsync(ct);
-            throw new HttpRequestException($"Ollama vision request failed ({response.StatusCode}): {error}");
+            if (chunk?.Response is not null)
+            {
+                responseBuilder.Append(chunk.Response);
+            }
         }
-
-        string responseJson = await response.Content.ReadAsStringAsync(ct);
-        JsonElement responseObj = JsonSerializer.Deserialize<JsonElement>(responseJson);
-
-        return responseObj.GetProperty("response").GetString() ?? string.Empty;
+        return responseBuilder.ToString();
     }
 
     private static string BuildAnalysisPrompt(VisionAnalysisOptions options)
