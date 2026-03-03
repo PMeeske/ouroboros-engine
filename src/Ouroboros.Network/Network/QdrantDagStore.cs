@@ -45,21 +45,6 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="QdrantDagStore"/> class.
-    /// </summary>
-    /// <param name="config">Qdrant configuration.</param>
-    /// <param name="embeddingFunc">Optional function to generate embeddings for semantic search.</param>
-    [Obsolete("Use the constructor accepting QdrantClient + IQdrantCollectionRegistry from DI.")]
-    public QdrantDagStore(QdrantDagConfig config, Func<string, Task<float[]>>? embeddingFunc = null)
-    {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
-        _embeddingFunc = embeddingFunc;
-
-        var uri = new Uri(config.Endpoint);
-        _client = new QdrantClient(uri.Host, uri.Port > 0 ? uri.Port : DefaultQdrantPort, config.UseHttps);
-    }
-
-    /// <summary>
     /// Gets whether this store supports semantic search (has embedding function).
     /// </summary>
     public bool SupportsSemanticSearch => _embeddingFunc != null;

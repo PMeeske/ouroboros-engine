@@ -230,44 +230,6 @@ public sealed partial class QdrantSkillRegistry
         return new Guid(hash).ToString();
     }
 
-    private static string NormalizeConnectionString(string? rawConnectionString)
-    {
-        var endpoint = (rawConnectionString ?? string.Empty).Trim().Trim('"');
-        if (string.IsNullOrWhiteSpace(endpoint))
-        {
-            return DefaultEndpoints.QdrantGrpc;
-        }
-
-        var schemeSeparatorCount = endpoint.Split("://", StringSplitOptions.None).Length - 1;
-        if (schemeSeparatorCount > 1)
-        {
-            return DefaultEndpoints.QdrantGrpc;
-        }
-
-        if (!endpoint.Contains("://", StringComparison.Ordinal))
-        {
-            endpoint = $"http://{endpoint}";
-        }
-
-        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
-        {
-            return DefaultEndpoints.QdrantGrpc;
-        }
-
-        if (!uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) &&
-            !uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
-        {
-            return DefaultEndpoints.QdrantGrpc;
-        }
-
-        if (string.IsNullOrWhiteSpace(uri.Host) || uri.Host.Contains("://", StringComparison.Ordinal))
-        {
-            return DefaultEndpoints.QdrantGrpc;
-        }
-
-        return uri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
-    }
-
     private static float[] GenerateFallbackEmbedding(string text, int size)
     {
         // Generate a simple hash-based vector as fallback when no embedding model is available

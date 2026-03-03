@@ -166,27 +166,6 @@ EVIDENCE: [supporting points]";
         return successRate >= 0.7;
     }
 
-    [Obsolete("This method uses additive confidence adjustment. Use BayesianConfidence.Update() instead.")]
-    private double CalculateConfidenceAdjustment(PlanExecutionResult execution, bool supported)
-    {
-        // Handle empty step results
-        if (execution.StepResults.Count == 0)
-            return supported ? 0.05 : -0.05;
-
-        double successRate = execution.StepResults.Count(r => r.Success) / (double)execution.StepResults.Count;
-
-        if (supported)
-        {
-            // Increase confidence based on how clean the success was
-            return 0.1 + (successRate - 0.7) * 0.2;
-        }
-        else
-        {
-            // Decrease confidence
-            return -0.15 - ((1.0 - successRate) * 0.1);
-        }
-    }
-
     /// <summary>
     /// Adjusts likelihood values based on execution quality.
     /// Low quality execution makes likelihoods move toward 0.5 (uninformative).

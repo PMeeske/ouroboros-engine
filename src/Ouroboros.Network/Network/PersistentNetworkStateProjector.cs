@@ -7,7 +7,6 @@ namespace Ouroboros.Network;
 
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using Ouroboros.Providers.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Core.Configuration;
 using Qdrant.Client;
@@ -59,73 +58,6 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
         _recentLearnings = new List<Learning>();
         _currentEpoch = 0;
         _initialized = false;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PersistentNetworkStateProjector"/> class.
-    /// </summary>
-    /// <param name="dag">The Merkle-DAG to project from.</param>
-    /// <param name="qdrantEndpoint">The Qdrant endpoint (e.g., <see cref="DefaultEndpoints.QdrantGrpc"/>).</param>
-    /// <param name="embeddingFunc">Function to generate embeddings for semantic storage.</param>
-    [Obsolete("Use the constructor accepting QdrantClient + IQdrantCollectionRegistry from DI.")]
-    public PersistentNetworkStateProjector(
-        MerkleDag dag,
-        string qdrantEndpoint,
-        Func<string, CancellationToken, Task<float[]>> embeddingFunc)
-    {
-        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
-        _embeddingFunc = embeddingFunc ?? throw new ArgumentNullException(nameof(embeddingFunc));
-        _snapshotCollectionName = "network_state_snapshots";
-        _learningsCollectionName = "network_learnings";
-        var normalizedEndpoint = NormalizeEndpoint(qdrantEndpoint, Ouroboros.Core.Configuration.DefaultEndpoints.QdrantGrpc);
-        var endpointUri = new Uri(normalizedEndpoint, UriKind.Absolute);
-        var host = endpointUri.Host;
-        var port = endpointUri.Port > 0 ? endpointUri.Port : 6334;
-        var useHttps = endpointUri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
-        _qdrantClient = new QdrantClient(host, port, useHttps);
-        _disposeClient = true;
-        _snapshots = new List<GlobalNetworkState>();
-        _recentLearnings = new List<Learning>();
-        _currentEpoch = 0;
-        _initialized = false;
-    }
-
-    private static string NormalizeEndpoint(string? rawEndpoint, string fallbackEndpoint)
-    {
-        var endpoint = (rawEndpoint ?? string.Empty).Trim().Trim('"');
-        if (string.IsNullOrWhiteSpace(endpoint))
-        {
-            return fallbackEndpoint;
-        }
-
-        var schemeSeparatorCount = endpoint.Split("://", StringSplitOptions.None).Length - 1;
-        if (schemeSeparatorCount > 1)
-        {
-            return fallbackEndpoint;
-        }
-
-        if (!endpoint.Contains("://", StringComparison.Ordinal))
-        {
-            endpoint = $"http://{endpoint}";
-        }
-
-        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
-        {
-            return fallbackEndpoint;
-        }
-
-        if (!uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) &&
-            !uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
-        {
-            return fallbackEndpoint;
-        }
-
-        if (string.IsNullOrWhiteSpace(uri.Host) || uri.Host.Contains("://", StringComparison.Ordinal))
-        {
-            return fallbackEndpoint;
-        }
-
-        return uri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
     }
 
     /// <summary>

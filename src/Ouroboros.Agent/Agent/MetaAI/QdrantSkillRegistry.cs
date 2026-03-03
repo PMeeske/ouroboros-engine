@@ -60,25 +60,6 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
         _disposeClient = false;
     }
 
-    [Obsolete("Use the constructor accepting QdrantClient + IQdrantCollectionRegistry from DI.")]
-    public QdrantSkillRegistry(
-        IEmbeddingModel? embedding = null,
-        QdrantSkillConfig? config = null)
-    {
-        _embedding = embedding;
-        _config = config ?? new QdrantSkillConfig();
-
-        // Parse connection string to extract host and port
-        var normalizedConnectionString = NormalizeConnectionString(_config.ConnectionString);
-        var uri = new Uri(normalizedConnectionString);
-        var host = uri.Host;
-        var port = uri.Port > 0 ? uri.Port : 6334; // Default to gRPC port
-        var useHttps = uri.Scheme == "https";
-
-        _client = new QdrantClient(host, port, useHttps);
-        _disposeClient = true;
-    }
-
     public QdrantSkillRegistry(
         QdrantClient client,
         IEmbeddingModel? embedding = null,

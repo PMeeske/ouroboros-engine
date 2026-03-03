@@ -39,20 +39,7 @@ public static class MerkleDagExtensions
         return await store.LoadDagAsync(ct);
     }
 
-    /// <summary>
-    /// Creates a Qdrant store connected to this DAG.
-    /// </summary>
-    /// <param name="dag">The DAG to associate with the store.</param>
-    /// <param name="config">Qdrant configuration.</param>
-    /// <param name="embeddingFunc">Optional embedding function for semantic search.</param>
-    /// <returns>A connected QdrantDagStore.</returns>
-    public static QdrantDagStore CreateQdrantStore(
-        this MerkleDag dag,
-        QdrantDagConfig config,
-        Func<string, Task<float[]>>? embeddingFunc = null)
-    {
-        return new QdrantDagStore(config, embeddingFunc);
-    }
+
 
     /// <summary>
     /// Serializes the MerkleDag to JSON.

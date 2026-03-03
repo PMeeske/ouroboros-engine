@@ -279,17 +279,10 @@ public sealed partial class SafetyGuard : ISafetyGuard
         _permissionPolicies[actionName] = new PermissionPolicy(actionName, level, description);
     }
 
-    // Backward compatibility methods for existing callers
-    // These adapt the old API to the new Foundation interface
-
     /// <summary>
-    /// Legacy method: Checks if an operation is safe to execute (synchronous).
-    /// Kept for backward compatibility - prefer CheckActionSafetyAsync.
-    /// WARNING: This method blocks on async code and should ONLY be used in console applications
-    /// or background tasks. Do NOT use in ASP.NET Core, UI contexts, or any environment with
-    /// a synchronization context, as it can still cause deadlocks despite Task.Run.
+    /// Checks if an operation is safe to execute (synchronous).
+    /// Prefer CheckActionSafetyAsync for new code.
     /// </summary>
-    [Obsolete("Use CheckActionSafetyAsync instead")]
     public SafetyCheckResult CheckSafety(
         string operation,
         Dictionary<string, object> parameters,
@@ -298,7 +291,6 @@ public sealed partial class SafetyGuard : ISafetyGuard
         ArgumentNullException.ThrowIfNull(operation);
         ArgumentNullException.ThrowIfNull(parameters);
 
-        // Task.Run helps but doesn't eliminate deadlock risk in all contexts
         IReadOnlyDictionary<string, object> readOnlyParams = parameters;
         SafetyCheckResult result = Task.Run(async () =>
             await CheckActionSafetyAsync(operation, readOnlyParams, null, CancellationToken.None))
@@ -309,22 +301,19 @@ public sealed partial class SafetyGuard : ISafetyGuard
     }
 
     /// <summary>
-    /// Legacy method: Sandboxes a plan step for safe execution.
-    /// Kept for backward compatibility.
+    /// Sandboxes a plan step for safe execution.
+    /// Prefer SandboxStepAsync for new code.
     /// </summary>
-    [Obsolete("This method is deprecated and will be removed in a future version")]
     public PlanStep SandboxStep(PlanStep step)
     {
         ArgumentNullException.ThrowIfNull(step);
 
-        // Create sandboxed version with restricted parameters
         Dictionary<string, object> sandboxedParams = new Dictionary<string, object>();
 
         foreach (KeyValuePair<string, object> param in step.Parameters)
         {
             if (param.Value is string strValue)
             {
-                // Sanitize string values
                 sandboxedParams[param.Key] = SanitizeString(strValue);
             }
             else
@@ -333,7 +322,6 @@ public sealed partial class SafetyGuard : ISafetyGuard
             }
         }
 
-        // Add sandbox metadata
         sandboxedParams["__sandboxed__"] = true;
         sandboxedParams["__original_action__"] = step.Action;
 

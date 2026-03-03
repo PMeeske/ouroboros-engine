@@ -63,34 +63,6 @@ public sealed partial class EpisodicMemoryEngine : IEpisodicMemoryEngine, IAsync
         _disposeClient = false;
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EpisodicMemoryEngine"/> class with connection string.
-    /// </summary>
-    [Obsolete("Use the constructor accepting QdrantClient + IQdrantCollectionRegistry from DI.")]
-    public EpisodicMemoryEngine(
-        string qdrantConnectionString,
-        IEmbeddingModel embeddingModel,
-        string collectionName = "episodic_memory",
-        ILogger<EpisodicMemoryEngine>? logger = null)
-    {
-        if (string.IsNullOrWhiteSpace(qdrantConnectionString))
-        {
-            throw new ArgumentException("Connection string cannot be null or empty", nameof(qdrantConnectionString));
-        }
-
-        _embeddingModel = embeddingModel ?? throw new ArgumentNullException(nameof(embeddingModel));
-        _collectionName = collectionName ?? throw new ArgumentNullException(nameof(collectionName));
-        _logger = logger;
-
-        var uri = new Uri(qdrantConnectionString);
-        var host = uri.Host;
-        var port = uri.Port > 0 ? uri.Port : 6334;
-        var useHttps = uri.Scheme == "https";
-
-        _qdrantClient = new QdrantClient(host, port, useHttps);
-        _disposeClient = true;
-    }
-
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
