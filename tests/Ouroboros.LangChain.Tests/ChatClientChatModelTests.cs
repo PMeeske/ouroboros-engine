@@ -8,8 +8,10 @@ using Xunit;
 using LcMessage = LangChain.Providers.Message;
 using LcMessageRole = LangChain.Providers.MessageRole;
 using LcChatRequest = LangChain.Providers.ChatRequest;
+using LcChatResponse = LangChain.Providers.ChatResponse;
+using MeaiChatResponse = Microsoft.Extensions.AI.ChatResponse;
 
-namespace Ouroboros.LangChain.Tests;
+namespace Ouroboros.LangChainBridge.Tests;
 
 [Trait("Category", "Unit")]
 public class ChatClientChatModelTests
@@ -17,7 +19,7 @@ public class ChatClientChatModelTests
     private static Mock<IChatClient> CreateMockChatClient(string responseText = "response")
     {
         var mock = new Mock<IChatClient>();
-        var chatResponse = new ChatResponse(new ChatMessage(
+        var chatResponse = new MeaiChatResponse(new ChatMessage(
             Microsoft.Extensions.AI.ChatRole.Assistant, responseText));
         mock.Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
@@ -129,7 +131,7 @@ public class ChatClientChatModelTests
             Messages = new List<LcMessage> { new("Hi", LcMessageRole.Human) },
         };
 
-        var responses = new List<LangChain.Providers.ChatResponse>();
+        var responses = new List<LcChatResponse>();
         await foreach (var response in model.GenerateAsync(request))
         {
             responses.Add(response);
@@ -152,7 +154,7 @@ public class ChatClientChatModelTests
         };
         var settings = new ChatSettings { };
 
-        var responses = new List<LangChain.Providers.ChatResponse>();
+        var responses = new List<LcChatResponse>();
         await foreach (var response in model.GenerateAsync(request, settings))
         {
             responses.Add(response);
@@ -171,7 +173,7 @@ public class ChatClientChatModelTests
             Messages = new List<LcMessage> { new("test", LcMessageRole.Human) },
         };
 
-        var responses = new List<LangChain.Providers.ChatResponse>();
+        var responses = new List<LcChatResponse>();
         await foreach (var response in model.GenerateAsync(request))
         {
             responses.Add(response);
@@ -190,7 +192,7 @@ public class ChatClientChatModelTests
             Messages = new List<LcMessage>(),
         };
 
-        var responses = new List<LangChain.Providers.ChatResponse>();
+        var responses = new List<LcChatResponse>();
         await foreach (var response in model.GenerateAsync(request))
         {
             responses.Add(response);
@@ -210,7 +212,7 @@ public class ChatClientChatModelTests
         var model = new ChatClientChatModel(mock.Object);
         var request = new LcChatRequest { Messages = null };
 
-        var responses = new List<LangChain.Providers.ChatResponse>();
+        var responses = new List<LcChatResponse>();
         await foreach (var response in model.GenerateAsync(request))
         {
             responses.Add(response);
@@ -234,7 +236,7 @@ public class ChatClientChatModelTests
     {
         IEnumerable<ChatMessage>? capturedMessages = null;
         var mock = new Mock<IChatClient>();
-        var chatResponse = new ChatResponse(new ChatMessage(
+        var chatResponse = new MeaiChatResponse(new ChatMessage(
             Microsoft.Extensions.AI.ChatRole.Assistant, "ok"));
         mock.Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
@@ -277,7 +279,7 @@ public class ChatClientChatModelTests
     {
         IEnumerable<ChatMessage>? capturedMessages = null;
         var mock = new Mock<IChatClient>();
-        var chatResponse = new ChatResponse(new ChatMessage(
+        var chatResponse = new MeaiChatResponse(new ChatMessage(
             Microsoft.Extensions.AI.ChatRole.Assistant, "ok"));
         mock.Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
@@ -305,7 +307,7 @@ public class ChatClientChatModelTests
     {
         IEnumerable<ChatMessage>? capturedMessages = null;
         var mock = new Mock<IChatClient>();
-        var chatResponse = new ChatResponse(new ChatMessage(
+        var chatResponse = new MeaiChatResponse(new ChatMessage(
             Microsoft.Extensions.AI.ChatRole.Assistant, "ok"));
         mock.Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
@@ -365,7 +367,7 @@ public class ChatClientChatModelTests
     public async Task GenerateAsync_NullResponseText_ReturnsEmptyContent()
     {
         var mock = new Mock<IChatClient>();
-        var chatResponse = new ChatResponse(new ChatMessage(
+        var chatResponse = new MeaiChatResponse(new ChatMessage(
             Microsoft.Extensions.AI.ChatRole.Assistant, (string?)null));
         mock.Setup(c => c.GetResponseAsync(
                 It.IsAny<IEnumerable<ChatMessage>>(),
@@ -379,7 +381,7 @@ public class ChatClientChatModelTests
             Messages = new List<LcMessage> { new("hi", LcMessageRole.Human) },
         };
 
-        var responses = new List<LangChain.Providers.ChatResponse>();
+        var responses = new List<LcChatResponse>();
         await foreach (var response in model.GenerateAsync(request))
         {
             responses.Add(response);

@@ -4,7 +4,7 @@ using LangChain.Providers;
 using Ouroboros.LangChainBridge;
 using Xunit;
 
-namespace Ouroboros.LangChain.Tests;
+namespace Ouroboros.LangChainBridge.Tests;
 
 [Trait("Category", "Unit")]
 public class DocumentLoaderExtensionsTests
@@ -119,8 +119,8 @@ public class DocumentLoaderExtensionsTests
 
         var result = documents.ToRagRequest("query");
 
-        result.Messages[0].Role.Should().Be(MessageRole.System);
-        result.Messages[0].Content.Should().Be("Context information here");
+        result.Messages.ElementAt(0).Role.Should().Be(MessageRole.System);
+        result.Messages.ElementAt(0).Content.Should().Be("Context information here");
     }
 
     [Fact]
@@ -130,8 +130,8 @@ public class DocumentLoaderExtensionsTests
 
         var result = documents.ToRagRequest("What is 2+2?");
 
-        result.Messages[1].Role.Should().Be(MessageRole.Human);
-        result.Messages[1].Content.Should().Be("What is 2+2?");
+        result.Messages.ElementAt(1).Role.Should().Be(MessageRole.Human);
+        result.Messages.ElementAt(1).Content.Should().Be("What is 2+2?");
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class DocumentLoaderExtensionsTests
 
         var result = documents.ToRagRequest("query");
 
-        result.Messages[0].Content.Should().Be("Doc1\n\n---\n\nDoc2");
+        result.Messages.ElementAt(0).Content.Should().Be("Doc1\n\n---\n\nDoc2");
     }
 
     [Fact]
@@ -159,6 +159,6 @@ public class DocumentLoaderExtensionsTests
 
         var result = documents.ToRagRequest("query", " ## ");
 
-        result.Messages[0].Content.Should().Be("A ## B");
+        result.Messages.ElementAt(0).Content.Should().Be("A ## B");
     }
 }

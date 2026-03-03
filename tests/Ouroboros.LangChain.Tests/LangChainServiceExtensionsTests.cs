@@ -6,7 +6,7 @@ using Moq;
 using Ouroboros.LangChainBridge;
 using Xunit;
 
-namespace Ouroboros.LangChain.Tests;
+namespace Ouroboros.LangChainBridge.Tests;
 
 [Trait("Category", "Unit")]
 public class LangChainServiceExtensionsTests

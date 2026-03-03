@@ -6,7 +6,7 @@ using Ouroboros.LangChainBridge;
 using Ouroboros.Tools;
 using Xunit;
 
-namespace Ouroboros.LangChain.Tests;
+namespace Ouroboros.LangChainBridge.Tests;
 
 [Trait("Category", "Unit")]
 public class ToolRegistryChainBridgeTests
