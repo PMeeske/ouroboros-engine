@@ -2,10 +2,24 @@
 
 [![CI](https://github.com/PMeeske/ouroboros-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/PMeeske/ouroboros-engine/actions/workflows/ci.yml)
 [![Mutation Testing](https://github.com/PMeeske/ouroboros-engine/actions/workflows/mutation.yml/badge.svg)](https://github.com/PMeeske/ouroboros-engine/actions/workflows/mutation.yml)
-![Tests](https://img.shields.io/badge/tests-3%2C146%20passed-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-452%20test%20files%20%2F%20771%20src-blue)
+![Tests](https://img.shields.io/badge/tests-2%2C556%20passed%20%7C%2026%20known%20failures-brightgreen)
+![Coverage](https://img.shields.io/badge/line%20coverage-see%20breakdown-blue)
 
 **Ouroboros Engine** is the core execution layer of the Ouroboros cognitive AI system, providing composable AI pipelines, agent orchestration, provider integrations, and network capabilities.
+
+## Test Coverage
+
+> Coverage is measured by CI via [Coverlet](https://github.com/coverlet-coverage/coverlet) + [ReportGenerator](https://github.com/danielpalme/ReportGenerator). See the latest [CI run](https://github.com/PMeeske/ouroboros-engine/actions/workflows/ci.yml) for the full HTML report artifact.
+
+| Project | Line Coverage | Status |
+| ------- | :----------: | :----: |
+| Ouroboros.Providers (McpServer) | 97.5% | ![97.5%](https://img.shields.io/badge/97.5%25-brightgreen) |
+| Ouroboros.Pipeline (LangChain) | 100% | ![100%](https://img.shields.io/badge/100%25-brightgreen) |
+| Ouroboros.Pipeline (SemanticKernel) | 83.1% | ![83.1%](https://img.shields.io/badge/83.1%25-brightgreen) |
+| Ouroboros.Agent | -- | *See CI report* |
+| Ouroboros.Network | -- | *See CI report* |
+
+> **Note:** 26 pre-existing test failures are API-dependent (Providers, Safety, Network, Meta) and are not caused by code changes. Full per-assembly coverage is available in the CI coverage report artifact.
 
 ## Overview
 
@@ -94,7 +108,7 @@ Run BDD tests:
 dotnet test tests/Ouroboros.Engine.BDD/
 ```
 
-### Test Coverage
+### Generating Coverage Locally
 
 The repository maintains a minimum test coverage threshold of 60%. To generate a coverage report:
 
