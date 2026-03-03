@@ -45,6 +45,18 @@ public static class KernelFactory
         return BuildKernel(chatClient, tools);
     }
 
+    /// <summary>
+    /// Creates a <see cref="Kernel"/> from an <see cref="IOuroborosChatClient"/>
+    /// (which is already an IChatClient -- zero adapter overhead).
+    /// </summary>
+    public static Kernel CreateKernel(
+        IOuroborosChatClient client,
+        Ouroboros.Tools.ToolRegistry? tools = null)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        return BuildKernel(client, tools);
+    }
+
     private static Kernel BuildKernel(IChatClient chatClient, Ouroboros.Tools.ToolRegistry? tools)
     {
         var builder = Kernel.CreateBuilder();

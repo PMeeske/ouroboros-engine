@@ -5,6 +5,7 @@
 /// These models can return separate thinking content and response content.
 /// Examples include Claude (with extended thinking), DeepSeek R1, and o1 models.
 /// </summary>
+[Obsolete("Use IOuroborosChatClient with ThinkingAIContent instead. Will be removed in v3.")]
 public interface IThinkingChatModel : Ouroboros.Abstractions.Core.IChatCompletionModel
 {
     /// <summary>

@@ -119,6 +119,16 @@ public static class ServiceCollectionExtensions
                 : new EmbeddingModelGeneratorAdapter(model);
         });
 
+        services.TryAddSingleton<Ouroboros.Abstractions.Core.IOuroborosChatClient>(sp =>
+        {
+            var model = sp.GetRequiredService<Ouroboros.Abstractions.Core.IChatCompletionModel>();
+            if (model is Ouroboros.Abstractions.Core.IOuroborosChatClient ouroClient)
+                return ouroClient;
+            throw new InvalidOperationException(
+                $"The resolved IChatCompletionModel ({model.GetType().Name}) does not implement IOuroborosChatClient. " +
+                "Migrate the provider to IOuroborosChatClient or use IChatClient via AddMeaiChatClient() instead.");
+        });
+
         return services;
     }
 
