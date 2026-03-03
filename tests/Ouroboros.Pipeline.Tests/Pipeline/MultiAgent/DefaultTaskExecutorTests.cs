@@ -81,6 +81,6 @@ public sealed class DefaultTaskExecutorTests
 
         var result = await _executor.ExecuteAsync(task, agent, CancellationToken.None);
 
-        result.Output.Should().Contain("Worker");
+        result.Output.Should().Contain("Executor");
     }
 }
