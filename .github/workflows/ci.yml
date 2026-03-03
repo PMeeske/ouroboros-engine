@@ -68,3 +68,19 @@ jobs:
         src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
         src/Ouroboros.Providers/Ouroboros.Providers.csproj
       coverage-threshold: 0
+
+  coverage-badge:
+    name: Coverage Badge
+    needs: [test]
+    if: always() && needs.test.result == 'success'
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-coverage-badge.yml@main
+    with:
+      coverage-percentage: ${{ needs.test.outputs.coverage-percentage }}
+      tests-passed: ${{ needs.test.outputs.tests-passed }}
+      tests-failed: ${{ needs.test.outputs.tests-failed }}
+      badge-filename: "ouroboros-engine-coverage.json"
+      tests-badge-filename: "ouroboros-engine-tests.json"
+      gist-id: ${{ vars.COVERAGE_GIST_ID }}
+      repo-name: "engine coverage"
+    secrets:
+      gist-token: ${{ secrets.GIST_TOKEN }}
