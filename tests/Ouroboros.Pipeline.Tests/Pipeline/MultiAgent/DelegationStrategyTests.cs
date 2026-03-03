@@ -12,6 +12,9 @@ namespace Ouroboros.Tests.Pipeline.MultiAgent;
 [Trait("Category", "Unit")]
 public sealed class DelegationStrategyTests
 {
+    private static readonly DelegationCriteria DefaultCriteria =
+        DelegationCriteria.FromGoal(Ouroboros.Pipeline.Planning.Goal.Atomic("test"));
+
     private static AgentIdentity CreateIdentity(
         string name = "Agent",
         AgentRole role = AgentRole.Worker,
@@ -21,7 +24,9 @@ public sealed class DelegationStrategyTests
             ? capabilities.Select(c => new AgentCapability(c.Name, c.Proficiency)).ToImmutableList()
             : ImmutableList<AgentCapability>.Empty;
 
-        return new AgentIdentity(Guid.NewGuid(), name, role, caps);
+        return new AgentIdentity(
+            Guid.NewGuid(), name, role, caps,
+            ImmutableDictionary<string, object>.Empty, DateTime.UtcNow);
     }
 
     private static AgentTeam CreateTeamWithAgents(params AgentIdentity[] identities)
@@ -54,7 +59,7 @@ public sealed class DelegationStrategyTests
     public void RoundRobin_NullTeam_Throws()
     {
         var strategy = new RoundRobinStrategy();
-        Action act = () => strategy.SelectAgent(DelegationCriteria.Default, null!);
+        Action act = () => strategy.SelectAgent(DefaultCriteria, null!);
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -62,7 +67,7 @@ public sealed class DelegationStrategyTests
     public void RoundRobin_EmptyTeam_NoMatch()
     {
         var strategy = new RoundRobinStrategy();
-        var result = strategy.SelectAgent(DelegationCriteria.Default, AgentTeam.Empty);
+        var result = strategy.SelectAgent(DefaultCriteria, AgentTeam.Empty);
 
         result.HasMatch.Should().BeFalse();
     }
@@ -75,7 +80,7 @@ public sealed class DelegationStrategyTests
         var team = CreateTeamWithAgents(a1, a2);
 
         var strategy = new RoundRobinStrategy();
-        var criteria = DelegationCriteria.Default;
+        var criteria = DefaultCriteria;
 
         var r1 = strategy.SelectAgent(criteria, team);
         var r2 = strategy.SelectAgent(criteria, team);
@@ -93,7 +98,7 @@ public sealed class DelegationStrategyTests
         var team = CreateTeamWithAgents(a1, a2);
 
         var strategy = new RoundRobinStrategy();
-        var criteria = DelegationCriteria.Default;
+        var criteria = DefaultCriteria;
 
         var first = strategy.SelectAgent(criteria, team);
         strategy.SelectAgent(criteria, team); // advance
@@ -109,7 +114,7 @@ public sealed class DelegationStrategyTests
         var team = CreateTeamWithAgents(CreateIdentity("A"));
         var strategy = new RoundRobinStrategy();
 
-        var results = strategy.SelectAgents(DelegationCriteria.Default, team, 5);
+        var results = strategy.SelectAgents(DefaultCriteria, team, 5);
 
         results.Should().HaveCount(1);
     }
@@ -120,7 +125,7 @@ public sealed class DelegationStrategyTests
         var team = CreateTeamWithAgents(CreateIdentity("A"));
         var strategy = new RoundRobinStrategy();
 
-        Action act = () => strategy.SelectAgents(DelegationCriteria.Default, team, 0);
+        Action act = () => strategy.SelectAgents(DefaultCriteria, team, 0);
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
@@ -136,7 +141,7 @@ public sealed class DelegationStrategyTests
     public void LoadBalancing_EmptyTeam_NoMatch()
     {
         var strategy = new LoadBalancingStrategy();
-        var result = strategy.SelectAgent(DelegationCriteria.Default, AgentTeam.Empty);
+        var result = strategy.SelectAgent(DefaultCriteria, AgentTeam.Empty);
 
         result.HasMatch.Should().BeFalse();
     }
@@ -148,7 +153,7 @@ public sealed class DelegationStrategyTests
         var team = CreateTeamWithAgents(agent);
 
         var strategy = new LoadBalancingStrategy();
-        var result = strategy.SelectAgent(DelegationCriteria.Default, team);
+        var result = strategy.SelectAgent(DefaultCriteria, team);
 
         result.HasMatch.Should().BeTrue();
         result.SelectedAgentId.Should().Be(agent.Id);
@@ -158,7 +163,7 @@ public sealed class DelegationStrategyTests
     public void LoadBalancing_SelectAgents_ZeroCount_Throws()
     {
         var strategy = new LoadBalancingStrategy();
-        Action act = () => strategy.SelectAgents(DelegationCriteria.Default, AgentTeam.Empty, 0);
+        Action act = () => strategy.SelectAgents(DefaultCriteria, AgentTeam.Empty, 0);
 
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
@@ -175,7 +180,7 @@ public sealed class DelegationStrategyTests
     public void BestFit_EmptyTeam_NoMatch()
     {
         var strategy = new BestFitStrategy();
-        var result = strategy.SelectAgent(DelegationCriteria.Default, AgentTeam.Empty);
+        var result = strategy.SelectAgent(DefaultCriteria, AgentTeam.Empty);
 
         result.HasMatch.Should().BeFalse();
     }
@@ -187,7 +192,7 @@ public sealed class DelegationStrategyTests
         var team = CreateTeamWithAgents(agent);
 
         var strategy = new BestFitStrategy();
-        var result = strategy.SelectAgent(DelegationCriteria.Default, team);
+        var result = strategy.SelectAgent(DefaultCriteria, team);
 
         result.HasMatch.Should().BeTrue();
     }
@@ -199,7 +204,7 @@ public sealed class DelegationStrategyTests
         var team = CreateTeamWithAgents(agent);
 
         var strategy = new BestFitStrategy();
-        var result = strategy.SelectAgent(DelegationCriteria.Default, team);
+        var result = strategy.SelectAgent(DefaultCriteria, team);
 
         result.HasMatch.Should().BeTrue();
         result.MatchScore.Should().BeGreaterThan(0);
@@ -217,7 +222,7 @@ public sealed class DelegationStrategyTests
     public void CapabilityBased_EmptyTeam_NoMatch()
     {
         var strategy = new CapabilityBasedStrategy();
-        var result = strategy.SelectAgent(DelegationCriteria.Default, AgentTeam.Empty);
+        var result = strategy.SelectAgent(DefaultCriteria, AgentTeam.Empty);
 
         result.HasMatch.Should().BeFalse();
     }
@@ -228,7 +233,7 @@ public sealed class DelegationStrategyTests
         var agent = CreateIdentity("Skilled", AgentRole.Worker, ("coding", 0.9));
         var team = CreateTeamWithAgents(agent);
 
-        var criteria = DelegationCriteria.Default;
+        var criteria = DefaultCriteria;
         var strategy = new CapabilityBasedStrategy();
         var result = strategy.SelectAgent(criteria, team);
 
@@ -250,7 +255,7 @@ public sealed class DelegationStrategyTests
         var team = CreateTeamWithAgents(agent);
 
         var strategy = new RoleBasedStrategy();
-        var result = strategy.SelectAgent(DelegationCriteria.Default, team);
+        var result = strategy.SelectAgent(DefaultCriteria, team);
 
         result.HasMatch.Should().BeTrue();
     }
@@ -259,7 +264,7 @@ public sealed class DelegationStrategyTests
     public void RoleBased_EmptyTeam_NoMatch()
     {
         var strategy = new RoleBasedStrategy();
-        var result = strategy.SelectAgent(DelegationCriteria.Default, AgentTeam.Empty);
+        var result = strategy.SelectAgent(DefaultCriteria, AgentTeam.Empty);
 
         result.HasMatch.Should().BeFalse();
     }
@@ -317,7 +322,7 @@ public sealed class DelegationStrategyTests
     {
         var composite = CompositeStrategy.Create(
             (new RoundRobinStrategy(), 1.0));
-        var results = composite.SelectAgents(DelegationCriteria.Default, AgentTeam.Empty, 1);
+        var results = composite.SelectAgents(DefaultCriteria, AgentTeam.Empty, 1);
 
         results.Should().BeEmpty();
     }
@@ -332,7 +337,7 @@ public sealed class DelegationStrategyTests
             (new RoundRobinStrategy(), 1.0),
             (new LoadBalancingStrategy(), 1.0));
 
-        var result = composite.SelectAgent(DelegationCriteria.Default, team);
+        var result = composite.SelectAgent(DefaultCriteria, team);
         result.HasMatch.Should().BeTrue();
     }
 
