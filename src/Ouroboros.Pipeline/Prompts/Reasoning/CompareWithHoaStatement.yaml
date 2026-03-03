@@ -1,0 +1,39 @@
+name: CompareWithHoaStatement
+description: Compares the operating cost statement with HOA/WEG cost statement
+template: |
+  Compare the operating cost statement with the condominium association (HOA/WEG) cost statement.
+
+  Available tools (JSON Schema):
+  {tools_schemas}
+
+  Operating Cost Statement:
+  {main_statement}
+
+  HOA/WEG Cost Statement:
+  {hoa_statement}
+
+  Previous Analysis:
+  {previous_analysis}
+
+  COMPARISON TASKS:
+  1. Verify that total costs in the main statement match the HOA/WEG statement
+  2. Identify any discrepancies in allocation keys or reference metrics
+  3. Check for cost categories present in HOA/WEG but missing in main statement
+  4. Flag any mathematical inconsistencies between documents
+
+  For each discrepancy found, indicate:
+  - The cost category affected
+  - The nature of the discrepancy
+  - Which document contains which value
+
+  This is a formal completeness check only - do not provide legal interpretation.
+template_format: semantic-kernel
+input_variables:
+  - name: tools_schemas
+    description: JSON Schema of available tools
+  - name: main_statement
+    description: The operating cost statement
+  - name: hoa_statement
+    description: The HOA/WEG cost statement
+  - name: previous_analysis
+    description: Results of previous analysis steps

@@ -1,0 +1,35 @@
+name: PredictIntention
+description: Predicts the intention or goal of another agent
+template: |
+  You are predicting the intention/goal of Agent '{{$agentId}}'.
+
+  AGENT'S BELIEFS:
+  {{$beliefs}}
+
+  RECENT ACTIONS:
+  {{$recentActions}}
+
+  KNOWN GOALS: {{$knownGoals}}
+  CAPABILITIES: {{$capabilities}}
+
+  Based on this information, predict what Agent '{{$agentId}}' is trying to achieve. Provide a JSON response:
+  {
+    "predicted_goal": "clear description of the main goal",
+    "confidence": 0.80,
+    "supporting_evidence": ["reason 1", "reason 2"],
+    "alternative_goals": ["alternative 1", "alternative 2"]
+  }
+
+  Consider both explicit statements and implicit behavior patterns.
+template_format: semantic-kernel
+input_variables:
+  - name: agentId
+    description: The ID of the agent whose intention is being predicted
+  - name: beliefs
+    description: Formatted list of the agent's current beliefs
+  - name: recentActions
+    description: Formatted list of the agent's recent actions
+  - name: knownGoals
+    description: Comma-separated list of the agent's known goals
+  - name: capabilities
+    description: Comma-separated list of the agent's known capabilities

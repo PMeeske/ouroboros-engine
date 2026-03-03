@@ -5,6 +5,7 @@
 
 using System.Text.Json;
 using Ouroboros.Agent.Json;
+using Ouroboros.Pipeline.Prompts;
 
 namespace Ouroboros.Agent.MeTTaAgents;
 
@@ -135,7 +136,7 @@ public sealed partial class MeTTaAgentTool : ITool
 
         var def = new MeTTaAgentDef(
             agentId, provider, model, role,
-            systemPrompt ?? $"You are a {role.ToLowerInvariant()} agent.",
+            systemPrompt ?? PromptTemplateLoader.GetPromptText("MeTTa", "DefaultAgentRole").Replace("{{$role}}", role.ToLowerInvariant()),
             maxTokens, temperature,
             Capabilities: capabilities);
 
@@ -193,7 +194,7 @@ public sealed partial class MeTTaAgentTool : ITool
         float temperature = root.TryGetProperty("temperature", out var temp)
             ? (float)temp.GetDouble() : 0.5f;
         string systemPrompt = GetOptionalString(root, "system_prompt")
-            ?? $"You are a {(role ?? "general").ToLowerInvariant()} agent.";
+            ?? PromptTemplateLoader.GetPromptText("MeTTa", "DefaultAgentRole").Replace("{{$role}}", (role ?? "general").ToLowerInvariant());
 
         List<string>? capabilities = null;
         if (root.TryGetProperty("capabilities", out var capsElem))

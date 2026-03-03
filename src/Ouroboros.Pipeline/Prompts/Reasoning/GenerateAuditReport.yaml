@@ -1,0 +1,53 @@
+name: GenerateAuditReport
+description: Generates the final formal completeness audit report
+template: |
+  Generate a formal completeness audit report based on the analysis performed.
+
+  Available tools (JSON Schema):
+  {tools_schemas}
+
+  Analysis Results:
+  {analysis_results}
+
+  Critical Gaps Identified:
+  {critical_gaps}
+
+  REPORT REQUIREMENTS:
+  Generate a JSON output with this structure:
+  {{
+    "documents_analyzed": true,
+    "overall_formal_status": "complete | incomplete | not_auditable",
+    "categories": [
+      {{
+        "category": "[category name]",
+        "total_costs": "[OK|INDIRECT|UNCLEAR|MISSING|INCONSISTENT]",
+        "reference_metric": "[status]",
+        "total_reference_value": "[status]",
+        "tenant_share": "[status]",
+        "tenant_cost": "[status]",
+        "balance": "[status]",
+        "comment": "[optional explanation]"
+      }}
+    ],
+    "critical_gaps": [
+      "[list of critical issues]"
+    ],
+    "summary_short": "[Brief summary of audit findings]",
+    "note": "This output does not contain legal evaluation or statements on validity or enforceability."
+  }}
+
+  DETERMINE overall_formal_status AS:
+  - "complete": All required fields OK for all categories
+  - "incomplete": Some fields MISSING, UNCLEAR, or INDIRECT
+  - "not_auditable": Critical information missing, cannot perform meaningful audit
+
+  Ensure the note disclaimer is always included.
+  This is a formal completeness check only - no legal advice or enforceability assessment.
+template_format: semantic-kernel
+input_variables:
+  - name: tools_schemas
+    description: JSON Schema of available tools
+  - name: analysis_results
+    description: Results from all analysis steps
+  - name: critical_gaps
+    description: Critical gaps identified during analysis

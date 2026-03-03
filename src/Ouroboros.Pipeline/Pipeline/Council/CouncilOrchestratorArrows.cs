@@ -3,6 +3,7 @@
 // </copyright>
 
 using Ouroboros.Pipeline.Council.Agents;
+using Ouroboros.Pipeline.Prompts;
 
 namespace Ouroboros.Pipeline.Council;
 
@@ -472,28 +473,11 @@ public static class CouncilOrchestratorArrows
         var votesSummary = string.Join("\n", votes.Select(v =>
             $"- {v.Key}: {v.Value.Position} (weight: {v.Value.Weight:F2})"));
 
-        return $"""
-            You are the Council Orchestrator synthesizing the results of a multi-agent debate.
-
-            ## Topic
-            {topic.Question}
-
-            ## Debate Summary
-            {transcriptSummary}
-
-            ## Votes
-            {votesSummary}
-
-            ## Status
-            - Majority Position: {majorityPosition}
-            - Consensus Reached: {consensusReached}
-
-            ## Your Task
-            Synthesize the debate into a clear, actionable conclusion. Include:
-            1. The final decision and recommendation
-            2. Key points of agreement
-            3. Remaining concerns to address
-            4. Next steps or action items
-            """;
+        return PromptTemplateLoader.GetPromptText("Council", "SynthesisReport")
+            .Replace("{{$topic}}", topic.Question)
+            .Replace("{{$transcriptSummary}}", transcriptSummary)
+            .Replace("{{$votesSummary}}", votesSummary)
+            .Replace("{{$majorityPosition}}", majorityPosition)
+            .Replace("{{$consensusReached}}", consensusReached.ToString());
     }
 }

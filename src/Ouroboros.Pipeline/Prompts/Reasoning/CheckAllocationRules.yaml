@@ -1,0 +1,38 @@
+name: CheckAllocationRules
+description: Compares allocation rules in the operating cost statement against the rental agreement
+template: |
+  Compare the allocation rules applied in the operating cost statement against the rental agreement.
+
+  Available tools (JSON Schema):
+  {tools_schemas}
+
+  Operating Cost Statement:
+  {main_statement}
+
+  Rental Agreement Allocation Rules:
+  {rental_agreement_rules}
+
+  Previous Analysis:
+  {previous_analysis}
+
+  VERIFICATION TASKS:
+  1. Extract allocation rules from the rental agreement passages
+  2. Compare: applied allocation key vs contractual allocation key for each category
+  3. Flag any mismatches between contractual and applied allocation methods
+
+  For each cost category, report:
+  - Contractual allocation method (from rental agreement)
+  - Applied allocation method (from operating cost statement)
+  - Match status: MATCH / MISMATCH / UNCLEAR / NOT_SPECIFIED
+
+  This is a formal completeness check only - do not assess legal validity of allocation methods.
+template_format: semantic-kernel
+input_variables:
+  - name: tools_schemas
+    description: JSON Schema of available tools
+  - name: main_statement
+    description: The operating cost statement
+  - name: rental_agreement_rules
+    description: Allocation rules from the rental agreement
+  - name: previous_analysis
+    description: Results of previous analysis steps

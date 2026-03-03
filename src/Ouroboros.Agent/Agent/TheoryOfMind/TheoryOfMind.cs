@@ -6,6 +6,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Ouroboros.Domain.Embodied;
+using Ouroboros.Pipeline.Prompts;
 using Unit = Ouroboros.Abstractions.Unit;
 
 namespace Ouroboros.Agent.TheoryOfMind;
@@ -58,33 +59,10 @@ public sealed class TheoryOfMind : ITheoryOfMind
                     $"- {b.Key}: {b.Value.Proposition} (confidence: {b.Value.Probability:P0})"))
                 : "No prior beliefs recorded";
 
-            string prompt = $@"You are analyzing observations of Agent '{agentId}' to infer their beliefs about the world.
-
-OBSERVATIONS:
-{observationsText}
-
-EXISTING BELIEFS:
-{existingBeliefs}
-
-Based on these observations, infer what Agent '{agentId}' believes. Consider:
-1. What information is the agent acting on?
-2. What assumptions are they making?
-3. What do they seem to know or not know?
-
-Provide a JSON response with this structure:
-{{
-  ""beliefs"": [
-    {{
-      ""key"": ""belief_key"",
-      ""proposition"": ""description of belief"",
-      ""probability"": 0.85,
-      ""source"": ""inference""
-    }}
-  ],
-  ""overall_confidence"": 0.75
-}}
-
-Focus on actionable beliefs that would influence the agent's behavior. Limit to 5 most important beliefs.";
+            string prompt = PromptTemplateLoader.GetPromptText("TheoryOfMind", "InferBeliefs")
+                .Replace("{{$agentId}}", agentId)
+                .Replace("{{$observations}}", observationsText)
+                .Replace("{{$existingBeliefs}}", existingBeliefs);
 
             string response = await _llm.GenerateTextAsync(prompt, ct);
 
@@ -130,26 +108,12 @@ Focus on actionable beliefs that would influence the agent's behavior. Limit to 
                 model.ObservationHistory.TakeLast(5).Select((o, i) =>
                     $"{i + 1}. [{o.ObservationType}] {o.Content}"));
 
-            string prompt = $@"You are predicting the intention/goal of Agent '{agentId}'.
-
-AGENT'S BELIEFS:
-{beliefsText}
-
-RECENT ACTIONS:
-{recentActions}
-
-KNOWN GOALS: {string.Join(", ", model.InferredGoals.DefaultIfEmpty("None"))}
-CAPABILITIES: {string.Join(", ", model.InferredCapabilities.DefaultIfEmpty("Unknown"))}
-
-Based on this information, predict what Agent '{agentId}' is trying to achieve. Provide a JSON response:
-{{
-  ""predicted_goal"": ""clear description of the main goal"",
-  ""confidence"": 0.80,
-  ""supporting_evidence"": [""reason 1"", ""reason 2""],
-  ""alternative_goals"": [""alternative 1"", ""alternative 2""]
-}}
-
-Consider both explicit statements and implicit behavior patterns.";
+            string prompt = PromptTemplateLoader.GetPromptText("TheoryOfMind", "PredictIntention")
+                .Replace("{{$agentId}}", agentId)
+                .Replace("{{$beliefs}}", beliefsText)
+                .Replace("{{$recentActions}}", recentActions)
+                .Replace("{{$knownGoals}}", string.Join(", ", model.InferredGoals.DefaultIfEmpty("None")))
+                .Replace("{{$capabilities}}", string.Join(", ", model.InferredCapabilities.DefaultIfEmpty("Unknown")));
 
             string response = await _llm.GenerateTextAsync(prompt, ct);
 
@@ -194,28 +158,14 @@ Consider both explicit statements and implicit behavior patterns.";
                     .TakeLast(3)
                     .Select((o, i) => $"{i + 1}. {o.Content}"));
 
-            string prompt = $@"You are predicting the next action of Agent '{agentId}'.
+            string beliefsText = string.Join("\n", beliefs.Beliefs.Take(3).Select(b => $"- {b.Key}: {b.Value.Proposition}"));
 
-AGENT'S BELIEFS:
-{string.Join("\n", beliefs.Beliefs.Take(3).Select(b => $"- {b.Key}: {b.Value.Proposition}"))}
-
-RECENT ACTIONS:
-{recentBehavior}
-
-INFERRED GOALS: {string.Join(", ", model.InferredGoals.Take(2).DefaultIfEmpty("Unknown"))}
-
-AVAILABLE ACTIONS:
-{actionsText}
-
-Based on this context, predict what action the agent will take next. Provide JSON response:
-{{
-  ""action_index"": 0,
-  ""action_name"": ""action name or description"",
-  ""confidence"": 0.70,
-  ""reasoning"": ""why this action makes sense given their beliefs and goals""
-}}
-
-Consider the agent's goals, beliefs, and recent behavior patterns.";
+            string prompt = PromptTemplateLoader.GetPromptText("TheoryOfMind", "PredictNextAction")
+                .Replace("{{$agentId}}", agentId)
+                .Replace("{{$beliefs}}", beliefsText)
+                .Replace("{{$recentBehavior}}", recentBehavior)
+                .Replace("{{$inferredGoals}}", string.Join(", ", model.InferredGoals.Take(2).DefaultIfEmpty("Unknown")))
+                .Replace("{{$availableActions}}", actionsText);
 
             string response = await _llm.GenerateTextAsync(prompt, ct);
 

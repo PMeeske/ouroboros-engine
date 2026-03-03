@@ -1,0 +1,8 @@
+name: DefaultAgentRole
+description: Default system prompt for a MeTTa agent with a specific role
+template: |
+  You are a {{$role}} agent.
+template_format: semantic-kernel
+input_variables:
+  - name: role
+    description: The role of the agent (e.g., coder, researcher, planner)

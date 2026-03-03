@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Ouroboros.Core.Ethics;
+using Ouroboros.Pipeline.Prompts;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -137,66 +138,42 @@ public sealed partial class MetaAIPlannerOrchestrator
         List<Experience> pastExperiences,
         List<Skill> matchingSkills)
     {
-        var sb = new System.Text.StringBuilder();
-        sb.Append($@"You are an AI planner. Create a detailed plan to accomplish this goal:
+        string contextSection = context != null && context.Any()
+            ? $"CONTEXT: {JsonSerializer.Serialize(context)}\n"
+            : string.Empty;
 
-GOAL: {goal}
-
-");
-
-        if (context != null && context.Any())
-        {
-            sb.Append($"CONTEXT: {JsonSerializer.Serialize(context)}\n\n");
-        }
-
+        string skillsSection = string.Empty;
         if (matchingSkills.Any())
         {
+            var sb = new System.Text.StringBuilder();
             sb.Append("AVAILABLE SKILLS:\n");
             foreach (Skill? skill in matchingSkills.Take(3))
             {
                 sb.Append($"- {skill.Name}: {skill.Description} (Success rate: {skill.SuccessRate:P0})\n");
             }
-            sb.Append('\n');
+            skillsSection = sb.ToString();
         }
 
+        string experienceSection = string.Empty;
         if (pastExperiences.Any())
         {
+            var sb = new System.Text.StringBuilder();
             sb.Append("PAST EXPERIENCE:\n");
             foreach (Experience? exp in pastExperiences.Take(3))
             {
                 sb.Append($"- Goal: {exp.Goal}, Quality: {exp.Verification.QualityScore:P0}, Verified: {exp.Verification.Verified}\n");
             }
-            sb.Append('\n');
+            experienceSection = sb.ToString();
         }
 
-        sb.Append($@"AVAILABLE TOOLS:
-{string.Join("\n", _tools.All.Select(t => $"- {t.Name}: {t.Description}"))}
+        string toolsText = string.Join("\n", _tools.All.Select(t => $"- {t.Name}: {t.Description}"));
 
-Create a plan with specific steps. For each step, specify:
-1. Action (tool name or task description)
-2. Parameters (as JSON object with ACTUAL CONCRETE VALUES)
-3. Expected outcome
-4. Confidence score (0-1)
-
-CRITICAL PARAMETER RULES:
-- Use ACTUAL CONCRETE VALUES in parameters - never placeholder descriptions
-- URLs must be real URLs (https://example.com), not descriptions like 'URL from search'
-- Search queries must be actual text, not 'query about topic'
-- If you don't have a real value yet, SKIP that step or mark confidence as 0
-
-WRONG parameters: {{""url"": ""URL of the search result"", ""query"": ""search for topic""}}
-CORRECT parameters: {{""url"": ""https://example.com/page"", ""query"": ""Ouroboros mythology serpent""}}
-
-Format your response as:
-STEP 1: [action]
-PARAMETERS: {{...}}
-EXPECTED: [outcome]
-CONFIDENCE: [0-1]
-
-STEP 2: ...
-");
-
-        return sb.ToString();
+        return PromptTemplateLoader.GetPromptText("MetaAI", "Planner")
+            .Replace("{{$goal}}", goal)
+            .Replace("{{$context}}", contextSection)
+            .Replace("{{$skills}}", skillsSection)
+            .Replace("{{$experience}}", experienceSection)
+            .Replace("{{$tools}}", toolsText);
     }
 
     private static Plan ParsePlan(string planText, string goal)

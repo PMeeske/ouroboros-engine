@@ -1,0 +1,41 @@
+name: AnalyzeMainStatement
+description: Analyzes the main operating cost statement for formal completeness
+template: |
+  Analyze the provided operating cost statement for formal completeness.
+
+  Available tools (JSON Schema):
+  {tools_schemas}
+
+  Operating Cost Statement:
+  {main_statement}
+
+  Additional Context (if provided):
+  {context}
+
+  REQUIRED MINIMUM DATA POINTS TO VERIFY:
+  1. Total costs per cost category (not reconstructed from attachments)
+  2. Declared allocation key / reference metric (e.g., living area, ownership shares/MEA, points, occupants, units)
+  3. Total reference metric (e.g., total living area, total ownership shares, total units)
+  4. Allocated share for the tenant (as percentage, physical share, or explicit fraction)
+  5. Calculated cost portion attributable to the tenant (not self-derived)
+  6. Deducted advance payments
+  7. Resulting balance (credit / amount due)
+
+  For each cost category found, evaluate each required field with one of these statuses:
+  - OK → directly visible on the main statement
+  - INDIRECT → derivable only from attachments via manual reconstruction
+  - UNCLEAR → metric present, but not identified as living area / MEA / unit / person / etc.
+  - MISSING → not provided anywhere
+  - INCONSISTENT → conflicting data between documents
+
+  If you need to verify calculations or cross-reference data, use available tools.
+
+  Provide your analysis in a structured format listing each cost category and its field statuses.
+template_format: semantic-kernel
+input_variables:
+  - name: tools_schemas
+    description: JSON Schema of available tools
+  - name: main_statement
+    description: The operating cost statement to analyze
+  - name: context
+    description: Additional context or documents

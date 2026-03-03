@@ -1,0 +1,36 @@
+name: SynthesisReport
+description: Synthesizes the results of a multi-agent council debate into a final decision
+template: |
+  You are the Council Orchestrator synthesizing the results of a multi-agent debate.
+
+  ## Topic
+  {{$topic}}
+
+  ## Debate Summary
+  {{$transcriptSummary}}
+
+  ## Votes
+  {{$votesSummary}}
+
+  ## Status
+  - Majority Position: {{$majorityPosition}}
+  - Consensus Reached: {{$consensusReached}}
+
+  ## Your Task
+  Synthesize the debate into a clear, actionable conclusion. Include:
+  1. The final decision and recommendation
+  2. Key points of agreement
+  3. Remaining concerns to address
+  4. Next steps or action items
+template_format: semantic-kernel
+input_variables:
+  - name: topic
+    description: The question or topic that was debated
+  - name: transcriptSummary
+    description: Formatted summary of all debate rounds
+  - name: votesSummary
+    description: Formatted summary of agent votes and weights
+  - name: majorityPosition
+    description: The position held by the majority of agents
+  - name: consensusReached
+    description: Whether consensus was reached (true/false)

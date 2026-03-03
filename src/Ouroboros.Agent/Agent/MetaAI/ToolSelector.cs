@@ -5,6 +5,7 @@
 
 using System.Text;
 using System.Text.Json;
+using Ouroboros.Pipeline.Prompts;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -70,36 +71,25 @@ public sealed class ToolSelector
     /// </summary>
     private string BuildToolSelectionPrompt(string stepDescription)
     {
-        var promptBuilder = new StringBuilder();
-        promptBuilder.AppendLine("You are a tool selection assistant. Given a step description, determine if a tool should be used and extract the necessary arguments.");
-        promptBuilder.AppendLine();
-        promptBuilder.AppendLine("Available tools:");
-        promptBuilder.AppendLine();
+        var toolsBuilder = new StringBuilder();
 
         // List each tool with its description and JSON schema
         foreach (ITool tool in _tools)
         {
-            promptBuilder.AppendLine($"Tool: {tool.Name}");
-            promptBuilder.AppendLine($"Description: {tool.Description}");
-            
+            toolsBuilder.AppendLine($"Tool: {tool.Name}");
+            toolsBuilder.AppendLine($"Description: {tool.Description}");
+
             if (!string.IsNullOrWhiteSpace(tool.JsonSchema))
             {
-                promptBuilder.AppendLine($"Parameters Schema: {tool.JsonSchema}");
+                toolsBuilder.AppendLine($"Parameters Schema: {tool.JsonSchema}");
             }
-            
-            promptBuilder.AppendLine();
+
+            toolsBuilder.AppendLine();
         }
 
-        promptBuilder.AppendLine($"Step to process: {stepDescription}");
-        promptBuilder.AppendLine();
-        promptBuilder.AppendLine("Respond ONLY with valid JSON in this exact format:");
-        promptBuilder.AppendLine(@"{""tool"": ""ToolName"", ""arguments"": {""param1"": ""value1"", ""param2"": ""value2""}}");
-        promptBuilder.AppendLine();
-        promptBuilder.AppendLine(@"If no tool is needed, respond with: {""tool"": null}");
-        promptBuilder.AppendLine();
-        promptBuilder.AppendLine("Your response:");
-
-        return promptBuilder.ToString();
+        return PromptTemplateLoader.GetPromptText("MetaAI", "ToolSelector")
+            .Replace("{{$availableTools}}", toolsBuilder.ToString())
+            .Replace("{{$stepDescription}}", stepDescription);
     }
 
     /// <summary>

@@ -1,0 +1,37 @@
+name: PredictNextAction
+description: Predicts the next action another agent will take
+template: |
+  You are predicting the next action of Agent '{{$agentId}}'.
+
+  AGENT'S BELIEFS:
+  {{$beliefs}}
+
+  RECENT ACTIONS:
+  {{$recentBehavior}}
+
+  INFERRED GOALS: {{$inferredGoals}}
+
+  AVAILABLE ACTIONS:
+  {{$availableActions}}
+
+  Based on this context, predict what action the agent will take next. Provide JSON response:
+  {
+    "action_index": 0,
+    "action_name": "action name or description",
+    "confidence": 0.70,
+    "reasoning": "why this action makes sense given their beliefs and goals"
+  }
+
+  Consider the agent's goals, beliefs, and recent behavior patterns.
+template_format: semantic-kernel
+input_variables:
+  - name: agentId
+    description: The ID of the agent whose next action is being predicted
+  - name: beliefs
+    description: Formatted string of the agent's top beliefs
+  - name: recentBehavior
+    description: Formatted list of the agent's recent action observations
+  - name: inferredGoals
+    description: Comma-separated list of the agent's inferred goals
+  - name: availableActions
+    description: Formatted list of available actions the agent can take
