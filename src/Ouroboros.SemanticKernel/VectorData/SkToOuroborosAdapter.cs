@@ -79,9 +79,8 @@ internal sealed class SkToOuroborosAdapter : IAdvancedVectorStore
     /// <inheritdoc />
     public IEnumerable<Vector> GetAll()
     {
-        // SK collections do not provide a synchronous GetAll; return empty.
-        // Callers should prefer the async search methods.
-        return [];
+        throw new NotSupportedException(
+            "SK VectorStore does not support synchronous GetAll. Use SearchWithFilterAsync instead.");
     }
 
     /// <inheritdoc />
