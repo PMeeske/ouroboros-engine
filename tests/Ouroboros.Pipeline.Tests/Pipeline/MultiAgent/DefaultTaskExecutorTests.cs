@@ -17,8 +17,12 @@ public sealed class DefaultTaskExecutorTests
 
     private static AgentState CreateAgentState(string name = "TestAgent")
     {
-        var identity = new AgentIdentity(Guid.NewGuid(), name, AgentRole.Worker, ImmutableList<AgentCapability>.Empty);
-        return AgentState.Create(identity);
+        var identity = new AgentIdentity(
+            Guid.NewGuid(), name, AgentRole.Worker,
+            ImmutableList<AgentCapability>.Empty,
+            ImmutableDictionary<string, object>.Empty,
+            DateTime.UtcNow);
+        return AgentState.ForAgent(identity);
     }
 
     private static AgentTask CreateTask(string description = "Test task")
