@@ -73,7 +73,7 @@ jobs:
     name: Coverage Badge
     needs: [test]
     if: always() && needs.test.result == 'success'
-    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-coverage-badge.yml@main
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-coverage-badge.yml@develop
     with:
       coverage-percentage: ${{ needs.test.outputs.coverage-percentage }}
       tests-passed: ${{ needs.test.outputs.tests-passed }}
