@@ -1,3 +1,7 @@
+// <copyright file="SemanticKernelServiceExtensions.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
+// </copyright>
+
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

@@ -287,14 +287,14 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
             IsConnected: _isInitialized);
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _syncLock.Dispose();
         if (_disposeClient)
         {
             _client.Dispose();
         }
-        await Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     /// <summary>

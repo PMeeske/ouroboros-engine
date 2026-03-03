@@ -1,3 +1,7 @@
+// <copyright file="OuroborosAutoFunctionFilter.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
+// </copyright>
+
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;

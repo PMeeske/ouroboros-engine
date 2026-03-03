@@ -293,7 +293,7 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
     }
 
     /// <inheritdoc/>
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         if (!_disposed)
         {
@@ -305,6 +305,6 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
             _disposed = true;
         }
 
-        await Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 }

@@ -39,6 +39,8 @@ internal sealed class SkToOuroborosAdapter : IAdvancedVectorStore
     /// <inheritdoc />
     public async Task AddAsync(IEnumerable<Vector> vectors, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(vectors);
+
         var collection = GetCollection();
         await collection.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
 
@@ -52,6 +54,9 @@ internal sealed class SkToOuroborosAdapter : IAdvancedVectorStore
         int amount = 5,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(embedding);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount);
+
         var collection = GetCollection();
         var results = new List<Document>();
 
@@ -91,8 +96,14 @@ internal sealed class SkToOuroborosAdapter : IAdvancedVectorStore
         float? scoreThreshold = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(embedding);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount);
+
         var collection = GetCollection();
         var options = new VectorSearchOptions<VectorStoreDocumentRecord>();
+
+        // Note: SK VectorStore abstraction does not support metadata filtering.
+        // The filter parameter is accepted for interface compatibility but not applied.
 
         // Apply score threshold via client-side filtering after retrieval,
         // since the base VectorSearchOptions does not expose a threshold parameter.
@@ -138,6 +149,9 @@ internal sealed class SkToOuroborosAdapter : IAdvancedVectorStore
         int amount = 5,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(embeddings);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(amount);
+
         // Implement as sequential searches since SK has no batch search.
         return BatchSearchCoreAsync(embeddings, amount, cancellationToken);
     }
@@ -156,6 +170,8 @@ internal sealed class SkToOuroborosAdapter : IAdvancedVectorStore
     /// <inheritdoc />
     public async Task DeleteByIdAsync(IEnumerable<string> ids, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(ids);
+
         var collection = GetCollection();
         await collection.DeleteAsync(ids, cancellationToken).ConfigureAwait(false);
     }
