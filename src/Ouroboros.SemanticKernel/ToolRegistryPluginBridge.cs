@@ -32,8 +32,11 @@ public static class ToolRegistryPluginBridge
 
     private static KernelFunction CreateKernelFunction(ITool tool)
     {
+        // CreateFromMethod infers parameter metadata from the delegate signature.
+        // Add [Description] to the input parameter so SK's function-calling schema
+        // includes a meaningful description for the LLM.
         return KernelFunctionFactory.CreateFromMethod(
-            async (string input, CancellationToken ct) =>
+            async ([Description("The input to pass to the tool")] string input, CancellationToken ct) =>
             {
                 var result = await tool.InvokeAsync(input, ct).ConfigureAwait(false);
                 return result.IsSuccess ? result.Value : $"Error: {result.Error}";

@@ -1,5 +1,5 @@
-// <copyright file="VectorStoreDocumentRecord.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="VectorStoreDocumentRecord.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using LangChain.Databases;

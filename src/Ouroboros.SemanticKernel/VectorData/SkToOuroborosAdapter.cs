@@ -1,5 +1,5 @@
-// <copyright file="SkToOuroborosAdapter.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="SkToOuroborosAdapter.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using System.Runtime.CompilerServices;
@@ -174,7 +174,10 @@ internal sealed class SkToOuroborosAdapter : IAdvancedVectorStore
 
         return new VectorStoreInfo(
             Name: _collectionName,
-            VectorCount: 0, // Not available from the base abstraction.
+            // VectorCount is not available from the SK abstraction; 0 does not imply an empty
+            // collection -- it signals "unknown" because VectorStoreInfo.VectorCount is ulong
+            // and cannot represent a sentinel like -1.
+            VectorCount: 0,
             VectorDimension: _vectorDimension,
             Status: exists ? "ready" : "not_found");
     }

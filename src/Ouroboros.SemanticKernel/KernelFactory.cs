@@ -61,9 +61,8 @@ public static class KernelFactory
     {
         var builder = Kernel.CreateBuilder();
 
-        // Register IChatClient as the chat completion backing via SK's MEAI bridge.
-        // SK 1.x discovers IChatClient and wraps it as IChatCompletionService internally.
-        builder.Services.AddSingleton(chatClient);
+        // Register IChatClient via SK's MEAI bridge extension, which handles both
+        // the singleton registration and the IChatClientBuilder pipeline internally.
         builder.Services.AddChatClient(chatClient);
 
         if (tools is { Count: > 0 })
