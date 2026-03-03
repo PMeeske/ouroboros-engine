@@ -1,0 +1,29 @@
+name: Improve
+description: Prompt template for the improvement/refinement reasoning phase
+template: |
+  Available tools (JSON Schema):
+  {tools_schemas}
+
+  Context:
+  {context}
+
+  Draft:
+  {draft}
+
+  Critique:
+  {critique}
+
+  Task:
+  Refine the draft of '{topic}' into FINAL_SPEC.
+  - Address all gaps/issues
+  - Add examples
+  - Include migration risks
+  - End with a short [CHANGELOG]
+  Tools allowed if helpful.
+template_format: semantic-kernel
+input_variables:
+  - tools_schemas
+  - context
+  - draft
+  - critique
+  - topic

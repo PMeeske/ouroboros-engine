@@ -35,6 +35,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Prompts\**\*.yaml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="MeTTa\Schemas\**\*.metta" CopyToOutputDirectory="PreserveNewest" Pack="true" PackagePath="contentFiles\any\any\MeTTa\Schemas">
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>

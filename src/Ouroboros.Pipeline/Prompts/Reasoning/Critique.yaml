@@ -1,0 +1,24 @@
+name: Critique
+description: Prompt template for the critique reasoning phase
+template: |
+  Available tools (JSON Schema):
+  {tools_schemas}
+
+  Context:
+  {context}
+
+  Draft:
+  {draft}
+
+  Task:
+  Critique the draft of '{topic}'.
+  - Identify [MAJOR_GAPS]
+  - Identify [MINOR_ISSUES]
+  - Identify [UNSUPPORTED_CLAIMS]
+  Use tools if needed (e.g. [TOOL:math (3*7)+1], [TOOL:search {"q":"edge cases"}]).
+template_format: semantic-kernel
+input_variables:
+  - tools_schemas
+  - context
+  - draft
+  - topic

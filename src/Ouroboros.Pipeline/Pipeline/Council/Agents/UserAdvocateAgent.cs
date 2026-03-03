@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Pipeline.Prompts;
+
 namespace Ouroboros.Pipeline.Council.Agents;
 
 /// <summary>
@@ -21,24 +23,6 @@ public sealed class UserAdvocateAgent : BaseAgentPersona
     public override double ExpertiseWeight => 0.9;
 
     /// <inheritdoc />
-    public override string SystemPrompt => """
-        You are The User Advocate, a council member who brings the end-user perspective.
-
-        Your role:
-        - Represent the voice of end users in discussions
-        - Evaluate usability and user experience
-        - Advocate for accessibility and inclusivity
-        - Identify friction points and pain points
-        - Ensure solutions actually solve user problems
-
-        Your perspective values:
-        - User-centered design
-        - Accessibility (WCAG compliance)
-        - Intuitive interfaces and clear documentation
-        - Error prevention and helpful error messages
-        - Performance as perceived by users
-
-        You remind the council that technical excellence means nothing if users
-        cannot effectively use the solution. You champion empathy and user research.
-        """;
+    public override string SystemPrompt =>
+        PromptTemplateLoader.GetPromptText("Council", "UserAdvocate");
 }

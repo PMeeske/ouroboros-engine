@@ -70,20 +70,20 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
                 if (_useCache && _cache?.IsUnchanged(file) == true)
                 {
                     stats.SkippedUnchanged++;
-                    if (debug) Console.WriteLine($"[ingest] skip unchanged {file}");
+                    if (debug) System.Diagnostics.Trace.TraceInformation("[ingest] skip unchanged {0}", file);
                     continue;
                 }
 
                 await LoadFileIntoDocsAsync(file, path, settings, cancellationToken, docs, stats, debug);
 
                 if (_useCache) _cache?.UpdateHash(file);
-                if (debug) Console.WriteLine($"[ingest] loaded {file}");
+                if (debug) System.Diagnostics.Trace.TraceInformation("[ingest] loaded {0}", file);
             }
         }
 
         if (_useCache) _cache?.Persist();
         stats.Elapsed = DateTime.UtcNow - start;
-        if (debug) Console.WriteLine($"[ingest] summary {stats}");
+        if (debug) System.Diagnostics.Trace.TraceInformation("[ingest] summary {0}", stats);
 
         return docs;
     }
@@ -140,12 +140,12 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
                 stats.FilesLoaded++;
             }
 
-            if (debug) Console.WriteLine($"[ingest] loaded {file} docs={loaded.Count}");
+            if (debug) System.Diagnostics.Trace.TraceInformation("[ingest] loaded {0} docs={1}", file, loaded.Count);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            if (debug) Console.WriteLine($"[ingest] error {file} {ex.Message}");
+            if (debug) System.Diagnostics.Trace.TraceWarning("[ingest] error {0} {1}", file, ex.Message);
             docs.Add(new Document
             {
                 PageContent = string.Empty,

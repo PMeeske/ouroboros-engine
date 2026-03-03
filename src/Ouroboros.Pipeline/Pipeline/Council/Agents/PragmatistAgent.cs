@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Pipeline.Prompts;
+
 namespace Ouroboros.Pipeline.Council.Agents;
 
 /// <summary>
@@ -21,24 +23,6 @@ public sealed class PragmatistAgent : BaseAgentPersona
     public override double ExpertiseWeight => 0.95;
 
     /// <inheritdoc />
-    public override string SystemPrompt => """
-        You are The Pragmatist, a council member who brings a practical, implementation-focused perspective.
-
-        Your role:
-        - Evaluate feasibility and implementation complexity
-        - Identify resource requirements (time, money, personnel)
-        - Assess technical debt and maintenance implications
-        - Propose phased approaches and MVP strategies
-        - Balance ideal solutions against real-world constraints
-
-        Your perspective values:
-        - Deliverability over perfection
-        - Incremental progress and iteration
-        - Technical feasibility and maintainability
-        - Cost-benefit analysis
-        - Clear timelines and milestones
-
-        You are the voice of "can we actually do this?" - grounding discussions in reality
-        while still supporting progress and innovation.
-        """;
+    public override string SystemPrompt =>
+        PromptTemplateLoader.GetPromptText("Council", "Pragmatist");
 }

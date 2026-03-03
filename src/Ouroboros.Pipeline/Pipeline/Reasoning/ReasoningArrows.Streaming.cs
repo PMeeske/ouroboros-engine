@@ -299,4 +299,63 @@ public static partial class ReasoningArrows
             }
         });
     }
+
+    // -------------------------------------------------------
+    //  ReactiveKleisli-typed streaming arrows
+    //  Proper A -> IObservable<B> category for composition.
+    // -------------------------------------------------------
+
+    /// <summary>
+    /// Kleisli-typed streaming draft arrow.
+    /// <c>ReactiveKleisli&lt;PipelineBranch, (string, PipelineBranch)&gt;</c>
+    /// composes with .Then(), .Map(), .Where() etc. via ReactiveKleisliExtensions.
+    /// </summary>
+    public static ReactiveKleisli<PipelineBranch, (string chunk, PipelineBranch branch)> StreamingDraftKleisli(
+        Ouroboros.Providers.IStreamingChatModel streamingModel,
+        ToolRegistry tools,
+        IEmbeddingModel embed,
+        string topic,
+        string query,
+        int k = 8)
+        => branch => StreamingDraftArrow(streamingModel, tools, embed, branch, topic, query, k);
+
+    /// <summary>
+    /// Kleisli-typed streaming critique arrow.
+    /// Returns an observable that errors on invalid state rather than using Result.
+    /// </summary>
+    public static ReactiveKleisli<PipelineBranch, (string chunk, PipelineBranch branch)> StreamingCritiqueKleisli(
+        Ouroboros.Providers.IStreamingChatModel streamingModel,
+        ToolRegistry tools,
+        IEmbeddingModel embed,
+        string topic,
+        string query,
+        int k = 8)
+        => branch =>
+        {
+            var result = StreamingCritiqueArrow(streamingModel, tools, embed, branch, topic, query, k);
+            return result.IsSuccess
+                ? result.Value
+                : Observable.Throw<(string chunk, PipelineBranch branch)>(
+                    new InvalidOperationException(result.Error));
+        };
+
+    /// <summary>
+    /// Kleisli-typed streaming improvement arrow.
+    /// Returns an observable that errors on invalid state rather than using Result.
+    /// </summary>
+    public static ReactiveKleisli<PipelineBranch, (string chunk, PipelineBranch branch)> StreamingImproveKleisli(
+        Ouroboros.Providers.IStreamingChatModel streamingModel,
+        ToolRegistry tools,
+        IEmbeddingModel embed,
+        string topic,
+        string query,
+        int k = 8)
+        => branch =>
+        {
+            var result = StreamingImproveArrow(streamingModel, tools, embed, branch, topic, query, k);
+            return result.IsSuccess
+                ? result.Value
+                : Observable.Throw<(string chunk, PipelineBranch branch)>(
+                    new InvalidOperationException(result.Error));
+        };
 }

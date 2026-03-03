@@ -119,6 +119,18 @@ public static class ServiceCollectionExtensions
                 : new EmbeddingModelGeneratorAdapter(model);
         });
 
+        // Reverse bridge: when IEmbeddingGenerator is registered externally
+        // (e.g. via Semantic Kernel or MEAI) but no IEmbeddingModel exists,
+        // wrap the generator so legacy consumers still resolve.
+        services.TryAddSingleton<IEmbeddingModel>(sp =>
+        {
+            var generator = sp.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
+            // Unwrap if the generator is already our forward adapter (avoid double-wrapping)
+            if (generator.GetService(typeof(IEmbeddingModel)) is IEmbeddingModel inner)
+                return inner;
+            return new EmbeddingGeneratorModelAdapter(generator);
+        });
+
         services.TryAddSingleton<Ouroboros.Abstractions.Core.IOuroborosChatClient>(sp =>
         {
             var model = sp.GetRequiredService<Ouroboros.Abstractions.Core.IChatCompletionModel>();
