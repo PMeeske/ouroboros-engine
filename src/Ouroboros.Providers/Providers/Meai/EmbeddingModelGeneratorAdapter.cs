@@ -1,3 +1,7 @@
+// <copyright file="EmbeddingModelGeneratorAdapter.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
+// </copyright>
+
 using Microsoft.Extensions.AI;
 using IEmbeddingModel = Ouroboros.Domain.IEmbeddingModel;
 

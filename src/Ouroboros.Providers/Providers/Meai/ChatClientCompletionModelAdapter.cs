@@ -1,3 +1,7 @@
+// <copyright file="ChatClientCompletionModelAdapter.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
+// </copyright>
+
 using Microsoft.Extensions.AI;
 using Ouroboros.Abstractions.Core;
 

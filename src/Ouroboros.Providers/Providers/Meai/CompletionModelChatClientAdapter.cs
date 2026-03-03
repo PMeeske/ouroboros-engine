@@ -1,3 +1,7 @@
+// <copyright file="CompletionModelChatClientAdapter.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
+// </copyright>
+
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using Microsoft.Extensions.AI;
