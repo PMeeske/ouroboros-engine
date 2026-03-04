@@ -248,4 +248,77 @@ public class TtsFallbackTests
             ? primaryResult
             : Result<SpeechResult, string>.Failure("No TTS result");
     }
+
+    /// <summary>
+    /// Verifies that the Edge TTS Jenny fallback is invoked when Azure TTS circuit breaker is open.
+    /// </summary>
+    [Fact]
+    public async Task WhenAzureCircuitBreakerOpen_ShouldFallbackToEdgeTtsJenny()
+    {
+        // Arrange
+        var primaryTts = new Mock<ITextToSpeechService>();
+        var edgeFallback = new Mock<ITextToSpeechService>();
+
+        primaryTts
+            .Setup(x => x.SynthesizeAsync(It.IsAny<string>(), It.IsAny<TextToSpeechOptions?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<SpeechResult, string>.Failure(
+                "Circuit breaker is open: Azure TTS disabled for 60s due to rate limiting"));
+
+        edgeFallback
+            .Setup(x => x.SynthesizeAsync(It.IsAny<string>(), It.IsAny<TextToSpeechOptions?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<SpeechResult, string>.Success(
+                new SpeechResult(new byte[] { 0x01, 0x02 }, "mp3", 1.0)));
+
+        // Act
+        var result = await SynthesizeWithFallback(primaryTts.Object, edgeFallback.Object, "Hello world");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue("Edge TTS Jenny fallback should succeed when Azure circuit is open");
+        edgeFallback.Verify(
+            x => x.SynthesizeAsync(It.IsAny<string>(), It.IsAny<TextToSpeechOptions?>(), It.IsAny<CancellationToken>()),
+            Times.Once,
+            "Edge TTS Jenny should be called exactly once as fallback");
+    }
+
+    /// <summary>
+    /// Verifies that Edge TTS Jenny fallback is invoked on general Azure TTS exceptions (crash scenario).
+    /// </summary>
+    [Fact]
+    public async Task WhenAzureTtsCrashes_ShouldFallbackToEdgeTtsJenny()
+    {
+        // Arrange
+        var primaryTts = new Mock<ITextToSpeechService>();
+        var edgeFallback = new Mock<ITextToSpeechService>();
+
+        primaryTts
+            .Setup(x => x.SynthesizeAsync(It.IsAny<string>(), It.IsAny<TextToSpeechOptions?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Azure Speech SDK crashed unexpectedly"));
+
+        edgeFallback
+            .Setup(x => x.SynthesizeAsync(It.IsAny<string>(), It.IsAny<TextToSpeechOptions?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<SpeechResult, string>.Success(
+                new SpeechResult(new byte[] { 0xFF, 0xFB, 0x90 }, "mp3", 2.5)));
+
+        // Act
+        var result = await SynthesizeWithFallback(primaryTts.Object, edgeFallback.Object, "Testing fallback on crash");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue("Edge TTS Jenny fallback should succeed when Azure crashes");
+        result.Value.Format.Should().Be("mp3");
+        edgeFallback.Verify(
+            x => x.SynthesizeAsync(It.IsAny<string>(), It.IsAny<TextToSpeechOptions?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Verifies that EdgeTtsService.Voices.JennyNeural matches the expected voice constant.
+    /// </summary>
+    [Fact]
+    public void EdgeTtsJennyVoice_ShouldBeCorrectVoiceName()
+    {
+        // Assert — documents the exact voice name used as fallback
+        EdgeTtsService.Voices.JennyNeural.Should().Be("en-US-JennyNeural");
+        EdgeTtsService.Voices.Default.Should().Be(EdgeTtsService.Voices.JennyNeural,
+            "Jenny should be the default Edge TTS voice used for fallback");
+    }
 }

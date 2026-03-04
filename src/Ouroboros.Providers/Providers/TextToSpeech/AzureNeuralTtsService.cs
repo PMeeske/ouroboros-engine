@@ -29,6 +29,12 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     private SpeechConfig? _config;
     private bool _disposed;
 
+    // Lazy Edge TTS fallback (Jenny voice) — shared across all Azure TTS instances.
+    // Activated only when the Azure circuit breaker opens or Azure TTS throws.
+    private static readonly Lazy<EdgeTtsService> EdgeTtsFallback = new(
+        () => new EdgeTtsService(EdgeTtsService.Voices.JennyNeural),
+        LazyThreadSafetyMode.ExecutionAndPublication);
+
     // Circuit breaker state - shared across all instances for global rate limit protection
     private static readonly ResiliencePipeline CircuitBreakerPipeline = new ResiliencePipelineBuilder()
         .AddCircuitBreaker(new CircuitBreakerStrategyOptions
@@ -353,16 +359,19 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         }
         catch (BrokenCircuitException)
         {
-            Console.Error.WriteLine("[TTS] Circuit open -- speech temporarily disabled");
+            System.Diagnostics.Trace.TraceWarning("[TTS] Circuit open -- falling back to Edge TTS Jenny");
+            await FallbackSpeakWithEdgeTtsAsync(text, ct).ConfigureAwait(false);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("Rate limited"))
         {
-            Console.Error.WriteLine("[TTS] Rate limit (429) -- skipping speech");
+            System.Diagnostics.Trace.TraceWarning("[TTS] Rate limit (429) -- falling back to Edge TTS Jenny");
+            await FallbackSpeakWithEdgeTtsAsync(text, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[TTS] {ex.GetType().Name}: {ex.Message} -- skipping speech");
+            System.Diagnostics.Trace.TraceWarning("[TTS] {0}: {1} -- falling back to Edge TTS Jenny", ex.GetType().Name, ex.Message);
+            await FallbackSpeakWithEdgeTtsAsync(text, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -405,15 +414,18 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
             if (result.Reason == ResultReason.Canceled)
             {
                 var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                return Result<SpeechResult, string>.Failure($"Speech synthesis canceled: {cancellation.ErrorDetails}");
+                System.Diagnostics.Trace.TraceWarning("[Azure TTS] Canceled: {0} -- falling back to Edge TTS Jenny", cancellation.ErrorDetails);
+                return await FallbackSynthesizeWithEdgeTtsAsync(text, options, ct).ConfigureAwait(false);
             }
 
-            return Result<SpeechResult, string>.Failure("Speech synthesis failed");
+            System.Diagnostics.Trace.TraceWarning("[Azure TTS] Synthesis failed -- falling back to Edge TTS Jenny");
+            return await FallbackSynthesizeWithEdgeTtsAsync(text, options, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return Result<SpeechResult, string>.Failure($"Azure TTS error: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning("[Azure TTS] {0}: {1} -- falling back to Edge TTS Jenny", ex.GetType().Name, ex.Message);
+            return await FallbackSynthesizeWithEdgeTtsAsync(text, options, ct).ConfigureAwait(false);
         }
     }
 
@@ -461,5 +473,51 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         _synthesizer?.Dispose();
         _synthesizer = null;
         _speechLock.Dispose();
+    }
+
+    /// <summary>
+    /// Falls back to Edge TTS (Jenny voice) for direct speaker output.
+    /// Synthesizes audio via Edge TTS, then plays it through <see cref="AudioPlayer"/>.
+    /// </summary>
+    private static async Task FallbackSpeakWithEdgeTtsAsync(string text, CancellationToken ct)
+    {
+        try
+        {
+            var edgeResult = await EdgeTtsFallback.Value.SynthesizeAsync(text, null, ct).ConfigureAwait(false);
+            if (edgeResult.IsSuccess)
+            {
+                await AudioPlayer.PlayAsync(edgeResult.Value, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                System.Diagnostics.Trace.TraceWarning("[TTS] Edge TTS fallback also failed: {0}", edgeResult.Error);
+            }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.TraceWarning("[TTS] Edge TTS fallback error: {0}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Falls back to Edge TTS (Jenny voice) for audio synthesis.
+    /// Returns the Edge TTS result, or a failure if both services are unavailable.
+    /// </summary>
+    private static async Task<Result<SpeechResult, string>> FallbackSynthesizeWithEdgeTtsAsync(
+        string text,
+        TextToSpeechOptions? options,
+        CancellationToken ct)
+    {
+        try
+        {
+            return await EdgeTtsFallback.Value.SynthesizeAsync(text, options, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            return Result<SpeechResult, string>.Failure(
+                $"Both Azure TTS and Edge TTS fallback failed: {ex.Message}");
+        }
     }
 }
