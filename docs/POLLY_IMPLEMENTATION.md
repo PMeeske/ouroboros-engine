@@ -204,11 +204,12 @@ The retry policy can be customized by modifying the policy configuration in each
 
 Potential improvements for future consideration:
 
-1. **Circuit Breaker**: Add circuit breaker pattern for failing endpoints
+1. ~~**Circuit Breaker**: Add circuit breaker pattern for failing endpoints~~ ✅ Implemented in `AzureNeuralTtsService`
 2. **Jitter**: Add randomization to backoff to prevent thundering herd
 3. **Configuration**: Move retry settings to appsettings.json
 4. **Metrics**: Add telemetry for retry statistics
 5. **Per-Endpoint Policies**: Different policies for different endpoint types
+6. ~~**TTS Fallback**: Add Edge TTS as fallback when Azure TTS is unavailable~~ ✅ Implemented — Edge TTS Jenny (`en-US-JennyNeural`) activates automatically when Azure TTS circuit breaker opens or synthesis crashes
 
 ## References
 
