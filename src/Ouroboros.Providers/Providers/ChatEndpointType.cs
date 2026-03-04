@@ -80,5 +80,13 @@ public enum ChatEndpointType
     /// <summary>
     /// HuggingFace Inference API
     /// </summary>
-    HuggingFace
+    HuggingFace,
+    /// <summary>
+    /// Claude CLI (pipe through 'claude' command-line tool)
+    /// </summary>
+    ClaudeCli,
+    /// <summary>
+    /// Generic CLI provider (pipe through an external CLI tool)
+    /// </summary>
+    CliProvider
 }
