@@ -274,6 +274,10 @@ public class TtsFallbackTests
 
         // Assert
         result.IsSuccess.Should().BeTrue("Edge TTS Jenny fallback should succeed when Azure circuit is open");
+        primaryTts.Verify(
+            x => x.SynthesizeAsync(It.IsAny<string>(), It.IsAny<TextToSpeechOptions?>(), It.IsAny<CancellationToken>()),
+            Times.Once,
+            "Primary Azure TTS should be attempted exactly once before fallback");
         edgeFallback.Verify(
             x => x.SynthesizeAsync(It.IsAny<string>(), It.IsAny<TextToSpeechOptions?>(), It.IsAny<CancellationToken>()),
             Times.Once,
@@ -305,6 +309,10 @@ public class TtsFallbackTests
         // Assert
         result.IsSuccess.Should().BeTrue("Edge TTS Jenny fallback should succeed when Azure crashes");
         result.Value.Format.Should().Be("mp3");
+        primaryTts.Verify(
+            x => x.SynthesizeAsync(It.IsAny<string>(), It.IsAny<TextToSpeechOptions?>(), It.IsAny<CancellationToken>()),
+            Times.Once,
+            "Primary Azure TTS should be attempted before the crash triggers fallback");
         edgeFallback.Verify(
             x => x.SynthesizeAsync(It.IsAny<string>(), It.IsAny<TextToSpeechOptions?>(), It.IsAny<CancellationToken>()),
             Times.Once);
