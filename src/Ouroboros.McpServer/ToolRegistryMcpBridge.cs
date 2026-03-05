@@ -82,11 +82,14 @@ public static class ToolRegistryMcpBridge
             : McpToolResult.Error(result.Error);
     }
 
-    private static JsonElement? ParseSchema(string? jsonSchema)
+    private static readonly JsonElement EmptyObjectSchema =
+        JsonSerializer.Deserialize<JsonElement>("""{"type":"object","properties":{}}""");
+
+    private static JsonElement ParseSchema(string? jsonSchema)
     {
         if (string.IsNullOrWhiteSpace(jsonSchema))
         {
-            return null;
+            return EmptyObjectSchema;
         }
 
         try
@@ -95,7 +98,7 @@ public static class ToolRegistryMcpBridge
         }
         catch (JsonException)
         {
-            return null;
+            return EmptyObjectSchema;
         }
     }
 }

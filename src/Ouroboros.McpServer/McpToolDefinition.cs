@@ -25,5 +25,5 @@ public sealed class McpToolDefinition
     /// <summary>
     /// Gets the JSON Schema describing the tool's input parameters.
     /// </summary>
-    public JsonElement? InputSchema { get; init; }
+    public JsonElement InputSchema { get; init; }
 }
