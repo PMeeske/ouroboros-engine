@@ -4,6 +4,7 @@
 // ==========================================================
 
 using System.Collections.Concurrent;
+using Ouroboros.Agent.Cognition.Planning;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -18,18 +19,24 @@ public sealed partial class GoalHierarchy : IGoalHierarchy
     private readonly ISafetyGuard _safety;
     private readonly Core.Ethics.IEthicsFramework _ethics;
     private readonly GoalHierarchyConfig _config;
+    private readonly IGoalSplitter? _goalSplitter;
+    private readonly ISelfModificationGovernor? _governor;
 
     public GoalHierarchy(
         Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ISafetyGuard safety,
         Core.Ethics.IEthicsFramework ethics,
-        GoalHierarchyConfig? config = null)
+        GoalHierarchyConfig? config = null,
+        IGoalSplitter? goalSplitter = null,
+        ISelfModificationGovernor? governor = null)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
         _ = _safety;
         _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
         _config = config ?? new GoalHierarchyConfig();
+        _goalSplitter = goalSplitter;
+        _governor = governor;
     }
 
     /// <summary>
@@ -101,6 +108,31 @@ public sealed partial class GoalHierarchy : IGoalHierarchy
                     $"Goal requires human approval before acceptance: {ethicsResult.Value.Reasoning}");
             }
 
+            // Self-modification governance gate
+            if (_governor is not null && IsSelfModificationGoal(goal))
+            {
+                var modRequest = new Core.Ethics.SelfModificationRequest
+                {
+                    Type = Core.Ethics.ModificationType.GoalModification,
+                    Description = goal.Description,
+                    Justification = $"Goal of type {goal.Type} with priority {goal.Priority}",
+                    ActionContext = context,
+                    ExpectedImprovements = goal.Constraints.TryGetValue("expectedImprovements", out var improvements)
+                        ? [improvements.ToString()!] : [],
+                    PotentialRisks = goal.Constraints.TryGetValue("potentialRisks", out var risks)
+                        ? [risks.ToString()!] : [],
+                    IsReversible = !goal.Constraints.ContainsKey("irreversible"),
+                    ImpactLevel = goal.Priority
+                };
+
+                var govResult = await _governor.ProposeAsync(modRequest, ct);
+                if (govResult.IsFailure)
+                    return Result<Goal, string>.Failure(govResult.Error);
+                if (!govResult.Value.IsApproved)
+                    return Result<Goal, string>.Failure(
+                        $"Self-modification governance denied: {govResult.Value.Reasoning}");
+            }
+
             // Add goal to hierarchy
             _goals[goal.Id] = goal;
 
@@ -155,28 +187,29 @@ public sealed partial class GoalHierarchy : IGoalHierarchy
 
         try
         {
-            // Use LLM to decompose the goal
-            string prompt = $@"Decompose this goal into {_config.MaxSubgoalsPerGoal} or fewer specific, actionable subgoals:
+            List<Goal> subgoals;
 
-GOAL: {goal.Description}
-TYPE: {goal.Type}
-PRIORITY: {goal.Priority}
-
-Provide {_config.MaxSubgoalsPerGoal} or fewer subgoals that together accomplish the main goal.
-For each subgoal, specify:
-- Description (one clear sentence)
-- Type (Primary/Secondary/Instrumental/Safety)
-- Priority (0.0-1.0)
-
-Format:
-SUBGOAL 1: [description]
-TYPE: [type]
-PRIORITY: [0-1]
-
-SUBGOAL 2: ...";
-
-            string response = await _llm.GenerateTextAsync(prompt, ct);
-            List<Goal> subgoals = ParseSubgoals(response, goal);
+            // Prefer Hypergrid-aware GoalSplitter (PEV pattern) when available
+            if (_goalSplitter is not null)
+            {
+                var hypergridContext = HypergridContext.Default;
+                var splitResult = await _goalSplitter.SplitAsync(goal, hypergridContext, ct);
+                if (splitResult.IsSuccess)
+                {
+                    subgoals = splitResult.Value.Steps
+                        .Select(step => step.ToGoal(goal))
+                        .ToList();
+                }
+                else
+                {
+                    // Fallback to raw LLM decomposition if splitter fails
+                    subgoals = await DecomposeViaLlmAsync(goal, ct);
+                }
+            }
+            else
+            {
+                subgoals = await DecomposeViaLlmAsync(goal, ct);
+            }
 
             // Recursively decompose subgoals if needed
             List<Goal> decomposedSubgoals = new List<Goal>();
@@ -203,6 +236,31 @@ SUBGOAL 2: ...";
         {
             return Result<Goal, string>.Failure($"Goal decomposition failed: {ex.Message}");
         }
+    }
+
+    private async Task<List<Goal>> DecomposeViaLlmAsync(Goal goal, CancellationToken ct)
+    {
+        string prompt = $@"Decompose this goal into {_config.MaxSubgoalsPerGoal} or fewer specific, actionable subgoals:
+
+GOAL: {goal.Description}
+TYPE: {goal.Type}
+PRIORITY: {goal.Priority}
+
+Provide {_config.MaxSubgoalsPerGoal} or fewer subgoals that together accomplish the main goal.
+For each subgoal, specify:
+- Description (one clear sentence)
+- Type (Primary/Secondary/Instrumental/Safety)
+- Priority (0.0-1.0)
+
+Format:
+SUBGOAL 1: [description]
+TYPE: [type]
+PRIORITY: [0-1]
+
+SUBGOAL 2: ...";
+
+        string response = await _llm.GenerateTextAsync(prompt, ct);
+        return ParseSubgoals(response, goal);
     }
 
     /// <summary>
@@ -388,5 +446,10 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
         await Task.CompletedTask;
         return prioritized;
     }
+
+    private static bool IsSelfModificationGoal(Goal goal) =>
+        goal.Constraints.ContainsKey("selfModification")
+        || goal.Description.Contains("self-modif", StringComparison.OrdinalIgnoreCase)
+        || goal.Description.Contains("self-improv", StringComparison.OrdinalIgnoreCase);
 
 }
