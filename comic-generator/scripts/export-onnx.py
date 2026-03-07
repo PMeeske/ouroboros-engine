@@ -5,13 +5,13 @@ Optimized for DirectML inference on AMD GPUs (ASUS ROG Ally).
 
 Usage:
     python export-onnx.py \
-        --model_path C:\ComfyUI\models\checkpoints\anything-v5 \
-        --output_path C:\ComfyUI\models\onnx\anything-v5 \
+        --model_path D:\ComfyUI_windows_portable_amd\ComfyUI_windows_portable\ComfyUI\models\checkpoints\anything-v5 \
+        --output_path D:\ComfyUI_windows_portable_amd\ComfyUI_windows_portable\ComfyUI\models\onnx\anything-v5 \
         --dtype float16
 
     python export-onnx.py \
-        --model_path C:\ComfyUI\models\checkpoints\anything-v5 \
-        --output_path C:\ComfyUI\models\onnx\anything-v5 \
+        --model_path D:\ComfyUI_windows_portable_amd\ComfyUI_windows_portable\ComfyUI\models\checkpoints\anything-v5 \
+        --output_path D:\ComfyUI_windows_portable_amd\ComfyUI_windows_portable\ComfyUI\models\onnx\anything-v5 \
         --dtype float32 \
         --opset 17
 """

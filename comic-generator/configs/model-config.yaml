@@ -1,7 +1,7 @@
 # Model Configuration — Comic Strip Generator
 #
-# Paths are relative to C:\ComfyUI\models\ unless absolute.
-# All models are SD 1.5 based to stay within ROG Ally VRAM limits.
+# Paths are relative to D:\ComfyUI_windows_portable_amd\ComfyUI_windows_portable\ComfyUI\models\
+# All models are SD 1.5 based for AMD DirectML compatibility.
 
 # === Base Models ===
 # Use ONE of these as the checkpoint in the workflow.

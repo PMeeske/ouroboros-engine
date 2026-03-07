@@ -3,17 +3,21 @@
 
 $ErrorActionPreference = "Stop"
 
-$COMFYUI_DIR = "C:\ComfyUI"
-$VENV_DIR = "$COMFYUI_DIR\venv"
+$COMFYUI_ROOT = "D:\ComfyUI_windows_portable_amd\ComfyUI_windows_portable"
+$COMFYUI_DIR  = "$COMFYUI_ROOT\ComfyUI"
+$PYTHON_EXE   = "$COMFYUI_ROOT\python_embeded\python.exe"
 
-# Activate virtual environment
-& "$VENV_DIR\Scripts\Activate.ps1"
+if (-not (Test-Path $PYTHON_EXE)) {
+    Write-Host "ERROR: ComfyUI portable not found at $COMFYUI_ROOT" -ForegroundColor Red
+    exit 1
+}
 
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host " Starting ComfyUI — AMD DirectML Mode" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Configuration:" -ForegroundColor Yellow
+Write-Host "  Install:     $COMFYUI_ROOT" -ForegroundColor White
 Write-Host "  Backend:     DirectML (AMD RDNA 3)" -ForegroundColor White
 Write-Host "  VRAM Mode:   Low VRAM" -ForegroundColor White
 Write-Host "  Preview:     Auto" -ForegroundColor White
@@ -24,13 +28,10 @@ Write-Host ""
 $env:PYTORCH_DIRECTML_ENABLE_GRAPH_CAPTURE = "1"
 $env:ONNXRUNTIME_DML_GRAPH_CAPTURE = "1"
 
-# Launch ComfyUI with optimized flags:
-#   --directml          : Use DirectML backend instead of CUDA
-#   --lowvram           : Aggressive VRAM management (offload to RAM when needed)
-#   --preview-method auto : Enable live preview during generation
-#   --dont-print-server : Reduce console noise
+# Launch ComfyUI with optimized flags
 Push-Location $COMFYUI_DIR
-python main.py `
+& $PYTHON_EXE -s main.py `
+    --windows-standalone-build `
     --directml `
     --lowvram `
     --preview-method auto `
