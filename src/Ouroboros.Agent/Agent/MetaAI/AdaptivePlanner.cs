@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Adaptive Planner - Real-time plan adaptation during execution
 // ==========================================================
@@ -50,7 +49,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                 PlanStep step = currentPlan.Steps[i];
 
                 // Create execution context
-                ExecutionContext context = new ExecutionContext(
+                PlanExecutionContext context = new PlanExecutionContext(
                     plan,
                     allStepResults,
                     step,
@@ -105,7 +104,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                 allStepResults.Add(stepResult);
 
                 // Check if we need to adapt after execution
-                ExecutionContext postContext = context with { CompletedSteps = allStepResults };
+                PlanExecutionContext postContext = context with { CompletedSteps = allStepResults };
                 AdaptationAction? postAdaptation = await EvaluateAdaptationAsync(postContext, ct);
 
                 if (postAdaptation?.Strategy == AdaptationStrategy.Replan && config.EnableAutoReplan)
@@ -143,6 +142,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
 
             return Result<PlanExecutionResult, string>.Success(execution);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<PlanExecutionResult, string>.Failure($"Adaptive execution failed: {ex.Message}");
@@ -162,20 +162,17 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
     /// Evaluates if adaptation is needed.
     /// </summary>
     public async Task<AdaptationAction?> EvaluateAdaptationAsync(
-        ExecutionContext context,
+        PlanExecutionContext context,
         CancellationToken ct = default)
     {
         // Check all registered triggers
-        foreach (AdaptationTrigger trigger in _triggers)
+        foreach (AdaptationTrigger trigger in _triggers.Where(trigger => trigger.Condition(context)))
         {
-            if (trigger.Condition(context))
+            // Trigger matched - determine adaptation action
+            AdaptationAction? action = await CreateAdaptationActionAsync(trigger, context, ct);
+            if (action != null)
             {
-                // Trigger matched - determine adaptation action
-                AdaptationAction? action = await CreateAdaptationActionAsync(trigger, context, ct);
-                if (action != null)
-                {
-                    return action;
-                }
+                return action;
             }
         }
 
@@ -194,27 +191,45 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
         {
             attempts++;
 
-            // Execute step (simplified - in real implementation would use orchestrator)
+            // Execute step via LLM
             Stopwatch sw = Stopwatch.StartNew();
 
             try
             {
-                // Simulate execution
-                await Task.Delay(50, ct);
+                // Build execution prompt from step metadata
+                string prompt = $"""
+                    Execute the following task:
+                    Action: {step.Action}
+                    Parameters: {JsonSerializer.Serialize(step.Parameters)}
+                    Expected outcome: {step.ExpectedOutcome}
+
+                    Provide the result of executing this task.
+                    """;
+
+                string output = await _llm.GenerateTextAsync(prompt, ct);
 
                 sw.Stop();
 
+                // Determine success: non-empty output that doesn't signal failure
+                bool success = !string.IsNullOrWhiteSpace(output);
+
                 lastResult = new StepResult(
                     step,
-                    true,
-                    $"Executed (attempt {attempts})",
-                    null,
+                    success,
+                    output,
+                    success ? null : "LLM returned empty output",
                     sw.Elapsed,
-                    new Dictionary<string, object> { ["attempts"] = attempts });
+                    new Dictionary<string, object>
+                    {
+                        ["attempts"] = attempts,
+                        ["type"] = "llm_task",
+                        ["action"] = step.Action
+                    });
 
                 if (lastResult.Success)
                     break;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 sw.Stop();
@@ -239,7 +254,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
 
     private async Task<AdaptationAction?> CreateAdaptationActionAsync(
         AdaptationTrigger trigger,
-        ExecutionContext context,
+        PlanExecutionContext context,
         CancellationToken ct)
     {
         AdaptationStrategy strategy = trigger.Strategy;

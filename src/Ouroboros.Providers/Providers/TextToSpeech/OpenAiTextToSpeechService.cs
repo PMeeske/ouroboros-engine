@@ -48,11 +48,12 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
         string model = "tts-1",
         HttpClient? httpClient = null)
     {
-        _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+        ArgumentNullException.ThrowIfNull(apiKey);
+        _apiKey = apiKey;
         _endpoint = endpoint ?? "https://api.openai.com/v1";
         _defaultModel = model;
         _ownsClient = httpClient == null;
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
     }
 
     /// <inheritdoc/>
@@ -113,6 +114,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
             return Result<SpeechResult, string>.Success(
                 new SpeechResult(audioData, format));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<SpeechResult, string>.Failure($"Speech synthesis failed: {ex.Message}");
@@ -152,6 +154,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
                     File.WriteAllBytes(outputPath, speech.AudioData);
                     return Result<string, string>.Success(outputPath);
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     return Result<string, string>.Failure($"Failed to save audio file: {ex.Message}");
@@ -177,6 +180,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
                     outputStream.Write(speech.AudioData, 0, speech.AudioData.Length);
                     return Result<string, string>.Success(speech.Format);
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     return Result<string, string>.Failure($"Failed to write audio stream: {ex.Message}");

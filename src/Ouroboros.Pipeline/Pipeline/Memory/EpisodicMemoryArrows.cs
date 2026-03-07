@@ -26,7 +26,7 @@ public static class EpisodicMemoryArrows
     public static Step<PipelineBranch, PipelineBranch> StoreEpisodeArrow(
         QdrantClient qdrantClient,
         IEmbeddingModel embeddingModel,
-        ExecutionContext context,
+        PipelineExecutionContext context,
         Outcome result,
         ImmutableDictionary<string, object> metadata,
         string collectionName = "episodic_memory")
@@ -54,6 +54,7 @@ public static class EpisodicMemoryArrows
 
                 return branch;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception)
             {
                 return branch; // Gracefully continue even if storage fails
@@ -73,7 +74,7 @@ public static class EpisodicMemoryArrows
     public static KleisliResult<PipelineBranch, PipelineBranch, string> SafeStoreEpisodeArrow(
         QdrantClient qdrantClient,
         IEmbeddingModel embeddingModel,
-        ExecutionContext context,
+        PipelineExecutionContext context,
         Outcome result,
         ImmutableDictionary<string, object> metadata,
         string collectionName = "episodic_memory")
@@ -99,6 +100,7 @@ public static class EpisodicMemoryArrows
                             DateTime.UtcNow))),
                     error => Result<PipelineBranch, string>.Failure(error));
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Failed to store episode: {ex.Message}");
@@ -144,6 +146,7 @@ public static class EpisodicMemoryArrows
 
                 return branch;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception)
             {
                 return branch; // Gracefully continue
@@ -220,6 +223,7 @@ public static class EpisodicMemoryArrows
 
                 return (branch, null);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception)
             {
                 return (branch, null);
@@ -265,7 +269,7 @@ public static class EpisodicMemoryArrows
         QdrantClient qdrantClient,
         IEmbeddingModel embeddingModel,
         PipelineBranch branch,
-        ExecutionContext context,
+        PipelineExecutionContext context,
         Outcome result,
         ImmutableDictionary<string, object> metadata,
         string collectionName,

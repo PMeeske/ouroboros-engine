@@ -122,14 +122,9 @@ public static class VectorFieldOperations
         if (dag == null) throw new ArgumentNullException(nameof(dag));
         if (getEmbedding == null) throw new ArgumentNullException(nameof(getEmbedding));
 
-        var result = new Dictionary<Guid, float>();
-
-        foreach (var node in dag.Nodes.Values)
-        {
-            result[node.Id] = ComputeDivergence(dag, node.Id, getEmbedding);
-        }
-
-        return result;
+        return dag.Nodes.Values.ToDictionary(
+            node => node.Id,
+            node => ComputeDivergence(dag, node.Id, getEmbedding));
     }
 
     /// <summary>
@@ -145,14 +140,9 @@ public static class VectorFieldOperations
         if (dag == null) throw new ArgumentNullException(nameof(dag));
         if (getEmbedding == null) throw new ArgumentNullException(nameof(getEmbedding));
 
-        var result = new Dictionary<Guid, float>();
-
-        foreach (var node in dag.Nodes.Values)
-        {
-            result[node.Id] = ComputeRotation(dag, node.Id, getEmbedding);
-        }
-
-        return result;
+        return dag.Nodes.Values.ToDictionary(
+            node => node.Id,
+            node => ComputeRotation(dag, node.Id, getEmbedding));
     }
 
     /// <summary>
@@ -223,31 +213,10 @@ public static class VectorFieldOperations
     {
         if (dag == null) throw new ArgumentNullException(nameof(dag));
 
-        var neighbors = new List<Guid>();
+        // Collect output neighbors then input neighbors, preserving insertion order
+        var outputIds = dag.GetOutgoingEdges(nodeId).Select(edge => edge.OutputId);
+        var inputIds = dag.GetIncomingEdges(nodeId).SelectMany(edge => edge.InputIds);
 
-        // Add output neighbors (from outgoing edges)
-        var outgoingEdges = dag.GetOutgoingEdges(nodeId);
-        foreach (var edge in outgoingEdges)
-        {
-            if (!neighbors.Contains(edge.OutputId))
-            {
-                neighbors.Add(edge.OutputId);
-            }
-        }
-
-        // Add input neighbors (from incoming edges)
-        var incomingEdges = dag.GetIncomingEdges(nodeId);
-        foreach (var edge in incomingEdges)
-        {
-            foreach (var inputId in edge.InputIds)
-            {
-                if (!neighbors.Contains(inputId))
-                {
-                    neighbors.Add(inputId);
-                }
-            }
-        }
-
-        return neighbors;
+        return outputIds.Concat(inputIds).Distinct().ToList();
     }
 }

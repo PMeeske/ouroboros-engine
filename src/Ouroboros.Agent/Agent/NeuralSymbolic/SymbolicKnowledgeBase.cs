@@ -1,6 +1,5 @@
 using Unit = Ouroboros.Abstractions.Unit;
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Symbolic Knowledge Base Implementation
 // Manages symbolic rules and executes MeTTa queries
@@ -51,6 +50,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
 
             return Result<Unit, string>.Success(Unit.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Failed to add rule: {ex.Message}");
@@ -74,6 +74,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
 
             return Result<List<SymbolicRule>, string>.Success(matchingRules);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<List<SymbolicRule>, string>.Failure($"Failed to query rules: {ex.Message}");
@@ -91,6 +92,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
             var result = await _mettaEngine.ExecuteQueryAsync(query, ct);
             return result;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<string, string>.Failure($"Failed to execute MeTTa query: {ex.Message}");
@@ -126,19 +128,17 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
                 {
                     // Parse results and add to inferred list
                     var results = ParseMeTTaResults(queryResult.Value);
-                    foreach (var result in results)
+                    foreach (var result in results.Where(result => visited.Add(result)))
                     {
-                        if (visited.Add(result))
-                        {
-                            inferred.Add(result);
-                            queue.Enqueue((result, depth + 1));
-                        }
+                        inferred.Add(result);
+                        queue.Enqueue((result, depth + 1));
                     }
                 }
             }
 
             return Result<List<string>, string>.Success(inferred);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<List<string>, string>.Failure($"Failed to perform inference: {ex.Message}");

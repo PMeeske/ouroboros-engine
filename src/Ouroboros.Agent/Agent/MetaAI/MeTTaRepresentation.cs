@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Meta-AI Layer v3.0 - MeTTa-First Representation Layer
 // Translates orchestrator concepts to MeTTa symbolic atoms
@@ -17,7 +16,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// Enables symbolic reasoning over orchestration flow.
 /// Supports Laws of Form integration for distinction-gated planning.
 /// </summary>
-public sealed class MeTTaRepresentation
+public sealed partial class MeTTaRepresentation
 {
     private readonly IMeTTaEngine _engine;
     private readonly FormMeTTaBridge? _formBridge;
@@ -143,6 +142,7 @@ public sealed class MeTTaRepresentation
             var factResult = await _engine.AddFactAsync(sb.ToString(), ct);
             return factResult.Map(_ => Unit.Value).MapError(_ => "Failed to add plan facts to MeTTa");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Plan translation error: {ex.Message}");
@@ -188,6 +188,7 @@ public sealed class MeTTaRepresentation
             var result = await _engine.AddFactAsync(sb.ToString(), ct);
             return result.Map(_ => Unit.Value).MapError(_ => "Failed to add execution state to MeTTa");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Execution state translation error: {ex.Message}");
@@ -229,6 +230,7 @@ public sealed class MeTTaRepresentation
             var result = await _engine.AddFactAsync(sb.ToString(), ct);
             return result.Map(_ => Unit.Value).MapError(_ => "Failed to add tool facts to MeTTa");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Tool translation error: {ex.Message}");
@@ -261,6 +263,7 @@ public sealed class MeTTaRepresentation
                 error => Result<List<NextNodeCandidate>, string>.Failure($"Next node query failed: {error}")
             );
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<List<NextNodeCandidate>, string>.Failure($"Query error: {ex.Message}");
@@ -303,7 +306,7 @@ public sealed class MeTTaRepresentation
         );
     }
 
-    private List<NextNodeCandidate> ParseNextNodeCandidates(string mettaOutput)
+    private static List<NextNodeCandidate> ParseNextNodeCandidates(string mettaOutput)
     {
         List<NextNodeCandidate> candidates = new List<NextNodeCandidate>();
 
@@ -311,10 +314,7 @@ public sealed class MeTTaRepresentation
         string[] lines = mettaOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         foreach (string line in lines)
         {
-            Match match = Regex.Match(
-                line,
-                @"\(cons\s+(\S+)\s+""?([^""]+)""?\)"
-            );
+            Match match = ConsExpressionRegex().Match(line);
 
             if (match.Success)
             {
@@ -329,7 +329,7 @@ public sealed class MeTTaRepresentation
         return candidates;
     }
 
-    private List<string> ParseToolList(string mettaOutput)
+    private static List<string> ParseToolList(string mettaOutput)
     {
         List<string> tools = new List<string>();
         string[] lines = mettaOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -346,8 +346,11 @@ public sealed class MeTTaRepresentation
         return tools;
     }
 
-    private string EscapeMeTTa(string text)
+    private static string EscapeMeTTa(string text)
     {
         return text.Replace("\"", "\\\"").Replace("\n", "\\n");
     }
+
+    [GeneratedRegex(@"\(cons\s+(\S+)\s+""?([^""]+)""?\)")]
+    private static partial Regex ConsExpressionRegex();
 }

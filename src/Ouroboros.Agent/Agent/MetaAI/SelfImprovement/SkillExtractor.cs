@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Skill Extractor Implementation
 // Automatic extraction of reusable skills from successful executions
@@ -12,7 +11,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// Implementation of automatic skill extraction from successful executions.
 /// Analyzes execution patterns and creates reusable skills with confidence scoring.
 /// </summary>
-public sealed class SkillExtractor : ISkillExtractor
+public sealed partial class SkillExtractor : ISkillExtractor
 {
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ISkillRegistry _skillRegistry;
@@ -175,6 +174,7 @@ public sealed class SkillExtractor : ISkillExtractor
 
             return Result<Skill, string>.Success(skill);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Skill, string>.Failure($"Skill extraction failed: {ex.Message}");
@@ -253,7 +253,7 @@ Write a 1-2 sentence description of this skill's capability:";
     /// <summary>
     /// Extracts prerequisites from successful execution steps.
     /// </summary>
-    private List<string> ExtractPrerequisites(PlanExecutionResult execution, SkillExtractionConfig config)
+    private static List<string> ExtractPrerequisites(PlanExecutionResult execution, SkillExtractionConfig config)
     {
         List<string> prerequisites = new List<string>();
 
@@ -273,7 +273,7 @@ Write a 1-2 sentence description of this skill's capability:";
     /// Parameterizes plan steps to make them more reusable.
     /// Identifies common patterns and replaces specific values with parameter placeholders.
     /// </summary>
-    private List<PlanStep> ParameterizeSteps(List<PlanStep> steps)
+    private static List<PlanStep> ParameterizeSteps(List<PlanStep> steps)
     {
         List<PlanStep> parameterizedSteps = new List<PlanStep>();
 
@@ -336,6 +336,7 @@ Write a 1-2 sentence description of this skill's capability:";
 
             return await Task.FromResult(Result<Skill, string>.Success(updatedSkill));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Skill, string>.Failure($"Failed to update existing skill: {ex.Message}");
@@ -345,7 +346,7 @@ Write a 1-2 sentence description of this skill's capability:";
     /// <summary>
     /// Sanitizes skill name to follow naming conventions.
     /// </summary>
-    private string SanitizeSkillName(string name)
+    private static string SanitizeSkillName(string name)
     {
         // Remove quotes and extra whitespace
         name = name.Trim('"', '\'', ' ', '\n', '\r');
@@ -354,10 +355,10 @@ Write a 1-2 sentence description of this skill's capability:";
         name = name.ToLowerInvariant();
 
         // Replace spaces and special chars with underscores
-        name = Regex.Replace(name, @"[^a-z0-9_]", "_");
+        name = NonAlphanumericRegex().Replace(name, "_");
 
         // Remove duplicate underscores
-        name = Regex.Replace(name, @"_+", "_");
+        name = DuplicateUnderscoreRegex().Replace(name, "_");
 
         // Remove leading/trailing underscores
         name = name.Trim('_');
@@ -372,7 +373,7 @@ Write a 1-2 sentence description of this skill's capability:";
     /// <summary>
     /// Generates a fallback skill name when LLM generation fails.
     /// </summary>
-    private string GenerateFallbackSkillName(PlanExecutionResult execution)
+    private static string GenerateFallbackSkillName(PlanExecutionResult execution)
     {
         // Extract first action as basis for name
         string firstAction = execution.Plan.Steps.FirstOrDefault()?.Action ?? "skill";
@@ -384,4 +385,9 @@ Write a 1-2 sentence description of this skill's capability:";
         return $"{sanitized}_{timestamp}";
     }
 
+    [GeneratedRegex(@"[^a-z0-9_]")]
+    private static partial Regex NonAlphanumericRegex();
+
+    [GeneratedRegex(@"_+")]
+    private static partial Regex DuplicateUnderscoreRegex();
 }

@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 namespace Ouroboros.Pipeline.Reasoning;
 
 /// <summary>
@@ -50,6 +49,7 @@ public sealed class PromptTemplate(string template)
 
             return Result<string>.Success(result);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<string>.Failure($"Template formatting failed: {ex.Message}");

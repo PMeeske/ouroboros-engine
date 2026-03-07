@@ -37,9 +37,12 @@ public sealed class TapoRtspClient : IDisposable
         CameraStreamQuality quality = CameraStreamQuality.HD,
         ILogger<TapoRtspClient>? logger = null)
     {
-        _cameraIp = cameraIp ?? throw new ArgumentNullException(nameof(cameraIp));
-        _username = username ?? throw new ArgumentNullException(nameof(username));
-        _password = password ?? throw new ArgumentNullException(nameof(password));
+        ArgumentNullException.ThrowIfNull(cameraIp);
+        ArgumentNullException.ThrowIfNull(username);
+        ArgumentNullException.ThrowIfNull(password);
+        _cameraIp = cameraIp;
+        _username = username;
+        _password = password;
         _quality = quality;
         _logger = logger;
     }
@@ -97,13 +100,25 @@ public sealed class TapoRtspClient : IDisposable
             var startInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-rtsp_transport tcp -i \"{rtspUrl}\" -frames:v 1 -f image2pipe -vcodec mjpeg -",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            startInfo.ArgumentList.Add("-rtsp_transport");
+            startInfo.ArgumentList.Add("tcp");
+            startInfo.ArgumentList.Add("-i");
+            startInfo.ArgumentList.Add(rtspUrl);
+            startInfo.ArgumentList.Add("-frames:v");
+            startInfo.ArgumentList.Add("1");
+            startInfo.ArgumentList.Add("-f");
+            startInfo.ArgumentList.Add("image2pipe");
+            startInfo.ArgumentList.Add("-vcodec");
+            startInfo.ArgumentList.Add("mjpeg");
+            startInfo.ArgumentList.Add("-");
 
+            // SECURITY: safe — hardcoded "ffmpeg" with ArgumentList; RTSP URL uses
+            // Uri.EscapeDataString for credentials, preventing injection.
             using var process = new Process { StartInfo = startInfo };
             process.Start();
 
@@ -148,6 +163,7 @@ public sealed class TapoRtspClient : IDisposable
             _logger?.LogDebug("Captured frame {FrameNumber}, {Size} bytes", _frameCount, frameData.Length);
             return Result<TapoCameraFrame>.Success(frame);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to capture frame from {CameraIp}", _cameraIp);
@@ -177,20 +193,30 @@ public sealed class TapoRtspClient : IDisposable
         var startInfo = new ProcessStartInfo
         {
             FileName = "ffmpeg",
-            Arguments = $"-rtsp_transport tcp -i \"{rtspUrl}\" -r {frameRate} -f image2pipe -vcodec mjpeg -",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+        startInfo.ArgumentList.Add("-rtsp_transport");
+        startInfo.ArgumentList.Add("tcp");
+        startInfo.ArgumentList.Add("-i");
+        startInfo.ArgumentList.Add(rtspUrl);
+        startInfo.ArgumentList.Add("-r");
+        startInfo.ArgumentList.Add(frameRate.ToString());
+        startInfo.ArgumentList.Add("-f");
+        startInfo.ArgumentList.Add("image2pipe");
+        startInfo.ArgumentList.Add("-vcodec");
+        startInfo.ArgumentList.Add("mjpeg");
+        startInfo.ArgumentList.Add("-");
 
         _ffmpegProcess = new Process { StartInfo = startInfo };
 
         try
         {
+            // SECURITY: safe — hardcoded "ffmpeg" with ArgumentList for RTSP streaming
             _ffmpegProcess.Start();
 
-            var buffer = new byte[1024 * 1024]; // 1MB buffer
             var stream = _ffmpegProcess.StandardOutput.BaseStream;
 
             while (!ct.IsCancellationRequested && !_ffmpegProcess.HasExited)
@@ -293,6 +319,7 @@ public sealed class TapoRtspClient : IDisposable
                 _ffmpegProcess.Kill(entireProcessTree: true);
                 _ffmpegProcess.Dispose();
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 _logger?.LogWarning(ex, "Error stopping FFmpeg process");
@@ -319,17 +346,24 @@ public sealed class TapoRtspClient : IDisposable
             var startInfo = new ProcessStartInfo
             {
                 FileName = "ffprobe",
-                Arguments = $"-rtsp_transport tcp -i \"{rtspUrl}\" -show_format -v quiet",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+            startInfo.ArgumentList.Add("-rtsp_transport");
+            startInfo.ArgumentList.Add("tcp");
+            startInfo.ArgumentList.Add("-i");
+            startInfo.ArgumentList.Add(rtspUrl);
+            startInfo.ArgumentList.Add("-show_format");
+            startInfo.ArgumentList.Add("-v");
+            startInfo.ArgumentList.Add("quiet");
 
+            // SECURITY: safe — hardcoded "ffprobe" with ArgumentList for connection test
             using var process = new Process { StartInfo = startInfo };
             process.Start();
 
-            var outputTask = process.StandardOutput.ReadToEndAsync(ct);
+            _ = process.StandardOutput.ReadToEndAsync(ct);
             var errorTask = process.StandardError.ReadToEndAsync(ct);
 
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -356,6 +390,7 @@ public sealed class TapoRtspClient : IDisposable
                 return Result<string>.Failure($"Connection failed: {error}");
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<string>.Failure($"Connection test failed: {ex.Message}");

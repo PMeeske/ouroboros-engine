@@ -8,4 +8,4 @@ public sealed record HierarchicalPlan(
     Plan TopLevelPlan,
     Dictionary<string, Plan> SubPlans,
     int MaxDepth,
-    DateTime CreatedAt);
+    DateTime CreatedAt) : IPlan;

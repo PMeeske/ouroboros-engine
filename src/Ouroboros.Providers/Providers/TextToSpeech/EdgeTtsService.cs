@@ -34,22 +34,24 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             BreakDuration = TimeSpan.FromMinutes(5), // Stay broken for 5 min if blocked
             OnOpened = args =>
             {
-                IsCircuitOpen = true;
+                _isCircuitOpen = true;
                 System.Diagnostics.Trace.TraceWarning("[TTS] Edge TTS circuit OPEN - disabled for 5 minutes (likely blocked by Microsoft)");
                 return default;
             },
             OnClosed = args =>
             {
-                IsCircuitOpen = false;
+                _isCircuitOpen = false;
                 return default;
             },
         })
         .Build();
 
+    private static volatile bool _isCircuitOpen;
+
     /// <summary>
     /// Gets whether the Edge TTS circuit breaker is open (service blocked/unavailable).
     /// </summary>
-    public static bool IsCircuitOpen { get; private set; }
+    public static bool IsCircuitOpen => _isCircuitOpen;
 
     /// <summary>
     /// Available Edge TTS neural voices.
@@ -147,6 +149,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
                 ct);
             return Result<SpeechResult, string>.Success(new SpeechResult(audioData, "mp3"));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<SpeechResult, string>.Failure($"Edge TTS error: {ex.Message}");
@@ -175,6 +178,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
                 await File.WriteAllBytesAsync(outputPath, result.Value.AudioData, ct);
                 return Result<string, string>.Success(outputPath);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<string, string>.Failure($"Failed to save audio: {ex.Message}");

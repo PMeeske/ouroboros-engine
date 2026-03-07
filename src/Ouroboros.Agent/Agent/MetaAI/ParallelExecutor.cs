@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Parallel Executor - Execute independent steps concurrently
 // ==========================================================
@@ -79,7 +78,7 @@ public sealed class ParallelExecutor
     /// <summary>
     /// Estimates the speedup from parallel execution.
     /// </summary>
-    public double EstimateSpeedup(Plan plan)
+    public static double EstimateSpeedup(Plan plan)
     {
         StepDependencyGraph dependencyGraph = new StepDependencyGraph(plan.Steps);
         List<List<int>> parallelGroups = dependencyGraph.GetParallelGroups();

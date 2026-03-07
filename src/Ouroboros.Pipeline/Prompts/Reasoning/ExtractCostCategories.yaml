@@ -1,0 +1,43 @@
+name: ExtractCostCategories
+description: Extracts all cost categories from operating cost statement documents
+template: |
+  Extract all cost categories from the provided operating cost statement.
+
+  Available tools (JSON Schema):
+  {tools_schemas}
+
+  Operating Cost Statement:
+  {main_statement}
+
+  Additional Documents:
+  {context}
+
+  EXTRACTION TASK:
+  List all operating cost categories found in the documents, such as:
+  - Heating (Heizkosten)
+  - Water/Wastewater (Wasser/Abwasser)
+  - Garbage collection (Müllabfuhr)
+  - Property tax (Grundsteuer)
+  - Building insurance (Gebäudeversicherung)
+  - Property management (Hausverwaltung)
+  - Cleaning (Reinigung)
+  - Garden maintenance (Gartenpflege)
+  - Elevator (Aufzug)
+  - Common electricity (Allgemeinstrom)
+  - Other operating costs
+
+  For each category found, extract:
+  1. Category name as stated in the document
+  2. Total amount shown (if visible)
+  3. Allocation key mentioned (if any)
+  4. Tenant's share amount (if shown)
+
+  Output as a structured list.
+template_format: semantic-kernel
+input_variables:
+  - name: tools_schemas
+    description: JSON Schema of available tools
+  - name: main_statement
+    description: The operating cost statement
+  - name: context
+    description: Additional documents for reference

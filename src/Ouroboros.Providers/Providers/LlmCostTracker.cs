@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Diagnostics;
 using System.Globalization;
 
@@ -50,7 +49,7 @@ public sealed class LlmCostTracker
         ["deepseek-coder"] = new("DeepSeek", 0.14m, 0.28m),
         ["deepseek-reasoner"] = new("DeepSeek", 0.55m, 2.19m, "R1 reasoning model"),
         ["deepseek-v3"] = new("DeepSeek", 0.27m, 1.10m),
-        ["deepseek-v3.1:671b-cloud"] = new("DeepSeek", 0.27m, 1.10m, "Ollama Cloud hosted"),
+        ["devstral-2:123b-cloud"] = new("DeepSeek", 0.27m, 1.10m, "Ollama Cloud hosted"),
 
         // === GOOGLE ===
         ["gemini-2.0-flash"] = new("Google", 0.10m, 0.40m),
@@ -91,7 +90,7 @@ public sealed class LlmCostTracker
 
     // Global tracker for cross-session statistics
     private static readonly LlmCostTracker GlobalTracker = new("*global*", "*all*");
-    private static readonly Dictionary<string, LlmCostTracker> ProviderTrackers = new();
+    private static readonly ConcurrentDictionary<string, LlmCostTracker> ProviderTrackers = new();
 
     public LlmCostTracker(string model, string? provider = null)
     {

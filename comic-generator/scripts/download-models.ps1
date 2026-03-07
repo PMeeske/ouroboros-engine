@@ -3,26 +3,29 @@
 
 $ErrorActionPreference = "Stop"
 
-$COMFYUI_DIR = "C:\ComfyUI"
-$VENV_DIR = "$COMFYUI_DIR\venv"
+$COMFYUI_ROOT = "D:\ComfyUI_windows_portable_amd\ComfyUI_windows_portable"
+$COMFYUI_DIR  = "$COMFYUI_ROOT\ComfyUI"
+$PYTHON_EXE   = "$COMFYUI_ROOT\python_embeded\python.exe"
 
-# Activate virtual environment
-& "$VENV_DIR\Scripts\Activate.ps1"
+if (-not (Test-Path $PYTHON_EXE)) {
+    Write-Host "ERROR: ComfyUI portable not found at $COMFYUI_ROOT" -ForegroundColor Red
+    exit 1
+}
 
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host " Model Downloader — Comic Strip Generator" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Ensure huggingface-cli is available
-pip install --quiet huggingface-hub
+# Ensure huggingface-cli is available via embedded Python
+& $PYTHON_EXE -s -m pip install --quiet huggingface-hub
 
 # --- Base Model: Anything V5 ---
 Write-Host "[1/4] Downloading base model: Anything V5..." -ForegroundColor Yellow
 $checkpointDir = "$COMFYUI_DIR\models\checkpoints"
 if (-not (Test-Path "$checkpointDir\anything-v5-PrtRE.safetensors")) {
     Write-Host "  Downloading from HuggingFace (this may take a while)..." -ForegroundColor White
-    huggingface-cli download stablediffusionapi/anything-v5 `
+    & $PYTHON_EXE -s -m huggingface_hub.commands.huggingface_cli download stablediffusionapi/anything-v5 `
         anything-v5-PrtRE.safetensors `
         --local-dir $checkpointDir `
         --local-dir-use-symlinks False
@@ -35,7 +38,7 @@ if (-not (Test-Path "$checkpointDir\anything-v5-PrtRE.safetensors")) {
 Write-Host "[2/4] Downloading alternative model: Counterfeit V3.0..." -ForegroundColor Yellow
 if (-not (Test-Path "$checkpointDir\CounterfeitV30_v30.safetensors")) {
     Write-Host "  Downloading from HuggingFace..." -ForegroundColor White
-    huggingface-cli download gsdf/Counterfeit-V3.0 `
+    & $PYTHON_EXE -s -m huggingface_hub.commands.huggingface_cli download gsdf/Counterfeit-V3.0 `
         CounterfeitV30_v30.safetensors `
         --local-dir $checkpointDir `
         --local-dir-use-symlinks False
@@ -48,7 +51,7 @@ if (-not (Test-Path "$checkpointDir\CounterfeitV30_v30.safetensors")) {
 Write-Host "[3/4] Downloading ControlNet: Lineart SD 1.5..." -ForegroundColor Yellow
 $controlnetDir = "$COMFYUI_DIR\models\controlnet"
 if (-not (Test-Path "$controlnetDir\control_v11p_sd15_lineart.pth")) {
-    huggingface-cli download lllyasviel/ControlNet-v1-1 `
+    & $PYTHON_EXE -s -m huggingface_hub.commands.huggingface_cli download lllyasviel/ControlNet-v1-1 `
         control_v11p_sd15_lineart.pth `
         --local-dir $controlnetDir `
         --local-dir-use-symlinks False
@@ -61,7 +64,7 @@ if (-not (Test-Path "$controlnetDir\control_v11p_sd15_lineart.pth")) {
 Write-Host "[4/4] Downloading upscaler: Real-ESRGAN x2 Anime..." -ForegroundColor Yellow
 $upscaleDir = "$COMFYUI_DIR\models\upscale_models"
 if (-not (Test-Path "$upscaleDir\RealESRGAN_x2plus_anime.pth")) {
-    huggingface-cli download ai-forever/Real-ESRGAN `
+    & $PYTHON_EXE -s -m huggingface_hub.commands.huggingface_cli download ai-forever/Real-ESRGAN `
         RealESRGAN_x2plus_anime.pth `
         --local-dir $upscaleDir `
         --local-dir-use-symlinks False

@@ -2,6 +2,8 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using Ouroboros.Providers.Configuration;
+
 namespace Ouroboros.Providers.Tapo;
 
 /// <summary>
@@ -13,7 +15,7 @@ public sealed record TapoVisionModelConfig
     /// <summary>
     /// Default vision model for Tapo camera analysis (Qwen3-VL 235B cloud for strongest visual understanding).
     /// </summary>
-    public const string DefaultVisionModel = "qwen3-vl:235b-cloud";
+    public const string DefaultVisionModel = "devstral-small-2:24b-cloud";
 
     /// <summary>
     /// Alternative lightweight vision model for faster local processing.
@@ -23,7 +25,7 @@ public sealed record TapoVisionModelConfig
     /// <summary>
     /// High-quality vision model for detailed analysis (same as default, highest available).
     /// </summary>
-    public const string HighQualityVisionModel = "qwen3-vl:235b-cloud";
+    public const string HighQualityVisionModel = "devstral-small-2:24b-cloud";
 
     /// <summary>
     /// Gets the vision model to use for camera analysis.
@@ -33,7 +35,7 @@ public sealed record TapoVisionModelConfig
     /// <summary>
     /// Gets the Ollama endpoint for vision model inference.
     /// </summary>
-    public string OllamaEndpoint { get; init; } = "http://localhost:11434";
+    public string OllamaEndpoint { get; init; } = DefaultEndpoints.Ollama;
 
     /// <summary>
     /// Gets the timeout for vision model requests.

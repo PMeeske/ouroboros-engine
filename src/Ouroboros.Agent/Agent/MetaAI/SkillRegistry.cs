@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Skill Registry Implementation
 // Manages learned skills and pattern reuse
@@ -33,7 +32,7 @@ public sealed class SkillRegistry : ISkillRegistry
             _skills[skill.Id] = skill;
             return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
             return Task.FromResult(Result<Unit, string>.Failure($"Failed to register skill: {ex.Message}"));
         }
@@ -54,7 +53,7 @@ public sealed class SkillRegistry : ISkillRegistry
 
             return Task.FromResult(Result<AgentSkill, string>.Failure($"Skill '{skillId}' not found"));
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
             return Task.FromResult(Result<AgentSkill, string>.Failure($"Failed to get skill: {ex.Message}"));
         }
@@ -122,7 +121,8 @@ public sealed class SkillRegistry : ISkillRegistry
 
             return Result<IReadOnlyList<AgentSkill>, string>.Success(filtered);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) // Intentional: embedding operations across providers
         {
             return Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to find skills: {ex.Message}");
         }
@@ -143,7 +143,7 @@ public sealed class SkillRegistry : ISkillRegistry
             _skills[skill.Id] = skill;
             return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
             return Task.FromResult(Result<Unit, string>.Failure($"Failed to update skill: {ex.Message}"));
         }
@@ -180,7 +180,7 @@ public sealed class SkillRegistry : ISkillRegistry
             _skills[skillId] = updated;
             return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             return Task.FromResult(Result<Unit, string>.Failure($"Failed to record execution: {ex.Message}"));
         }
@@ -201,7 +201,7 @@ public sealed class SkillRegistry : ISkillRegistry
 
             return Task.FromResult(Result<Unit, string>.Failure($"Skill '{skillId}' not found"));
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             return Task.FromResult(Result<Unit, string>.Failure($"Failed to unregister skill: {ex.Message}"));
         }
@@ -217,7 +217,7 @@ public sealed class SkillRegistry : ISkillRegistry
             var skills = _skills.Values.OrderByDescending(s => s.SuccessRate).ToList();
             return Task.FromResult(Result<IReadOnlyList<AgentSkill>, string>.Success((IReadOnlyList<AgentSkill>)skills));
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             return Task.FromResult(Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to get all skills: {ex.Message}"));
         }
@@ -234,7 +234,7 @@ public sealed class SkillRegistry : ISkillRegistry
             _skills[skill.Id] = skill;
             return Result<Unit, string>.Success(Unit.Value);
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
             return Result<Unit, string>.Failure($"Failed to register skill: {ex.Message}");
         }
@@ -340,7 +340,7 @@ public sealed class SkillRegistry : ISkillRegistry
 
             return Task.FromResult(Result<Skill, string>.Success(skill));
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
             return Task.FromResult(Result<Skill, string>.Failure($"Failed to extract skill: {ex.Message}"));
         }

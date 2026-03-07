@@ -1,19 +1,28 @@
-﻿using LangChain.Providers.Ollama;
+using Microsoft.Extensions.AI;
+using OllamaSharp;
+using OllamaSharp.Models;
+using Ouroboros.Abstractions.Core;
 
 namespace Ouroboros.Providers;
 
 /// <summary>
-/// Adapter that wraps the Ollama embedding API when available. If the daemon
+/// Adapter that wraps the Ollama embedding API via OllamaSharp when available. If the daemon
 /// cannot be reached we fall back to deterministic embeddings.
+/// Implements <see cref="IEmbeddingGeneratorBridge"/> for zero-overhead MEAI interop
+/// (OllamaApiClient natively implements <see cref="IEmbeddingGenerator{String, Embedding}"/>).
 /// </summary>
-public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
+public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGeneratorBridge
 {
-    private readonly OllamaEmbeddingModel _model;
+    private readonly OllamaApiClient _client;
+    private readonly string _modelName;
     private readonly DeterministicEmbeddingModel _fallback = new();
 
-    public OllamaEmbeddingAdapter(OllamaEmbeddingModel model)
+    public OllamaEmbeddingAdapter(OllamaApiClient client, string modelName)
     {
-        _model = model ?? throw new ArgumentNullException(nameof(model));
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelName);
+        _client = client;
+        _modelName = modelName;
     }
 
     /// <inheritdoc/>
@@ -23,15 +32,21 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
 
         try
         {
-            LangChain.Providers.EmbeddingResponse response = await _model.CreateEmbeddingsAsync(safeInput, cancellationToken: ct).ConfigureAwait(false);
-            if (TryExtractEmbedding(response, out float[]? vector))
+            EmbedResponse response = await _client.EmbedAsync(new EmbedRequest
             {
-                return vector;
+                Model = _modelName,
+                Input = [safeInput]
+            }, ct).ConfigureAwait(false);
+
+            if (response?.Embeddings is { Count: > 0 } embeddings
+                && embeddings[0] is { Length: > 0 } firstVector)
+            {
+                return firstVector;
             }
         }
         catch
         {
-            // LangChain encoding error - fall through to fallback
+            // OllamaSharp communication error - fall through to fallback
         }
 
         // Use deterministic fallback (hash-based embedding)
@@ -56,13 +71,7 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
             if (char.IsSurrogate(c)) continue;
             if (char.IsControl(c) && c != '\n' && c != '\r' && c != '\t') continue;
 
-            // Skip emoji and other high Unicode (above BMP can cause issues)
-            if (c > 0xFFFF || (c >= 0xD800 && c <= 0xDFFF)) continue;
-
-            // Skip common problematic ranges
-            if (c >= 0x1F600 && c <= 0x1F64F) continue; // Emoticons
-            if (c >= 0x1F300 && c <= 0x1F5FF) continue; // Misc symbols
-            if (c >= 0x1F680 && c <= 0x1F6FF) continue; // Transport
+            // Skip BMP symbols that commonly cause encoding issues with embedding APIs
             if (c >= 0x2600 && c <= 0x26FF) continue;   // Misc symbols
             if (c >= 0x2700 && c <= 0x27BF) continue;   // Dingbats
 
@@ -104,75 +113,6 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel
         }
     }
 
-    private static bool TryExtractEmbedding(object? response, out float[] embedding)
-    {
-        embedding = Array.Empty<float>();
-        if (response is null)
-        {
-            return false;
-        }
-
-        switch (response)
-        {
-            case float[] floats:
-                embedding = floats;
-                return true;
-            case IReadOnlyList<float> roList:
-                embedding = roList.ToArray();
-                return true;
-            case IEnumerable<float> enumerable:
-                embedding = enumerable.ToArray();
-                return true;
-        }
-
-        Type type = response.GetType();
-
-        System.Reflection.PropertyInfo? vectorProperty = type.GetProperty("Vector");
-        if (vectorProperty?.GetValue(response) is IEnumerable<float> vectorEnum)
-        {
-            embedding = vectorEnum.ToArray();
-            return embedding.Length > 0;
-        }
-
-        System.Reflection.PropertyInfo? embeddingsProperty = type.GetProperty("Embeddings");
-        if (embeddingsProperty?.GetValue(response) is System.Collections.IEnumerable embeddingsEnum)
-        {
-            foreach (object? entry in embeddingsEnum)
-            {
-                if (entry is float[] entryArray)
-                {
-                    embedding = entryArray;
-                    return embedding.Length > 0;
-                }
-
-                if (entry is IEnumerable<float> direct)
-                {
-                    embedding = direct.ToArray();
-                    if (embedding.Length > 0)
-                    {
-                        return true;
-                    }
-                }
-                else if (entry is { })
-                {
-                    Type entryType = entry.GetType();
-                    IEnumerable<float>? vectorInner = entryType.GetProperty("Vector")?.GetValue(entry) as IEnumerable<float>;
-                    if (vectorInner is not null)
-                    {
-                        embedding = vectorInner.ToArray();
-                        return embedding.Length > 0;
-                    }
-
-                    IEnumerable<float>? inner = entryType.GetProperty("Embedding")?.GetValue(entry) as IEnumerable<float>;
-                    if (inner is not null)
-                    {
-                        embedding = inner.ToArray();
-                        return embedding.Length > 0;
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
+    /// <inheritdoc/>
+    public IEmbeddingGenerator<string, Embedding<float>> GetEmbeddingGenerator() => _client;
 }

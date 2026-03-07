@@ -10,7 +10,7 @@ namespace Ouroboros.Providers.SpeechToText;
 /// Cross-platform microphone recorder using system tools.
 /// Uses ffmpeg/sox on all platforms for recording from microphone.
 /// </summary>
-public static class MicrophoneRecorder
+public static partial class MicrophoneRecorder
 {
     /// <summary>
     /// Records audio from the microphone for a specified duration.
@@ -44,6 +44,8 @@ public static class MicrophoneRecorder
 
         try
         {
+            // SECURITY: safe — GetRecorderStartInfo uses hardcoded commands (ffmpeg,
+            // powershell, rec, arecord) with ArgumentList for all parameters.
             using Process? process = Process.Start(startInfo);
             if (process == null)
             {
@@ -69,7 +71,11 @@ public static class MicrophoneRecorder
         {
             return Result<string, string>.Failure("Recording cancelled");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
+        {
+            return Result<string, string>.Failure($"Recording failed: {ex.Message}");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<string, string>.Failure($"Recording failed: {ex.Message}");
         }
@@ -107,6 +113,7 @@ public static class MicrophoneRecorder
 
         try
         {
+            // SECURITY: safe — same as RecordAsync above; hardcoded commands with ArgumentList
             using Process? process = Process.Start(startInfo);
             if (process == null)
             {
@@ -147,7 +154,11 @@ public static class MicrophoneRecorder
         {
             return Result<string, string>.Failure("Recording cancelled");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
+        {
+            return Result<string, string>.Failure($"Recording failed: {ex.Message}");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<string, string>.Failure($"Recording failed: {ex.Message}");
         }
@@ -179,14 +190,14 @@ public static class MicrophoneRecorder
                     {
                         File.Delete(path);
                     }
-                    catch
+                    catch (IOException)
                     {
                         // Ignore cleanup errors
                     }
 
                     return Result<byte[], string>.Success(data);
                 }
-                catch (Exception ex)
+                catch (IOException ex)
                 {
                     return Result<byte[], string>.Failure($"Failed to read recording: {ex.Message}");
                 }
@@ -238,225 +249,4 @@ public static class MicrophoneRecorder
         return "Unable to list devices on this platform";
     }
 
-    private static ProcessStartInfo? GetRecorderStartInfo(string outputPath, int durationSeconds, string format)
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            // Use ffmpeg with DirectShow on Windows
-            if (IsCommandAvailable("ffmpeg"))
-            {
-                // Get the default/active audio input device
-                string? audioDevice = GetDefaultWindowsAudioDevice();
-                if (string.IsNullOrEmpty(audioDevice))
-                {
-                    audioDevice = "Microphone"; // Fallback
-                }
-
-                return new ProcessStartInfo
-                {
-                    FileName = "ffmpeg",
-                    Arguments = $"-f dshow -i audio=\"{audioDevice}\" -t {durationSeconds} -y \"{outputPath}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                };
-            }
-
-            // Fallback to PowerShell with Windows.Media.Capture
-            return new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                Arguments = $"-NoProfile -Command \"" +
-                    $"Add-Type -AssemblyName System.Speech; " +
-                    $"$recognizer = New-Object System.Speech.Recognition.SpeechRecognitionEngine; " +
-                    $"$recognizer.SetInputToDefaultAudioDevice(); " +
-                    $"Start-Sleep -Seconds {durationSeconds}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardError = true,
-            };
-        }
-        else if (OperatingSystem.IsMacOS())
-        {
-            // Use ffmpeg with AVFoundation on macOS
-            if (IsCommandAvailable("ffmpeg"))
-            {
-                return new ProcessStartInfo
-                {
-                    FileName = "ffmpeg",
-                    Arguments = $"-f avfoundation -i \":0\" -t {durationSeconds} -y \"{outputPath}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                };
-            }
-
-            // Fallback to sox/rec
-            if (IsCommandAvailable("rec"))
-            {
-                return new ProcessStartInfo
-                {
-                    FileName = "rec",
-                    Arguments = $"\"{outputPath}\" trim 0 {durationSeconds}",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true,
-                };
-            }
-        }
-        else if (OperatingSystem.IsLinux())
-        {
-            // Use ffmpeg with ALSA/PulseAudio on Linux
-            if (IsCommandAvailable("ffmpeg"))
-            {
-                // Try PulseAudio first, fall back to ALSA
-                string input = IsCommandAvailable("pactl") ? "-f pulse -i default" : "-f alsa -i default";
-                return new ProcessStartInfo
-                {
-                    FileName = "ffmpeg",
-                    Arguments = $"{input} -t {durationSeconds} -y \"{outputPath}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                };
-            }
-
-            // Fallback to arecord
-            if (IsCommandAvailable("arecord"))
-            {
-                return new ProcessStartInfo
-                {
-                    FileName = "arecord",
-                    Arguments = $"-d {durationSeconds} -f cd \"{outputPath}\"",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true,
-                };
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Gets the default/active Windows audio input device.
-    /// Prioritizes devices with "Microphone" in name, falls back to first audio device.
-    /// </summary>
-    private static string? GetDefaultWindowsAudioDevice()
-    {
-        try
-        {
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                FileName = "ffmpeg",
-                Arguments = "-list_devices true -f dshow -i dummy",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            };
-
-            using Process? process = Process.Start(startInfo);
-            if (process == null)
-            {
-                return null;
-            }
-
-            string error = process.StandardError.ReadToEnd();
-            process.WaitForExit(5000);
-
-            // Parse output to find audio devices
-            // Format: [dshow @ ...] "Device Name" (audio)
-            List<string> audioDevices = new List<string>();
-            foreach (string line in error.Split('\n'))
-            {
-                if (line.Contains("(audio)"))
-                {
-                    int start = line.IndexOf('"');
-                    int end = line.LastIndexOf('"');
-                    if (start >= 0 && end > start)
-                    {
-                        audioDevices.Add(line.Substring(start + 1, end - start - 1));
-                    }
-                }
-            }
-
-            if (audioDevices.Count == 0)
-            {
-                return null;
-            }
-
-            // Prioritize device with "Microphone" or "Mikrofon" in name (active/primary mic)
-            string? preferredDevice = audioDevices.FirstOrDefault(d =>
-                d.Contains("Microphone", StringComparison.OrdinalIgnoreCase) ||
-                d.Contains("Mikrofon", StringComparison.OrdinalIgnoreCase));
-
-            return preferredDevice ?? audioDevices[0];
-        }
-        catch
-        {
-            // Ignore errors
-        }
-
-        return null;
-    }
-
-    private static bool IsCommandAvailable(string command)
-    {
-        try
-        {
-            string whichCommand = OperatingSystem.IsWindows() ? "where" : "which";
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                FileName = whichCommand,
-                Arguments = command,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true,
-            };
-
-            using Process? process = Process.Start(startInfo);
-            process?.WaitForExit(1000);
-            return process?.ExitCode == 0;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static async Task<string> RunCommandAsync(string command, string args)
-    {
-        try
-        {
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                FileName = command,
-                Arguments = args,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-            };
-
-            using Process? process = Process.Start(startInfo);
-            if (process == null)
-            {
-                return "Failed to start process";
-            }
-
-            string output = await process.StandardOutput.ReadToEndAsync();
-            string error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            return string.IsNullOrEmpty(output) ? error : output;
-        }
-        catch (Exception ex)
-        {
-            return $"Error: {ex.Message}";
-        }
-    }
 }

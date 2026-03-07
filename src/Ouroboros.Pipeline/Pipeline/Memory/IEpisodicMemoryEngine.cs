@@ -28,7 +28,7 @@ public interface IEpisodicMemoryEngine
     /// <returns>Result containing the episode ID on success, or error message on failure.</returns>
     Task<Result<EpisodeId, string>> StoreEpisodeAsync(
         PipelineBranch branch,
-        ExecutionContext context,
+        PipelineExecutionContext context,
         Outcome result,
         ImmutableDictionary<string, object> metadata,
         CancellationToken ct = default);

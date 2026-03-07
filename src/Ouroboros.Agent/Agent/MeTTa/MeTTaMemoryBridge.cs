@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using Ouroboros.Abstractions;
 using Ouroboros.Agent.MetaAI;
 using MetaAIMemoryStatistics = Ouroboros.Agent.MetaAI.MemoryStatistics;
@@ -37,15 +36,9 @@ public sealed class MeTTaMemoryBridge
             MetaAIMemoryStatistics stats = statsResult.IsSuccess 
                 ? new MetaAIMemoryStatistics(statsResult.Value.TotalExperiences, statsResult.Value.SuccessfulExperiences, statsResult.Value.FailedExperiences, statsResult.Value.UniqueContexts, statsResult.Value.UniqueTags, AverageQualityScore: statsResult.Value.AverageQualityScore)
                 : new MetaAIMemoryStatistics(0, 0, 0, 0, 0, AverageQualityScore: 0.0);
-            List<Experience> experiences = new List<Experience>();
-
             // Retrieve all experiences (this is a simplified approach)
             // In a real implementation, you'd want pagination or streaming
-            for (int i = 0; i < stats.TotalExperiences && i < 1000; i++)
-            {
-                // Note: This assumes we can enumerate experiences somehow
-                // The actual MemoryStore API might need extension for this
-            }
+            // The actual MemoryStore API might need extension for enumeration
 
             int factCount = 0;
 
@@ -63,6 +56,7 @@ public sealed class MeTTaMemoryBridge
 
             return Result<int, string>.Success(factCount);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<int, string>.Failure($"Memory sync failed: {ex.Message}");
@@ -104,6 +98,7 @@ public sealed class MeTTaMemoryBridge
 
             return Result<Unit, string>.Success(Unit.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Failed to add experience: {ex.Message}");

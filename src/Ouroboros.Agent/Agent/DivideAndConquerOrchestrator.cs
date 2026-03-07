@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Divide and Conquer Orchestrator
 // High-performance orchestrator for parallel task execution
@@ -89,6 +88,7 @@ public sealed class DivideAndConquerOrchestrator
 
             return Result<string, string>.Success(mergedResult);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             totalTimer.Stop();
@@ -188,6 +188,7 @@ public sealed class DivideAndConquerOrchestrator
                 ExecutionTime: sw.Elapsed,
                 Success: true);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             sw.Stop();
@@ -238,22 +239,22 @@ public sealed class DivideAndConquerOrchestrator
         _metrics.AddOrUpdate(
             resourceName,
             // Add new
-            _ => new PerformanceMetrics(
-                resourceName,
+            key => new PerformanceMetrics(
+                key,
                 ExecutionCount: 1,
                 AverageLatencyMs: latencyMs,
                 SuccessRate: success ? 1.0 : 0.0,
                 LastUsed: DateTime.UtcNow,
                 CustomMetrics: new Dictionary<string, double>()),
             // Update existing
-            (_, existing) =>
+            (key, existing) =>
             {
                 int newCount = existing.ExecutionCount + 1;
                 double newAvgLatency = ((existing.AverageLatencyMs * existing.ExecutionCount) + latencyMs) / newCount;
                 double newSuccessRate = ((existing.SuccessRate * existing.ExecutionCount) + (success ? 1.0 : 0.0)) / newCount;
 
                 return new PerformanceMetrics(
-                    resourceName,
+                    key,
                     ExecutionCount: newCount,
                     AverageLatencyMs: newAvgLatency,
                     SuccessRate: newSuccessRate,

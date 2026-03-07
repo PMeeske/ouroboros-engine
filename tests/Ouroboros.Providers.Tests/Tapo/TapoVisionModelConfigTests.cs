@@ -14,7 +14,7 @@ public class TapoVisionModelConfigTests
 
         // Assert
         config.VisionModel.Should().Be(TapoVisionModelConfig.DefaultVisionModel);
-        config.VisionModel.Should().Be("qwen3-vl:235b-cloud");
+        config.VisionModel.Should().Be("devstral-small-2:24b-cloud");
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public class TapoVisionModelConfigTests
 
         // Assert
         config.VisionModel.Should().Be(TapoVisionModelConfig.HighQualityVisionModel);
-        config.VisionModel.Should().Be("qwen3-vl:235b-cloud");
+        config.VisionModel.Should().Be("devstral-small-2:24b-cloud");
     }
 
     [Fact]

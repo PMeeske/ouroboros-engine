@@ -71,6 +71,7 @@ public static class GlobalProjectionService
             var epoch = GetLatestEpoch(updatedBranch).Value;
             return Result<(EpochSnapshot, PipelineBranch)>.Success((epoch, updatedBranch));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<(EpochSnapshot, PipelineBranch)>.Failure($"Failed to create epoch snapshot: {ex.Message}");
@@ -159,6 +160,7 @@ public static class GlobalProjectionService
 
             return Result<ProjectionMetrics>.Success(metrics);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ProjectionMetrics>.Failure($"Failed to compute metrics: {ex.Message}");

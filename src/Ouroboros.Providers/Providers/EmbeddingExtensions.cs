@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using Ouroboros.Diagnostics;
 
 namespace Ouroboros.Providers;
@@ -31,6 +30,7 @@ public static class EmbeddingExtensions
                 Telemetry.RecordEmbeddingSuccess(embedding.Length);
                 Telemetry.RecordVectors(1);
             }
+            catch (OperationCanceledException) { throw; }
             catch
             {
                 Telemetry.RecordEmbeddingFailure();

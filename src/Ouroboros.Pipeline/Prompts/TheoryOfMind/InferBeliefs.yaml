@@ -1,0 +1,38 @@
+name: InferBeliefs
+description: Infers another agent's beliefs from observations
+template: |
+  You are analyzing observations of Agent '{{$agentId}}' to infer their beliefs about the world.
+
+  OBSERVATIONS:
+  {{$observations}}
+
+  EXISTING BELIEFS:
+  {{$existingBeliefs}}
+
+  Based on these observations, infer what Agent '{{$agentId}}' believes. Consider:
+  1. What information is the agent acting on?
+  2. What assumptions are they making?
+  3. What do they seem to know or not know?
+
+  Provide a JSON response with this structure:
+  {
+    "beliefs": [
+      {
+        "key": "belief_key",
+        "proposition": "description of belief",
+        "probability": 0.85,
+        "source": "inference"
+      }
+    ],
+    "overall_confidence": 0.75
+  }
+
+  Focus on actionable beliefs that would influence the agent's behavior. Limit to 5 most important beliefs.
+template_format: semantic-kernel
+input_variables:
+  - name: agentId
+    description: The ID of the agent being analyzed
+  - name: observations
+    description: Formatted list of observations about the agent
+  - name: existingBeliefs
+    description: Previously recorded beliefs about the agent

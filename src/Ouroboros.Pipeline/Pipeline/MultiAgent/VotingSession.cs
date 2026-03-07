@@ -99,15 +99,7 @@ public sealed class VotingSession
                 throw new InvalidOperationException($"Agent {vote.AgentId} has already voted in this session.");
             }
 
-            bool isValidOption = false;
-            foreach (string option in _options)
-            {
-                if (string.Equals(option, vote.Option, StringComparison.Ordinal))
-                {
-                    isValidOption = true;
-                    break;
-                }
-            }
+            bool isValidOption = _options.Any(option => string.Equals(option, vote.Option, StringComparison.Ordinal));
 
             if (!isValidOption)
             {

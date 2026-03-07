@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Priority Modulator Interface
 // Phase 3: Affective Dynamics - Threat/opportunity appraisal

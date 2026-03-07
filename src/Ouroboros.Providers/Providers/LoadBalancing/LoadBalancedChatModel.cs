@@ -42,7 +42,8 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
     /// <param name="loadBalancer">Custom load balancer instance.</param>
     public LoadBalancedChatModel(IProviderLoadBalancer<Ouroboros.Abstractions.Core.IChatCompletionModel> loadBalancer)
     {
-        _loadBalancer = loadBalancer ?? throw new ArgumentNullException(nameof(loadBalancer));
+        ArgumentNullException.ThrowIfNull(loadBalancer);
+        _loadBalancer = loadBalancer;
         _retryPolicy = CreateRetryPolicy();
     }
 
@@ -165,7 +166,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
                     // Re-throw to trigger Polly retry with exponential backoff
                     throw;
                 }
-                catch (Exception ex)
+                catch (HttpRequestException ex)
                 {
                     sw.Stop();
 
@@ -183,15 +184,26 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
                 }
             }).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             // All retries exhausted - return error message for graceful degradation
             _logger.LogWarning(ex, "All retries exhausted");
-            
-            string providersAttempted = attemptedProviders.Count > 0 
-                ? $"Attempted: {string.Join(", ", attemptedProviders)}" 
+
+            string providersAttempted = attemptedProviders.Count > 0
+                ? $"Attempted: {string.Join(", ", attemptedProviders)}"
                 : "No providers could be selected";
-            
+
+            return $"[load-balanced-error] All providers exhausted. {providersAttempted}. Error: {ex.Message}";
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "All retries exhausted");
+
+            string providersAttempted = attemptedProviders.Count > 0
+                ? $"Attempted: {string.Join(", ", attemptedProviders)}"
+                : "No providers could be selected";
+
             return $"[load-balanced-error] All providers exhausted. {providersAttempted}. Error: {ex.Message}";
         }
     }

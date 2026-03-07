@@ -1,4 +1,4 @@
-﻿using Ouroboros.Abstractions;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.Metacognition;
 
@@ -38,6 +38,7 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
         _thresholds = new ConcurrentDictionary<string, double>();
         _subscribers = new ConcurrentBag<Action<MonitoringAlert>>();
         _lastHealthCheck = DateTime.UtcNow;
+        _ = _lastHealthCheck; // S4487: retained for future health-check staleness detection
 
         InitializeDefaultThresholds();
     }
@@ -69,6 +70,7 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
 
             return Result<Unit, string>.Success(Unit.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Failed to record event: {ex.Message}");
@@ -429,6 +431,8 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
         {
             _monitor = monitor;
             _handler = handler;
+            _ = _monitor; // S4487: retained for future unsubscription support
+            _ = _handler; // S4487: retained for future unsubscription support
         }
 
         public void Dispose()

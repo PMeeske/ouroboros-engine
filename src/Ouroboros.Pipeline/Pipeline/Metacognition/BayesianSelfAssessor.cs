@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.Metacognition;
@@ -73,6 +73,7 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
             var assessment = SelfAssessmentResult.FromDimensionScores(scores.ToImmutable());
             return Result<SelfAssessmentResult, string>.Success(assessment);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<SelfAssessmentResult, string>.Failure($"Assessment failed: {ex.Message}");
@@ -96,6 +97,7 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
 
             return Task.FromResult(Result<DimensionScore, string>.Success(calibratedScore));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Task.FromResult(
@@ -133,11 +135,12 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
         {
             var updatedBelief = _capabilityBeliefs.AddOrUpdate(
                 capability,
-                _ => CapabilityBelief.Uninformative(capability).WithBayesianUpdate(evidence),
+                key => CapabilityBelief.Uninformative(key).WithBayesianUpdate(evidence),
                 (_, existing) => existing.WithBayesianUpdate(evidence));
 
             return Result<CapabilityBelief, string>.Success(updatedBelief);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<CapabilityBelief, string>.Failure($"Belief update failed: {ex.Message}");
@@ -187,6 +190,7 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
 
             return Result<Unit, string>.Success(Unit.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Calibration failed: {ex.Message}");
@@ -216,6 +220,7 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
 
             return Result<DimensionScore, string>.Success(updatedScore);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<DimensionScore, string>.Failure($"Dimension score update failed: {ex.Message}");

@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
@@ -59,7 +58,7 @@ public static class ZipIngestion
                     if (IsLikelyText(buf.AsSpan(0, read)))
                         kind = ZipContentKind.Text;
                 }
-                catch { /* ignore heuristic failure */ }
+                catch (InvalidDataException) { /* ignore heuristic failure */ }
             }
             ZipArchiveEntry captured = entry; // capture entry while archive kept alive by registry
             Func<Stream> opener = () => captured.Open();
@@ -121,6 +120,7 @@ public static class ZipIngestion
                     };
                 }
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 // Last resort: preserve kind intent
@@ -149,6 +149,7 @@ public static class ZipIngestion
         {
             return await ParseCsvAsync(rec, maxLines, ct);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return new Dictionary<string, object>
@@ -166,6 +167,7 @@ public static class ZipIngestion
         {
             return await ParseXmlAsync(rec, includeText, ct);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return new Dictionary<string, object>

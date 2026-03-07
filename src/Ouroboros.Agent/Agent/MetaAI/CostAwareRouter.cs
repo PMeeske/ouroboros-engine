@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Cost-Aware Router - Balance quality vs. cost
 // ==========================================================
@@ -20,6 +19,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
     {
         _uncertaintyRouter = uncertaintyRouter ?? throw new ArgumentNullException(nameof(uncertaintyRouter));
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        _ = _orchestrator;
 
         // Register default costs
         RegisterDefaultCosts();
@@ -105,6 +105,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
 
             return Result<CostBenefitAnalysis, string>.Success(analysis);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<CostBenefitAnalysis, string>.Failure($"Cost-aware routing failed: {ex.Message}");
@@ -192,6 +193,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
 
             return Result<Plan, string>.Success(optimizedPlan);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Plan, string>.Failure($"Plan optimization failed: {ex.Message}");
@@ -232,14 +234,14 @@ public sealed class CostAwareRouter : ICostAwareRouter
             .FirstOrDefault();
     }
 
-    private double CalculateEstimatedCost(string task, CostInfo costInfo)
+    private static double CalculateEstimatedCost(string task, CostInfo costInfo)
     {
         // Estimate based on task length
         int estimatedTokens = task.Length / 4; // Rough approximation
         return costInfo.CostPerRequest + (costInfo.CostPerToken * estimatedTokens);
     }
 
-    private int EstimateTokenCount(PlanStep step)
+    private static int EstimateTokenCount(PlanStep step)
     {
         // Simple token estimation
         int actionLength = step.Action.Length;
@@ -249,7 +251,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
         return (actionLength + paramsLength + outcomeLength) / 4;
     }
 
-    private double CalculateValueScore(double cost, double quality, CostOptimizationStrategy strategy)
+    private static double CalculateValueScore(double cost, double quality, CostOptimizationStrategy strategy)
     {
         return strategy switch
         {
@@ -261,7 +263,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
         };
     }
 
-    private double EstimateInitialConfidence(string task)
+    private static double EstimateInitialConfidence(string task)
     {
         // Simple heuristic: longer, more detailed tasks have higher confidence
         // More sophisticated implementations would use ML models
@@ -277,7 +279,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
         return Math.Clamp(baseConfidence, 0.0, 1.0);
     }
 
-    private string DetermineRouteFromDecision(RoutingDecision decision)
+    private static string DetermineRouteFromDecision(RoutingDecision decision)
     {
         // Map strategy to route name
         return decision.RecommendedStrategy switch

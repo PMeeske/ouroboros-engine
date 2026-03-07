@@ -51,8 +51,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
     {
         if (string.IsNullOrWhiteSpace(providerId))
             throw new ArgumentException("Provider ID cannot be empty", nameof(providerId));
-        if (provider == null)
-            throw new ArgumentNullException(nameof(provider));
+        ArgumentNullException.ThrowIfNull(provider);
 
         _providers[providerId] = provider;
         _healthStatus[providerId] = new ProviderHealthStatus(
@@ -88,15 +87,13 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
         {
             if (kvp.Value.IsInCooldown && kvp.Value.CooldownUntil <= DateTime.UtcNow)
             {
-                // Cooldown expired, restore health if no other issues
-                if (kvp.Value.ConsecutiveFailures == 0)
+                // Cooldown expired, restore health and reset failure count
+                _healthStatus[kvp.Key] = kvp.Value with
                 {
-                    _healthStatus[kvp.Key] = kvp.Value with
-                    {
-                        IsHealthy = true,
-                        CooldownUntil = null
-                    };
-                }
+                    IsHealthy = true,
+                    ConsecutiveFailures = 0,
+                    CooldownUntil = null
+                };
             }
         }
 
@@ -130,7 +127,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
             if (recoverablePlaceholders.Count > 0)
             {
                 // Mark first recoverable as healthy and try it
-                string recoverId = recoverablePlaceholders.First();
+                string recoverId = recoverablePlaceholders[0];
                 MarkProviderHealthy(recoverId);
                 healthyProviders.Add(recoverId);
             }
@@ -253,7 +250,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
         System.Diagnostics.Trace.TraceInformation("[ProviderLoadBalancer] Provider '{0}' marked healthy", providerId);
     }
 
-    private TimeSpan CalculateCooldownDuration(ProviderHealthStatus health)
+    private static TimeSpan CalculateCooldownDuration(ProviderHealthStatus health)
     {
         // Exponential backoff based on how recently it was rate limited
         if (health.CooldownUntil.HasValue && health.CooldownUntil > DateTime.UtcNow)

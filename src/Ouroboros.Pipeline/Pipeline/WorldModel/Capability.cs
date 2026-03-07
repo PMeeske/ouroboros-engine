@@ -12,21 +12,8 @@ public sealed record Capability(
     ImmutableList<string> RequiredTools)
 {
     /// <summary>
-    /// Creates a capability with no required tools.
-    /// </summary>
-    /// <param name="name">Capability name.</param>
-    /// <param name="description">Capability description.</param>
-    /// <returns>A new capability.</returns>
-    public static Capability Create(string name, string description)
-    {
-        ArgumentNullException.ThrowIfNull(name);
-        ArgumentNullException.ThrowIfNull(description);
-
-        return new Capability(name, description, ImmutableList<string>.Empty);
-    }
-
-    /// <summary>
-    /// Creates a capability with required tools.
+    /// Creates a capability with optional required tools.
+    /// When called with no tools, produces a capability with an empty tool list.
     /// </summary>
     /// <param name="name">Capability name.</param>
     /// <param name="description">Capability description.</param>

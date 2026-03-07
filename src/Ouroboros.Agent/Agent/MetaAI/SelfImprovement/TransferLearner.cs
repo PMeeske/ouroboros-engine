@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Transfer Learning Implementation
 // Domain adaptation and analogical reasoning for skill transfer
@@ -11,7 +10,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// <summary>
 /// Implementation of transfer learning for cross-domain skill adaptation.
 /// </summary>
-public sealed class TransferLearner : ITransferLearner
+public sealed partial class TransferLearner : ITransferLearner
 {
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ISkillRegistry _skills;
@@ -28,6 +27,7 @@ public sealed class TransferLearner : ITransferLearner
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        _ = _memory;
         _config = config ?? new TransferLearningConfig();
     }
 
@@ -105,6 +105,7 @@ public sealed class TransferLearner : ITransferLearner
 
             return Result<TransferResult, string>.Success(result);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<TransferResult, string>.Failure($"Transfer learning failed: {ex.Message}");
@@ -147,7 +148,7 @@ Respond with just the number.";
             string response = await _llm.GenerateTextAsync(prompt, ct);
 
             // Extract numeric score
-            Match scoreMatch = Regex.Match(response, @"0?\.\d+|1\.0");
+            Match scoreMatch = TransferScoreRegex().Match(response);
             if (scoreMatch.Success && double.TryParse(scoreMatch.Value, out double score))
             {
                 return Math.Clamp(score, 0.0, 1.0);
@@ -212,15 +213,13 @@ database_query -> library_search (confidence: 0.8)
 
             foreach (string line in lines)
             {
-                Match match = Regex.Match(
-                    line,
-                    @"(.+?)\s*->\s*(.+?)\s*\(confidence:\s*(0?\.\d+|1\.0)\)");
+                Match match = AnalogyRegex().Match(line);
 
                 if (match.Success)
                 {
                     string source = match.Groups[1].Value.Trim();
                     string target = match.Groups[2].Value.Trim();
-                    double confidence = double.Parse(match.Groups[3].Value);
+                    double confidence = double.Parse(match.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture);
 
                     analogies.Add((source, target, confidence));
                 }
@@ -264,7 +263,7 @@ database_query -> library_search (confidence: 0.8)
 
     // Private helper methods
 
-    private string InferDomainFromSkill(Skill skill)
+    private static string InferDomainFromSkill(Skill skill)
     {
         // Extract domain hints from skill name and description
         string[] words = skill.Name.Split('_', StringSplitOptions.RemoveEmptyEntries);
@@ -273,7 +272,7 @@ database_query -> library_search (confidence: 0.8)
         return string.Join(" ", domainHints);
     }
 
-    private string BuildAdaptationPrompt(
+    private static string BuildAdaptationPrompt(
         Skill sourceSkill,
         string targetDomain,
         List<(string source, string target, double confidence)> analogies)
@@ -308,7 +307,7 @@ EXPECTED: [expected outcome]
 ";
     }
 
-    private List<PlanStep> ParseAdaptedSteps(string response, List<PlanStep> originalSteps)
+    private static List<PlanStep> ParseAdaptedSteps(string response, List<PlanStep> originalSteps)
     {
         List<PlanStep> adaptedSteps = new List<PlanStep>();
         string[] lines = response.Split('\n');
@@ -360,23 +359,26 @@ EXPECTED: [expected outcome]
         return adaptedSteps.Any() ? adaptedSteps : originalSteps;
     }
 
-    private List<string> ExtractAdaptations(string response)
+    private static List<string> ExtractAdaptations(string response)
     {
         List<string> adaptations = new List<string>();
 
         // Look for lines that describe adaptations
         string[] lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        foreach (string line in lines)
+        foreach (string line in lines.Where(line =>
+            line.Contains("adapted", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("modified", StringComparison.OrdinalIgnoreCase) ||
+            line.Contains("changed", StringComparison.OrdinalIgnoreCase)))
         {
-            if (line.Contains("adapted", StringComparison.OrdinalIgnoreCase) ||
-                line.Contains("modified", StringComparison.OrdinalIgnoreCase) ||
-                line.Contains("changed", StringComparison.OrdinalIgnoreCase))
-            {
-                adaptations.Add(line.Trim());
-            }
+            adaptations.Add(line.Trim());
         }
 
         return adaptations.Take(5).ToList();
     }
 
+    [GeneratedRegex(@"0?\.\d+|1\.0")]
+    private static partial Regex TransferScoreRegex();
+
+    [GeneratedRegex(@"(.+?)\s*->\s*(.+?)\s*\(confidence:\s*(0?\.\d+|1\.0)\)")]
+    private static partial Regex AnalogyRegex();
 }

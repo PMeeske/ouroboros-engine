@@ -1,4 +1,6 @@
-﻿namespace Ouroboros.Providers;
+﻿using Ouroboros.Providers.Configuration;
+
+namespace Ouroboros.Providers;
 
 /// <summary>
 /// Builder for creating RoundRobinChatModel instances with fluent API.
@@ -57,7 +59,7 @@ public sealed class RoundRobinBuilder
     /// <summary>
     /// Adds local Ollama to the pool.
     /// </summary>
-    public RoundRobinBuilder AddOllama(string model = "llama3.2", string endpoint = "http://localhost:11434")
+    public RoundRobinBuilder AddOllama(string model = "llama3.2", string endpoint = DefaultEndpoints.Ollama)
         => AddProvider("Ollama", ChatEndpointType.OllamaLocal, model, endpoint);
 
     /// <summary>

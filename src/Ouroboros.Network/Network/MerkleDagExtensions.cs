@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Network.Json;
+
 namespace Ouroboros.Network;
 
 /// <summary>
@@ -37,20 +39,7 @@ public static class MerkleDagExtensions
         return await store.LoadDagAsync(ct);
     }
 
-    /// <summary>
-    /// Creates a Qdrant store connected to this DAG.
-    /// </summary>
-    /// <param name="dag">The DAG to associate with the store.</param>
-    /// <param name="config">Qdrant configuration.</param>
-    /// <param name="embeddingFunc">Optional embedding function for semantic search.</param>
-    /// <returns>A connected QdrantDagStore.</returns>
-    public static QdrantDagStore CreateQdrantStore(
-        this MerkleDag dag,
-        QdrantDagConfig config,
-        Func<string, Task<float[]>>? embeddingFunc = null)
-    {
-        return new QdrantDagStore(config, embeddingFunc);
-    }
+
 
     /// <summary>
     /// Serializes the MerkleDag to JSON.
@@ -78,7 +67,7 @@ public static class MerkleDagExtensions
                 e.DurationMs,
                 e.Hash)).ToArray());
 
-        return JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(data, JsonDefaults.Indented);
     }
 
     /// <summary>
@@ -155,6 +144,7 @@ public static class MerkleDagExtensions
 
             return Result<MerkleDag>.Success(dag);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<MerkleDag>.Failure($"Failed to deserialize DAG: {ex.Message}");

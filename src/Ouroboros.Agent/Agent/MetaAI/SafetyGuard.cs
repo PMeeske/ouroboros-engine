@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Safety Guard Implementation
 // Permission-based safe execution
@@ -16,7 +15,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// Combines string-matching safety checks with optional MeTTa symbolic reasoning
 /// for neuro-symbolic safety validation.
 /// </summary>
-public sealed class SafetyGuard : ISafetyGuard
+public sealed partial class SafetyGuard : ISafetyGuard
 {
     private const double RiskThresholdForDenial = 0.8;
 
@@ -59,16 +58,13 @@ public sealed class SafetyGuard : ISafetyGuard
         List<string> violations = new();
 
         // Step 1: Check with OuroborosAtom.IsSafeAction() if available in context
-        if (context is OuroborosAtom atom)
+        if (context is OuroborosAtom atom && !atom.IsSafeAction(actionName))
         {
-            if (!atom.IsSafeAction(actionName))
-            {
-                violations.Add("Action rejected by OuroborosAtom safety constraints");
-                return SafetyCheckResult.Denied(
-                    "Action violates Ouroboros safety constraints",
-                    violations,
-                    1.0);
-            }
+            violations.Add("Action rejected by OuroborosAtom safety constraints");
+            return SafetyCheckResult.Denied(
+                "Action violates Ouroboros safety constraints",
+                violations,
+                1.0);
         }
 
         // Check for dangerous patterns
@@ -193,6 +189,7 @@ public sealed class SafetyGuard : ISafetyGuard
 
             return Task.FromResult(new SandboxResult(true, sandboxedStep, restrictions, null));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Task.FromResult(new SandboxResult(false, null, Array.Empty<string>(), ex.Message));
@@ -282,17 +279,10 @@ public sealed class SafetyGuard : ISafetyGuard
         _permissionPolicies[actionName] = new PermissionPolicy(actionName, level, description);
     }
 
-    // Backward compatibility methods for existing callers
-    // These adapt the old API to the new Foundation interface
-
     /// <summary>
-    /// Legacy method: Checks if an operation is safe to execute (synchronous).
-    /// Kept for backward compatibility - prefer CheckActionSafetyAsync.
-    /// WARNING: This method blocks on async code and should ONLY be used in console applications
-    /// or background tasks. Do NOT use in ASP.NET Core, UI contexts, or any environment with
-    /// a synchronization context, as it can still cause deadlocks despite Task.Run.
+    /// Checks if an operation is safe to execute (synchronous).
+    /// Prefer CheckActionSafetyAsync for new code.
     /// </summary>
-    [Obsolete("Use CheckActionSafetyAsync instead")]
     public SafetyCheckResult CheckSafety(
         string operation,
         Dictionary<string, object> parameters,
@@ -301,7 +291,6 @@ public sealed class SafetyGuard : ISafetyGuard
         ArgumentNullException.ThrowIfNull(operation);
         ArgumentNullException.ThrowIfNull(parameters);
 
-        // Task.Run helps but doesn't eliminate deadlock risk in all contexts
         IReadOnlyDictionary<string, object> readOnlyParams = parameters;
         SafetyCheckResult result = Task.Run(async () =>
             await CheckActionSafetyAsync(operation, readOnlyParams, null, CancellationToken.None))
@@ -312,22 +301,19 @@ public sealed class SafetyGuard : ISafetyGuard
     }
 
     /// <summary>
-    /// Legacy method: Sandboxes a plan step for safe execution.
-    /// Kept for backward compatibility.
+    /// Sandboxes a plan step for safe execution.
+    /// Prefer SandboxStepAsync for new code.
     /// </summary>
-    [Obsolete("This method is deprecated and will be removed in a future version")]
     public PlanStep SandboxStep(PlanStep step)
     {
         ArgumentNullException.ThrowIfNull(step);
 
-        // Create sandboxed version with restricted parameters
         Dictionary<string, object> sandboxedParams = new Dictionary<string, object>();
 
         foreach (KeyValuePair<string, object> param in step.Parameters)
         {
             if (param.Value is string strValue)
             {
-                // Sanitize string values
                 sandboxedParams[param.Key] = SanitizeString(strValue);
             }
             else
@@ -336,222 +322,10 @@ public sealed class SafetyGuard : ISafetyGuard
             }
         }
 
-        // Add sandbox metadata
         sandboxedParams["__sandboxed__"] = true;
         sandboxedParams["__original_action__"] = step.Action;
 
         return step with { Parameters = sandboxedParams };
-    }
-
-    private string SanitizeString(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return value;
-
-        // Remove potentially dangerous characters
-        string sanitized = value
-            .Replace("<", "&lt;")
-            .Replace(">", "&gt;")
-            .Replace("'", "&#39;")
-            .Replace("\"", "&quot;");
-
-        // Limit length to prevent DOS
-        if (sanitized.Length > 10000)
-        {
-            sanitized = sanitized.Substring(0, 10000);
-        }
-
-        return sanitized;
-    }
-
-    private PermissionLevel GetRequiredPermissionLevel(string action)
-    {
-        if (string.IsNullOrWhiteSpace(action))
-            return _defaultLevel;
-
-        // Check registered policies
-        if (_permissionPolicies.TryGetValue(action, out PermissionPolicy? policy))
-        {
-            return policy.Level;
-        }
-
-        // Determine based on action patterns
-        string actionLower = action.ToLowerInvariant();
-
-        if (actionLower.Contains("read") || actionLower.Contains("get") || actionLower.Contains("list"))
-            return PermissionLevel.Read;
-
-        if (actionLower.Contains("delete") || actionLower.Contains("drop") || actionLower.Contains("remove"))
-            return PermissionLevel.Admin;
-
-        if (actionLower.Contains("system") || actionLower.Contains("admin"))
-            return PermissionLevel.Admin;
-
-        if (actionLower.Contains("write") || actionLower.Contains("update") || actionLower.Contains("create"))
-            return PermissionLevel.Write;
-
-        if (actionLower.Contains("exec") || actionLower.Contains("run") || actionLower.Contains("execute"))
-            return PermissionLevel.Execute;
-
-        return _defaultLevel;
-    }
-
-    private void InitializeDefaultPermissions()
-    {
-        // Register common tool permissions with new permission levels
-        RegisterPermissionPolicy("math", PermissionLevel.Read, "Mathematical calculations");
-        RegisterPermissionPolicy("search", PermissionLevel.Read, "Search operations");
-        RegisterPermissionPolicy("llm", PermissionLevel.Execute, "LLM text generation");
-        RegisterPermissionPolicy("run_usedraft", PermissionLevel.Execute, "Generate draft");
-        RegisterPermissionPolicy("run_usecritique", PermissionLevel.Execute, "Critique content");
-        RegisterPermissionPolicy("file_write", PermissionLevel.Write, "File write operations");
-        RegisterPermissionPolicy("qdrant_admin", PermissionLevel.Write, "Qdrant vector database administration");
-    }
-
-    private bool ContainsDangerousPatterns(string operation, IReadOnlyDictionary<string, object> parameters)
-    {
-        string[] dangerousPatterns = new[]
-        {
-            "eval", "exec", "system", "shell", "subprocess",
-            "rm -rf", "delete *", "drop table", "truncate"
-        };
-
-        string combined = operation + " " + string.Join(" ", parameters.Values.Select(v => v?.ToString() ?? ""));
-        string lowerCombined = combined.ToLowerInvariant();
-
-        return dangerousPatterns.Any(pattern => lowerCombined.Contains(pattern));
-    }
-
-    private bool ContainsInjectionPatterns(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return false;
-
-        string[] injectionPatterns = new[]
-        {
-            "';", "\"; ", "' OR '1'='1", "\" OR \"1\"=\"1",
-            "../", "..\\", "<script", "javascript:",
-            "onload=", "onerror="
-        };
-
-        return injectionPatterns.Any(pattern =>
-            value.Contains(pattern, StringComparison.OrdinalIgnoreCase));
-    }
-
-    /// <summary>
-    /// Queries MeTTa symbolic reasoning for action safety.
-    /// </summary>
-    /// <param name="action">The action to check.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>Form representing MeTTa's safety assessment (Mark/Void/Imaginary).</returns>
-    private async Task<Form> QueryMeTTaSafetyAsync(string action, CancellationToken ct)
-    {
-        if (_mettaEngine == null)
-        {
-            return Form.Imaginary; // No engine means uncertain
-        }
-
-        try
-        {
-            // Escape the action string for MeTTa query
-            string escapedAction = EscapeMeTTaString(action);
-
-            // Query: (IsSafeAction "action")
-            string query = $"(IsSafeAction \"{escapedAction}\")";
-            Result<string, string> result = await _mettaEngine.ExecuteQueryAsync(query, ct);
-
-            // Map result to Form
-            return result.Match(
-                onSuccess: queryResult =>
-                {
-                    string trimmed = queryResult.Trim();
-
-                    // MeTTa returns atoms like Mark, Void, or empty results
-                    if (trimmed.Contains("Mark", StringComparison.OrdinalIgnoreCase) ||
-                        trimmed.Contains("⌐", StringComparison.OrdinalIgnoreCase)) // '⌐' is the Laws of Form notation for Mark
-                    {
-                        return Form.Mark;
-                    }
-                    else if (trimmed.Contains("Void", StringComparison.OrdinalIgnoreCase) ||
-                             trimmed.Contains("∅", StringComparison.OrdinalIgnoreCase) || // '∅' is the Unicode empty set symbol used by Laws of Form / MeTTa to denote Void
-                             string.IsNullOrWhiteSpace(trimmed))
-                    {
-                        return Form.Void;
-                    }
-                    else
-                    {
-                        // Unknown result → uncertain
-                        return Form.Imaginary;
-                    }
-                },
-                onFailure: _ => Form.Imaginary); // Query failure → uncertain
-        }
-        catch
-        {
-            // Exception during query → uncertain
-            return Form.Imaginary;
-        }
-    }
-
-    /// <summary>
-    /// Adds MeTTa safety rules to the knowledge base.
-    /// Should be called during orchestrator initialization.
-    /// </summary>
-    /// <param name="instanceId">The Ouroboros instance ID for scoping rules.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>Result indicating success or failure.</returns>
-    public async Task<Result<Unit, string>> AddMeTTaSafetyRulesAsync(string instanceId, CancellationToken ct = default)
-    {
-        if (_mettaEngine == null)
-        {
-            return Result<Unit, string>.Success(Unit.Value); // No engine, skip silently
-        }
-
-        try
-        {
-            // Escape the instance ID to prevent injection attacks
-            string escapedInstanceId = EscapeMeTTaString(instanceId);
-
-            // Rule: Actions are safe if the instance respects safety constraints
-            // and the action doesn't match destructive patterns
-            string safetyRule = $@"
-(= (IsSafeAction $action)
-   (if (and (Respects (OuroborosInstance ""{escapedInstanceId}"") NoSelfDestruction)
-            (not (MatchesPattern $action ""destructive"")))
-       Mark
-       Void))
-
-(= (MatchesPattern $action ""destructive"")
-   (or (contains $action ""delete self"")
-       (contains $action ""terminate"")
-       (contains $action ""disable oversight"")))";
-
-            Result<string, string> result = await _mettaEngine.ApplyRuleAsync(safetyRule, ct);
-
-            return result.Match(
-                onSuccess: _ => Result<Unit, string>.Success(Unit.Value),
-                onFailure: error => Result<Unit, string>.Failure($"Failed to add MeTTa safety rules: {error}"));
-        }
-        catch (Exception ex)
-        {
-            return Result<Unit, string>.Failure($"Exception adding MeTTa safety rules: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Escapes a string for use in MeTTa queries.
-    /// </summary>
-    private static string EscapeMeTTaString(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        // Escape quotes and backslashes for MeTTa
-        return value
-            .Replace("\\", "\\\\")
-            .Replace("\"", "\\\"");
     }
 
     // Internal helper record for permission policies

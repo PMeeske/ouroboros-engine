@@ -110,15 +110,7 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
             stopwatch.Stop();
             return HandleSuccess(output, stopwatch.Elapsed, metadata, activity);
         }
-        catch (OperationCanceledException ex)
-        {
-            stopwatch.Stop();
-            return HandleFailure(
-                $"Operation cancelled: {ex.Message}",
-                stopwatch.Elapsed,
-                metadata,
-                activity);
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             stopwatch.Stop();
@@ -275,6 +267,7 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
                 var result = await operation();
                 return Result<T, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception) when (attempt < retryConfig.MaxRetries && !ct.IsCancellationRequested)
             {
                 // Add jitter to prevent thundering herd

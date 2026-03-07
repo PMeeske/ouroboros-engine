@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Human-in-the-Loop - Interactive refinement and approval
 // ==========================================================
@@ -122,6 +121,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
 
             return Result<PlanExecutionResult, string>.Success(execution);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<PlanExecutionResult, string>.Failure($"Human oversight execution failed: {ex.Message}");
@@ -193,13 +193,14 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
 
             return Result<Plan, string>.Success(plan);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Plan, string>.Failure($"Interactive refinement failed: {ex.Message}");
         }
     }
 
-    private bool IsCriticalStep(PlanStep step, HumanInTheLoopConfig config)
+    private static bool IsCriticalStep(PlanStep step, HumanInTheLoopConfig config)
     {
         string actionLower = step.Action.ToLowerInvariant();
 
@@ -234,7 +235,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
         return step with { Parameters = newParams };
     }
 
-    private PlanStep ParseStepFromFeedback(string feedback)
+    private static PlanStep ParseStepFromFeedback(string feedback)
     {
         // Simple parsing - in production use more sophisticated approach
         string[] parts = feedback.Split('|');

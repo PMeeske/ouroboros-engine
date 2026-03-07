@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using Polly;
 using Polly.Retry;
 
@@ -7,14 +7,14 @@ namespace Ouroboros.Providers;
 /// <summary>
 /// Embedding provider for LiteLLM proxy using OpenAI-compatible /v1/embeddings endpoint.
 /// Supports various embedding models proxied through LiteLLM.
-/// Includes Polly exponential backoff retry policy to handle rate limiting.
+/// Includes Polly v8 resilience pipeline with exponential backoff to handle rate limiting.
 /// </summary>
 public sealed class LiteLLMEmbeddingModel : IEmbeddingModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
     private readonly DeterministicEmbeddingModel _fallback = new();
-    private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
+    private readonly ResiliencePipeline<HttpResponseMessage> _resiliencePipeline;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LiteLLMEmbeddingModel"/> class.
@@ -34,18 +34,28 @@ public sealed class LiteLLMEmbeddingModel : IEmbeddingModel
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;
 
-        // Create Polly retry policy with exponential backoff for rate limiting (429) and server errors (5xx)
-        _retryPolicy = Policy
-            .HandleResult<HttpResponseMessage>(r =>
-                (int)r.StatusCode == 429 || // Too Many Requests
-                (int)r.StatusCode >= 500)   // Server errors
-            .WaitAndRetryAsync(
-                retryCount: 3,
-                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                onRetry: (outcome, timespan, retryCount, context) =>
+        // Polly v8 resilience pipeline with exponential backoff for rate limiting (429) and server errors (5xx)
+        _resiliencePipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
+            .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
+            {
+                MaxRetryAttempts = 3,
+                BackoffType = DelayBackoffType.Exponential,
+                UseJitter = true,
+                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                    .HandleResult(r =>
+                        (int)r.StatusCode == 429 ||
+                        (int)r.StatusCode >= 500),
+                OnRetry = args =>
                 {
-                    System.Diagnostics.Trace.TraceInformation("[LiteLLMEmbeddingModel] Retry {0} after {1}s due to {2}", retryCount, timespan.TotalSeconds, outcome.Result?.StatusCode);
-                });
+                    System.Diagnostics.Trace.TraceInformation(
+                        "[LiteLLMEmbeddingModel] Retry {0} after {1:F1}s due to {2}",
+                        args.AttemptNumber,
+                        args.RetryDelay.TotalSeconds,
+                        args.Outcome.Result?.StatusCode);
+                    return ValueTask.CompletedTask;
+                },
+            })
+            .Build();
     }
 
     /// <inheritdoc/>
@@ -60,10 +70,9 @@ public sealed class LiteLLMEmbeddingModel : IEmbeddingModel
                 input = input,
             });
 
-            HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
-            {
-                return await _client.PostAsync("/v1/embeddings", payload, ct).ConfigureAwait(false);
-            }).ConfigureAwait(false);
+            HttpResponseMessage response = await _resiliencePipeline.ExecuteAsync(
+                async token => await _client.PostAsync("/v1/embeddings", payload, token).ConfigureAwait(false),
+                ct).ConfigureAwait(false);
 
             response.EnsureSuccessStatusCode();
 
@@ -101,7 +110,7 @@ public sealed class LiteLLMEmbeddingModel : IEmbeddingModel
         }
         catch
         {
-            // LiteLLM proxy not reachable or error occurred → fall back to deterministic embedding
+            // LiteLLM proxy not reachable or error occurred -> fall back to deterministic embedding
         }
 
         return await _fallback.CreateEmbeddingsAsync(input, ct).ConfigureAwait(false);

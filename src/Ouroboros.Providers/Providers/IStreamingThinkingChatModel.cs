@@ -3,6 +3,7 @@
 /// <summary>
 /// Extended contract for models that support streaming thinking/reasoning mode.
 /// </summary>
+[Obsolete("Use IOuroborosChatClient with GetStreamingResponseAsync and ThinkingAIContent instead. Will be removed in v3.")]
 public interface IStreamingThinkingChatModel : IThinkingChatModel, IStreamingChatModel
 {
     /// <summary>

@@ -147,6 +147,7 @@ public sealed class SymbolicRetrievalStep
 
             return Result<HybridRetrievalResult, string>.Success(hybridResult);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<HybridRetrievalResult, string>.Failure(
@@ -179,44 +180,38 @@ public sealed class SymbolicRetrievalStep
         Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct);
 
         return result.Match(
-            success => Result<IReadOnlyList<string>, string>.Success(this.ParseDocumentIds(success)),
+            success => Result<IReadOnlyList<string>, string>.Success(ParseDocumentIds(success)),
             error => Result<IReadOnlyList<string>, string>.Failure(error));
     }
 
     /// <summary>
     /// Parses document IDs from MeTTa query results.
     /// </summary>
-    private IReadOnlyList<string> ParseDocumentIds(string mettaResult)
+    private static IReadOnlyList<string> ParseDocumentIds(string mettaResult)
     {
-        List<string> ids = new();
-
         // MeTTa returns results in various formats like:
         // [(Doc "deployment.md")] or (Doc "deployment.md") or just document identifiers
-        System.Text.RegularExpressions.Regex docPattern = 
+        System.Text.RegularExpressions.Regex docPattern =
             new(@"\(Doc\s+""([^""]+)""\)", System.Text.RegularExpressions.RegexOptions.Compiled);
 
-        foreach (System.Text.RegularExpressions.Match match in docPattern.Matches(mettaResult))
-        {
-            if (match.Groups.Count > 1)
-            {
-                ids.Add(match.Groups[1].Value);
-            }
-        }
+        List<string> ids = docPattern.Matches(mettaResult)
+            .Cast<System.Text.RegularExpressions.Match>()
+            .Where(match => match.Groups.Count > 1)
+            .Select(match => match.Groups[1].Value)
+            .ToList();
 
         // Also try simple string extraction for direct matches
         if (ids.Count == 0)
         {
             // Try to extract quoted strings
-            System.Text.RegularExpressions.Regex quotedPattern = 
+            System.Text.RegularExpressions.Regex quotedPattern =
                 new(@"""([^""]+)""", System.Text.RegularExpressions.RegexOptions.Compiled);
-            
-            foreach (System.Text.RegularExpressions.Match match in quotedPattern.Matches(mettaResult))
-            {
-                if (match.Groups.Count > 1)
-                {
-                    ids.Add(match.Groups[1].Value);
-                }
-            }
+
+            ids = quotedPattern.Matches(mettaResult)
+                .Cast<System.Text.RegularExpressions.Match>()
+                .Where(match => match.Groups.Count > 1)
+                .Select(match => match.Groups[1].Value)
+                .ToList();
         }
 
         return ids;

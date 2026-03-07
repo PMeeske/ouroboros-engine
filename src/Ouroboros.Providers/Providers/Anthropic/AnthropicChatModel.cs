@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Text;
 using System.Reactive.Linq;
 using Anthropic.SDK;
@@ -85,7 +84,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
             MessageParameters parameters = new()
             {
                 Messages = messages,
-                MaxTokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : 4096,
+                MaxTokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : 128_000,
                 Model = _model,
                 Stream = false
             };
@@ -146,7 +145,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
         {
             throw; // propagate cleanly — let callers handle, don't return fallback
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             System.Diagnostics.Trace.TraceWarning("[AnthropicChatModel] Error: {0}: {1}", ex.GetType().Name, ex.Message);
         }
@@ -171,7 +170,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
                 MessageParameters parameters = new()
                 {
                     Messages = messages,
-                    MaxTokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : 4096,
+                    MaxTokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : 128_000,
                     Model = _model,
                     Stream = true
                 };
@@ -206,7 +205,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
                 // Deliberate cancellation — complete cleanly
                 observer.OnCompleted();
             }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
             {
                 observer.OnError(ex);
             }

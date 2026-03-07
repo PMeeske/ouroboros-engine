@@ -2,8 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-#pragma warning disable SA1309 // Field names should not begin with underscore
-#pragma warning disable SA1101 // Prefix local calls with this
 
 namespace Ouroboros.Pipeline.Reasoning;
 
@@ -96,6 +94,7 @@ public class HyperonReasoningStep : IDisposable
 
                 return result;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 // Record step failure
@@ -262,6 +261,7 @@ public class HyperonReasoningStep : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        // Intentional: sync-over-async in Dispose; IDisposable cannot be async and flow requires async disposal
         _flow.DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 }

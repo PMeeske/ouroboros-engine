@@ -3,6 +3,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using Ouroboros.Providers.Configuration;
+
 namespace Ouroboros.Agent.ConsolidatedMind;
 
 /// <summary>
@@ -15,7 +17,7 @@ public static class OllamaCloudDefaults
     /// <summary>
     /// Default local Ollama endpoint.
     /// </summary>
-    public const string LocalEndpoint = "http://localhost:11434";
+    public const string LocalEndpoint = DefaultEndpoints.Ollama;
 
     /// <summary>
     /// Default Ollama Cloud endpoint.

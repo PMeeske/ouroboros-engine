@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using Ouroboros.Abstractions.Monads;
+using Ouroboros.Abstractions;
 using Ouroboros.Agent.MetaAI.SelfModel;
 
 namespace Ouroboros.Agent.Tests.MetaAI.SelfModel;

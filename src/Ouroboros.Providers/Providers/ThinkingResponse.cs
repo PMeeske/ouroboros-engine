@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -12,7 +11,7 @@ namespace Ouroboros.Providers;
 /// <param name="Content">The final response content after thinking.</param>
 /// <param name="ThinkingTokens">Estimated token count for thinking content (if available from API).</param>
 /// <param name="ContentTokens">Estimated token count for content (if available from API).</param>
-public sealed record ThinkingResponse(
+public sealed partial record ThinkingResponse(
     string? Thinking,
     string Content,
     int? ThinkingTokens = null,
@@ -46,7 +45,7 @@ public sealed record ThinkingResponse(
             return new ThinkingResponse(null, text ?? string.Empty);
 
         // Try to extract <think>...</think> tags (used by DeepSeek R1, etc.)
-        var thinkMatch = Regex.Match(text, @"<think>(.*?)</think>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        var thinkMatch = ThinkTagRegex().Match(text);
         if (thinkMatch.Success)
         {
             string thinking = thinkMatch.Groups[1].Value.Trim();
@@ -55,7 +54,7 @@ public sealed record ThinkingResponse(
         }
 
         // Try <thinking>...</thinking> format
-        var thinkingMatch = Regex.Match(text, @"<thinking>(.*?)</thinking>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        var thinkingMatch = ThinkingTagRegex().Match(text);
         if (thinkingMatch.Success)
         {
             string thinking = thinkingMatch.Groups[1].Value.Trim();
@@ -66,4 +65,10 @@ public sealed record ThinkingResponse(
         // No thinking tags found
         return new ThinkingResponse(null, text);
     }
+
+    [GeneratedRegex(@"<think>(.*?)</think>", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
+    private static partial Regex ThinkTagRegex();
+
+    [GeneratedRegex(@"<thinking>(.*?)</thinking>", RegexOptions.Singleline | RegexOptions.IgnoreCase)]
+    private static partial Regex ThinkingTagRegex();
 }

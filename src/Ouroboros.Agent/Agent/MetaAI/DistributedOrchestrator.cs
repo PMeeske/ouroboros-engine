@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Distributed Orchestration - Coordinate multiple agents
 // ==========================================================
@@ -79,7 +78,6 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
             IEnumerable<Task<StepResult>> tasks = assignments.Select(async assignment =>
             {
                 AgentInfo agent = _agents[assignment.AgentId];
-                PlanStep step = assignment.Step;
 
                 // Mark agent as busy
                 _agents[assignment.AgentId] = agent with { Status = AgentStatus.Busy };
@@ -125,6 +123,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
 
             return Result<PlanExecutionResult, string>.Success(execution);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<PlanExecutionResult, string>.Failure($"Distributed execution failed: {ex.Message}");
@@ -200,7 +199,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
         return assignments;
     }
 
-    private AgentInfo? FindSuitableAgent(PlanStep step, List<AgentInfo> agents)
+    private static AgentInfo? FindSuitableAgent(PlanStep step, List<AgentInfo> agents)
     {
         // Find agent with matching capabilities
         return agents.FirstOrDefault(a => a.Capabilities.Contains(step.Action)) ?? agents.FirstOrDefault();
@@ -233,6 +232,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
                     ["task_id"] = assignment.TaskId
                 });
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             sw.Stop();

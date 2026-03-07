@@ -11,7 +11,7 @@ namespace Ouroboros.Providers;
 /// </summary>
 public sealed record ChatRuntimeSettings(
     double Temperature = 0.7,
-    int MaxTokens = 512,
+    int MaxTokens = 0,
     int TimeoutSeconds = 60,
     bool Stream = false,
     string? Culture = null,

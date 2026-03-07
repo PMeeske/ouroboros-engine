@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Skill Composition - Combine skills into higher-level skills
 // ==========================================================
@@ -88,6 +87,7 @@ public sealed class SkillComposer : ISkillComposer
 
             return await Task.FromResult(Result<Skill, string>.Success(compositeSkill));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Skill, string>.Failure($"Skill composition failed: {ex.Message}");

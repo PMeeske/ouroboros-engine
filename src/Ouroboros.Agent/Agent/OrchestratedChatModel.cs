@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Orchestrated Chat Model
 // Performance-aware wrapper that uses orchestrator for
@@ -57,6 +56,7 @@ public sealed class OrchestratedChatModel : Ouroboros.Abstractions.Core.IChatCom
                 },
                 error => Task.FromResult($"[orchestrator-error] {error}"));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             if (_trackMetrics)
@@ -116,6 +116,7 @@ public sealed class OrchestratedChatModel : Ouroboros.Abstractions.Core.IChatCom
                 error => Task.FromResult<(string, List<ToolExecution>, OrchestratorDecision?)>(
                     ($"[orchestrator-error] {error}", new List<ToolExecution>(), null)));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             if (_trackMetrics)

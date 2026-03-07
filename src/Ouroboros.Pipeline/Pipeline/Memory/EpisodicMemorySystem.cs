@@ -34,7 +34,7 @@ public sealed class EpisodicMemorySystem
     /// Creates an arrow to store an episode.
     /// </summary>
     public Step<PipelineBranch, PipelineBranch> StoreEpisode(
-        ExecutionContext context,
+        PipelineExecutionContext context,
         Outcome result,
         ImmutableDictionary<string, object> metadata)
         => EpisodicMemoryArrows.StoreEpisodeArrow(

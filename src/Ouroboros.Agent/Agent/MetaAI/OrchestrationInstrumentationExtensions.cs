@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Extension methods for instrumenting orchestration components.
@@ -44,6 +44,7 @@ public static class OrchestrationInstrumentationExtensions
             activity?.SetTag("orchestrator.duration_ms", stopwatch.ElapsedMilliseconds);
             return result;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             stopwatch.Stop();

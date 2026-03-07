@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Orchestration Cache
 // Caching layer for orchestration decisions to improve performance
@@ -203,8 +202,6 @@ public sealed class InMemoryOrchestrationCache : IOrchestrationCache, IDisposabl
         public OrchestratorDecision Decision { get; }
         public DateTime ExpiresAt { get; }
         public DateTime LastAccessedAt { get; private set; }
-        public int AccessCount => _accessCount;
-
         public CacheEntry(OrchestratorDecision decision, DateTime expiresAt)
         {
             Decision = decision;

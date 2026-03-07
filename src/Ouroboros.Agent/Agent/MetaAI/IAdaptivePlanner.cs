@@ -22,6 +22,6 @@ public interface IAdaptivePlanner
     /// Evaluates if adaptation is needed.
     /// </summary>
     Task<AdaptationAction?> EvaluateAdaptationAsync(
-        ExecutionContext context,
+        PlanExecutionContext context,
         CancellationToken ct = default);
 }

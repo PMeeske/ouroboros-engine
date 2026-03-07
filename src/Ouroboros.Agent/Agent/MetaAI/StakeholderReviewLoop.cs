@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Stakeholder Review Loop - PR-based approval workflow
 // ==========================================================
@@ -108,6 +107,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
 
             return Result<StakeholderReviewResult, string>.Success(result);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<StakeholderReviewResult, string>.Failure(
@@ -177,6 +177,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
 
             return Result<ReviewState, string>.Failure("Monitoring cancelled");
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ReviewState, string>.Failure(
@@ -213,6 +214,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
 
             return Result<int, string>.Success(resolvedCount);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<int, string>.Failure(
@@ -220,7 +222,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
         }
     }
 
-    private bool CheckAllApproved(ReviewState state, StakeholderReviewConfig config)
+    private static bool CheckAllApproved(ReviewState state, StakeholderReviewConfig config)
     {
         int approvedCount = state.Reviews.Count(r => r.Approved);
 
@@ -236,7 +238,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
         }
     }
 
-    private ReviewStatus DetermineReviewStatus(
+    private static ReviewStatus DetermineReviewStatus(
         List<ReviewDecision> reviews,
         List<ReviewComment> comments,
         StakeholderReviewConfig config)
@@ -265,7 +267,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
         return ReviewStatus.AwaitingReview;
     }
 
-    private string GenerateResolution(string commentContent)
+    private static string GenerateResolution(string commentContent)
     {
         // Simple resolution generation
         // In production, this could use an LLM to generate proper responses

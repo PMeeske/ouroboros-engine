@@ -49,7 +49,8 @@ public sealed class SpeechToTextTool : ITool
     /// <param name="service">The speech-to-text service to use.</param>
     public SpeechToTextTool(ISpeechToTextService service)
     {
-        _service = service ?? throw new ArgumentNullException(nameof(service));
+        ArgumentNullException.ThrowIfNull(service);
+        _service = service;
     }
 
     /// <summary>
@@ -106,7 +107,8 @@ public sealed class SpeechToTextTool : ITool
                 transcription => Result<string, string>.Success(transcription.Text),
                 error => Result<string, string>.Failure(error));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<string, string>.Failure($"Transcription failed: {ex.Message}");
         }

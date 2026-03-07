@@ -86,7 +86,7 @@ public sealed class MessageFilterIntegrationTests
         // Act
         var message = CreateTestMessage("test.topic", "test-neuron");
         var waitTask = testNeuron.WaitForMessageAsync(500);
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait for message to be processed
         await waitTask;
@@ -118,7 +118,7 @@ public sealed class MessageFilterIntegrationTests
         // Act
         var message = CreateTestMessage("reflection.request", "test-neuron");
         var waitTask = testNeuron.WaitForMessageAsync(500);
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait for message to be processed
         await waitTask;
@@ -152,7 +152,7 @@ public sealed class MessageFilterIntegrationTests
         // Act
         var message = CreateTestMessage("custom.action", "test-neuron");
         var waitTask = testNeuron.WaitForMessageAsync(1000);
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait for message to be processed
         await waitTask;
@@ -194,7 +194,7 @@ public sealed class MessageFilterIntegrationTests
 
         // Act
         var message = CreateTestMessage("dangerous.action", "test-neuron");
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait a bit to ensure the message would have been delivered if it wasn't blocked
         await Task.Delay(500);
@@ -226,7 +226,7 @@ public sealed class MessageFilterIntegrationTests
         // Act
         var message = CreateTestMessage("test.topic", "test-neuron");
         var waitTask = testNeuron.WaitForMessageAsync(1000);
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait for message to be processed
         await waitTask;
@@ -258,7 +258,7 @@ public sealed class MessageFilterIntegrationTests
 
         // Act
         var message = CreateTestMessage("test.topic", "test-neuron");
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait a bit to ensure the message would have been delivered if it wasn't blocked
         await Task.Delay(500);
@@ -287,7 +287,7 @@ public sealed class MessageFilterIntegrationTests
 
         // Act - First message should be blocked
         var message1 = CreateTestMessage("test.topic", "test-neuron");
-        network.RouteMessage(message1);
+        await network.RouteMessageAsync(message1);
         await Task.Delay(500);
 
         testNeuron.ReceivedMessages.Should().BeEmpty();
@@ -298,7 +298,7 @@ public sealed class MessageFilterIntegrationTests
         // Second message should go through
         var message2 = CreateTestMessage("test.topic", "test-neuron");
         var waitTask = testNeuron.WaitForMessageAsync(500);
-        network.RouteMessage(message2);
+        await network.RouteMessageAsync(message2);
 
         // Wait for message to be processed
         await waitTask;

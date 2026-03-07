@@ -120,7 +120,7 @@ public sealed class ConsensusProtocol : IConsensusProtocol
     /// <summary>
     /// Evaluates votes using simple majority (greater than 50%).
     /// </summary>
-    private ConsensusResult EvaluateMajority(IReadOnlyList<AgentVote> votes)
+    private static ConsensusResult EvaluateMajority(IReadOnlyList<AgentVote> votes)
     {
         return EvaluateThresholdBased(votes, MajorityThreshold, nameof(ConsensusStrategy.Majority));
     }
@@ -128,7 +128,7 @@ public sealed class ConsensusProtocol : IConsensusProtocol
     /// <summary>
     /// Evaluates votes using super majority (greater than 66%).
     /// </summary>
-    private ConsensusResult EvaluateSuperMajority(IReadOnlyList<AgentVote> votes)
+    private static ConsensusResult EvaluateSuperMajority(IReadOnlyList<AgentVote> votes)
     {
         return EvaluateThresholdBased(votes, SuperMajorityThreshold, nameof(ConsensusStrategy.SuperMajority));
     }
@@ -136,7 +136,7 @@ public sealed class ConsensusProtocol : IConsensusProtocol
     /// <summary>
     /// Evaluates votes requiring unanimous agreement.
     /// </summary>
-    private ConsensusResult EvaluateUnanimous(IReadOnlyList<AgentVote> votes)
+    private static ConsensusResult EvaluateUnanimous(IReadOnlyList<AgentVote> votes)
     {
         Dictionary<string, int> voteCounts = CalculateVoteCounts(votes);
         Dictionary<string, double> confidenceByOption = CalculateConfidenceByOption(votes);
@@ -207,7 +207,7 @@ public sealed class ConsensusProtocol : IConsensusProtocol
     /// <summary>
     /// Evaluates votes selecting the single highest confidence vote.
     /// </summary>
-    private ConsensusResult EvaluateHighestConfidence(IReadOnlyList<AgentVote> votes)
+    private static ConsensusResult EvaluateHighestConfidence(IReadOnlyList<AgentVote> votes)
     {
         Dictionary<string, int> voteCounts = CalculateVoteCounts(votes);
         Dictionary<string, double> confidenceByOption = CalculateConfidenceByOption(votes);
@@ -243,7 +243,7 @@ public sealed class ConsensusProtocol : IConsensusProtocol
     /// <summary>
     /// Evaluates votes using ranked choice voting with elimination.
     /// </summary>
-    private ConsensusResult EvaluateRankedChoice(IReadOnlyList<AgentVote> votes)
+    private static ConsensusResult EvaluateRankedChoice(IReadOnlyList<AgentVote> votes)
     {
         // For ranked choice, we simulate elimination rounds
         // Since we have single votes per agent, we use confidence as tiebreaker
@@ -308,7 +308,7 @@ public sealed class ConsensusProtocol : IConsensusProtocol
     /// <summary>
     /// Evaluates votes using a threshold-based approach.
     /// </summary>
-    private ConsensusResult EvaluateThresholdBased(IReadOnlyList<AgentVote> votes, double threshold, string protocolName)
+    private static ConsensusResult EvaluateThresholdBased(IReadOnlyList<AgentVote> votes, double threshold, string protocolName)
     {
         Dictionary<string, int> voteCounts = CalculateVoteCounts(votes);
         Dictionary<string, double> confidenceByOption = CalculateConfidenceByOption(votes);
@@ -355,21 +355,9 @@ public sealed class ConsensusProtocol : IConsensusProtocol
     /// </summary>
     private static Dictionary<string, int> CalculateVoteCounts(IReadOnlyList<AgentVote> votes)
     {
-        Dictionary<string, int> counts = new Dictionary<string, int>(StringComparer.Ordinal);
-
-        foreach (AgentVote vote in votes)
-        {
-            if (counts.TryGetValue(vote.Option, out int count))
-            {
-                counts[vote.Option] = count + 1;
-            }
-            else
-            {
-                counts[vote.Option] = 1;
-            }
-        }
-
-        return counts;
+        return votes
+            .GroupBy(vote => vote.Option, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
     }
 
     /// <summary>

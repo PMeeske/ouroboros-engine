@@ -28,7 +28,8 @@ public sealed class TapoRestClient : IDisposable
     /// <param name="logger">Optional logger for diagnostics.</param>
     public TapoRestClient(HttpClient httpClient, ILogger<TapoRestClient>? logger = null)
     {
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        ArgumentNullException.ThrowIfNull(httpClient);
+        _httpClient = httpClient;
         _logger = logger;
         _jsonOptions = new JsonSerializerOptions
         {
@@ -120,7 +121,7 @@ public sealed class TapoRestClient : IDisposable
             _logger?.LogError(ex, "HTTP error during login");
             return Result<string>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
             _logger?.LogError(ex, "Unexpected error during login");
             return Result<string>.Failure($"Login failed: {ex.Message}");
@@ -164,7 +165,7 @@ public sealed class TapoRestClient : IDisposable
             _logger?.LogError(ex, "HTTP error getting devices");
             return Result<List<TapoDevice>>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
             _logger?.LogError(ex, "Error getting devices");
             return Result<List<TapoDevice>>.Failure($"Failed to get devices: {ex.Message}");
@@ -208,7 +209,7 @@ public sealed class TapoRestClient : IDisposable
             _logger?.LogError(ex, "HTTP error getting actions");
             return Result<List<string>>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (JsonException ex)
         {
             _logger?.LogError(ex, "Error getting actions");
             return Result<List<string>>.Failure($"Failed to get actions: {ex.Message}");
@@ -255,7 +256,7 @@ public sealed class TapoRestClient : IDisposable
             _logger?.LogError(ex, "HTTP error refreshing session for device {Device}", deviceName);
             return Result<Unit>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             _logger?.LogError(ex, "Error refreshing session for device {Device}", deviceName);
             return Result<Unit>.Failure($"Failed to refresh session: {ex.Message}");
@@ -298,10 +299,84 @@ public sealed class TapoRestClient : IDisposable
             _logger?.LogError(ex, "HTTP error reloading config");
             return Result<Unit>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             _logger?.LogError(ex, "Error reloading config");
             return Result<Unit>.Failure($"Failed to reload config: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Triggers network discovery on the gateway and returns newly found devices.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Result containing newly discovered devices or error.</returns>
+    public async Task<Result<List<TapoDevice>>> DiscoverDevicesAsync(CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_sessionId))
+            return Result<List<TapoDevice>>.Failure("Not authenticated. Call LoginAsync first.");
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/discover");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
+
+            var response = await _httpClient.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync(ct);
+                _logger?.LogError("Discovery failed: {Error}", error);
+                return Result<List<TapoDevice>>.Failure($"Discovery failed: {response.StatusCode}");
+            }
+
+            var devices = await response.Content.ReadFromJsonAsync<List<TapoDevice>>(_jsonOptions, ct);
+            return devices != null
+                ? Result<List<TapoDevice>>.Success(devices)
+                : Result<List<TapoDevice>>.Failure("No devices returned from discovery");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger?.LogError(ex, "HTTP error during discovery");
+            return Result<List<TapoDevice>>.Failure($"HTTP error: {ex.Message}");
+        }
+        catch (JsonException ex)
+        {
+            _logger?.LogError(ex, "Error during discovery");
+            return Result<List<TapoDevice>>.Failure($"Discovery failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Checks if the gateway server is healthy and responding.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Result containing "ok" on success or error message.</returns>
+    public async Task<Result<string>> HealthCheckAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("/health", ct);
+            if (!response.IsSuccessStatusCode)
+                return Result<string>.Failure($"Health check failed: {response.StatusCode}");
+
+            var body = await response.Content.ReadAsStringAsync(ct);
+            return Result<string>.Success(body);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            return Result<string>.Failure($"Health check failed: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Result<string>.Failure($"Health check failed: {ex.Message}");
         }
     }
 

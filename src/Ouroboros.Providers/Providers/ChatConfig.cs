@@ -1,5 +1,5 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using Microsoft.Extensions.Configuration;
+using Ouroboros.Providers.Configuration;
 
 namespace Ouroboros.Providers;
 
@@ -56,7 +56,7 @@ public static class ChatConfig
         [ChatEndpointType.Replicate] = "https://api.replicate.com",
         [ChatEndpointType.HuggingFace] = "https://api-inference.huggingface.co",
         [ChatEndpointType.GitHubModels] = "https://models.inference.ai.azure.com",
-        [ChatEndpointType.OllamaLocal] = "http://localhost:11434",
+        [ChatEndpointType.OllamaLocal] = Configuration.DefaultEndpoints.Ollama,
     };
 
     /// <summary>
@@ -280,11 +280,10 @@ public static class ChatConfig
         if (url.Contains("api.ollama.com") || url.Contains("ollama.cloud"))
             return ChatEndpointType.OllamaCloud;
 
-        if (url.Contains("localhost") || url.Contains("127.0.0.1") || url.Contains("0.0.0.0"))
+        if ((url.Contains("localhost") || url.Contains("127.0.0.1") || url.Contains("0.0.0.0"))
+            && url.Contains(":11434"))
         {
-            // Check for common Ollama port
-            if (url.Contains(":11434"))
-                return ChatEndpointType.OllamaLocal;
+            return ChatEndpointType.OllamaLocal;
         }
 
         // === LITELLM ===

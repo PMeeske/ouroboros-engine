@@ -117,6 +117,7 @@ Please provide a comprehensive response addressing the topic based on the contex
                     specialists, config, embed, topic, query, k)(branch);
                 return Result<PipelineBranch, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Reasoning failed: {ex.Message}");

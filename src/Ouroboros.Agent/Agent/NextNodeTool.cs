@@ -1,10 +1,10 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // NextNode Tool - Symbolic Next-Step Enumeration
 // Uses MeTTa to determine valid next nodes in execution
 // ==========================================================
 
 using System.Text.Json;
+using Ouroboros.Agent.Json;
 using Ouroboros.Agent.MetaAI;
 
 namespace Ouroboros.Tools;
@@ -60,6 +60,8 @@ public sealed class NextNodeTool : ITool
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         _representation = new MeTTaRepresentation(engine);
+        _ = _engine;
+        _ = _registry;
     }
 
     /// <inheritdoc />
@@ -105,19 +107,16 @@ public sealed class NextNodeTool : ITool
                 Timestamp = DateTime.UtcNow
             };
 
-            return Result<string, string>.Success(JsonSerializer.Serialize(response, new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            }));
+            return Result<string, string>.Success(JsonSerializer.Serialize(response, JsonDefaults.Indented));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<string, string>.Failure($"NextNode tool error: {ex.Message}");
         }
     }
 
-    private Result<NextNodeRequest, string> ParseInput(string input)
+    private static Result<NextNodeRequest, string> ParseInput(string input)
     {
         try
         {
@@ -161,6 +160,7 @@ public sealed class NextNodeTool : ITool
                 new NextNodeRequest(stepId, goal, context, constraints)
             );
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<NextNodeRequest, string>.Failure(

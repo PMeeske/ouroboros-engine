@@ -242,7 +242,7 @@ public static class MindDsl
         MindOperation<T>.FromAsync(async (mind, ct) =>
         {
             try { return await primary.ExecuteAsync(mind, ct); }
-            catch { return await fallback.ExecuteAsync(mind, ct); }
+            catch (Exception ex) when (ex is not OperationCanceledException) { return await fallback.ExecuteAsync(mind, ct); }
         });
 
     /// <summary>

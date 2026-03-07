@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Self-Evaluator Implementation
 // Metacognitive monitoring and autonomous improvement
@@ -12,7 +11,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// Implementation of self-evaluator for metacognitive monitoring.
 /// Tracks performance, identifies patterns, and suggests improvements.
 /// </summary>
-public sealed class SelfEvaluator : ISelfEvaluator
+public sealed partial class SelfEvaluator : ISelfEvaluator
 {
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ICapabilityRegistry _capabilities;
@@ -35,6 +34,7 @@ public sealed class SelfEvaluator : ISelfEvaluator
         _skills = skills ?? throw new ArgumentNullException(nameof(skills));
         _memory = memory ?? throw new ArgumentNullException(nameof(memory));
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        _ = _orchestrator;
         _config = config ?? new SelfEvaluatorConfig();
     }
 
@@ -49,8 +49,6 @@ public sealed class SelfEvaluator : ISelfEvaluator
             // Get all capabilities
             List<AgentCapability> capabilities = await _capabilities.GetCapabilitiesAsync(ct);
             IReadOnlyList<Skill> skills = _skills.GetAllSkills().ToSkills();
-            IReadOnlyDictionary<string, PerformanceMetrics> metrics = _orchestrator.GetMetrics();
-
             // Calculate capability scores
             Dictionary<string, double> capabilityScores = capabilities.ToDictionary(
                 c => c.Name,
@@ -99,6 +97,7 @@ public sealed class SelfEvaluator : ISelfEvaluator
 
             return Result<SelfAssessment, string>.Success(assessment);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<SelfAssessment, string>.Failure($"Performance evaluation failed: {ex.Message}");
@@ -254,6 +253,7 @@ DURATION: [days/weeks]";
 
             return Result<ImprovementPlan, string>.Success(plan);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ImprovementPlan, string>.Failure($"Improvement planning failed: {ex.Message}");
@@ -354,7 +354,7 @@ DURATION: [days/weeks]";
 
     // Private helper methods
 
-    private double CalculateSkillAcquisitionRate(IReadOnlyList<Skill> skills)
+    private static double CalculateSkillAcquisitionRate(IReadOnlyList<Skill> skills)
     {
         if (!skills.Any())
             return 0.0;
@@ -419,7 +419,7 @@ What patterns do you observe? Provide one concise insight.";
         }
     }
 
-    private ImprovementPlan ParseImprovementPlan(string response)
+    private static ImprovementPlan ParseImprovementPlan(string response)
     {
         string[] lines = response.Split('\n');
         string goal = "Improve overall performance";
@@ -446,13 +446,13 @@ What patterns do you observe? Provide one concise insight.";
                 string durationStr = trimmed.Substring("DURATION:".Length).Trim().ToLowerInvariant();
                 if (durationStr.Contains("day"))
                 {
-                    Match match = Regex.Match(durationStr, @"(\d+)");
+                    Match match = DurationNumberRegex().Match(durationStr);
                     if (match.Success && int.TryParse(match.Groups[1].Value, out int days))
                         duration = TimeSpan.FromDays(days);
                 }
                 else if (durationStr.Contains("week"))
                 {
-                    Match match = Regex.Match(durationStr, @"(\d+)");
+                    Match match = DurationNumberRegex().Match(durationStr);
                     if (match.Success && int.TryParse(match.Groups[1].Value, out int weeks))
                         duration = TimeSpan.FromDays(weeks * 7);
                 }
@@ -475,4 +475,7 @@ What patterns do you observe? Provide one concise insight.";
             0.8,
             DateTime.UtcNow);
     }
+
+    [GeneratedRegex(@"(\d+)")]
+    private static partial Regex DurationNumberRegex();
 }

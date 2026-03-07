@@ -13,7 +13,7 @@ public static class SpeechToTextToolExtensions
     /// <param name="registry">The tool registry.</param>
     /// <param name="apiKey">OpenAI API key. If null, uses OPENAI_API_KEY environment variable.</param>
     /// <returns>A new registry with the speech-to-text tool added.</returns>
-    public static ToolRegistry WithSpeechToText(this ToolRegistry registry, string? apiKey = null)
+    public static ToolRegistry WithSpeechToText(this ToolRegistry registry, string? apiKey)
     {
         string? key = apiKey ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         if (string.IsNullOrEmpty(key))

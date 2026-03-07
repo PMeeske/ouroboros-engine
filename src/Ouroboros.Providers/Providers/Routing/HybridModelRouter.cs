@@ -21,7 +21,8 @@ public sealed class HybridModelRouter : Ouroboros.Abstractions.Core.IChatComplet
     /// <param name="config">Routing configuration with model assignments.</param>
     public HybridModelRouter(HybridRoutingConfig config)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config;
 
         // Build task-to-model mapping
         _taskModels = new Dictionary<TaskType, Ouroboros.Abstractions.Core.IChatCompletionModel>
@@ -56,6 +57,7 @@ public sealed class HybridModelRouter : Ouroboros.Abstractions.Core.IChatComplet
             string result = await selectedModel.GenerateTextAsync(prompt, ct);
             return result;
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             // If selected model fails and we have a fallback, try it
@@ -66,6 +68,7 @@ public sealed class HybridModelRouter : Ouroboros.Abstractions.Core.IChatComplet
                 {
                     return await _config.FallbackModel.GenerateTextAsync(prompt, ct);
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception fallbackEx)
                 {
                     System.Diagnostics.Trace.TraceWarning("[HybridModelRouter] Fallback also failed: {0}", fallbackEx.Message);

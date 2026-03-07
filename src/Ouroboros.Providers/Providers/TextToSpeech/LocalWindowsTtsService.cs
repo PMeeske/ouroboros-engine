@@ -88,7 +88,12 @@ $synth.GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name }
                     output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()),
                 error => Result<List<string>, string>.Failure(error));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
+        {
+            return Result<List<string>, string>.Failure(ex.Message);
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<List<string>, string>.Failure(ex.Message);
         }
@@ -192,7 +197,7 @@ Write-Output 'OK'
                 byte[] audioData = await File.ReadAllBytesAsync(tempFile, ct);
 
                 // Clean up temp file
-                try { File.Delete(tempFile); } catch { }
+                try { File.Delete(tempFile); } catch (IOException) { /* Intentional: best-effort temp file cleanup */ }
 
                 return Result<SpeechResult, string>.Success(new SpeechResult(audioData, "wav"));
             }
@@ -201,7 +206,12 @@ Write-Output 'OK'
                 return Result<SpeechResult, string>.Failure(runResult.Error);
             }
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
+        {
+            return Result<SpeechResult, string>.Failure($"TTS error: {ex.Message}");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<SpeechResult, string>.Failure($"TTS error: {ex.Message}");
         }
@@ -210,7 +220,7 @@ Write-Output 'OK'
     /// <summary>
     /// Builds SSML with enhanced prosody for more natural speech.
     /// </summary>
-    private string BuildEnhancedSsml(string text, int rate)
+    private static string BuildEnhancedSsml(string text, int rate)
     {
         // Convert rate (-10 to 10) to SSML prosody rate (x-slow to x-fast)
         string prosodyRate = rate switch
@@ -235,7 +245,7 @@ Write-Output 'OK'
     /// <summary>
     /// Adds natural prosody markers to text for more expressive speech.
     /// </summary>
-    private string AddNaturalProsody(string text)
+    private static string AddNaturalProsody(string text)
     {
         // Escape XML special characters first
         text = text
@@ -309,7 +319,8 @@ Write-Output 'OK'
                 await File.WriteAllBytesAsync(outputPath, result.Value.AudioData, ct);
                 return Result<string, string>.Success(outputPath);
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) { throw; }
+            catch (IOException ex)
             {
                 return Result<string, string>.Failure($"Failed to save audio: {ex.Message}");
             }
@@ -336,7 +347,8 @@ Write-Output 'OK'
                 await outputStream.WriteAsync(result.Value.AudioData, ct);
                 return Result<string, string>.Success("wav");
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) { throw; }
+            catch (IOException ex)
             {
                 return Result<string, string>.Failure($"Failed to write to stream: {ex.Message}");
             }
@@ -381,7 +393,7 @@ Write-Output 'OK'
     /// <param name="volume">Volume from 0 to 100.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result indicating success or failure.</returns>
-    public async Task<Result<bool, string>> SpeakWithToneAsync(
+    public static async Task<Result<bool, string>> SpeakWithToneAsync(
         string text,
         int rate,
         int volume,
@@ -422,7 +434,12 @@ $synth.Speak($speechText)
                 _ => Result<bool, string>.Success(true),
                 error => Result<bool, string>.Failure(error));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
+        {
+            return Result<bool, string>.Failure($"TTS error: {ex.Message}");
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<bool, string>.Failure($"TTS error: {ex.Message}");
         }
@@ -437,7 +454,6 @@ $synth.Speak($speechText)
             var startInfo = new ProcessStartInfo
             {
                 FileName = "powershell.exe",
-                Arguments = $"-NoProfile -NonInteractive -Command \"{script.Replace("\"", "\\\"")}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -445,7 +461,13 @@ $synth.Speak($speechText)
                 StandardOutputEncoding = Encoding.UTF8,
                 StandardErrorEncoding = Encoding.UTF8,
             };
+            startInfo.ArgumentList.Add("-NoProfile");
+            startInfo.ArgumentList.Add("-NonInteractive");
+            startInfo.ArgumentList.Add("-Command");
+            startInfo.ArgumentList.Add(script);
 
+            // SECURITY: safe — hardcoded "powershell.exe" with ArgumentList;
+            // script content is passed as a single argument, not interpreted by shell.
             using var process = Process.Start(startInfo);
             if (process == null)
             {
@@ -464,7 +486,12 @@ $synth.Speak($speechText)
 
             return Result<string, string>.Success(output.Trim());
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
+        {
+            return Result<string, string>.Failure(ex.Message);
+        }
+        catch (System.ComponentModel.Win32Exception ex)
         {
             return Result<string, string>.Failure(ex.Message);
         }

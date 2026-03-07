@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Homeostasis Policy Implementation
 // Phase 3: Affective Dynamics - SLA regulation & corrective triggers
@@ -187,10 +186,11 @@ public sealed class HomeostasisPolicy : IHomeostasisPolicy
                 break;
 
             case HomeostasisAction.Throttle:
-                // Record negative stress signals to reduce stress
+                // Record zero-value signals to let stress decay via EMA
+                // Note: negative values don't reduce stress because UpdateInternalState uses Math.Abs
                 for (int i = 0; i < 5; i++)
                 {
-                    monitor.RecordSignal("homeostasis_throttle", -0.2, violation.Signal);
+                    monitor.RecordSignal("homeostasis_throttle", 0.0, violation.Signal);
                     await Task.Delay(10, ct);
                 }
                 var throttledState = monitor.GetCurrentState();

@@ -14,7 +14,7 @@ public static class TextToSpeechToolExtensions
     /// <param name="apiKey">OpenAI API key. If null, uses OPENAI_API_KEY environment variable.</param>
     /// <param name="model">TTS model: "tts-1" or "tts-1-hd".</param>
     /// <returns>A new registry with the text-to-speech tool added.</returns>
-    public static ToolRegistry WithTextToSpeech(this ToolRegistry registry, string? apiKey = null, string model = "tts-1")
+    public static ToolRegistry WithTextToSpeech(this ToolRegistry registry, string? apiKey, string model = "tts-1")
     {
         string? key = apiKey ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         if (string.IsNullOrEmpty(key))

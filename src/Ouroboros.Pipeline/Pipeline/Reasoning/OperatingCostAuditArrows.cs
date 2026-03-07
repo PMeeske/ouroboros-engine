@@ -2,7 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using LangChain.DocumentLoaders;
 
@@ -117,6 +116,7 @@ public static class OperatingCostAuditArrows
                 PipelineBranch result = branch.WithReasoning(new Draft(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Main statement analysis failed: {ex.Message}");
@@ -238,6 +238,7 @@ public static class OperatingCostAuditArrows
                 PipelineBranch result = branch.WithReasoning(new FinalSpec(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Audit report generation failed: {ex.Message}");

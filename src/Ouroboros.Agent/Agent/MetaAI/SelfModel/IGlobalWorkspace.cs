@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Global Workspace Interface
 // Phase 2: Shared working memory with attention policies

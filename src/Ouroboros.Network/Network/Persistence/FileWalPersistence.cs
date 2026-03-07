@@ -3,6 +3,7 @@
 // </copyright>
 
 using System.Runtime.CompilerServices;
+using Ouroboros.Network.Json;
 
 namespace Ouroboros.Network.Persistence;
 
@@ -56,10 +57,7 @@ public sealed class FileWalPersistence : IGraphPersistence
             throw new ArgumentNullException(nameof(node));
         }
 
-        var nodeJson = JsonSerializer.Serialize(node, new JsonSerializerOptions
-        {
-            WriteIndented = false,
-        });
+        var nodeJson = JsonSerializer.Serialize(node, JsonDefaults.Default);
 
         var entry = new WalEntry(WalEntryType.AddNode, DateTimeOffset.UtcNow, nodeJson);
         await AppendEntryAsync(entry, ct).ConfigureAwait(false);
@@ -78,10 +76,7 @@ public sealed class FileWalPersistence : IGraphPersistence
             throw new ArgumentNullException(nameof(edge));
         }
 
-        var edgeJson = JsonSerializer.Serialize(edge, new JsonSerializerOptions
-        {
-            WriteIndented = false,
-        });
+        var edgeJson = JsonSerializer.Serialize(edge, JsonDefaults.Default);
 
         var entry = new WalEntry(WalEntryType.AddEdge, DateTimeOffset.UtcNow, edgeJson);
         await AppendEntryAsync(entry, ct).ConfigureAwait(false);
@@ -188,10 +183,7 @@ public sealed class FileWalPersistence : IGraphPersistence
     {
         ThrowIfDisposed();
 
-        var entryJson = JsonSerializer.Serialize(entry, new JsonSerializerOptions
-        {
-            WriteIndented = false,
-        });
+        var entryJson = JsonSerializer.Serialize(entry, JsonDefaults.Default);
 
         await _writeLock.WaitAsync(ct).ConfigureAwait(false);
         try
@@ -246,10 +238,7 @@ public sealed class FileWalPersistence : IGraphPersistence
         // Convert from Abstractions.Network.TransitionEdge to Network.TransitionEdge
         // The abstraction edge has SourceId/TargetId while Network has InputIds/OutputId
         // We need to serialize the metadata to JSON for the OperationSpecJson field
-        var metadataJson = JsonSerializer.Serialize(edge.Metadata, new JsonSerializerOptions
-        {
-            WriteIndented = false,
-        });
+        var metadataJson = JsonSerializer.Serialize(edge.Metadata, JsonDefaults.Default);
 
         var networkEdge = new TransitionEdge(
             edge.Id,

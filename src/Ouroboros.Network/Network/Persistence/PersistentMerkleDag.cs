@@ -100,6 +100,7 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
                 }
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<PersistentMerkleDag, string>.Failure($"Replay failed: {ex.Message}");
@@ -166,6 +167,7 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
         {
             await _persistence.AppendNodeAsync(ToAbstractionsNode(node), ct).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             // Note: The node is already in memory - in production, consider rollback or compensation
@@ -205,6 +207,7 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
         {
             await _persistence.AppendEdgeAsync(ToAbstractionsEdge(edge), ct).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             // Note: The edge is already in memory - in production, consider rollback or compensation

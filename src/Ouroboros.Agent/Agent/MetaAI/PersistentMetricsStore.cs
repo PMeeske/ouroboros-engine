@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Persistent Metrics Store Implementation
 // JSON file-based persistence for performance metrics
@@ -24,7 +23,7 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
     private readonly Timer? _autoSaveTimer;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
     private bool _disposed;
-    private bool _isDirty;
+    private volatile bool _isDirty;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -51,7 +50,14 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
         if (_config.AutoSave && _config.AutoSaveInterval > TimeSpan.Zero)
         {
             _autoSaveTimer = new Timer(
-                async _ => await SaveIfDirtyAsync(),
+                async _ =>
+                {
+                    try { await SaveIfDirtyAsync(); }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        System.Diagnostics.Trace.TraceWarning($"Auto-save failed: {ex.Message}");
+                    }
+                },
                 null,
                 _config.AutoSaveInterval,
                 _config.AutoSaveInterval);
@@ -176,7 +182,9 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
                 Metrics: snapshot);
 
             string json = JsonSerializer.Serialize(wrapper, JsonOptions);
-            await File.WriteAllTextAsync(_filePath, json, ct);
+            var tempPath = _filePath + ".tmp";
+            await File.WriteAllTextAsync(tempPath, json, ct);
+            File.Move(tempPath, _filePath, overwrite: true);
 
             _isDirty = false;
         }
@@ -280,9 +288,9 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
                 }
             }
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            // Corrupted file, start fresh
+            System.Diagnostics.Trace.TraceWarning($"Corrupted metrics file, starting fresh: {ex.Message}");
             _metrics.Clear();
         }
     }
@@ -310,7 +318,8 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
         // Final save
         if (_isDirty)
         {
-            _saveLock.Wait();
+            if (!_saveLock.Wait(TimeSpan.FromSeconds(5)))
+                return;
             try
             {
                 var snapshot = new Dictionary<string, PerformanceMetrics>(_metrics);
@@ -320,7 +329,9 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
                     Metrics: snapshot);
 
                 string json = JsonSerializer.Serialize(wrapper, JsonOptions);
-                File.WriteAllText(_filePath, json);
+                var tempPath = _filePath + ".tmp";
+                File.WriteAllText(tempPath, json);
+                File.Move(tempPath, _filePath, overwrite: true);
             }
             finally
             {

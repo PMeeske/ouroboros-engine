@@ -1,5 +1,4 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-using LangChain.Providers.Ollama;
+using OllamaSharp.Models;
 
 namespace Ouroboros.Providers;
 
@@ -9,7 +8,7 @@ public static class OllamaPresets
     /// Preset for DeepSeek Coder 33B with conservative defaults optimized for code generation.
     /// Automatically adapts threads, context window, and GPU usage based on <see cref="MachineCapabilities"/>.
     /// </summary>
-    public static OllamaChatSettings DeepSeekCoder33B
+    public static RequestOptions DeepSeekCoder33B
     {
         get
         {
@@ -18,31 +17,34 @@ public static class OllamaPresets
             int gpus = MachineCapabilities.GpuCount;
 
             // conservative defaults
-            OllamaChatSettings settings = new OllamaChatSettings
+            return new RequestOptions
             {
-                NumCtx = memMb > 64000 ? 8192 : 4096, // more RAM → larger context
+                NumCtx = memMb > 64000 ? 8192 : 4096, // more RAM -> larger context
                 NumThread = Math.Max(1, cores - 1),
                 NumGpu = gpus > 0 ? gpus : 0,
                 MainGpu = 0,
                 LowVram = gpus == 0, // force low-VRAM path if CPU-only
-                Temperature = 0.2f,  // coder → low creativity
+                Temperature = 0.2f,  // coder -> low creativity
                 TopP = 0.9f,
                 TopK = 40,
                 RepeatPenalty = 1.1f,
-                KeepAlive = 10 * 60, // keep model in memory 10 min
                 UseMmap = true,
                 UseMlock = false
             };
-
-            return settings;
         }
     }
+
+    /// <summary>
+    /// KeepAlive duration in seconds for DeepSeek Coder 33B.
+    /// Apply via <see cref="GenerateRequest.KeepAlive"/> since it is not part of <see cref="RequestOptions"/>.
+    /// </summary>
+    public const string DeepSeekCoder33BKeepAlive = "10m";
 
     /// <summary>
     /// Preset for Llama 3 (general conversation). Balanced temperature and retrieval-friendly settings.
     /// Adapts to available CPU cores, memory size and GPU count.
     /// </summary>
-    public static OllamaChatSettings Llama3General
+    public static RequestOptions Llama3General
     {
         get
         {
@@ -50,7 +52,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            OllamaChatSettings settings = new OllamaChatSettings
+            return new RequestOptions
             {
                 NumCtx = memMb > 32000 ? 8192 : 4096,
                 NumThread = Math.Max(1, cores - 1),
@@ -61,19 +63,22 @@ public static class OllamaPresets
                 TopP = 0.9f,
                 TopK = 40,
                 RepeatPenalty = 1.1f,
-                KeepAlive = 10 * 60,
                 UseMmap = true,
                 UseMlock = false
             };
-            return settings;
         }
     }
+
+    /// <summary>
+    /// KeepAlive duration in seconds for Llama 3 General.
+    /// </summary>
+    public const string Llama3GeneralKeepAlive = "10m";
 
     /// <summary>
     /// Preset for Llama 3 summarization. Lower temperature and slightly stronger repeat penalty
     /// to encourage concise, deterministic output.
     /// </summary>
-    public static OllamaChatSettings Llama3Summarize
+    public static RequestOptions Llama3Summarize
     {
         get
         {
@@ -81,7 +86,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            OllamaChatSettings settings = new OllamaChatSettings
+            return new RequestOptions
             {
                 NumCtx = memMb > 32000 ? 8192 : 4096,
                 NumThread = Math.Max(1, cores - 1),
@@ -92,19 +97,22 @@ public static class OllamaPresets
                 TopP = 0.9f,
                 TopK = 40,
                 RepeatPenalty = 1.15f,
-                KeepAlive = 10 * 60,
                 UseMmap = true,
                 UseMlock = false
             };
-            return settings;
         }
     }
+
+    /// <summary>
+    /// KeepAlive duration in seconds for Llama 3 Summarize.
+    /// </summary>
+    public const string Llama3SummarizeKeepAlive = "10m";
 
     /// <summary>
     /// Preset for DeepSeek R1 14B (reasoning). Larger context window and exploratory temperature
     /// for deeper chains-of-thought, within conservative system limits.
     /// </summary>
-    public static OllamaChatSettings DeepSeekR1_14B_Reason
+    public static RequestOptions DeepSeekR1_14B_Reason
     {
         get
         {
@@ -112,7 +120,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            OllamaChatSettings settings = new OllamaChatSettings
+            return new RequestOptions
             {
                 NumCtx = memMb > 64000 ? 12288 : 8192, // reasoning benefits from larger ctx
                 NumThread = Math.Max(1, cores - 1),
@@ -123,19 +131,22 @@ public static class OllamaPresets
                 TopP = 0.92f,
                 TopK = 50,
                 RepeatPenalty = 1.05f,
-                KeepAlive = 10 * 60,
                 UseMmap = true,
                 UseMlock = false
             };
-            return settings;
         }
     }
+
+    /// <summary>
+    /// KeepAlive duration in seconds for DeepSeek R1 14B.
+    /// </summary>
+    public const string DeepSeekR1_14B_ReasonKeepAlive = "10m";
 
     /// <summary>
     /// Preset for DeepSeek R1 32B (reasoning). Tries to leverage up to 2 GPUs if present
     /// and expands context window with sufficient host memory.
     /// </summary>
-    public static OllamaChatSettings DeepSeekR1_32B_Reason
+    public static RequestOptions DeepSeekR1_32B_Reason
     {
         get
         {
@@ -143,7 +154,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            OllamaChatSettings settings = new OllamaChatSettings
+            return new RequestOptions
             {
                 NumCtx = memMb > 96000 ? 16384 : (memMb > 64000 ? 12288 : 8192),
                 NumThread = Math.Max(1, cores - 1),
@@ -154,19 +165,22 @@ public static class OllamaPresets
                 TopP = 0.92f,
                 TopK = 50,
                 RepeatPenalty = 1.05f,
-                KeepAlive = 10 * 60,
                 UseMmap = true,
                 UseMlock = false
             };
-            return settings;
         }
     }
+
+    /// <summary>
+    /// KeepAlive duration in seconds for DeepSeek R1 32B.
+    /// </summary>
+    public const string DeepSeekR1_32B_ReasonKeepAlive = "10m";
 
     /// <summary>
     /// Preset for Mistral 7B (general). Light-weight, suitable for CPU-only or single-GPU setups,
     /// with a modest context window for RAG tasks.
     /// </summary>
-    public static OllamaChatSettings Mistral7BGeneral
+    public static RequestOptions Mistral7BGeneral
     {
         get
         {
@@ -174,7 +188,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            OllamaChatSettings settings = new OllamaChatSettings
+            return new RequestOptions
             {
                 NumCtx = memMb > 16000 ? 4096 : 3072,
                 NumThread = Math.Max(1, cores - 1),
@@ -185,18 +199,21 @@ public static class OllamaPresets
                 TopP = 0.9f,
                 TopK = 40,
                 RepeatPenalty = 1.1f,
-                KeepAlive = 10 * 60,
                 UseMmap = true,
                 UseMlock = false
             };
-            return settings;
         }
     }
 
     /// <summary>
+    /// KeepAlive duration in seconds for Mistral 7B General.
+    /// </summary>
+    public const string Mistral7BGeneralKeepAlive = "10m";
+
+    /// <summary>
     /// Preset for Qwen2.5 7B (general). Balanced configuration for mixed tasks and RAG.
     /// </summary>
-    public static OllamaChatSettings Qwen25_7B_General
+    public static RequestOptions Qwen25_7B_General
     {
         get
         {
@@ -204,7 +221,7 @@ public static class OllamaPresets
             long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            OllamaChatSettings settings = new OllamaChatSettings
+            return new RequestOptions
             {
                 NumCtx = memMb > 16000 ? 4096 : 3072,
                 NumThread = Math.Max(1, cores - 1),
@@ -215,26 +232,28 @@ public static class OllamaPresets
                 TopP = 0.9f,
                 TopK = 40,
                 RepeatPenalty = 1.1f,
-                KeepAlive = 10 * 60,
                 UseMmap = true,
                 UseMlock = false
             };
-            return settings;
         }
     }
 
     /// <summary>
+    /// KeepAlive duration in seconds for Qwen2.5 7B General.
+    /// </summary>
+    public const string Qwen25_7B_GeneralKeepAlive = "10m";
+
+    /// <summary>
     /// Preset for Phi-3 Mini (general). Small footprint model preset for quick local runs.
     /// </summary>
-    public static OllamaChatSettings Phi3MiniGeneral
+    public static RequestOptions Phi3MiniGeneral
     {
         get
         {
             int cores = MachineCapabilities.CpuCores;
-            long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
-            OllamaChatSettings settings = new OllamaChatSettings
+            return new RequestOptions
             {
                 NumCtx = 4096,
                 NumThread = Math.Max(1, cores - 1),
@@ -245,32 +264,34 @@ public static class OllamaPresets
                 TopP = 0.9f,
                 TopK = 40,
                 RepeatPenalty = 1.1f,
-                KeepAlive = 10 * 60,
                 UseMmap = true,
                 UseMlock = false
             };
-            return settings;
         }
     }
+
+    /// <summary>
+    /// KeepAlive duration in seconds for Phi-3 Mini General.
+    /// </summary>
+    public const string Phi3MiniGeneralKeepAlive = "10m";
 
     /// <summary>
     /// Preset for TinyLlama optimized for high-performance parallel execution.
     /// Designed for divide-and-conquer strategies where multiple instances run concurrently.
     /// Ultra-low context window and aggressive threading for maximum throughput.
     /// </summary>
-    public static OllamaChatSettings TinyLlamaFast
+    public static RequestOptions TinyLlamaFast
     {
         get
         {
             int cores = MachineCapabilities.CpuCores;
-            long memMb = MachineCapabilities.TotalMemoryMb;
             int gpus = MachineCapabilities.GpuCount;
 
             // Reserve threads for parallel execution - each instance gets fewer threads
             // to allow multiple instances to run simultaneously
             int threadsPerInstance = Math.Max(1, cores / 4);
 
-            OllamaChatSettings settings = new OllamaChatSettings
+            return new RequestOptions
             {
                 NumCtx = 2048, // Small context for speed
                 NumThread = threadsPerInstance,
@@ -281,11 +302,14 @@ public static class OllamaPresets
                 TopP = 0.85f,
                 TopK = 30,
                 RepeatPenalty = 1.1f,
-                KeepAlive = 5 * 60, // Shorter keep-alive for memory efficiency
                 UseMmap = true,
                 UseMlock = false
             };
-            return settings;
         }
     }
+
+    /// <summary>
+    /// KeepAlive duration in seconds for TinyLlama Fast.
+    /// </summary>
+    public const string TinyLlamaFastKeepAlive = "5m";
 }

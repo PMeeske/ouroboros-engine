@@ -30,7 +30,7 @@ public class OllamaPresetsTests
         settings.TopP.Should().Be(0.9f);
         settings.TopK.Should().Be(40);
         settings.RepeatPenalty.Should().Be(1.1f);
-        settings.KeepAlive.Should().Be(10 * 60); // 10 minutes
+        OllamaPresets.DeepSeekCoder33BKeepAlive.Should().Be("10m");
         settings.UseMmap.Should().BeTrue();
         settings.UseMlock.Should().BeFalse();
     }
@@ -96,7 +96,7 @@ public class OllamaPresetsTests
         settings.TopP.Should().Be(0.9f);
         settings.TopK.Should().Be(40);
         settings.RepeatPenalty.Should().Be(1.1f);
-        settings.KeepAlive.Should().Be(10 * 60);
+        OllamaPresets.Llama3GeneralKeepAlive.Should().Be("10m");
         settings.UseMmap.Should().BeTrue();
         settings.UseMlock.Should().BeFalse();
     }
@@ -137,7 +137,7 @@ public class OllamaPresetsTests
         settings.TopP.Should().Be(0.9f);
         settings.TopK.Should().Be(40);
         settings.RepeatPenalty.Should().Be(1.15f); // Stronger penalty
-        settings.KeepAlive.Should().Be(10 * 60);
+        OllamaPresets.Llama3SummarizeKeepAlive.Should().Be("10m");
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class OllamaPresetsTests
         settings.TopP.Should().Be(0.92f);
         settings.TopK.Should().Be(50);
         settings.RepeatPenalty.Should().Be(1.05f);
-        settings.KeepAlive.Should().Be(10 * 60);
+        OllamaPresets.DeepSeekR1_14B_ReasonKeepAlive.Should().Be("10m");
     }
 
     [Fact]
@@ -321,7 +321,7 @@ public class OllamaPresetsTests
         settings.TopK.Should().Be(30);
         settings.RepeatPenalty.Should().Be(1.1f);
         settings.NumCtx.Should().Be(2048); // Small for speed
-        settings.KeepAlive.Should().Be(5 * 60); // Shorter keep-alive
+        OllamaPresets.TinyLlamaFastKeepAlive.Should().Be("5m"); // Shorter keep-alive
         settings.LowVram.Should().BeTrue(); // Always low VRAM for parallel
     }
 
@@ -410,26 +410,26 @@ public class OllamaPresetsTests
     }
 
     [Fact]
-    public void AllPresets_HavePositiveKeepAlive()
+    public void AllPresets_HaveNonEmptyKeepAlive()
     {
-        // Act
-        var presets = new[]
+        // Act - KeepAlive is now a separate const string per preset, not part of RequestOptions
+        var keepAlives = new[]
         {
-            OllamaPresets.DeepSeekCoder33B,
-            OllamaPresets.Llama3General,
-            OllamaPresets.Llama3Summarize,
-            OllamaPresets.DeepSeekR1_14B_Reason,
-            OllamaPresets.DeepSeekR1_32B_Reason,
-            OllamaPresets.Mistral7BGeneral,
-            OllamaPresets.Qwen25_7B_General,
-            OllamaPresets.Phi3MiniGeneral,
-            OllamaPresets.TinyLlamaFast
+            OllamaPresets.DeepSeekCoder33BKeepAlive,
+            OllamaPresets.Llama3GeneralKeepAlive,
+            OllamaPresets.Llama3SummarizeKeepAlive,
+            OllamaPresets.DeepSeekR1_14B_ReasonKeepAlive,
+            OllamaPresets.DeepSeekR1_32B_ReasonKeepAlive,
+            OllamaPresets.Mistral7BGeneralKeepAlive,
+            OllamaPresets.Qwen25_7B_GeneralKeepAlive,
+            OllamaPresets.Phi3MiniGeneralKeepAlive,
+            OllamaPresets.TinyLlamaFastKeepAlive
         };
 
         // Assert
-        foreach (var preset in presets)
+        foreach (var keepAlive in keepAlives)
         {
-            preset.KeepAlive.Should().BeGreaterThan(0);
+            keepAlive.Should().NotBeNullOrEmpty();
         }
     }
 

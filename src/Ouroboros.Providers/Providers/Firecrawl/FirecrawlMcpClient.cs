@@ -5,6 +5,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Ouroboros.Providers.Json;
 
 namespace Ouroboros.Providers.Firecrawl;
 
@@ -32,7 +33,7 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
         }
 
         _options = options;
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
         _httpClient.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/'));
         _httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", options.ResolveApiKey());
@@ -40,12 +41,7 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
             new MediaTypeWithQualityHeaderValue("application/json"));
         _httpClient.Timeout = options.Timeout;
 
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true,
-            WriteIndented = false
-        };
+        _jsonOptions = JsonDefaults.CamelCase;
     }
 
     /// <inheritdoc/>
@@ -84,7 +80,12 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
 
             return Result<FirecrawlScrapeResult, string>.Success(ParseScrapeResult(data, url));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<FirecrawlScrapeResult, string>.Failure($"Scrape failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<FirecrawlScrapeResult, string>.Failure($"Scrape failed: {ex.Message}");
         }
@@ -126,7 +127,12 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
 
             return Result<string, string>.Success(jobId);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<string, string>.Failure($"Crawl failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<string, string>.Failure($"Crawl failed: {ex.Message}");
         }
@@ -163,7 +169,12 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
                 Results = results
             });
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<FirecrawlCrawlStatus, string>.Failure($"GetCrawlStatus failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<FirecrawlCrawlStatus, string>.Failure($"GetCrawlStatus failed: {ex.Message}");
         }
@@ -215,7 +226,12 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
 
             return Result<IReadOnlyList<FirecrawlSearchResult>, string>.Success(results);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<FirecrawlSearchResult>, string>.Failure($"Search failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<FirecrawlSearchResult>, string>.Failure($"Search failed: {ex.Message}");
         }
@@ -249,7 +265,12 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
             var json = await response.Content.ReadAsStringAsync(ct);
             return Result<string, string>.Success(json);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<string, string>.Failure($"Extract failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<string, string>.Failure($"Extract failed: {ex.Message}");
         }
@@ -287,7 +308,12 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
 
             return Result<IReadOnlyList<string>, string>.Success(urls);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<string>, string>.Failure($"Map failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<string>, string>.Failure($"Map failed: {ex.Message}");
         }

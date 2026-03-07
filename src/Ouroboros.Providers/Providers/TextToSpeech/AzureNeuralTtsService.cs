@@ -15,7 +15,7 @@ namespace Ouroboros.Providers.TextToSpeech;
 /// Provides high-quality, natural-sounding voices including Jenny (Cortana-like).
 /// Implements streaming TTS for real-time voice synthesis.
 /// </summary>
-public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
+public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 {
     private volatile bool _isSynthesizing;
     private CancellationTokenSource? _currentSynthesisCts;
@@ -28,6 +28,12 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     private SpeechSynthesizer? _synthesizer;
     private SpeechConfig? _config;
     private bool _disposed;
+
+    // Lazy Edge TTS fallback (Jenny voice) — shared across all Azure TTS instances.
+    // Activated only when the Azure circuit breaker opens or Azure TTS throws.
+    private static readonly Lazy<EdgeTtsService> EdgeTtsFallback = new(
+        () => new EdgeTtsService(EdgeTtsService.Voices.JennyNeural),
+        LazyThreadSafetyMode.ExecutionAndPublication);
 
     // Circuit breaker state - shared across all instances for global rate limit protection
     private static readonly ResiliencePipeline CircuitBreakerPipeline = new ResiliencePipelineBuilder()
@@ -107,8 +113,10 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
     /// <param name="culture">Culture for language selection (e.g., "de-DE").</param>
     public AzureNeuralTtsService(string subscriptionKey, string region, string persona = "Ouroboros", string? culture = null)
     {
-        _subscriptionKey = subscriptionKey ?? throw new ArgumentNullException(nameof(subscriptionKey));
-        _region = region ?? throw new ArgumentNullException(nameof(region));
+        ArgumentNullException.ThrowIfNull(subscriptionKey);
+        ArgumentNullException.ThrowIfNull(region);
+        _subscriptionKey = subscriptionKey;
+        _region = region;
         _persona = persona;
         _culture = culture ?? "en-US";
 
@@ -344,25 +352,26 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
                     else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
                     {
                         System.Diagnostics.Debug.WriteLine($"[Azure TTS] Synthesis complete, {result.AudioData.Length} bytes");
-                        try { OnAudioSynthesized?.Invoke(result.AudioData); } catch { }
+                        try { OnAudioSynthesized?.Invoke(result.AudioData); } catch (Exception ex) when (ex is not OperationCanceledException) { }
                     }
                 }, ct);
             }, ct);
         }
         catch (BrokenCircuitException)
         {
-            System.Diagnostics.Trace.TraceWarning("[Azure TTS] Circuit open - using fallback");
-            throw;
+            System.Diagnostics.Trace.TraceWarning("[TTS] Circuit open -- falling back to Edge TTS Jenny");
+            await FallbackSpeakWithEdgeTtsAsync(text, ct).ConfigureAwait(false);
         }
         catch (HttpRequestException ex) when (ex.Message.Contains("Rate limited"))
         {
-            System.Diagnostics.Trace.TraceWarning("[Azure TTS] Rate limit exceeded after retries");
-            throw;
+            System.Diagnostics.Trace.TraceWarning("[TTS] Rate limit (429) -- falling back to Edge TTS Jenny");
+            await FallbackSpeakWithEdgeTtsAsync(text, ct).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            System.Diagnostics.Trace.TraceWarning("[Azure TTS] Exception: {0}", ex.Message);
-            throw;
+            System.Diagnostics.Trace.TraceWarning("[TTS] {0}: {1} -- falling back to Edge TTS Jenny", ex.GetType().Name, ex.Message);
+            await FallbackSpeakWithEdgeTtsAsync(text, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -405,14 +414,18 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
             if (result.Reason == ResultReason.Canceled)
             {
                 var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                return Result<SpeechResult, string>.Failure($"Speech synthesis canceled: {cancellation.ErrorDetails}");
+                System.Diagnostics.Trace.TraceWarning("[Azure TTS] Canceled: {0} -- falling back to Edge TTS Jenny", cancellation.ErrorDetails);
+                return await FallbackSynthesizeWithEdgeTtsAsync(text, options, ct).ConfigureAwait(false);
             }
 
-            return Result<SpeechResult, string>.Failure("Speech synthesis failed");
+            System.Diagnostics.Trace.TraceWarning("[Azure TTS] Synthesis failed -- falling back to Edge TTS Jenny");
+            return await FallbackSynthesizeWithEdgeTtsAsync(text, options, ct).ConfigureAwait(false);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            return Result<SpeechResult, string>.Failure($"Azure TTS error: {ex.Message}");
+            System.Diagnostics.Trace.TraceWarning("[Azure TTS] {0}: {1} -- falling back to Edge TTS Jenny", ex.GetType().Name, ex.Message);
+            return await FallbackSynthesizeWithEdgeTtsAsync(text, options, ct).ConfigureAwait(false);
         }
     }
 
@@ -450,161 +463,6 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
         return Result<string, string>.Failure(result.Error ?? "Unknown error");
     }
 
-    // ========================================================================
-    // IStreamingTtsService Implementation
-    // ========================================================================
-
-    /// <inheritdoc/>
-    public bool IsSynthesizing => _isSynthesizing;
-
-    /// <inheritdoc/>
-    public bool SupportsStreaming => true;
-
-    /// <inheritdoc/>
-    public IObservable<SpeechChunk> StreamSynthesis(
-        IObservable<string> textStream,
-        TextToSpeechOptions? options = null,
-        CancellationToken ct = default)
-    {
-        return textStream
-            .BufferIntoSentences()
-            .SelectMany(sentence => Observable.FromAsync<SpeechChunk?>(async token =>
-            {
-                var result = await SynthesizeChunkAsync(sentence, options, token);
-                return result.IsSuccess ? result.Value : null;
-            }))
-            .Where(chunk => chunk != null)
-            .Select(chunk => chunk!);
-    }
-
-    /// <inheritdoc/>
-    public IObservable<SpeechChunk> StreamSynthesisIncremental(
-        string text,
-        TextToSpeechOptions? options = null,
-        CancellationToken ct = default)
-    {
-        return Observable.Create<SpeechChunk>(async (observer, token) =>
-        {
-            var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(ct, token).Token;
-            _currentSynthesisCts = CancellationTokenSource.CreateLinkedTokenSource(linkedCt);
-
-            try
-            {
-                _isSynthesizing = true;
-                var sentences = StreamingTtsExtensions.SplitIntoSentences(text).ToList();
-
-                for (int i = 0; i < sentences.Count; i++)
-                {
-                    if (_currentSynthesisCts.Token.IsCancellationRequested)
-                    {
-                        break;
-                    }
-
-                    var sentence = sentences[i];
-                    var isLast = i == sentences.Count - 1;
-
-                    var result = await SynthesizeChunkAsync(sentence, options, _currentSynthesisCts.Token);
-
-                    if (result.IsSuccess)
-                    {
-                        var chunk = result.Value;
-                        var finalChunk = new SpeechChunk(
-                            chunk.AudioData,
-                            chunk.Format,
-                            chunk.DurationSeconds,
-                            chunk.Text,
-                            IsSentenceEnd: true,
-                            IsComplete: isLast);
-                        observer.OnNext(finalChunk);
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[Azure TTS] Chunk synthesis error: {result.Error}");
-                    }
-                }
-
-                observer.OnCompleted();
-            }
-            catch (OperationCanceledException)
-            {
-                observer.OnCompleted();
-            }
-            catch (Exception ex)
-            {
-                observer.OnError(ex);
-            }
-            finally
-            {
-                _isSynthesizing = false;
-            }
-        });
-    }
-
-    /// <inheritdoc/>
-    public async Task<Result<SpeechChunk, string>> SynthesizeChunkAsync(
-        string text,
-        TextToSpeechOptions? options = null,
-        CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return Result<SpeechChunk, string>.Failure("Text cannot be empty");
-        }
-
-        if (_synthesizer == null) InitializeSynthesizer();
-
-        try
-        {
-            _isSynthesizing = true;
-            var rate      = options?.Speed ?? 1.0;
-            var isWhisper = options?.IsWhisper ?? false;
-            var ssml      = BuildSsml(text, isWhisper, cultureOverride: null, rate);
-
-            using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
-
-            if (result.Reason == ResultReason.SynthesizingAudioCompleted)
-            {
-                return Result<SpeechChunk, string>.Success(new SpeechChunk(
-                    result.AudioData,
-                    "audio/wav",
-                    result.AudioDuration.TotalSeconds,
-                    Text: text,
-                    IsSentenceEnd: true,
-                    IsComplete: false));
-            }
-
-            if (result.Reason == ResultReason.Canceled)
-            {
-                var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
-                return Result<SpeechChunk, string>.Failure($"Speech synthesis canceled: {cancellation.ErrorDetails}");
-            }
-
-            return Result<SpeechChunk, string>.Failure("Speech synthesis failed");
-        }
-        catch (Exception ex)
-        {
-            return Result<SpeechChunk, string>.Failure($"Azure TTS error: {ex.Message}");
-        }
-        finally
-        {
-            _isSynthesizing = false;
-        }
-    }
-
-    /// <inheritdoc/>
-    public void InterruptSynthesis()
-    {
-        try
-        {
-            _currentSynthesisCts?.Cancel();
-            _isSynthesizing = false;
-        }
-        catch (ObjectDisposedException)
-        {
-            // Already disposed
-        }
-    }
-
     /// <inheritdoc/>
     public void Dispose()
     {
@@ -615,5 +473,51 @@ public sealed class AzureNeuralTtsService : IStreamingTtsService, IDisposable
         _synthesizer?.Dispose();
         _synthesizer = null;
         _speechLock.Dispose();
+    }
+
+    /// <summary>
+    /// Falls back to Edge TTS (Jenny voice) for direct speaker output.
+    /// Synthesizes audio via Edge TTS, then plays it through <see cref="AudioPlayer"/>.
+    /// </summary>
+    private static async Task FallbackSpeakWithEdgeTtsAsync(string text, CancellationToken ct)
+    {
+        try
+        {
+            var edgeResult = await EdgeTtsFallback.Value.SynthesizeAsync(text, null, ct).ConfigureAwait(false);
+            if (edgeResult.IsSuccess)
+            {
+                await AudioPlayer.PlayAsync(edgeResult.Value, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                System.Diagnostics.Trace.TraceWarning("[TTS] Edge TTS fallback also failed: {0}", edgeResult.Error);
+            }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.TraceWarning("[TTS] Edge TTS fallback error: {0}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Falls back to Edge TTS (Jenny voice) for audio synthesis.
+    /// Returns the Edge TTS result, or a failure if both services are unavailable.
+    /// </summary>
+    private static async Task<Result<SpeechResult, string>> FallbackSynthesizeWithEdgeTtsAsync(
+        string text,
+        TextToSpeechOptions? options,
+        CancellationToken ct)
+    {
+        try
+        {
+            return await EdgeTtsFallback.Value.SynthesizeAsync(text, options, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            return Result<SpeechResult, string>.Failure(
+                $"Both Azure TTS and Edge TTS fallback failed: {ex.Message}");
+        }
     }
 }

@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Identity Graph Implementation
 // Phase 2: Agent identity with capabilities, resources, commitments, performance
@@ -6,6 +5,7 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Ouroboros.Agent.Json;
 
 namespace Ouroboros.Agent.MetaAI.SelfModel;
 
@@ -187,7 +187,7 @@ public sealed class IdentityGraph : IIdentityGraph
             return;
 
         AgentIdentityState state = await GetStateAsync(ct);
-        string json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
+        string json = JsonSerializer.Serialize(state, JsonDefaults.Indented);
         
         string directory = Path.GetDirectoryName(_persistencePath)!;
         if (!string.IsNullOrEmpty(directory))

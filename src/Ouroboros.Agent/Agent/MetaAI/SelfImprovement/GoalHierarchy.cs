@@ -1,10 +1,10 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Goal Hierarchy Implementation
 // Hierarchical goal decomposition with value alignment
 // ==========================================================
 
 using System.Collections.Concurrent;
+using Ouroboros.Agent.Cognition.Planning;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -12,24 +12,31 @@ namespace Ouroboros.Agent.MetaAI;
 /// Implementation of hierarchical goal management.
 /// Decomposes complex goals and ensures value alignment.
 /// </summary>
-public sealed class GoalHierarchy : IGoalHierarchy
+public sealed partial class GoalHierarchy : IGoalHierarchy
 {
     private readonly ConcurrentDictionary<Guid, Goal> _goals = new();
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ISafetyGuard _safety;
     private readonly Core.Ethics.IEthicsFramework _ethics;
     private readonly GoalHierarchyConfig _config;
+    private readonly IGoalSplitter? _goalSplitter;
+    private readonly ISelfModificationGovernor? _governor;
 
     public GoalHierarchy(
         Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ISafetyGuard safety,
         Core.Ethics.IEthicsFramework ethics,
-        GoalHierarchyConfig? config = null)
+        GoalHierarchyConfig? config = null,
+        IGoalSplitter? goalSplitter = null,
+        ISelfModificationGovernor? governor = null)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
+        _ = _safety;
         _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
         _config = config ?? new GoalHierarchyConfig();
+        _goalSplitter = goalSplitter;
+        _governor = governor;
     }
 
     /// <summary>
@@ -101,6 +108,31 @@ public sealed class GoalHierarchy : IGoalHierarchy
                     $"Goal requires human approval before acceptance: {ethicsResult.Value.Reasoning}");
             }
 
+            // Self-modification governance gate
+            if (_governor is not null && IsSelfModificationGoal(goal))
+            {
+                var modRequest = new Core.Ethics.SelfModificationRequest
+                {
+                    Type = Core.Ethics.ModificationType.GoalModification,
+                    Description = goal.Description,
+                    Justification = $"Goal of type {goal.Type} with priority {goal.Priority}",
+                    ActionContext = context,
+                    ExpectedImprovements = goal.Constraints.TryGetValue("expectedImprovements", out var improvements)
+                        ? [improvements.ToString()!] : [],
+                    PotentialRisks = goal.Constraints.TryGetValue("potentialRisks", out var risks)
+                        ? [risks.ToString()!] : [],
+                    IsReversible = !goal.Constraints.ContainsKey("irreversible"),
+                    ImpactLevel = goal.Priority
+                };
+
+                var govResult = await _governor.ProposeAsync(modRequest, ct);
+                if (govResult.IsFailure)
+                    return Result<Goal, string>.Failure(govResult.Error);
+                if (!govResult.Value.IsApproved)
+                    return Result<Goal, string>.Failure(
+                        $"Self-modification governance denied: {govResult.Value.Reasoning}");
+            }
+
             // Add goal to hierarchy
             _goals[goal.Id] = goal;
 
@@ -112,6 +144,7 @@ public sealed class GoalHierarchy : IGoalHierarchy
 
             return Result<Goal, string>.Success(goal);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Goal, string>.Failure($"Goal addition failed: {ex.Message}");
@@ -154,28 +187,29 @@ public sealed class GoalHierarchy : IGoalHierarchy
 
         try
         {
-            // Use LLM to decompose the goal
-            string prompt = $@"Decompose this goal into {_config.MaxSubgoalsPerGoal} or fewer specific, actionable subgoals:
+            List<Goal> subgoals;
 
-GOAL: {goal.Description}
-TYPE: {goal.Type}
-PRIORITY: {goal.Priority}
-
-Provide {_config.MaxSubgoalsPerGoal} or fewer subgoals that together accomplish the main goal.
-For each subgoal, specify:
-- Description (one clear sentence)
-- Type (Primary/Secondary/Instrumental/Safety)
-- Priority (0.0-1.0)
-
-Format:
-SUBGOAL 1: [description]
-TYPE: [type]
-PRIORITY: [0-1]
-
-SUBGOAL 2: ...";
-
-            string response = await _llm.GenerateTextAsync(prompt, ct);
-            List<Goal> subgoals = ParseSubgoals(response, goal);
+            // Prefer Hypergrid-aware GoalSplitter (PEV pattern) when available
+            if (_goalSplitter is not null)
+            {
+                var hypergridContext = HypergridContext.Default;
+                var splitResult = await _goalSplitter.SplitAsync(goal, hypergridContext, ct);
+                if (splitResult.IsSuccess)
+                {
+                    subgoals = splitResult.Value.Steps
+                        .Select(step => step.ToGoal(goal))
+                        .ToList();
+                }
+                else
+                {
+                    // Fallback to raw LLM decomposition if splitter fails
+                    subgoals = await DecomposeViaLlmAsync(goal, ct);
+                }
+            }
+            else
+            {
+                subgoals = await DecomposeViaLlmAsync(goal, ct);
+            }
 
             // Recursively decompose subgoals if needed
             List<Goal> decomposedSubgoals = new List<Goal>();
@@ -197,10 +231,36 @@ SUBGOAL 2: ...";
 
             return Result<Goal, string>.Success(updatedGoal);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Goal, string>.Failure($"Goal decomposition failed: {ex.Message}");
         }
+    }
+
+    private async Task<List<Goal>> DecomposeViaLlmAsync(Goal goal, CancellationToken ct)
+    {
+        string prompt = $@"Decompose this goal into {_config.MaxSubgoalsPerGoal} or fewer specific, actionable subgoals:
+
+GOAL: {goal.Description}
+TYPE: {goal.Type}
+PRIORITY: {goal.Priority}
+
+Provide {_config.MaxSubgoalsPerGoal} or fewer subgoals that together accomplish the main goal.
+For each subgoal, specify:
+- Description (one clear sentence)
+- Type (Primary/Secondary/Instrumental/Safety)
+- Priority (0.0-1.0)
+
+Format:
+SUBGOAL 1: [description]
+TYPE: [type]
+PRIORITY: [0-1]
+
+SUBGOAL 2: ...";
+
+        string response = await _llm.GenerateTextAsync(prompt, ct);
+        return ParseSubgoals(response, goal);
     }
 
     /// <summary>
@@ -387,162 +447,9 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
         return prioritized;
     }
 
-    // Private helper methods
+    private static bool IsSelfModificationGoal(Goal goal) =>
+        goal.Constraints.ContainsKey("selfModification")
+        || goal.Description.Contains("self-modif", StringComparison.OrdinalIgnoreCase)
+        || goal.Description.Contains("self-improv", StringComparison.OrdinalIgnoreCase);
 
-    private List<Goal> ParseSubgoals(string response, Goal parentGoal)
-    {
-        List<Goal> subgoals = new List<Goal>();
-        string[] lines = response.Split('\n');
-
-        string? description = null;
-        GoalType type = GoalType.Instrumental;
-        double priority = 0.5;
-
-        foreach (string line in lines)
-        {
-            string trimmed = line.Trim();
-
-            if (trimmed.StartsWith("SUBGOAL"))
-            {
-                if (description != null)
-                {
-                    Goal subgoal = new Goal(
-                        Guid.NewGuid(),
-                        description,
-                        type,
-                        priority,
-                        parentGoal,
-                        new List<Goal>(),
-                        new Dictionary<string, object>(),
-                        DateTime.UtcNow,
-                        false,
-                        null);
-                    subgoals.Add(subgoal);
-                }
-
-                description = trimmed.Split(':').Skip(1).FirstOrDefault()?.Trim() ?? "";
-                type = GoalType.Instrumental;
-                priority = 0.5;
-            }
-            else if (trimmed.StartsWith("TYPE:"))
-            {
-                string typeStr = trimmed.Substring("TYPE:".Length).Trim();
-                type = Enum.TryParse<GoalType>(typeStr, true, out GoalType parsed)
-                    ? parsed
-                    : GoalType.Instrumental;
-            }
-            else if (trimmed.StartsWith("PRIORITY:"))
-            {
-                string priorityStr = trimmed.Substring("PRIORITY:".Length).Trim();
-                if (double.TryParse(priorityStr, out double p))
-                {
-                    priority = Math.Clamp(p, 0.0, 1.0);
-                }
-            }
-        }
-
-        if (description != null)
-        {
-            Goal subgoal = new Goal(
-                Guid.NewGuid(),
-                description,
-                type,
-                priority,
-                parentGoal,
-                new List<Goal>(),
-                new Dictionary<string, object>(),
-                DateTime.UtcNow,
-                false,
-                null);
-            subgoals.Add(subgoal);
-        }
-
-        return subgoals.Take(_config.MaxSubgoalsPerGoal).ToList();
-    }
-
-    private bool IsComplexGoal(Goal goal)
-    {
-        // Goals with lower priority or instrumental type are less complex
-        return goal.Priority > 0.7 || goal.Type == GoalType.Primary;
-    }
-
-    private bool HasDirectConflict(Goal goal1, Goal goal2)
-    {
-        // Check constraint conflicts
-        foreach (KeyValuePair<string, object> constraint1 in goal1.Constraints)
-        {
-            if (goal2.Constraints.TryGetValue(constraint1.Key, out object? value2))
-            {
-                if (!constraint1.Value.Equals(value2))
-                    return true;
-            }
-        }
-
-        return false;
-    }
-
-    private bool HasResourceConflict(Goal goal1, Goal goal2)
-    {
-        // Simple heuristic: high-priority goals may compete
-        return goal1.Priority > 0.8 && goal2.Priority > 0.8 &&
-               goal1.Type == goal2.Type;
-    }
-
-    private async Task<GoalConflict?> DetectSemanticConflictAsync(
-        Goal goal1,
-        Goal goal2,
-        CancellationToken ct)
-    {
-        string prompt = $@"Analyze if these two goals conflict:
-
-GOAL 1: {goal1.Description} (Type: {goal1.Type}, Priority: {goal1.Priority})
-GOAL 2: {goal2.Description} (Type: {goal2.Type}, Priority: {goal2.Priority})
-
-Do they conflict? Answer 'YES' or 'NO' and explain why.";
-
-        try
-        {
-            string response = await _llm.GenerateTextAsync(prompt, ct);
-
-            if (response.Contains("YES", StringComparison.OrdinalIgnoreCase))
-            {
-                return new GoalConflict(
-                    goal1,
-                    goal2,
-                    "Semantic conflict",
-                    response,
-                    new List<string> { "Reframe goals", "Adjust priorities", "Create intermediate goals" });
-            }
-        }
-        catch
-        {
-            // Ignore LLM errors in conflict detection
-        }
-
-        return null;
-    }
-
-    private async Task<bool> CheckConstraintViolationAsync(
-        Goal goal,
-        string constraint,
-        CancellationToken ct)
-    {
-        string prompt = $@"Does this goal violate the safety constraint?
-
-GOAL: {goal.Description}
-CONSTRAINT: {constraint}
-
-Answer with 'VIOLATES' or 'SAFE'.";
-
-        try
-        {
-            string response = await _llm.GenerateTextAsync(prompt, ct);
-            return response.Contains("VIOLATES", StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            // On error, assume safe to not block execution
-            return false;
-        }
-    }
 }

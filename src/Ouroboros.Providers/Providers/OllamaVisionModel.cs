@@ -5,6 +5,9 @@
 namespace Ouroboros.Providers;
 
 using System.Diagnostics;
+using OllamaSharp;
+using OllamaSharp.Models;
+using Ouroboros.Providers.Configuration;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -14,6 +17,7 @@ using Ouroboros.Core.Monads;
 /// <summary>
 /// Ollama-based implementation of <see cref="IVisionModel"/> that routes vision requests
 /// to multimodal models like qwen3-vl, llava, or minicpm-v via the Ollama API.
+/// Uses OllamaSharp for API communication.
 /// Integrates with the multi-model swarm for strong visual understanding.
 /// </summary>
 public sealed class OllamaVisionModel : IVisionModel
@@ -21,7 +25,7 @@ public sealed class OllamaVisionModel : IVisionModel
     /// <summary>
     /// Default vision model — Qwen3-VL 235B cloud for strongest visual understanding.
     /// </summary>
-    public const string DefaultModel = "qwen3-vl:235b-cloud";
+    public const string DefaultModel = "devstral-small-2:24b-cloud";
 
     /// <summary>
     /// Lightweight fallback vision model for faster processing.
@@ -29,6 +33,7 @@ public sealed class OllamaVisionModel : IVisionModel
     public const string LightweightModel = "llava:7b";
 
     private readonly HttpClient _httpClient;
+    private readonly OllamaApiClient _ollamaClient;
     private readonly string _model;
     private readonly string _endpoint;
     private readonly TimeSpan _timeout;
@@ -37,12 +42,12 @@ public sealed class OllamaVisionModel : IVisionModel
     /// <summary>
     /// Initializes a new instance of the <see cref="OllamaVisionModel"/> class.
     /// </summary>
-    /// <param name="endpoint">Ollama API endpoint (e.g. http://localhost:11434).</param>
-    /// <param name="model">Vision model name (e.g. qwen3-vl:235b-cloud).</param>
+    /// <param name="endpoint">Ollama API endpoint (e.g. <see cref="DefaultEndpoints.Ollama"/>).</param>
+    /// <param name="model">Vision model name (e.g. devstral-small-2:24b-cloud).</param>
     /// <param name="timeout">Request timeout. Defaults to 120 seconds.</param>
     /// <param name="logger">Optional logger.</param>
     public OllamaVisionModel(
-        string endpoint = "http://localhost:11434",
+        string endpoint = DefaultEndpoints.Ollama,
         string model = DefaultModel,
         TimeSpan? timeout = null,
         ILogger<OllamaVisionModel>? logger = null)
@@ -56,6 +61,8 @@ public sealed class OllamaVisionModel : IVisionModel
             BaseAddress = new Uri(_endpoint, UriKind.Absolute),
             Timeout = _timeout,
         };
+        _ollamaClient = new OllamaApiClient(_httpClient);
+        _ollamaClient.SelectedModel = _model;
     }
 
     /// <inheritdoc/>
@@ -90,7 +97,7 @@ public sealed class OllamaVisionModel : IVisionModel
         {
             return Result<VisionAnalysisResult, string>.Failure($"Vision analysis timed out after {_timeout.TotalSeconds}s");
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Vision analysis failed with {Model}", _model);
             return Result<VisionAnalysisResult, string>.Failure($"Vision analysis failed: {ex.Message}");
@@ -137,7 +144,7 @@ public sealed class OllamaVisionModel : IVisionModel
             string response = await CallOllamaVisionAsync(base64Image, question, ct);
             return Result<string, string>.Success(response);
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Vision Q&A failed with {Model}", _model);
             return Result<string, string>.Failure($"Vision Q&A failed: {ex.Message}");
@@ -163,7 +170,7 @@ public sealed class OllamaVisionModel : IVisionModel
             List<DetectedObject> objects = ParseDetectedObjects(response, maxObjects);
             return Result<IReadOnlyList<DetectedObject>, string>.Success(objects);
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Object detection failed with {Model}", _model);
             return Result<IReadOnlyList<DetectedObject>, string>.Failure($"Object detection failed: {ex.Message}");
@@ -189,7 +196,7 @@ public sealed class OllamaVisionModel : IVisionModel
             List<DetectedFace> faces = ParseDetectedFaces(response, analyzeEmotion);
             return Result<IReadOnlyList<DetectedFace>, string>.Success(faces);
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Face detection failed with {Model}", _model);
             return Result<IReadOnlyList<DetectedFace>, string>.Failure($"Face detection failed: {ex.Message}");
@@ -205,14 +212,8 @@ public sealed class OllamaVisionModel : IVisionModel
     {
         try
         {
-            HttpResponseMessage response = await _httpClient.GetAsync("/api/tags", ct);
-            if (!response.IsSuccessStatusCode)
-            {
-                return false;
-            }
-
-            string json = await response.Content.ReadAsStringAsync(ct);
-            return json.Contains(_model, StringComparison.OrdinalIgnoreCase);
+            var models = await _ollamaClient.ListLocalModelsAsync(ct);
+            return models.Any(m => m.Name.Contains(_model, StringComparison.OrdinalIgnoreCase));
         }
         catch
         {
@@ -222,31 +223,21 @@ public sealed class OllamaVisionModel : IVisionModel
 
     private async Task<string> CallOllamaVisionAsync(string base64Image, string prompt, CancellationToken ct)
     {
-        object requestBody = new
+        StringBuilder responseBuilder = new();
+        await foreach (var chunk in _ollamaClient.GenerateAsync(new GenerateRequest
         {
-            model = _model,
-            prompt = prompt,
-            images = new[] { base64Image },
-            stream = false,
-        };
-
-        StringContent content = new StringContent(
-            JsonSerializer.Serialize(requestBody),
-            Encoding.UTF8,
-            "application/json");
-
-        HttpResponseMessage response = await _httpClient.PostAsync("/api/generate", content, ct);
-
-        if (!response.IsSuccessStatusCode)
+            Model = _model,
+            Prompt = prompt,
+            Images = new[] { base64Image },
+            Stream = false,
+        }, ct))
         {
-            string error = await response.Content.ReadAsStringAsync(ct);
-            throw new HttpRequestException($"Ollama vision request failed ({response.StatusCode}): {error}");
+            if (chunk?.Response is not null)
+            {
+                responseBuilder.Append(chunk.Response);
+            }
         }
-
-        string responseJson = await response.Content.ReadAsStringAsync(ct);
-        JsonElement responseObj = JsonSerializer.Deserialize<JsonElement>(responseJson);
-
-        return responseObj.GetProperty("response").GetString() ?? string.Empty;
+        return responseBuilder.ToString();
     }
 
     private static string BuildAnalysisPrompt(VisionAnalysisOptions options)
@@ -419,15 +410,7 @@ public sealed class OllamaVisionModel : IVisionModel
             "living room", "bathroom", "garden", "park", "beach", "forest", "city", "rural",
             "restaurant", "store", "classroom", "laboratory", "warehouse", "parking"];
 
-        foreach (string scene in sceneTypes)
-        {
-            if (lower.Contains(scene))
-            {
-                return scene;
-            }
-        }
-
-        return null;
+        return sceneTypes.FirstOrDefault(scene => lower.Contains(scene));
     }
 
     private static List<string>? ExtractColors(string response)
@@ -436,14 +419,7 @@ public sealed class OllamaVisionModel : IVisionModel
         string[] colorNames = ["red", "blue", "green", "yellow", "orange", "purple", "pink",
             "white", "black", "gray", "brown", "beige", "teal", "cyan", "magenta"];
 
-        List<string> found = new List<string>();
-        foreach (string color in colorNames)
-        {
-            if (lower.Contains(color))
-            {
-                found.Add(color);
-            }
-        }
+        List<string> found = colorNames.Where(color => lower.Contains(color)).ToList();
 
         return found.Count > 0 ? found : null;
     }

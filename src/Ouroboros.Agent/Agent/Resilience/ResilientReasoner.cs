@@ -2,7 +2,6 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 namespace Ouroboros.Agent.Resilience;
 
@@ -45,6 +44,7 @@ public sealed class ResilientReasoner : IReasoner
     {
         _bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
         _llm = llm;
+        _ = _llm;
         _config = config ?? new CircuitBreakerConfig();
         _logger = logger;
         
@@ -161,11 +161,13 @@ public sealed class ResilientReasoner : IReasoner
                     ? Result<string, string>.Success(fallbackResult.Value.Answer)
                     : Result<string, string>.Failure($"Neural reasoning unavailable (circuit open), symbolic fallback failed: {fallbackResult.Error}");
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception fallbackEx)
             {
                 return Result<string, string>.Failure($"Neural reasoning unavailable (circuit open), symbolic fallback exception: {fallbackEx.Message}");
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             // Exception thrown - record failure for neural modes
@@ -189,6 +191,7 @@ public sealed class ResilientReasoner : IReasoner
                         ? Result<string, string>.Success(fallbackResult.Value.Answer)
                         : Result<string, string>.Failure($"Both neural and symbolic reasoning failed. Neural error: {ex.Message}, Symbolic error: {fallbackResult.Error}");
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception fallbackEx)
                 {
                     return Result<string, string>.Failure($"Both neural and symbolic reasoning failed. Neural error: {ex.Message}, Symbolic error: {fallbackEx.Message}");

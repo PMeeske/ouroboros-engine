@@ -71,6 +71,7 @@ public static class GlobalProjectionArrows
                 var result = await CreateEpochArrow(relatedBranches, metadata)(branch);
                 return Result<PipelineBranch, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Epoch creation failed: {ex.Message}");

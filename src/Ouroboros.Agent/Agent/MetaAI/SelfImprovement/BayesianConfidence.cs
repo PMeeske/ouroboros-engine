@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Bayesian Confidence Updating
 // Implements Bayes' theorem for hypothesis testing
@@ -67,12 +66,18 @@ public static class BayesianConfidence
     /// </remarks>
     public static EvidenceStrength CategorizeEvidence(double bayesFactor)
     {
-        if (bayesFactor <= 0 || double.IsNaN(bayesFactor) || double.IsInfinity(bayesFactor))
+        if (bayesFactor <= 0 || double.IsNaN(bayesFactor))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(bayesFactor),
                 bayesFactor,
-                "Bayes factor must be a positive finite number");
+                "Bayes factor must be a positive number");
+        }
+
+        // Treat infinity as decisive evidence (consistent with BayesFactor returning +Inf)
+        if (double.IsInfinity(bayesFactor))
+        {
+            return EvidenceStrength.Decisive;
         }
 
         var k = Math.Abs(Math.Log10(bayesFactor));

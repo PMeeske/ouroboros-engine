@@ -1,4 +1,4 @@
-﻿using Ouroboros.Abstractions;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.Metacognition;
 
@@ -120,6 +120,7 @@ public static class CognitiveMonitorArrow
 
                 return result;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 var duration = DateTime.UtcNow - startTime;

@@ -1,5 +1,6 @@
-﻿using System.Net.Http.Json;
 using System.Reactive.Linq;
+using OllamaSharp;
+using OllamaSharp.Models;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Wrap;
@@ -8,7 +9,7 @@ namespace Ouroboros.Providers;
 
 /// <summary>
 /// HTTP client specifically designed for Ollama Cloud API endpoints.
-/// Uses Ollama's native JSON API format with /api/generate endpoint.
+/// Uses OllamaSharp for typed API access with /api/generate endpoint.
 /// Includes Polly exponential backoff retry policy to handle rate limiting.
 /// Supports thinking mode for models like DeepSeek R1 that emit &lt;think&gt; tags.
 /// </summary>
@@ -19,9 +20,10 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
     private static readonly SemaphoreSlim s_cloudConcurrency = new(2, 2);
 
     private readonly HttpClient _client;
+    private readonly OllamaApiClient _ollamaClient;
     private readonly string _model;
     private readonly ChatRuntimeSettings _settings;
-    private readonly AsyncPolicyWrap<HttpResponseMessage> _resiliencePolicy;
+    private readonly AsyncPolicyWrap _resiliencePolicy;
     private readonly LlmCostTracker? _costTracker;
 
     /// <summary>
@@ -40,20 +42,22 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             Timeout = TimeSpan.FromMinutes(10) // Large models like DeepSeek 671B need longer timeouts
         };
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+
+        _ollamaClient = new OllamaApiClient(_client);
+        _ollamaClient.SelectedModel = model;
+
         _model = model;
         _settings = settings ?? new ChatRuntimeSettings();
         _costTracker = costTracker ?? new LlmCostTracker(model);
 
         // === ENHANCED POLLY RESILIENCE POLICY ===
+        // OllamaSharp throws exceptions on failure (no HttpResponseMessage to inspect),
+        // so the policy is exception-based rather than result-based.
 
         // 1. Retry policy with exponential backoff + jitter for rate limiting and server errors
         var retryPolicy = Policy
-            .HandleResult<HttpResponseMessage>(r =>
-                (int)r.StatusCode == 429 ||    // Too Many Requests
-                (int)r.StatusCode == 503 ||    // Service Unavailable (explicitly)
-                (int)r.StatusCode >= 500)      // All server errors
-            .Or<HttpRequestException>()        // Network failures
-            .Or<TaskCanceledException>(ex =>   // Only genuine HttpClient timeouts, NOT external cancellation.
+            .Handle<HttpRequestException>()        // Network failures and HTTP error status codes
+            .Or<TaskCanceledException>(ex =>        // Only genuine HttpClient timeouts, NOT external cancellation.
                 // HttpClient.Timeout fires as TaskCanceledException with InnerException=TimeoutException.
                 // Deliberate cancellation (Racing mode, user Ctrl+C) produces a bare TCE without a TimeoutException.
                 ex.InnerException is TimeoutException)
@@ -66,20 +70,19 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                     var jitter = TimeSpan.FromMilliseconds(System.Random.Shared.Next(0, 1000));
                     return baseDelay + jitter;
                 },
-                onRetry: (outcome, timespan, retryCount, context) =>
+                onRetry: (exception, timespan, retryCount, context) =>
                 {
-                    var reason = outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString() ?? "Unknown";
+                    var reason = exception.Message;
                     System.Diagnostics.Trace.TraceInformation("[OllamaCloudChatModel] Retry {0}/5 after {1:F1}s due to {2}", retryCount, timespan.TotalSeconds, reason);
                 });
 
         // 2. Circuit breaker - fail fast if service is consistently down
         var circuitBreakerPolicy = Policy
-            .HandleResult<HttpResponseMessage>(r => (int)r.StatusCode >= 500)
-            .Or<HttpRequestException>()
+            .Handle<HttpRequestException>()
             .CircuitBreakerAsync(
-                handledEventsAllowedBeforeBreaking: 5,  // Open circuit after 5 consecutive failures
+                exceptionsAllowedBeforeBreaking: 5,  // Open circuit after 5 consecutive failures
                 durationOfBreak: TimeSpan.FromSeconds(30),  // Stay open for 30s before trying again
-                onBreak: (outcome, breakDelay) =>
+                onBreak: (exception, breakDelay) =>
                 {
                     System.Diagnostics.Trace.TraceWarning("[OllamaCloudChatModel] Circuit OPEN for {0}s - service appears down", breakDelay.TotalSeconds);
                 },
@@ -103,51 +106,41 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
         await s_cloudConcurrency.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            // Use Ollama's native /api/generate endpoint and JSON format
-            var payloadObject = new
-            {
-                model = _model,
-                prompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt,
-                stream = false,
-                options = new
-                {
-                    temperature = _settings.Temperature,
-                    num_predict = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
-                }
-            };
+            string finalPrompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
 
-            HttpResponseMessage response = await _resiliencePolicy.ExecuteAsync(async (innerCt) =>
+            var result = await _resiliencePolicy.ExecuteAsync(async (innerCt) =>
             {
-                // Create fresh JsonContent for each retry attempt (content can only be used once).
-                // innerCt is checked by Polly before each retry — so a Racing-mode cancellation
-                // causes immediate abort instead of 5x exponential-backoff spam.
-                using JsonContent payload = JsonContent.Create(payloadObject);
-                return await _client.PostAsync("/api/generate", payload, innerCt).ConfigureAwait(false);
-            }, ct).ConfigureAwait(false);
-
-            string rawContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                System.Diagnostics.Trace.TraceWarning("[OllamaCloudChatModel] HTTP {0}: {1}", (int)response.StatusCode, rawContent);
-                return $"[ollama-cloud-fallback:{_model}] {prompt}";
-            }
-
-            using var doc = System.Text.Json.JsonDocument.Parse(rawContent);
-            if (doc.RootElement.TryGetProperty("response", out var responseElement))
-            {
-                // Extract token counts from Ollama response if available
+                string response = "";
                 int promptTokens = 0, outputTokens = 0;
-                if (doc.RootElement.TryGetProperty("prompt_eval_count", out var promptEval))
-                    promptTokens = promptEval.GetInt32();
-                if (doc.RootElement.TryGetProperty("eval_count", out var evalCount))
-                    outputTokens = evalCount.GetInt32();
+
+                await foreach (var chunk in _ollamaClient.GenerateAsync(new GenerateRequest
+                {
+                    Model = _model,
+                    Prompt = finalPrompt,
+                    Stream = false,
+                    Options = new RequestOptions
+                    {
+                        Temperature = (float)_settings.Temperature,
+                        NumPredict = _settings.MaxTokens > 0 ? _settings.MaxTokens : null
+                    }
+                }, innerCt).ConfigureAwait(false))
+                {
+                    response += chunk.Response;
+
+                    // Extract token counts from the final (done=true) chunk.
+                    // OllamaSharp yields GenerateDoneResponseStream for the final item.
+                    if (chunk.Done && chunk is GenerateDoneResponseStream doneChunk)
+                    {
+                        promptTokens = doneChunk.PromptEvalCount;
+                        outputTokens = doneChunk.EvalCount;
+                    }
+                }
 
                 _costTracker?.EndRequest(promptTokens, outputTokens);
-                return responseElement.GetString() ?? "";
-            }
+                return response;
+            }, ct).ConfigureAwait(false);
 
-            System.Diagnostics.Trace.TraceWarning("[OllamaCloudChatModel] No 'response' field in: {0}", rawContent);
+            return !string.IsNullOrEmpty(result) ? result : $"[ollama-cloud-fallback:{_model}]";
         }
         catch (BrokenCircuitException)
         {
@@ -165,7 +158,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
         {
             s_cloudConcurrency.Release();
         }
-        return $"[ollama-cloud-fallback:{_model}] {prompt}";
+        return $"[ollama-cloud-fallback:{_model}]";
     }
 
     /// <inheritdoc/>
@@ -183,94 +176,72 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             await s_cloudConcurrency.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                using JsonContent payload = JsonContent.Create(new
+                string finalPrompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
+
+                await _resiliencePolicy.ExecuteAsync(async (innerToken) =>
                 {
-                    model = _model,
-                    prompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt,
-                    stream = true,
-                    options = new
+                    bool inThinking = false;
+                    StringBuilder buffer = new();
+
+                    await foreach (var chunk in _ollamaClient.GenerateAsync(new GenerateRequest
                     {
-                        temperature = _settings.Temperature,
-                        num_predict = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
-                    }
-                });
-
-                HttpResponseMessage response = await _resiliencePolicy.ExecuteAsync(
-                    (innerToken) => _client.PostAsync("/api/generate", payload, innerToken),
-                    token).ConfigureAwait(false);
-
-                response.EnsureSuccessStatusCode();
-
-                using Stream responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
-                using StreamReader reader = new StreamReader(responseStream);
-
-                bool inThinking = false;
-                StringBuilder buffer = new();
-
-                string? line;
-                while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null && !token.IsCancellationRequested)
-                {
-                    if (string.IsNullOrWhiteSpace(line)) continue;
-
-                    try
-                    {
-                        using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(line);
-                        if (doc.RootElement.TryGetProperty("response", out System.Text.Json.JsonElement responseElement))
+                        Model = _model,
+                        Prompt = finalPrompt,
+                        Stream = true,
+                        Options = new RequestOptions
                         {
-                            string? content = responseElement.GetString();
-                            if (!string.IsNullOrEmpty(content))
+                            Temperature = (float)_settings.Temperature,
+                            NumPredict = _settings.MaxTokens > 0 ? _settings.MaxTokens : null
+                        }
+                    }, innerToken).ConfigureAwait(false))
+                    {
+                        string? content = chunk.Response;
+                        if (!string.IsNullOrEmpty(content))
+                        {
+                            buffer.Append(content);
+                            string bufferStr = buffer.ToString();
+
+                            // Check for thinking tag transitions
+                            if (!inThinking && bufferStr.Contains("<think>", StringComparison.OrdinalIgnoreCase))
                             {
-                                buffer.Append(content);
-                                string bufferStr = buffer.ToString();
+                                int idx = bufferStr.IndexOf("<think>", StringComparison.OrdinalIgnoreCase);
+                                string beforeTag = bufferStr[..idx];
+                                if (!string.IsNullOrEmpty(beforeTag))
+                                    observer.OnNext((false, beforeTag));
 
-                                // Check for thinking tag transitions
-                                if (!inThinking && bufferStr.Contains("<think>", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    int idx = bufferStr.IndexOf("<think>", StringComparison.OrdinalIgnoreCase);
-                                    string beforeTag = bufferStr[..idx];
-                                    if (!string.IsNullOrEmpty(beforeTag))
-                                        observer.OnNext((false, beforeTag));
-
-                                    buffer.Clear();
-                                    buffer.Append(bufferStr[(idx + 7)..]);
-                                    inThinking = true;
-                                    continue;
-                                }
-
-                                if (inThinking && bufferStr.Contains("</think>", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    int idx = bufferStr.IndexOf("</think>", StringComparison.OrdinalIgnoreCase);
-                                    string thinkingContent = bufferStr[..idx];
-                                    if (!string.IsNullOrEmpty(thinkingContent))
-                                        observer.OnNext((true, thinkingContent));
-
-                                    buffer.Clear();
-                                    buffer.Append(bufferStr[(idx + 8)..]);
-                                    inThinking = false;
-                                    continue;
-                                }
-
-                                // Emit chunk with current state
-                                observer.OnNext((inThinking, content));
                                 buffer.Clear();
+                                buffer.Append(bufferStr[(idx + 7)..]);
+                                inThinking = true;
+                                continue;
                             }
+
+                            if (inThinking && bufferStr.Contains("</think>", StringComparison.OrdinalIgnoreCase))
+                            {
+                                int idx = bufferStr.IndexOf("</think>", StringComparison.OrdinalIgnoreCase);
+                                string thinkingContent = bufferStr[..idx];
+                                if (!string.IsNullOrEmpty(thinkingContent))
+                                    observer.OnNext((true, thinkingContent));
+
+                                buffer.Clear();
+                                buffer.Append(bufferStr[(idx + 8)..]);
+                                inThinking = false;
+                                continue;
+                            }
+
+                            // Emit chunk with current state
+                            observer.OnNext((inThinking, content));
+                            buffer.Clear();
                         }
 
-                        if (doc.RootElement.TryGetProperty("done", out System.Text.Json.JsonElement doneElement) && doneElement.GetBoolean())
+                        if (chunk.Done)
                         {
                             // Flush any remaining buffer
                             if (buffer.Length > 0)
                                 observer.OnNext((inThinking, buffer.ToString()));
-                            observer.OnCompleted();
-                            return;
+                            break;
                         }
                     }
-                    catch (System.Text.Json.JsonException)
-                    {
-                        // Skip malformed JSON chunks
-                        continue;
-                    }
-                }
+                }, token).ConfigureAwait(false);
 
                 observer.OnCompleted();
             }
@@ -279,6 +250,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 // Circuit is open - complete gracefully without error
                 observer.OnCompleted();
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 observer.OnError(ex);
@@ -298,56 +270,34 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             await s_cloudConcurrency.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                using JsonContent payload = JsonContent.Create(new
+                string finalPrompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
+
+                await _resiliencePolicy.ExecuteAsync(async (innerToken) =>
                 {
-                    model = _model,
-                    prompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt,
-                    stream = true,
-                    options = new
+                    await foreach (var chunk in _ollamaClient.GenerateAsync(new GenerateRequest
                     {
-                        temperature = _settings.Temperature,
-                        num_predict = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
-                    }
-                });
-
-                HttpResponseMessage response = await _resiliencePolicy.ExecuteAsync(
-                    (innerToken) => _client.PostAsync("/api/generate", payload, innerToken),
-                    token).ConfigureAwait(false);
-
-                response.EnsureSuccessStatusCode();
-
-                using Stream responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
-                using StreamReader reader = new StreamReader(responseStream);
-
-                string? line;
-                while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null && !token.IsCancellationRequested)
-                {
-                    if (string.IsNullOrWhiteSpace(line)) continue;
-
-                    try
-                    {
-                        using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(line);
-                        if (doc.RootElement.TryGetProperty("response", out System.Text.Json.JsonElement responseElement))
+                        Model = _model,
+                        Prompt = finalPrompt,
+                        Stream = true,
+                        Options = new RequestOptions
                         {
-                            string? content = responseElement.GetString();
-                            if (!string.IsNullOrEmpty(content))
-                            {
-                                observer.OnNext(content);
-                            }
+                            Temperature = (float)_settings.Temperature,
+                            NumPredict = _settings.MaxTokens > 0 ? _settings.MaxTokens : null
+                        }
+                    }, innerToken).ConfigureAwait(false))
+                    {
+                        string? content = chunk.Response;
+                        if (!string.IsNullOrEmpty(content))
+                        {
+                            observer.OnNext(content);
                         }
 
-                        if (doc.RootElement.TryGetProperty("done", out System.Text.Json.JsonElement doneElement) && doneElement.GetBoolean())
+                        if (chunk.Done)
                         {
-                            observer.OnCompleted();
-                            return;
+                            break;
                         }
                     }
-                    catch (System.Text.Json.JsonException)
-                    {
-                        // Skip malformed JSON chunks
-                        continue;
-                    }
-                }
+                }, token).ConfigureAwait(false);
 
                 observer.OnCompleted();
             }
@@ -356,6 +306,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 // Circuit is open - complete gracefully without error
                 observer.OnCompleted();
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 observer.OnError(ex);
@@ -369,6 +320,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
 
     public void Dispose()
     {
+        _ollamaClient?.Dispose();
         _client?.Dispose();
     }
 }

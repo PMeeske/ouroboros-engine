@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Smart Model Orchestrator
 // Performance-aware AI orchestrator that selects optimal
@@ -16,7 +15,7 @@ namespace Ouroboros.Agent;
 /// based on use case classification and performance metrics.
 /// Implements functional programming patterns with monadic error handling.
 /// </summary>
-public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
+public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDisposable
 {
     private const double TypeMatchWeight = 0.35;
     private const double CapabilityWeight = 0.25;
@@ -52,11 +51,12 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
         string fallbackModel = "default")
     {
         _baseTools = baseTools ?? throw new ArgumentNullException(nameof(baseTools));
+        _ = _baseTools;
         _toolSelector = new DynamicToolSelector(baseTools);
         _metricsStore = metricsStore;
         _fallbackModel = fallbackModel;
 
-        // Load persisted metrics if store provided
+        // Intentional: sync-over-async in constructor; metrics must be loaded before orchestrator is usable
         if (_metricsStore != null)
         {
             LoadPersistedMetricsAsync().GetAwaiter().GetResult();
@@ -159,7 +159,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
         string lowerPrompt = prompt.ToLowerInvariant();
 
         // Code generation patterns
-        if (Regex.IsMatch(lowerPrompt, @"\b(code|implement|function|class|method|debug|fix|refactor)\b"))
+        if (SmcoCodePattern().IsMatch(lowerPrompt))
         {
             int complexity = EstimateComplexity(prompt);
             return new UseCase(
@@ -171,7 +171,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
         }
 
         // Reasoning patterns
-        if (Regex.IsMatch(lowerPrompt, @"\b(analyze|reason|explain|why|how|cause|logic|deduce)\b"))
+        if (SmcoReasoningPattern().IsMatch(lowerPrompt))
         {
             int complexity = EstimateComplexity(prompt);
             return new UseCase(
@@ -183,7 +183,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
         }
 
         // Creative patterns
-        if (Regex.IsMatch(lowerPrompt, @"\b(create|generate|write|story|poem|creative|imagine)\b"))
+        if (SmcoCreativePattern().IsMatch(lowerPrompt))
         {
             return new UseCase(
                 UseCaseType.Creative,
@@ -194,7 +194,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
         }
 
         // Summarization patterns
-        if (Regex.IsMatch(lowerPrompt, @"\b(summarize|brief|tldr|overview|condense)\b") || prompt.Length > 1000)
+        if (SmcoSummarizePattern().IsMatch(lowerPrompt) || prompt.Length > 1000)
         {
             return new UseCase(
                 UseCaseType.Summarization,
@@ -205,7 +205,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
         }
 
         // Vision/camera patterns - routes to Analysis model type (vision sub-model)
-        if (Regex.IsMatch(lowerPrompt, @"\b(vision|visual|image|camera|cam|see|look|photo|picture|screenshot|snapshot|frame|capture|pan|tilt|ptz|rotate.*camera|turn.*camera|move.*camera|patrol|sweep)\b"))
+        if (SmcoVisionPattern().IsMatch(lowerPrompt))
         {
             return new UseCase(
                 UseCaseType.Analysis,
@@ -216,7 +216,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
         }
 
         // Tool use patterns
-        if (Regex.IsMatch(lowerPrompt, @"\[TOOL:|use.*tool|invoke|execute"))
+        if (SmcoToolUsePattern().IsMatch(lowerPrompt))
         {
             return new UseCase(
                 UseCaseType.ToolUse,
@@ -265,7 +265,7 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
                 "No suitable models found for use case");
         }
 
-        var best = scoredModels.First();
+        var best = scoredModels[0];
 
         // Get model instance or create fallback
         if (!_models.TryGetValue(best.Capability.ModelName, out Ouroboros.Abstractions.Core.IChatCompletionModel? model))
@@ -410,102 +410,14 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
     /// <summary>
     /// Estimates complexity of a prompt.
     /// </summary>
-    private int EstimateComplexity(string prompt)
+    private static int EstimateComplexity(string prompt)
     {
         int length = prompt.Length;
         int sentences = prompt.Split('.', '!', '?').Length;
-        int technicalTerms = Regex.Matches(
-            prompt,
-            @"\b(algorithm|architecture|implement|optimize|performance|system)\b",
-            RegexOptions.IgnoreCase).Count;
+        int technicalTerms = SmcoTechnicalTermsPattern().Matches(prompt).Count;
 
         return (length / 100) + sentences + (technicalTerms * 2);
     }
-
-    /// <summary>
-    /// Records performance metrics for model execution.
-    /// </summary>
-    public void RecordMetric(string resourceName, double latencyMs, bool success)
-    {
-        PerformanceMetrics updatedMetrics = _metrics.AddOrUpdate(
-            resourceName,
-            // Add new
-            _ => new PerformanceMetrics(
-                resourceName,
-                ExecutionCount: 1,
-                AverageLatencyMs: latencyMs,
-                SuccessRate: success ? 1.0 : 0.0,
-                LastUsed: DateTime.UtcNow,
-                CustomMetrics: new Dictionary<string, double>()),
-            // Update existing
-            (_, existing) =>
-            {
-                int newCount = existing.ExecutionCount + 1;
-                double newAvgLatency = ((existing.AverageLatencyMs * existing.ExecutionCount) + latencyMs) / newCount;
-                double newSuccessRate = ((existing.SuccessRate * existing.ExecutionCount) + (success ? 1.0 : 0.0)) / newCount;
-
-                return new PerformanceMetrics(
-                    resourceName,
-                    ExecutionCount: newCount,
-                    AverageLatencyMs: newAvgLatency,
-                    SuccessRate: newSuccessRate,
-                    LastUsed: DateTime.UtcNow,
-                    CustomMetrics: existing.CustomMetrics);
-            });
-
-        // Persist to store if available (fire and forget for performance)
-        _metricsStore?.StoreMetricsAsync(updatedMetrics);
-    }
-
-    /// <summary>
-    /// Records performance metrics for model execution asynchronously.
-    /// </summary>
-    public async Task RecordMetricAsync(string resourceName, double latencyMs, bool success, CancellationToken ct = default)
-    {
-        PerformanceMetrics updatedMetrics = _metrics.AddOrUpdate(
-            resourceName,
-            // Add new
-            _ => new PerformanceMetrics(
-                resourceName,
-                ExecutionCount: 1,
-                AverageLatencyMs: latencyMs,
-                SuccessRate: success ? 1.0 : 0.0,
-                LastUsed: DateTime.UtcNow,
-                CustomMetrics: new Dictionary<string, double>()),
-            // Update existing
-            (_, existing) =>
-            {
-                int newCount = existing.ExecutionCount + 1;
-                double newAvgLatency = ((existing.AverageLatencyMs * existing.ExecutionCount) + latencyMs) / newCount;
-                double newSuccessRate = ((existing.SuccessRate * existing.ExecutionCount) + (success ? 1.0 : 0.0)) / newCount;
-
-                return new PerformanceMetrics(
-                    resourceName,
-                    ExecutionCount: newCount,
-                    AverageLatencyMs: newAvgLatency,
-                    SuccessRate: newSuccessRate,
-                    LastUsed: DateTime.UtcNow,
-                    CustomMetrics: existing.CustomMetrics);
-            });
-
-        // Persist to store if available
-        if (_metricsStore != null)
-        {
-            await _metricsStore.StoreMetricsAsync(updatedMetrics, ct);
-        }
-    }
-
-    /// <summary>
-    /// Gets all current performance metrics.
-    /// </summary>
-    public IReadOnlyDictionary<string, PerformanceMetrics> GetMetrics()
-        => new Dictionary<string, PerformanceMetrics>(_metrics);
-
-    /// <summary>
-    /// Gets the metrics store statistics if a persistent store is configured.
-    /// </summary>
-    public async Task<MetricsStoreStatistics?> GetMetricsStoreStatisticsAsync()
-        => _metricsStore != null ? await _metricsStore.GetStatisticsAsync() : null;
 
     /// <summary>
     /// Disposes the orchestrator and its resources.
@@ -518,4 +430,29 @@ public sealed class SmartModelOrchestrator : IModelOrchestrator, IDisposable
         // Dispose metrics store if it implements IDisposable
         (_metricsStore as IDisposable)?.Dispose();
     }
+
+    // ================================================================
+    // [GeneratedRegex] source-generated regex patterns
+    // ================================================================
+
+    [GeneratedRegex(@"\b(code|implement|function|class|method|debug|fix|refactor)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoCodePattern();
+
+    [GeneratedRegex(@"\b(analyze|reason|explain|why|how|cause|logic|deduce)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoReasoningPattern();
+
+    [GeneratedRegex(@"\b(create|generate|write|story|poem|creative|imagine)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoCreativePattern();
+
+    [GeneratedRegex(@"\b(summarize|brief|tldr|overview|condense)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoSummarizePattern();
+
+    [GeneratedRegex(@"\b(vision|visual|image|camera|cam|see|look|photo|picture|screenshot|snapshot|frame|capture|pan|tilt|ptz|rotate.*camera|turn.*camera|move.*camera|patrol|sweep)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoVisionPattern();
+
+    [GeneratedRegex(@"\[TOOL:|use.*tool|invoke|execute", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoToolUsePattern();
+
+    [GeneratedRegex(@"\b(algorithm|architecture|implement|optimize|performance|system)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SmcoTechnicalTermsPattern();
 }

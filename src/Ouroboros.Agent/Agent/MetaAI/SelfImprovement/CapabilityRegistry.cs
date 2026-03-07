@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Capability Registry Implementation
 // Agent self-model with capability tracking and assessment
@@ -245,7 +244,7 @@ List only the tool names that are required, one per line.";
             string response = await _llm.GenerateTextAsync(prompt, ct);
             List<string> toolNames = response.Split('\n', StringSplitOptions.RemoveEmptyEntries)
                 .Select(l => l.Trim())
-                .Where(l => !string.IsNullOrWhiteSpace(l) && !l.StartsWith("#"))
+                .Where(l => !string.IsNullOrWhiteSpace(l) && !l.StartsWith('#'))
                 .ToList();
 
             return toolNames;

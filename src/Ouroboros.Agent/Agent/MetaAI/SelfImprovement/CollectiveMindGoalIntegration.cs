@@ -27,6 +27,7 @@ public sealed class CollectiveMindGoalIntegration
     {
         _mind = mind ?? throw new ArgumentNullException(nameof(mind));
         _goalHierarchy = goalHierarchy;
+        _ = _goalHierarchy;
     }
 
     /// <summary>
@@ -61,12 +62,6 @@ public sealed class CollectiveMindGoalIntegration
     public async Task<ThinkingResponse> ExecutePipelineGoalAsync(PipelineGoal goal, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(goal);
-
-        // Convert to SubGoal to get routing metadata
-        var subGoal = Pipeline.Planning.SubGoalExtensions.ToSubGoal(goal);
-
-        // Route based on recommended tier
-        var tier = subGoal.PreferredTier;
 
         // Execute with CollectiveMind (it handles pathway selection internally)
         return await _mind.GenerateWithThinkingAsync(goal.Description, ct);
@@ -167,6 +162,7 @@ public sealed class CollectiveMindGoalIntegration
                     sw.Stop();
                     return new SubGoalResult(sg.Id, "collective", response, sw.Elapsed, true);
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     sw.Stop();
@@ -191,6 +187,7 @@ public sealed class CollectiveMindGoalIntegration
                     sw.Stop();
                     results[sg.Id] = new SubGoalResult(sg.Id, "collective", response, sw.Elapsed, true);
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
                     sw.Stop();

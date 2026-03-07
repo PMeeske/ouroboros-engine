@@ -5,6 +5,7 @@
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using Ouroboros.Providers.Json;
 
 namespace Ouroboros.Providers.Docker;
 
@@ -12,7 +13,7 @@ namespace Ouroboros.Providers.Docker;
 /// Docker Engine MCP client using the Docker Engine REST API.
 /// Supports Unix socket, named pipe, and TCP connections.
 /// </summary>
-public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
+public sealed partial class DockerMcpClient : IDockerMcpClient, IDisposable
 {
     private readonly DockerMcpClientOptions _options;
     private readonly HttpClient _httpClient;
@@ -33,12 +34,7 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
         _options = options;
         _httpClient = httpClient ?? CreateHttpClient(options);
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true,
-            WriteIndented = false
-        };
+        _jsonOptions = JsonDefaults.CamelCase;
     }
 
     /// <inheritdoc/>
@@ -63,7 +59,12 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<IReadOnlyList<DockerContainerInfo>, string>.Success(containers);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<DockerContainerInfo>, string>.Failure($"ListContainers failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<DockerContainerInfo>, string>.Failure($"ListContainers failed: {ex.Message}");
         }
@@ -85,7 +86,12 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
             var el = JsonDocument.Parse(json).RootElement;
             return Result<DockerContainerInfo, string>.Success(ParseContainerInspect(el));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<DockerContainerInfo, string>.Failure($"InspectContainer failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<DockerContainerInfo, string>.Failure($"InspectContainer failed: {ex.Message}");
         }
@@ -108,7 +114,8 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
             var logs = await response.Content.ReadAsStringAsync(ct);
             return Result<string, string>.Success(StripDockerStreamHeaders(logs));
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"GetContainerLogs failed: {ex.Message}");
         }
@@ -133,7 +140,8 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<string, string>.Success($"Container '{containerId}' started");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"StartContainer failed: {ex.Message}");
         }
@@ -159,7 +167,8 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<string, string>.Success($"Container '{containerId}' stopped");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"StopContainer failed: {ex.Message}");
         }
@@ -181,7 +190,8 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<string, string>.Success($"Container '{containerId}' removed");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"RemoveContainer failed: {ex.Message}");
         }
@@ -222,7 +232,12 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<IReadOnlyList<DockerImageInfo>, string>.Success(images);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<DockerImageInfo>, string>.Failure($"ListImages failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<DockerImageInfo>, string>.Failure($"ListImages failed: {ex.Message}");
         }
@@ -246,7 +261,8 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
             await response.Content.ReadAsStringAsync(ct);
             return Result<string, string>.Success($"Image '{image}' pulled successfully");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"PullImage failed: {ex.Message}");
         }
@@ -280,7 +296,12 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<IReadOnlyList<DockerNetworkInfo>, string>.Success(networks);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<DockerNetworkInfo>, string>.Failure($"ListNetworks failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<DockerNetworkInfo>, string>.Failure($"ListNetworks failed: {ex.Message}");
         }
@@ -322,7 +343,12 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<IReadOnlyList<DockerVolumeInfo>, string>.Success(volumes);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<IReadOnlyList<DockerVolumeInfo>, string>.Failure($"ListVolumes failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<IReadOnlyList<DockerVolumeInfo>, string>.Failure($"ListVolumes failed: {ex.Message}");
         }
@@ -396,7 +422,12 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
 
             return Result<string, string>.Success(containerId);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return Result<string, string>.Failure($"RunContainer failed: {ex.Message}");
+        }
+        catch (JsonException ex)
         {
             return Result<string, string>.Failure($"RunContainer failed: {ex.Message}");
         }
@@ -412,152 +443,4 @@ public sealed class DockerMcpClient : IDockerMcpClient, IDisposable
         }
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
-
-    private static HttpClient CreateHttpClient(DockerMcpClientOptions options)
-    {
-        HttpMessageHandler handler;
-
-        if (!string.IsNullOrWhiteSpace(options.BaseUrl))
-        {
-            // TCP mode
-            handler = new HttpClientHandler();
-        }
-        else if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-        {
-            // Windows named pipe
-            handler = new SocketsHttpHandler
-            {
-                ConnectCallback = async (context, ct) =>
-                {
-                    var pipeName = options.PipePath.Replace(@"//./pipe/", "");
-                    var pipe = new System.IO.Pipes.NamedPipeClientStream(
-                        ".", pipeName, System.IO.Pipes.PipeDirection.InOut,
-                        System.IO.Pipes.PipeOptions.Asynchronous);
-                    await pipe.ConnectAsync(ct);
-                    return pipe;
-                }
-            };
-        }
-        else
-        {
-            // Unix socket
-            handler = new SocketsHttpHandler
-            {
-                ConnectCallback = async (context, ct) =>
-                {
-                    var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-                    await socket.ConnectAsync(new UnixDomainSocketEndPoint(options.SocketPath), ct);
-                    return new NetworkStream(socket, ownsSocket: true);
-                }
-            };
-        }
-
-        var client = new HttpClient(handler) { Timeout = options.Timeout };
-
-        // Docker API always needs a base address; for socket/pipe, use a dummy host
-        if (!string.IsNullOrWhiteSpace(options.BaseUrl))
-        {
-            client.BaseAddress = new Uri(options.BaseUrl);
-        }
-        else
-        {
-            client.BaseAddress = new Uri("http://localhost");
-        }
-
-        return client;
-    }
-
-    private static DockerContainerInfo ParseContainerSummary(JsonElement el)
-    {
-        var names = new List<string>();
-        if (el.TryGetProperty("Names", out var ns) && ns.ValueKind == JsonValueKind.Array)
-            foreach (var n in ns.EnumerateArray())
-                names.Add(n.GetString()!.TrimStart('/'));
-
-        var ports = new List<DockerPortMapping>();
-        if (el.TryGetProperty("Ports", out var ps) && ps.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var p in ps.EnumerateArray())
-            {
-                ports.Add(new DockerPortMapping
-                {
-                    HostIp = p.TryGetProperty("IP", out var ip) ? ip.GetString() : null,
-                    HostPort = p.TryGetProperty("PublicPort", out var hp) ? hp.GetInt32() : null,
-                    ContainerPort = p.TryGetProperty("PrivatePort", out var cp) ? cp.GetInt32() : 0,
-                    Protocol = p.TryGetProperty("Type", out var tp) ? tp.GetString()! : "tcp"
-                });
-            }
-        }
-
-        var labels = new Dictionary<string, string>();
-        if (el.TryGetProperty("Labels", out var lbl) && lbl.ValueKind == JsonValueKind.Object)
-            foreach (var kv in lbl.EnumerateObject())
-                labels[kv.Name] = kv.Value.GetString()!;
-
-        return new DockerContainerInfo
-        {
-            Id = el.GetProperty("Id").GetString()!,
-            Names = names,
-            Image = el.TryGetProperty("Image", out var img) ? img.GetString()! : "unknown",
-            State = el.TryGetProperty("State", out var st) ? st.GetString()! : "unknown",
-            Status = el.TryGetProperty("Status", out var sts) ? sts.GetString() : null,
-            Ports = ports,
-            Labels = labels,
-            CreatedAt = el.TryGetProperty("Created", out var cr)
-                ? DateTimeOffset.FromUnixTimeSeconds(cr.GetInt64()) : null
-        };
-    }
-
-    private static DockerContainerInfo ParseContainerInspect(JsonElement el)
-    {
-        var name = el.TryGetProperty("Name", out var n) ? n.GetString()!.TrimStart('/') : "unknown";
-        var state = el.TryGetProperty("State", out var st) && st.TryGetProperty("Status", out var sts)
-            ? sts.GetString()! : "unknown";
-
-        return new DockerContainerInfo
-        {
-            Id = el.GetProperty("Id").GetString()!,
-            Names = [name],
-            Image = el.TryGetProperty("Config", out var cfg) && cfg.TryGetProperty("Image", out var img)
-                ? img.GetString()! : "unknown",
-            State = state,
-            Status = state,
-            CreatedAt = el.TryGetProperty("Created", out var cr)
-                ? DateTimeOffset.Parse(cr.GetString()!) : null
-        };
-    }
-
-    /// <summary>
-    /// Docker log streams include 8-byte headers per frame. Strip them for plain text output.
-    /// </summary>
-    private static string StripDockerStreamHeaders(string raw)
-    {
-        // If the output doesn't have stream headers, return as-is
-        if (string.IsNullOrEmpty(raw) || raw.Length < 8)
-            return raw;
-
-        var sb = new StringBuilder();
-        var bytes = Encoding.UTF8.GetBytes(raw);
-        var i = 0;
-        while (i + 8 <= bytes.Length)
-        {
-            // byte 0: stream type (1=stdout, 2=stderr)
-            // bytes 4-7: big-endian frame size
-            var frameSize = (bytes[i + 4] << 24) | (bytes[i + 5] << 16) | (bytes[i + 6] << 8) | bytes[i + 7];
-            i += 8;
-            if (i + frameSize <= bytes.Length)
-            {
-                sb.Append(Encoding.UTF8.GetString(bytes, i, frameSize));
-                i += frameSize;
-            }
-            else
-            {
-                // Malformed or plain text; return original
-                return raw;
-            }
-        }
-
-        return sb.Length > 0 ? sb.ToString() : raw;
-    }
 }

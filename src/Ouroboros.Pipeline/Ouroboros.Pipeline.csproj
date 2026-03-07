@@ -21,6 +21,21 @@
     <PackageReference Include="System.Linq.Async" Version="7.0.0" />
     <PackageReference Include="System.Interactive.Async" Version="7.0.0" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
+    <!-- Dynamic grammar compilation: ANTLR + Roslyn -->
+    <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+    <!-- gRPC client for Hyperon sidecar -->
+    <PackageReference Include="Grpc.Net.Client" Version="2.76.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.34.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.78.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="..\..\protos\hyperon_grammar.proto" GrpcServices="Client" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Prompts\**\*.yaml" />
   </ItemGroup>
 
   <ItemGroup>

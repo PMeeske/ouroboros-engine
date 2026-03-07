@@ -2,11 +2,11 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Ouroboros.Domain.Embodied;
+using Ouroboros.Pipeline.Prompts;
 using Unit = Ouroboros.Abstractions.Unit;
 
 namespace Ouroboros.Agent.TheoryOfMind;
@@ -59,33 +59,10 @@ public sealed class TheoryOfMind : ITheoryOfMind
                     $"- {b.Key}: {b.Value.Proposition} (confidence: {b.Value.Probability:P0})"))
                 : "No prior beliefs recorded";
 
-            string prompt = $@"You are analyzing observations of Agent '{agentId}' to infer their beliefs about the world.
-
-OBSERVATIONS:
-{observationsText}
-
-EXISTING BELIEFS:
-{existingBeliefs}
-
-Based on these observations, infer what Agent '{agentId}' believes. Consider:
-1. What information is the agent acting on?
-2. What assumptions are they making?
-3. What do they seem to know or not know?
-
-Provide a JSON response with this structure:
-{{
-  ""beliefs"": [
-    {{
-      ""key"": ""belief_key"",
-      ""proposition"": ""description of belief"",
-      ""probability"": 0.85,
-      ""source"": ""inference""
-    }}
-  ],
-  ""overall_confidence"": 0.75
-}}
-
-Focus on actionable beliefs that would influence the agent's behavior. Limit to 5 most important beliefs.";
+            string prompt = PromptTemplateLoader.GetPromptText("TheoryOfMind", "InferBeliefs")
+                .Replace("{{$agentId}}", agentId)
+                .Replace("{{$observations}}", observationsText)
+                .Replace("{{$existingBeliefs}}", existingBeliefs);
 
             string response = await _llm.GenerateTextAsync(prompt, ct);
 
@@ -94,6 +71,7 @@ Focus on actionable beliefs that would influence the agent's behavior. Limit to 
 
             return Result<BeliefState, string>.Success(beliefs);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<BeliefState, string>.Failure($"Belief inference failed: {ex.Message}");
@@ -130,26 +108,12 @@ Focus on actionable beliefs that would influence the agent's behavior. Limit to 
                 model.ObservationHistory.TakeLast(5).Select((o, i) =>
                     $"{i + 1}. [{o.ObservationType}] {o.Content}"));
 
-            string prompt = $@"You are predicting the intention/goal of Agent '{agentId}'.
-
-AGENT'S BELIEFS:
-{beliefsText}
-
-RECENT ACTIONS:
-{recentActions}
-
-KNOWN GOALS: {string.Join(", ", model.InferredGoals.DefaultIfEmpty("None"))}
-CAPABILITIES: {string.Join(", ", model.InferredCapabilities.DefaultIfEmpty("Unknown"))}
-
-Based on this information, predict what Agent '{agentId}' is trying to achieve. Provide a JSON response:
-{{
-  ""predicted_goal"": ""clear description of the main goal"",
-  ""confidence"": 0.80,
-  ""supporting_evidence"": [""reason 1"", ""reason 2""],
-  ""alternative_goals"": [""alternative 1"", ""alternative 2""]
-}}
-
-Consider both explicit statements and implicit behavior patterns.";
+            string prompt = PromptTemplateLoader.GetPromptText("TheoryOfMind", "PredictIntention")
+                .Replace("{{$agentId}}", agentId)
+                .Replace("{{$beliefs}}", beliefsText)
+                .Replace("{{$recentActions}}", recentActions)
+                .Replace("{{$knownGoals}}", string.Join(", ", model.InferredGoals.DefaultIfEmpty("None")))
+                .Replace("{{$capabilities}}", string.Join(", ", model.InferredCapabilities.DefaultIfEmpty("Unknown")));
 
             string response = await _llm.GenerateTextAsync(prompt, ct);
 
@@ -157,6 +121,7 @@ Consider both explicit statements and implicit behavior patterns.";
 
             return Result<IntentionPrediction, string>.Success(prediction);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IntentionPrediction, string>.Failure($"Intention prediction failed: {ex.Message}");
@@ -193,28 +158,14 @@ Consider both explicit statements and implicit behavior patterns.";
                     .TakeLast(3)
                     .Select((o, i) => $"{i + 1}. {o.Content}"));
 
-            string prompt = $@"You are predicting the next action of Agent '{agentId}'.
+            string beliefsText = string.Join("\n", beliefs.Beliefs.Take(3).Select(b => $"- {b.Key}: {b.Value.Proposition}"));
 
-AGENT'S BELIEFS:
-{string.Join("\n", beliefs.Beliefs.Take(3).Select(b => $"- {b.Key}: {b.Value.Proposition}"))}
-
-RECENT ACTIONS:
-{recentBehavior}
-
-INFERRED GOALS: {string.Join(", ", model.InferredGoals.Take(2).DefaultIfEmpty("Unknown"))}
-
-AVAILABLE ACTIONS:
-{actionsText}
-
-Based on this context, predict what action the agent will take next. Provide JSON response:
-{{
-  ""action_index"": 0,
-  ""action_name"": ""action name or description"",
-  ""confidence"": 0.70,
-  ""reasoning"": ""why this action makes sense given their beliefs and goals""
-}}
-
-Consider the agent's goals, beliefs, and recent behavior patterns.";
+            string prompt = PromptTemplateLoader.GetPromptText("TheoryOfMind", "PredictNextAction")
+                .Replace("{{$agentId}}", agentId)
+                .Replace("{{$beliefs}}", beliefsText)
+                .Replace("{{$recentBehavior}}", recentBehavior)
+                .Replace("{{$inferredGoals}}", string.Join(", ", model.InferredGoals.Take(2).DefaultIfEmpty("Unknown")))
+                .Replace("{{$availableActions}}", actionsText);
 
             string response = await _llm.GenerateTextAsync(prompt, ct);
 
@@ -222,6 +173,7 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
 
             return Result<ActionPrediction, string>.Success(prediction);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ActionPrediction, string>.Failure($"Action prediction failed: {ex.Message}");
@@ -247,8 +199,8 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
             // Get or create agent model
             AgentModel model = _agentModels.AddOrUpdate(
                 agentId,
-                _ => AgentModel.Create(agentId).WithObservation(observation),
-                (_, existing) => existing.WithObservation(observation));
+                key => AgentModel.Create(key).WithObservation(observation),
+                (key, existing) => existing.WithObservation(observation));
 
             // Infer beliefs from recent observations
             List<AgentObservation> recentObs = model.ObservationHistory.TakeLast(10).ToList();
@@ -266,6 +218,7 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
             await Task.CompletedTask;
             return Result<Unit, string>.Success(Unit.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<Unit, string>.Failure($"Model update failed: {ex.Message}");
@@ -317,7 +270,7 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
 
     // Private helper methods
 
-    private BeliefState ParseBeliefStateFromLLM(string agentId, string llmResponse, BeliefState existingBeliefs)
+    private static BeliefState ParseBeliefStateFromLLM(string agentId, string llmResponse, BeliefState existingBeliefs)
     {
         try
         {
@@ -353,7 +306,7 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
         }
     }
 
-    private IntentionPrediction ParseIntentionFromLLM(string agentId, string llmResponse)
+    private static IntentionPrediction ParseIntentionFromLLM(string agentId, string llmResponse)
     {
         try
         {
@@ -383,7 +336,7 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
         }
     }
 
-    private ActionPrediction ParseActionFromLLM(
+    private static ActionPrediction ParseActionFromLLM(
         string agentId,
         string llmResponse,
         IReadOnlyList<EmbodiedAction>? availableActions)
@@ -396,10 +349,6 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
             int actionIndex = root.TryGetProperty("action_index", out JsonElement indexElement)
                 ? indexElement.GetInt32()
                 : -1;
-
-            string actionName = root.TryGetProperty("action_name", out JsonElement nameElement)
-                ? nameElement.GetString() ?? "Unknown"
-                : "Unknown";
 
             double confidence = root.GetProperty("confidence").GetDouble();
             string reasoning = root.GetProperty("reasoning").GetString() ?? "";
@@ -423,7 +372,7 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
         }
     }
 
-    private double CalculateRecencyScore(DateTime lastInteraction)
+    private static double CalculateRecencyScore(DateTime lastInteraction)
     {
         TimeSpan timeSinceInteraction = DateTime.UtcNow - lastInteraction;
         double hoursSince = timeSinceInteraction.TotalHours;
@@ -444,43 +393,83 @@ Consider the agent's goals, beliefs, and recent behavior patterns.";
 
     // The ITheoryOfMind interface is bound to Ouroboros.Abstractions.Domain placeholder types,
     // while this class operates on the richer Ouroboros.Agent.TheoryOfMind types.
-    // These explicit implementations return failures with guidance instead of throwing.
+    // These explicit implementations adapt the placeholder types and delegate to the typed overloads.
 
     /// <inheritdoc />
-    Task<Result<Ouroboros.Abstractions.Domain.BeliefState, string>> ITheoryOfMind.InferBeliefsAsync(
+    async Task<Result<Ouroboros.Abstractions.Domain.BeliefState, string>> ITheoryOfMind.InferBeliefsAsync(
         string agentId,
         IReadOnlyList<Ouroboros.Abstractions.Domain.AgentObservation> observations,
-        CancellationToken ct) =>
-        Task.FromResult(Result<Ouroboros.Abstractions.Domain.BeliefState, string>.Failure(
-            "Use the overload accepting Ouroboros.Agent.TheoryOfMind.AgentObservation types."));
+        CancellationToken ct)
+    {
+        // Adapt placeholder observations to typed observations.
+        // Placeholder AgentObservation has no fields, so we create generic observations
+        // that capture the fact that the agent was observed.
+        var typedObservations = observations
+            .Select((_, i) => AgentObservation.Action(
+                agentId,
+                $"Observation {i + 1} (from abstraction layer)"))
+            .ToList();
+
+        var result = await InferBeliefsAsync(agentId, typedObservations, ct);
+        return result.Map(_ => new Ouroboros.Abstractions.Domain.BeliefState());
+    }
 
     /// <inheritdoc />
-    Task<Result<Ouroboros.Abstractions.Domain.IntentionPrediction, string>> ITheoryOfMind.PredictIntentionAsync(
+    async Task<Result<Ouroboros.Abstractions.Domain.IntentionPrediction, string>> ITheoryOfMind.PredictIntentionAsync(
         string agentId,
         Ouroboros.Abstractions.Domain.BeliefState beliefs,
-        CancellationToken ct) =>
-        Task.FromResult(Result<Ouroboros.Abstractions.Domain.IntentionPrediction, string>.Failure(
-            "Use the overload accepting Ouroboros.Agent.TheoryOfMind.BeliefState types."));
+        CancellationToken ct)
+    {
+        // The placeholder BeliefState has no fields. Use any existing typed beliefs
+        // from the internal model, or fall back to an empty belief state.
+        AgentModel? existingModel = GetAgentModel(agentId);
+        BeliefState typedBeliefs = existingModel?.Beliefs ?? BeliefState.Empty(agentId);
+
+        var result = await PredictIntentionAsync(agentId, typedBeliefs, ct);
+        return result.Map(_ => new Ouroboros.Abstractions.Domain.IntentionPrediction());
+    }
 
     /// <inheritdoc />
-    Task<Result<Ouroboros.Abstractions.Domain.ActionPrediction, string>> ITheoryOfMind.PredictNextActionAsync(
+    async Task<Result<Ouroboros.Abstractions.Domain.ActionPrediction, string>> ITheoryOfMind.PredictNextActionAsync(
         string agentId,
         Ouroboros.Abstractions.Domain.BeliefState beliefs,
         IReadOnlyList<Ouroboros.Abstractions.Domain.EmbodiedAction> availableActions,
-        CancellationToken ct) =>
-        Task.FromResult(Result<Ouroboros.Abstractions.Domain.ActionPrediction, string>.Failure(
-            "Use the overload accepting Ouroboros.Agent.TheoryOfMind types."));
+        CancellationToken ct)
+    {
+        // Adapt placeholder types to typed equivalents.
+        AgentModel? existingModel = GetAgentModel(agentId);
+        BeliefState typedBeliefs = existingModel?.Beliefs ?? BeliefState.Empty(agentId);
+
+        // Placeholder EmbodiedAction has no fields; create NoOp actions to preserve count.
+        var typedActions = availableActions
+            .Select((_, i) => EmbodiedAction.NoOp())
+            .ToList();
+
+        var result = await PredictNextActionAsync(agentId, typedBeliefs, typedActions, ct);
+        return result.Map(_ => new Ouroboros.Abstractions.Domain.ActionPrediction());
+    }
 
     /// <inheritdoc />
-    Task<Result<Unit, string>> ITheoryOfMind.UpdateAgentModelAsync(
+    async Task<Result<Unit, string>> ITheoryOfMind.UpdateAgentModelAsync(
         string agentId,
         Ouroboros.Abstractions.Domain.AgentObservation observation,
-        CancellationToken ct) =>
-        Task.FromResult(Result<Unit, string>.Failure(
-            "Use the overload accepting Ouroboros.Agent.TheoryOfMind.AgentObservation types."));
+        CancellationToken ct)
+    {
+        // Adapt the placeholder observation to a typed observation.
+        var typedObservation = AgentObservation.Action(
+            agentId,
+            "Observation from abstraction layer");
+
+        return await UpdateAgentModelAsync(agentId, typedObservation, ct);
+    }
 
     /// <inheritdoc />
-    Ouroboros.Abstractions.Domain.AgentModel? ITheoryOfMind.GetAgentModel(string agentId) => null;
+    Ouroboros.Abstractions.Domain.AgentModel? ITheoryOfMind.GetAgentModel(string agentId)
+    {
+        // Return a placeholder AgentModel if an internal model exists for this agent.
+        AgentModel? model = GetAgentModel(agentId);
+        return model != null ? new Ouroboros.Abstractions.Domain.AgentModel() : null;
+    }
 
     #endregion
 }

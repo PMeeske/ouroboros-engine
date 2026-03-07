@@ -99,6 +99,7 @@ public sealed class SymbolicIngestionStep
             SymbolicIngestionResult result = new(documentId, vectorIds, triples);
             return Result<(PipelineBranch, SymbolicIngestionResult), string>.Success((updatedBranch, result));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<(PipelineBranch, SymbolicIngestionResult), string>.Failure(

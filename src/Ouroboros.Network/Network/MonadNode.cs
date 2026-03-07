@@ -4,6 +4,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using Ouroboros.Network.Json;
 
 namespace Ouroboros.Network;
 
@@ -77,10 +78,7 @@ public sealed record MonadNode
         ReasoningState state,
         ImmutableArray<Guid> parentIds = default)
     {
-        var json = JsonSerializer.Serialize(state, new JsonSerializerOptions
-        {
-            WriteIndented = false,
-        });
+        var json = JsonSerializer.Serialize(state, JsonDefaults.Default);
 
         return new MonadNode(
             Guid.NewGuid(),
@@ -103,10 +101,7 @@ public sealed record MonadNode
         T payload,
         ImmutableArray<Guid> parentIds = default)
     {
-        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
-        {
-            WriteIndented = false,
-        });
+        var json = JsonSerializer.Serialize(payload, JsonDefaults.Default);
 
         return new MonadNode(
             Guid.NewGuid(),

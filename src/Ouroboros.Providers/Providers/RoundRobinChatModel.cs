@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Reactive.Linq;
 
 namespace Ouroboros.Providers;
@@ -112,35 +111,40 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
 
     /// <summary>
     /// Gets the next provider using weighted round-robin selection.
+    /// Returns the provider tuple and its index within the providers list.
     /// </summary>
-    private (Ouroboros.Abstractions.Core.IChatCompletionModel Model, ProviderConfig Config, ProviderStats Stats)? GetNextProvider(HashSet<int>? excludeIndices = null)
+    private (Ouroboros.Abstractions.Core.IChatCompletionModel Model, ProviderConfig Config, ProviderStats Stats, int Index)? GetNextProvider(HashSet<int>? excludeIndices = null)
     {
         lock (_lock)
         {
             if (_providers.Count == 0) return null;
 
-            int startIndex = _currentIndex;
             int attempts = 0;
 
             while (attempts < _providers.Count)
             {
-                var (model, config, stats) = _providers[_currentIndex];
-                _currentIndex = (_currentIndex + 1) % _providers.Count;
+                int idx = _currentIndex;
+                var (model, config, stats) = _providers[idx];
                 attempts++;
 
-                // Skip disabled, unhealthy, or excluded providers
-                if (!config.Enabled) continue;
-                if (!stats.IsHealthy && _failoverEnabled) continue;
-                if (excludeIndices?.Contains(_currentIndex) == true) continue;
+                // Check exclusion BEFORE using the provider
+                if (!config.Enabled || (!stats.IsHealthy && _failoverEnabled) || excludeIndices?.Contains(idx) == true)
+                {
+                    _currentIndex = (_currentIndex + 1) % _providers.Count;
+                    continue;
+                }
 
-                return (model, config, stats);
+                // Advance pointer AFTER selecting a valid provider
+                _currentIndex = (_currentIndex + 1) % _providers.Count;
+                return (model, config, stats, idx);
             }
 
             // If failover is disabled or all providers are unhealthy, try any enabled provider
-            foreach (var provider in _providers)
+            for (int i = 0; i < _providers.Count; i++)
             {
-                if (provider.Config.Enabled && excludeIndices?.Contains(_providers.IndexOf(provider)) != true)
-                    return provider;
+                var provider = _providers[i];
+                if (provider.Config.Enabled && excludeIndices?.Contains(i) != true)
+                    return (provider.Model, provider.Config, provider.Stats, i);
             }
 
             return null;
@@ -169,14 +173,22 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 throw new InvalidOperationException("No available providers in round-robin pool");
             }
 
-            var (model, config, stats) = provider.Value;
-            int providerIndex = _providers.IndexOf(provider.Value);
+            var (model, config, stats, providerIndex) = provider.Value;
             triedIndices.Add(providerIndex);
 
             try
             {
-                stats.TotalRequests++;
+                Interlocked.Increment(ref stats.TotalRequests);
                 _aggregateCostTracker.StartRequest();
+
+                // Capture pre-request token counts for delta calculation
+                long preInputTokens = 0, preOutputTokens = 0;
+                if (model is ICostAwareChatModel costAwarePre && costAwarePre.CostTracker != null)
+                {
+                    var preMetrics = costAwarePre.CostTracker.GetSessionMetrics();
+                    preInputTokens = preMetrics.TotalInputTokens;
+                    preOutputTokens = preMetrics.TotalOutputTokens;
+                }
 
                 ThinkingResponse result;
                 if (model is IThinkingChatModel thinkingModel)
@@ -196,15 +208,17 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 }
 
                 // Success
-                stats.SuccessfulRequests++;
-                stats.ConsecutiveFailures = 0;
+                Interlocked.Increment(ref stats.SuccessfulRequests);
+                Interlocked.Exchange(ref stats.ConsecutiveFailures, 0);
                 stats.LastSuccess = DateTime.UtcNow;
 
-                // Track costs from provider's tracker
+                // Track costs from provider's tracker (delta, not cumulative)
                 if (model is ICostAwareChatModel costAware && costAware.CostTracker != null)
                 {
-                    var metrics = costAware.CostTracker.GetSessionMetrics();
-                    _aggregateCostTracker.EndRequest((int)metrics.TotalInputTokens, (int)metrics.TotalOutputTokens);
+                    var postMetrics = costAware.CostTracker.GetSessionMetrics();
+                    _aggregateCostTracker.EndRequest(
+                        (int)(postMetrics.TotalInputTokens - preInputTokens),
+                        (int)(postMetrics.TotalOutputTokens - preOutputTokens));
                 }
                 else
                 {
@@ -217,10 +231,11 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
             {
                 throw; // deliberate cancellation — don't retry
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                stats.FailedRequests++;
-                stats.ConsecutiveFailures++;
+                Interlocked.Increment(ref stats.FailedRequests);
+                Interlocked.Increment(ref stats.ConsecutiveFailures);
                 stats.LastFailure = DateTime.UtcNow;
                 lastException = ex;
 
@@ -233,7 +248,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
             }
         }
 
-        throw new AggregateException($"All {retries} providers failed", lastException!);
+        throw new InvalidOperationException($"All {retries} providers failed", lastException!);
     }
 
     /// <inheritdoc/>
@@ -259,13 +274,12 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                     return;
                 }
 
-                var (model, config, stats) = provider.Value;
-                int providerIndex = _providers.IndexOf(provider.Value);
+                var (model, config, stats, providerIndex) = provider.Value;
                 triedIndices.Add(providerIndex);
 
                 try
                 {
-                    stats.TotalRequests++;
+                    Interlocked.Increment(ref stats.TotalRequests);
 
                     if (model is IStreamingThinkingChatModel streamingThinking)
                     {
@@ -279,8 +293,8 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
 
                         if (hasContent)
                         {
-                            stats.SuccessfulRequests++;
-                            stats.ConsecutiveFailures = 0;
+                            Interlocked.Increment(ref stats.SuccessfulRequests);
+                            Interlocked.Exchange(ref stats.ConsecutiveFailures, 0);
                             stats.LastSuccess = DateTime.UtcNow;
                             observer.OnCompleted();
                             return;
@@ -292,8 +306,8 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                         string result = await model.GenerateTextAsync(prompt, token);
                         if (!result.Contains("-fallback:"))
                         {
-                            stats.SuccessfulRequests++;
-                            stats.ConsecutiveFailures = 0;
+                            Interlocked.Increment(ref stats.SuccessfulRequests);
+                            Interlocked.Exchange(ref stats.ConsecutiveFailures, 0);
                             stats.LastSuccess = DateTime.UtcNow;
                             observer.OnNext((false, result));
                             observer.OnCompleted();
@@ -303,15 +317,16 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
 
                     throw new InvalidOperationException($"Provider {config.Name} returned empty or fallback response");
                 }
-                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                catch (OperationCanceledException ex) when (token.IsCancellationRequested)
                 {
-                    observer.OnCompleted(); // deliberate cancellation — don't retry
+                    observer.OnError(ex); // deliberate cancellation — signal error, don't retry
                     return;
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
-                    stats.FailedRequests++;
-                    stats.ConsecutiveFailures++;
+                    Interlocked.Increment(ref stats.FailedRequests);
+                    Interlocked.Increment(ref stats.ConsecutiveFailures);
                     stats.LastFailure = DateTime.UtcNow;
 
                     System.Diagnostics.Trace.TraceWarning("[RoundRobinChatModel] Provider '{0}' streaming failed: {1}", config.Name, ex.Message);
@@ -339,7 +354,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
         {
             foreach (var (_, _, stats) in _providers)
             {
-                stats.ConsecutiveFailures = 0;
+                Interlocked.Exchange(ref stats.ConsecutiveFailures, 0);
             }
         }
     }
@@ -354,9 +369,10 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
             if (_providers.Count == 0)
                 return "No providers configured";
 
+            var activeCount = _providers.Count(p => p.Config.Enabled && p.Stats.IsHealthy);
             var lines = new List<string>
             {
-                $"Round-Robin Pool: {_providers.Count} providers ({ActiveProviderCount} healthy)",
+                $"Round-Robin Pool: {_providers.Count} providers ({activeCount} healthy)",
                 ""
             };
 

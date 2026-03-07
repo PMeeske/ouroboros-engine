@@ -54,6 +54,7 @@ public static class GraphRetrievalArrow
                     searchResult => Result<(PipelineBranch, HybridSearchResult), string>.Success((branch, searchResult)),
                     error => Result<(PipelineBranch, HybridSearchResult), string>.Failure(error));
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<(PipelineBranch, HybridSearchResult), string>.Failure($"Graph retrieval failed: {ex.Message}");

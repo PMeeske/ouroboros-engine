@@ -51,7 +51,7 @@ public class WeightedRoutingTests
     }
 
     [Fact]
-    public void RouteMessage_StrongInhibition_BlocksDelivery()
+    public async Task RouteMessage_StrongInhibition_BlocksDelivery()
     {
         // Arrange
         var intentionBus = new IntentionBus();
@@ -73,7 +73,7 @@ public class WeightedRoutingTests
             Topic = "test.topic",
             Payload = "test",
         };
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait for async processing - use shorter delay since we expect no delivery
         Thread.Sleep(100);
@@ -86,7 +86,7 @@ public class WeightedRoutingTests
     }
 
     [Fact]
-    public void RouteMessage_WeakInhibition_ReducesPriority()
+    public async Task RouteMessage_WeakInhibition_ReducesPriority()
     {
         // Arrange
         var intentionBus = new IntentionBus();
@@ -109,7 +109,7 @@ public class WeightedRoutingTests
             Payload = "test",
             Priority = IntentionPriority.Normal,
         };
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait deterministically for async processing
         SpinWait.SpinUntil(() => !target.ReceivedMessages.IsEmpty, TimeSpan.FromSeconds(5));
@@ -124,7 +124,7 @@ public class WeightedRoutingTests
     }
 
     [Fact]
-    public void RouteMessage_StrongExcitation_BoostsPriority()
+    public async Task RouteMessage_StrongExcitation_BoostsPriority()
     {
         // Arrange
         var intentionBus = new IntentionBus();
@@ -147,7 +147,7 @@ public class WeightedRoutingTests
             Payload = "test",
             Priority = IntentionPriority.Normal,
         };
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait deterministically for async processing
         SpinWait.SpinUntil(() => !target.ReceivedMessages.IsEmpty, TimeSpan.FromSeconds(5));
@@ -162,7 +162,7 @@ public class WeightedRoutingTests
     }
 
     [Fact]
-    public void RouteMessage_NormalExcitation_DeliversNormally()
+    public async Task RouteMessage_NormalExcitation_DeliversNormally()
     {
         // Arrange
         var intentionBus = new IntentionBus();
@@ -185,7 +185,7 @@ public class WeightedRoutingTests
             Payload = "test",
             Priority = IntentionPriority.Normal,
         };
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait deterministically for async processing
         SpinWait.SpinUntil(() => !target.ReceivedMessages.IsEmpty, TimeSpan.FromSeconds(5));
@@ -200,7 +200,7 @@ public class WeightedRoutingTests
     }
 
     [Fact]
-    public void RouteMessage_NullTopology_DefaultBehavior()
+    public async Task RouteMessage_NullTopology_DefaultBehavior()
     {
         // Arrange
         var intentionBus = new IntentionBus();
@@ -221,7 +221,7 @@ public class WeightedRoutingTests
             Payload = "test",
             Priority = IntentionPriority.Normal,
         };
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait deterministically for async processing
         SpinWait.SpinUntil(() => !target.ReceivedMessages.IsEmpty, TimeSpan.FromSeconds(5));
@@ -236,7 +236,7 @@ public class WeightedRoutingTests
     }
 
     [Fact]
-    public void RouteMessage_WithTopology_RecordsActivation()
+    public async Task RouteMessage_WithTopology_RecordsActivation()
     {
         // Arrange
         var intentionBus = new IntentionBus();
@@ -258,7 +258,7 @@ public class WeightedRoutingTests
             Topic = "test.topic",
             Payload = "test",
         };
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait deterministically for async processing
         SpinWait.SpinUntil(() => !target.ReceivedMessages.IsEmpty, TimeSpan.FromSeconds(5));
@@ -273,7 +273,7 @@ public class WeightedRoutingTests
     }
 
     [Fact]
-    public void RouteMessage_WildcardTopic_RespectsWeights()
+    public async Task RouteMessage_WildcardTopic_RespectsWeights()
     {
         // Arrange
         var intentionBus = new IntentionBus();
@@ -295,7 +295,7 @@ public class WeightedRoutingTests
             Topic = "test.subtopic",
             Payload = "test",
         };
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait for async processing - use shorter delay since we expect no delivery
         Thread.Sleep(100);
@@ -308,7 +308,7 @@ public class WeightedRoutingTests
     }
 
     [Fact]
-    public void RouteMessage_MultipleTargets_AppliesWeightsSeparately()
+    public async Task RouteMessage_MultipleTargets_AppliesWeightsSeparately()
     {
         // Arrange
         var intentionBus = new IntentionBus();
@@ -337,7 +337,7 @@ public class WeightedRoutingTests
             Payload = "test",
             Priority = IntentionPriority.Normal,
         };
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait deterministically for async processing
         SpinWait.SpinUntil(() => target1.ReceivedMessages.Count > 0 && target3.ReceivedMessages.Count > 0, TimeSpan.FromSeconds(5));
@@ -356,7 +356,7 @@ public class WeightedRoutingTests
     }
 
     [Fact]
-    public void RouteMessage_ExactThreshold_WeakInhibition()
+    public async Task RouteMessage_ExactThreshold_WeakInhibition()
     {
         // Arrange
         var intentionBus = new IntentionBus();
@@ -379,7 +379,7 @@ public class WeightedRoutingTests
             Payload = "test",
             Priority = IntentionPriority.Normal,
         };
-        network.RouteMessage(message);
+        await network.RouteMessageAsync(message);
 
         // Wait deterministically for async processing
         SpinWait.SpinUntil(() => !target.ReceivedMessages.IsEmpty, TimeSpan.FromSeconds(5));

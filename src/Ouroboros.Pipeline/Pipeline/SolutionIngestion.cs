@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using System.Xml.Linq;
 using LangChain.Databases;
 using LangChain.Splitters.Text;
@@ -86,7 +85,7 @@ public static class SolutionIngestion
                 string meta = $"SOLUTION SUMMARY\nPath: {Path.GetFileName(solutionFile)}\nProject Count: {projectLines.Count}\nProjects:\n" + string.Join('\n', projectLines);
                 await EmbedSyntheticAsync(embed, vectors, meta, solutionFile + "#meta:solution", ct);
             }
-            catch { /* ignore meta failures */ }
+            catch (IOException) { /* ignore meta failures */ }
         }
 
         if (options.IncludeProjectMeta)
@@ -107,7 +106,7 @@ public static class SolutionIngestion
                     string meta = $"PROJECT SUMMARY\nName: {Path.GetFileName(csproj)}\nSDK: {sdk}\nTargetFramework(s): {string.Join(",", tfms)}\nPackages:\n" + string.Join('\n', pkgRefs);
                     await EmbedSyntheticAsync(embed, vectors, meta, csproj + "#meta:project", ct);
                 }
-                catch { }
+                catch (Exception ex) when (ex is not OperationCanceledException) { }
             }
         }
 
@@ -157,13 +156,13 @@ public static class SolutionIngestion
                         });
                         ci++;
                     }
-                    catch
+                    catch (Exception ex) when (ex is not OperationCanceledException)
                     {
                         // skip bad chunk
                     }
                 }
             }
-            catch { /* skip file */ }
+            catch (IOException) { /* skip file */ }
         }
 
         if (vectors.Count > 0)
@@ -185,7 +184,7 @@ public static class SolutionIngestion
                 Embedding = emb
             });
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Fallback deterministic embedding so downstream logic & tests still have a vector even without a live model.
             Dictionary<string, object?> meta = new Dictionary<string, object?> { ["type"] = "meta", ["fallback"] = true };
@@ -206,15 +205,11 @@ public static class SolutionIngestion
     {
         // basic ignore heuristics (bin/obj, hidden, .git, node_modules)
         string[] segments = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        foreach (string s in segments)
-        {
-            if (s.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
-                s.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
-                s.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
-                s.Equals(".vs", StringComparison.OrdinalIgnoreCase) ||
-                s.Equals("node_modules", StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-        return false;
+        return segments.Any(s =>
+            s.Equals("bin", StringComparison.OrdinalIgnoreCase) ||
+            s.Equals("obj", StringComparison.OrdinalIgnoreCase) ||
+            s.Equals(".git", StringComparison.OrdinalIgnoreCase) ||
+            s.Equals(".vs", StringComparison.OrdinalIgnoreCase) ||
+            s.Equals("node_modules", StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -3,6 +3,7 @@
 // </copyright>
 
 using Ouroboros.Pipeline.Council.Agents;
+using Ouroboros.Pipeline.Prompts;
 
 namespace Ouroboros.Pipeline.Council;
 
@@ -100,6 +101,7 @@ public static class CouncilOrchestratorArrows
                         branch.WithEvent(CouncilDecisionEvent.Create(topic, decision))),
                     error => Result<PipelineBranch, string>.Failure(error));
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Council debate exception: {ex.Message}");
@@ -208,37 +210,33 @@ public static class CouncilOrchestratorArrows
             var decision = await SynthesizeDecisionAsync(llm, topic, transcript, votes, config, ct);
             return decision;
         }
-        catch (OperationCanceledException)
-        {
-            return Result<CouncilDecision, string>.Failure("Council debate was cancelled.");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<CouncilDecision, string>.Failure($"Council debate failed: {ex.Message}");
         }
     }
 
-    private static async Task<Result<DebateRound, string>> ExecuteProposalPhaseAsync(
+    /// <summary>
+    /// Executes the proposal phase with parallel agent execution.
+    /// Shared by both <see cref="CouncilOrchestrator"/> and <see cref="CouncilOrchestratorArrows"/>.
+    /// </summary>
+    internal static async Task<Result<DebateRound, string>> ExecuteProposalPhaseAsync(
         ToolAwareChatModel llm,
         IReadOnlyList<IAgentPersona> agents,
         CouncilTopic topic,
         CouncilConfig config,
         CancellationToken ct)
     {
-        var contributions = new List<AgentContribution>();
-
-        foreach (var agent in agents)
+        var tasks = agents.Select(async agent =>
         {
-            ct.ThrowIfCancellationRequested();
-            var result = await agent.GenerateProposalAsync(topic, llm, ct);
-            if (result.IsFailure)
-            {
-                // Log but continue - graceful degradation
-                continue;
-            }
+            try { return await agent.GenerateProposalAsync(topic, llm, ct); }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return Result<AgentContribution, string>.Failure(ex.Message); }
+        });
 
-            contributions.Add(result.Value);
-        }
+        var results = await Task.WhenAll(tasks);
+        var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
 
         if (contributions.Count == 0)
         {
@@ -252,7 +250,11 @@ public static class CouncilOrchestratorArrows
             Timestamp: DateTime.UtcNow));
     }
 
-    private static async Task<Result<DebateRound, string>> ExecuteChallengePhaseAsync(
+    /// <summary>
+    /// Executes the challenge phase with parallel agent execution.
+    /// Shared by both <see cref="CouncilOrchestrator"/> and <see cref="CouncilOrchestratorArrows"/>.
+    /// </summary>
+    internal static async Task<Result<DebateRound, string>> ExecuteChallengePhaseAsync(
         ToolAwareChatModel llm,
         IReadOnlyList<IAgentPersona> agents,
         CouncilTopic topic,
@@ -260,23 +262,27 @@ public static class CouncilOrchestratorArrows
         CouncilConfig config,
         CancellationToken ct)
     {
-        var contributions = new List<AgentContribution>();
-
-        foreach (var agent in agents)
+        var tasks = agents.Select(async agent =>
         {
-            ct.ThrowIfCancellationRequested();
-            var otherProposals = proposals
-                .Where(p => p.Key != agent.Name)
-                .Select(p => p.Value)
-                .ToList();
-
-            var result = await agent.GenerateChallengeAsync(topic, otherProposals, llm, ct);
-            if (result.IsFailure)
+            try
             {
-                continue;
-            }
+                var otherProposals = proposals
+                    .Where(p => p.Key != agent.Name)
+                    .Select(p => p.Value)
+                    .ToList();
 
-            contributions.Add(result.Value);
+                return await agent.GenerateChallengeAsync(topic, otherProposals, llm, ct);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return Result<AgentContribution, string>.Failure(ex.Message); }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
+
+        if (contributions.Count == 0)
+        {
+            return Result<DebateRound, string>.Failure("No contributions received from challenge phase.");
         }
 
         return Result<DebateRound, string>.Success(new DebateRound(
@@ -286,7 +292,11 @@ public static class CouncilOrchestratorArrows
             Timestamp: DateTime.UtcNow));
     }
 
-    private static async Task<Result<DebateRound, string>> ExecuteRefinementPhaseAsync(
+    /// <summary>
+    /// Executes the refinement phase with parallel agent execution.
+    /// Shared by both <see cref="CouncilOrchestrator"/> and <see cref="CouncilOrchestratorArrows"/>.
+    /// </summary>
+    internal static async Task<Result<DebateRound, string>> ExecuteRefinementPhaseAsync(
         ToolAwareChatModel llm,
         IReadOnlyList<IAgentPersona> agents,
         CouncilTopic topic,
@@ -295,23 +305,25 @@ public static class CouncilOrchestratorArrows
         CouncilConfig config,
         CancellationToken ct)
     {
-        var contributions = new List<AgentContribution>();
+        var tasks = agents
+            .Where(agent => proposals.ContainsKey(agent.Name))
+            .Select(async agent =>
+            {
+                try
+                {
+                    var ownProposal = proposals[agent.Name];
+                    return await agent.GenerateRefinementAsync(topic, challenges, ownProposal, llm, ct);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex) { return Result<AgentContribution, string>.Failure(ex.Message); }
+            });
 
-        foreach (var agent in agents)
+        var results = await Task.WhenAll(tasks);
+        var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
+
+        if (contributions.Count == 0)
         {
-            ct.ThrowIfCancellationRequested();
-            if (!proposals.TryGetValue(agent.Name, out var ownProposal))
-            {
-                continue;
-            }
-
-            var result = await agent.GenerateRefinementAsync(topic, challenges, ownProposal, llm, ct);
-            if (result.IsFailure)
-            {
-                continue;
-            }
-
-            contributions.Add(result.Value);
+            return Result<DebateRound, string>.Failure("No contributions received from refinement phase.");
         }
 
         return Result<DebateRound, string>.Success(new DebateRound(
@@ -321,7 +333,11 @@ public static class CouncilOrchestratorArrows
             Timestamp: DateTime.UtcNow));
     }
 
-    private static async Task<Result<(Dictionary<string, AgentVote> Votes, DebateRound Round), string>> ExecuteVotingPhaseAsync(
+    /// <summary>
+    /// Executes the voting phase with parallel agent execution.
+    /// Shared by both <see cref="CouncilOrchestrator"/> and <see cref="CouncilOrchestratorArrows"/>.
+    /// </summary>
+    internal static async Task<Result<(Dictionary<string, AgentVote> Votes, DebateRound Round), string>> ExecuteVotingPhaseAsync(
         ToolAwareChatModel llm,
         IReadOnlyList<IAgentPersona> agents,
         CouncilTopic topic,
@@ -329,21 +345,28 @@ public static class CouncilOrchestratorArrows
         CouncilConfig config,
         CancellationToken ct)
     {
+        var tasks = agents.Select(async agent =>
+        {
+            try { return (agent.Name, Result: await agent.GenerateVoteAsync(topic, transcript, llm, ct)); }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex) { return (agent.Name, Result: Result<AgentVote, string>.Failure(ex.Message)); }
+        });
+
+        var results = await Task.WhenAll(tasks);
+
         var votes = new Dictionary<string, AgentVote>();
         var contributions = new List<AgentContribution>();
 
-        foreach (var agent in agents)
+        foreach (var (name, result) in results)
         {
-            ct.ThrowIfCancellationRequested();
-            var result = await agent.GenerateVoteAsync(topic, transcript, llm, ct);
             if (result.IsFailure)
             {
                 continue;
             }
 
-            votes[agent.Name] = result.Value;
+            votes[name] = result.Value;
             contributions.Add(new AgentContribution(
-                agent.Name,
+                name,
                 $"VOTE: {result.Value.Position} - {result.Value.Rationale}"));
         }
 
@@ -384,6 +407,8 @@ public static class CouncilOrchestratorArrows
         }
 
         var majorityPosition = voteGroups.OrderByDescending(g => g.Value).FirstOrDefault();
+        if (majorityPosition.Key == null)
+            return Result<CouncilDecision, string>.Failure("No positions found in votes");
 
         // Check for consensus
         var consensusReached = majorityPosition.Value >= totalWeight * config.ConsensusThreshold;
@@ -430,7 +455,11 @@ public static class CouncilOrchestratorArrows
         return Result<CouncilDecision, string>.Success(decision);
     }
 
-    private static string BuildSynthesisPrompt(
+    /// <summary>
+    /// Builds the LLM prompt for decision synthesis.
+    /// Shared by both <see cref="CouncilOrchestrator"/> and <see cref="CouncilOrchestratorArrows"/>.
+    /// </summary>
+    internal static string BuildSynthesisPrompt(
         CouncilTopic topic,
         List<DebateRound> transcript,
         Dictionary<string, AgentVote> votes,
@@ -444,28 +473,11 @@ public static class CouncilOrchestratorArrows
         var votesSummary = string.Join("\n", votes.Select(v =>
             $"- {v.Key}: {v.Value.Position} (weight: {v.Value.Weight:F2})"));
 
-        return $"""
-            You are the Council Orchestrator synthesizing the results of a multi-agent debate.
-
-            ## Topic
-            {topic.Question}
-
-            ## Debate Summary
-            {transcriptSummary}
-
-            ## Votes
-            {votesSummary}
-
-            ## Status
-            - Majority Position: {majorityPosition}
-            - Consensus Reached: {consensusReached}
-
-            ## Your Task
-            Synthesize the debate into a clear, actionable conclusion. Include:
-            1. The final decision and recommendation
-            2. Key points of agreement
-            3. Remaining concerns to address
-            4. Next steps or action items
-            """;
+        return PromptTemplateLoader.GetPromptText("Council", "SynthesisReport")
+            .Replace("{{$topic}}", topic.Question)
+            .Replace("{{$transcriptSummary}}", transcriptSummary)
+            .Replace("{{$votesSummary}}", votesSummary)
+            .Replace("{{$majorityPosition}}", majorityPosition)
+            .Replace("{{$consensusReached}}", consensusReached.ToString());
     }
 }

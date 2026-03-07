@@ -50,11 +50,12 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
         string model = "whisper-1",
         HttpClient? httpClient = null)
     {
-        _apiKey = apiKey ?? throw new ArgumentNullException(nameof(apiKey));
+        ArgumentNullException.ThrowIfNull(apiKey);
+        _apiKey = apiKey;
         _endpoint = endpoint ?? "https://api.openai.com/v1";
         _model = model;
         _ownsClient = httpClient == null;
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
     }
 
     /// <inheritdoc/>
@@ -87,7 +88,8 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
             await using FileStream stream = File.OpenRead(filePath);
             return await TranscribeStreamAsync(stream, Path.GetFileName(filePath), options, ct);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (IOException ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Failed to read file: {ex.Message}");
         }
@@ -140,7 +142,8 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
                 options,
                 ct);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (IOException ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Failed to read file: {ex.Message}");
         }
@@ -162,7 +165,7 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
             HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
             return response.IsSuccessStatusCode;
         }
-        catch
+        catch (HttpRequestException)
         {
             return false;
         }
@@ -295,7 +298,8 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
 
             return ParseVerboseJsonResponse(responseText);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (HttpRequestException ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Transcription failed: {ex.Message}");
         }

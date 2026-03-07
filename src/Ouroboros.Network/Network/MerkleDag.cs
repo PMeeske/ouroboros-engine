@@ -72,12 +72,10 @@ public sealed class MerkleDag
             }
 
             // Verify parent nodes exist
-            foreach (var parentId in node.ParentIds)
+            var missingParent = node.ParentIds.Cast<Guid?>().FirstOrDefault(id => !_nodes.ContainsKey(id!.Value));
+            if (missingParent.HasValue)
             {
-                if (!_nodes.ContainsKey(parentId))
-                {
-                    return Result<MonadNode>.Failure($"Parent node {parentId} does not exist");
-                }
+                return Result<MonadNode>.Failure($"Parent node {missingParent.Value} does not exist");
             }
 
             _nodes[node.Id] = node;
@@ -113,12 +111,10 @@ public sealed class MerkleDag
             }
 
             // Verify all input and output nodes exist
-            foreach (var inputId in edge.InputIds)
+            var missingInput = edge.InputIds.Cast<Guid?>().FirstOrDefault(id => !_nodes.ContainsKey(id!.Value));
+            if (missingInput.HasValue)
             {
-                if (!_nodes.ContainsKey(inputId))
-                {
-                    return Result<TransitionEdge>.Failure($"Input node {inputId} does not exist");
-                }
+                return Result<TransitionEdge>.Failure($"Input node {missingInput.Value} does not exist");
             }
 
             if (!_nodes.ContainsKey(edge.OutputId))
@@ -219,18 +215,15 @@ public sealed class MerkleDag
     /// <returns>A Result containing the sorted nodes or an error if the graph has cycles.</returns>
     public Result<ImmutableArray<MonadNode>> TopologicalSort()
     {
-        var inDegree = new Dictionary<Guid, int>();
+        var inDegree = _nodes.Values.ToDictionary(
+            node => node.Id,
+            node => GetIncomingEdges(node.Id).Count());
         var queue = new Queue<Guid>();
         var sorted = new List<MonadNode>();
 
-        // Initialize in-degrees based on incoming edges
-        foreach (var node in _nodes.Values)
+        foreach (var id in inDegree.Where(kvp => kvp.Value == 0).Select(kvp => kvp.Key))
         {
-            inDegree[node.Id] = GetIncomingEdges(node.Id).Count();
-            if (inDegree[node.Id] == 0)
-            {
-                queue.Enqueue(node.Id);
-            }
+            queue.Enqueue(id);
         }
 
         // Process nodes
@@ -243,10 +236,13 @@ public sealed class MerkleDag
             foreach (var edge in GetOutgoingEdges(nodeId))
             {
                 inDegree[edge.OutputId]--;
-                if (inDegree[edge.OutputId] == 0)
-                {
-                    queue.Enqueue(edge.OutputId);
-                }
+            }
+
+            foreach (var childId in GetOutgoingEdges(nodeId)
+                         .Select(e => e.OutputId)
+                         .Where(id => inDegree[id] == 0))
+            {
+                queue.Enqueue(childId);
             }
         }
 
@@ -285,21 +281,17 @@ public sealed class MerkleDag
     public Result<bool> VerifyIntegrity()
     {
         // Verify all node hashes
-        foreach (var node in _nodes.Values)
+        var invalidNode = _nodes.Values.FirstOrDefault(n => !n.VerifyHash());
+        if (invalidNode != null)
         {
-            if (!node.VerifyHash())
-            {
-                return Result<bool>.Failure($"Node {node.Id} hash verification failed");
-            }
+            return Result<bool>.Failure($"Node {invalidNode.Id} hash verification failed");
         }
 
         // Verify all edge hashes
-        foreach (var edge in _edges.Values)
+        var invalidEdge = _edges.Values.FirstOrDefault(e => !e.VerifyHash());
+        if (invalidEdge != null)
         {
-            if (!edge.VerifyHash())
-            {
-                return Result<bool>.Failure($"Edge {edge.Id} hash verification failed");
-            }
+            return Result<bool>.Failure($"Edge {invalidEdge.Id} hash verification failed");
         }
 
         // Verify no cycles

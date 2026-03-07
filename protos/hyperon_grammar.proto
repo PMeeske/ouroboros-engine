@@ -1,0 +1,198 @@
+syntax = "proto3";
+
+package ouroboros.grammar;
+
+option csharp_namespace = "Ouroboros.Pipeline.Grammar.Grpc";
+
+// Service for grammar validation, correction, and composition via upstream Hyperon.
+service HyperonGrammarService {
+  // Validates an ANTLR4 grammar string, returning structural issues.
+  rpc ValidateGrammar (ValidateGrammarRequest) returns (ValidateGrammarResponse);
+
+  // Corrects a grammar by applying MeTTa rewriting rules (left-recursion removal, etc.).
+  rpc CorrectGrammar (CorrectGrammarRequest) returns (CorrectGrammarResponse);
+
+  // Composes multiple grammar fragments into a single coherent grammar.
+  rpc ComposeGrammars (ComposeGrammarsRequest) returns (ComposeGrammarsResponse);
+
+  // Refines a grammar based on parse failure feedback.
+  rpc RefineGrammar (RefineGrammarRequest) returns (RefineGrammarResponse);
+
+  // Stores a proven grammar pattern in the AtomSpace for future retrieval.
+  rpc StoreProvenGrammar (StoreProvenGrammarRequest) returns (StoreProvenGrammarResponse);
+
+  // Retrieves the closest matching proven grammar for a description.
+  rpc RetrieveGrammar (RetrieveGrammarRequest) returns (RetrieveGrammarResponse);
+
+  // Health check for sidecar availability.
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+
+  // --- Logic Transfer Object (LTO) Operations ---
+  // These RPCs accept MeTTa atoms as formal specifications (LTOs)
+  // and convert them to executable ANTLR grammars over the wire.
+
+  // Converts MeTTa grammar spec atoms to an ANTLR4 .g4 grammar string.
+  rpc AtomsToGrammar (AtomsToGrammarRequest) returns (AtomsToGrammarResponse);
+
+  // Validates MeTTa grammar spec atoms against structural rules in the AtomSpace.
+  rpc ValidateAtoms (ValidateAtomsRequest) returns (ValidateAtomsResponse);
+
+  // Corrects MeTTa grammar spec atoms by applying symbolic rewriting rules.
+  rpc CorrectAtoms (CorrectAtomsRequest) returns (CorrectAtomsResponse);
+}
+
+// --- Validation ---
+
+message ValidateGrammarRequest {
+  string grammar_g4 = 1;
+}
+
+message ValidateGrammarResponse {
+  bool is_valid = 1;
+  repeated GrammarIssue issues = 2;
+}
+
+message GrammarIssue {
+  GrammarIssueSeverity severity = 1;
+  string rule_name = 2;
+  string description = 3;
+  GrammarIssueKind kind = 4;
+}
+
+enum GrammarIssueSeverity {
+  GRAMMAR_ISSUE_SEVERITY_UNSPECIFIED = 0;
+  GRAMMAR_ISSUE_SEVERITY_WARNING = 1;
+  GRAMMAR_ISSUE_SEVERITY_ERROR = 2;
+}
+
+enum GrammarIssueKind {
+  GRAMMAR_ISSUE_KIND_UNSPECIFIED = 0;
+  GRAMMAR_ISSUE_KIND_LEFT_RECURSION = 1;
+  GRAMMAR_ISSUE_KIND_UNREACHABLE_RULE = 2;
+  GRAMMAR_ISSUE_KIND_FIRST_SET_CONFLICT = 3;
+  GRAMMAR_ISSUE_KIND_MISSING_RULE = 4;
+  GRAMMAR_ISSUE_KIND_SYNTAX_ERROR = 5;
+  GRAMMAR_ISSUE_KIND_AMBIGUITY = 6;
+}
+
+// --- Correction ---
+
+message CorrectGrammarRequest {
+  string grammar_g4 = 1;
+  repeated GrammarIssue known_issues = 2;
+}
+
+message CorrectGrammarResponse {
+  bool success = 1;
+  string corrected_grammar_g4 = 2;
+  repeated string corrections_applied = 3;
+  repeated GrammarIssue remaining_issues = 4;
+}
+
+// --- Composition ---
+
+message ComposeGrammarsRequest {
+  repeated string grammar_fragments = 1;
+  string grammar_name = 2;
+}
+
+message ComposeGrammarsResponse {
+  bool success = 1;
+  string composed_grammar_g4 = 2;
+  repeated string conflicts_resolved = 3;
+}
+
+// --- Refinement (feedback loop) ---
+
+message RefineGrammarRequest {
+  string grammar_g4 = 1;
+  ParseFailureInfo failure = 2;
+}
+
+message ParseFailureInfo {
+  string offending_token = 1;
+  string expected_tokens = 2;
+  int32 line = 3;
+  int32 column = 4;
+  string input_snippet = 5;
+}
+
+message RefineGrammarResponse {
+  bool success = 1;
+  string refined_grammar_g4 = 2;
+  string refinement_explanation = 3;
+}
+
+// --- Grammar Memory ---
+
+message StoreProvenGrammarRequest {
+  string description = 1;
+  string grammar_g4 = 2;
+  repeated string sample_inputs = 3;
+}
+
+message StoreProvenGrammarResponse {
+  bool success = 1;
+  string grammar_id = 2;
+}
+
+message RetrieveGrammarRequest {
+  string description = 1;
+}
+
+message RetrieveGrammarResponse {
+  bool found = 1;
+  string grammar_g4 = 2;
+  string grammar_id = 3;
+  double similarity_score = 4;
+}
+
+// --- Logic Transfer Object (LTO) Operations ---
+// MeTTa atoms serve as formal specifications (Logic Transfer Objects) that
+// carry verifiable logic over the wire, not just data.
+
+message AtomsToGrammarRequest {
+  // MeTTa source containing grammar spec atoms (MkGrammar, MkProduction, etc.)
+  string metta_atoms = 1;
+}
+
+message AtomsToGrammarResponse {
+  bool success = 1;
+  string grammar_g4 = 2;
+  repeated string notes = 3;
+}
+
+message ValidateAtomsRequest {
+  // MeTTa source containing grammar spec atoms to validate
+  string metta_atoms = 1;
+}
+
+message ValidateAtomsResponse {
+  bool is_valid = 1;
+  repeated GrammarIssue issues = 2;
+  repeated string validation_notes = 3;
+}
+
+message CorrectAtomsRequest {
+  // MeTTa source containing grammar spec atoms to correct
+  string metta_atoms = 1;
+  repeated GrammarIssue known_issues = 2;
+}
+
+message CorrectAtomsResponse {
+  bool success = 1;
+  // Corrected MeTTa atoms source
+  string corrected_metta_atoms = 2;
+  repeated string corrections_applied = 3;
+  repeated GrammarIssue remaining_issues = 4;
+}
+
+// --- Health ---
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  string version = 2;
+  int32 grammars_stored = 3;
+}

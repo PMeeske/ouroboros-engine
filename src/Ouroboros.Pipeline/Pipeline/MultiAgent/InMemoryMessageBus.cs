@@ -1,4 +1,5 @@
-﻿using System.Threading.Channels;
+using System.Threading.Channels;
+using Microsoft.Extensions.Logging;
 
 namespace Ouroboros.Pipeline.MultiAgent;
 
@@ -15,13 +16,15 @@ public sealed class InMemoryMessageBus : IMessageBus, IDisposable
     private readonly int _maxHistorySize;
     private readonly CancellationTokenSource _disposalTokenSource;
     private readonly Task _processingTask;
+    private readonly ILogger<InMemoryMessageBus>? _logger;
     private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InMemoryMessageBus"/> class.
     /// </summary>
     /// <param name="maxHistorySize">The maximum number of messages to retain in history.</param>
-    public InMemoryMessageBus(int maxHistorySize = 1000)
+    /// <param name="logger">Optional logger for diagnostic output.</param>
+    public InMemoryMessageBus(int maxHistorySize = 1000, ILogger<InMemoryMessageBus>? logger = null)
     {
         if (maxHistorySize < 0)
         {
@@ -38,6 +41,7 @@ public sealed class InMemoryMessageBus : IMessageBus, IDisposable
         });
         _messageHistory = new ConcurrentQueue<AgentMessage>();
         _maxHistorySize = maxHistorySize;
+        _logger = logger;
         _disposalTokenSource = new CancellationTokenSource();
         _processingTask = ProcessMessagesAsync(_disposalTokenSource.Token);
     }
@@ -215,9 +219,13 @@ public sealed class InMemoryMessageBus : IMessageBus, IDisposable
         {
             _processingTask.Wait(TimeSpan.FromSeconds(5));
         }
-        catch (AggregateException)
+        catch (OperationCanceledException)
         {
-            // Ignore cancellation exceptions during disposal
+            // Expected: task was cancelled via _disposalTokenSource
+        }
+        catch (AggregateException ae) when (ae.InnerExceptions.All(e => e is OperationCanceledException))
+        {
+            // Expected: AggregateException wrapping cancellation during disposal
         }
 
         // Complete all pending requests with cancellation
@@ -251,12 +259,10 @@ public sealed class InMemoryMessageBus : IMessageBus, IDisposable
         AddToHistory(message);
 
         // Handle response messages for pending requests
-        if (message.Type == MessageType.Response && message.CorrelationId.HasValue)
+        if (message.Type == MessageType.Response && message.CorrelationId.HasValue
+            && _pendingRequests.TryRemove(message.CorrelationId.Value, out TaskCompletionSource<AgentMessage>? tcs))
         {
-            if (_pendingRequests.TryRemove(message.CorrelationId.Value, out TaskCompletionSource<AgentMessage>? tcs))
-            {
-                tcs.TrySetResult(message);
-            }
+            tcs.TrySetResult(message);
         }
 
         // Get matching subscriptions ordered by priority
@@ -289,10 +295,10 @@ public sealed class InMemoryMessageBus : IMessageBus, IDisposable
         {
             await subscription.Handler(message).ConfigureAwait(false);
         }
-        catch (Exception)
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
         {
-            // Log error in production; for now, we silently handle to prevent one handler from affecting others
-            // Consider adding an error event or callback mechanism
+            _logger?.LogError(ex, "Message handler threw an unhandled exception");
         }
     }
 

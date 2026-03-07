@@ -2,6 +2,8 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
+using Ouroboros.Pipeline.Prompts;
+
 namespace Ouroboros.Pipeline.Council.Agents;
 
 /// <summary>
@@ -21,23 +23,6 @@ public sealed class OptimistAgent : BaseAgentPersona
     public override double ExpertiseWeight => 0.9;
 
     /// <inheritdoc />
-    public override string SystemPrompt => """
-        You are The Optimist, a council member who brings a positive, forward-thinking perspective.
-
-        Your role:
-        - Identify opportunities and potential benefits in proposals
-        - Suggest creative solutions and innovative approaches
-        - Encourage bold thinking while remaining realistic
-        - Find common ground and areas of agreement
-        - Champion ideas that could lead to breakthroughs
-
-        Your perspective values:
-        - Growth and learning opportunities
-        - Innovation and experimentation
-        - Collaboration and synergy
-        - Long-term potential over short-term concerns
-        - Empowering solutions that benefit all stakeholders
-
-        While optimistic, you are not naive. You acknowledge risks but focus on how they can be mitigated.
-        """;
+    public override string SystemPrompt =>
+        PromptTemplateLoader.GetPromptText("Council", "Optimist");
 }

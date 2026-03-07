@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 using LangChain.DocumentLoaders;
 
 namespace Ouroboros.Pipeline.Ingestion;
@@ -19,11 +18,16 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
     private readonly bool _useCache;
     private readonly DirectoryIngestionCache? _cache;
 
+    // internal hook to pass stats object without altering interface signature
+    private DirectoryIngestionStats? _optionsStats;
+
     public DirectoryDocumentLoader(bool recursive = true, params string[] fileGlobs)
         : this(new DirectoryIngestionOptions { Recursive = recursive, Patterns = fileGlobs }) { }
 
     public DirectoryDocumentLoader(DirectoryIngestionOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+
         _recursive = options.Recursive;
         _fileGlobs = (options.Patterns is { Length: > 0 }) ? options.Patterns : ["*"];
         _allowedExtensions = options.Extensions?.Length > 0 ? [.. options.Extensions.Select(e => e.StartsWith('.') ? e.ToLowerInvariant() : "." + e.ToLowerInvariant())] : null;
@@ -43,101 +47,122 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
             throw new ArgumentException("DataSource must contain a path string for directory loading");
 
         if (File.Exists(path))
-        {
-            // Single file – delegate directly
             return await new TInner().LoadAsync(source, settings, cancellationToken);
-        }
 
         if (!Directory.Exists(path))
             throw new DirectoryNotFoundException($"Directory '{path}' not found");
 
-        List<Document> docs = new List<Document>();
+        List<Document> docs = [];
         bool debug = Environment.GetEnvironmentVariable("MONADIC_DEBUG") == "1";
         DateTime start = DateTime.UtcNow;
         SearchOption dirEnumOption = _recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
         DirectoryIngestionStats stats = _optionsStats ?? new DirectoryIngestionStats();
+
         foreach (string pattern in _fileGlobs)
         {
             foreach (string file in Directory.EnumerateFiles(path, pattern, dirEnumOption))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                // Directory exclusion
-                if (_excludeDirs is not null)
+
+                if (ShouldSkipFile(file, path))
+                    continue;
+
+                if (_useCache && _cache?.IsUnchanged(file) == true)
                 {
-                    string rel = Path.GetRelativePath(path, Path.GetDirectoryName(file)!);
-                    string[] parts = rel.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                    if (parts.Any(p => _excludeDirs.Contains(p.ToLowerInvariant()))) continue;
+                    stats.SkippedUnchanged++;
+                    if (debug) System.Diagnostics.Trace.TraceInformation("[ingest] skip unchanged {0}", file);
+                    continue;
                 }
-                // Size filter
-                if (_maxFileBytes is not null)
-                {
-                    try
-                    {
-                        FileInfo info = new FileInfo(file);
-                        if (info.Length > _maxFileBytes) continue;
-                    }
-                    catch { /* ignore */ }
-                }
-                // Extension filter
-                if (_allowedExtensions is not null)
-                {
-                    string ext = Path.GetExtension(file).ToLowerInvariant();
-                    if (!_allowedExtensions.Contains(ext)) continue;
-                }
-                bool skipByCache = false;
-                if (_useCache && _cache is not null)
-                {
-                    if (_cache.IsUnchanged(file)) { stats.SkippedUnchanged++; if (debug) Console.WriteLine($"[ingest] skip unchanged {file}"); continue; }
-                }
-                try
-                {
-                    DataSource fileSource = DataSource.FromPath(file);
-                    IReadOnlyCollection<Document> loaded = await new TInner().LoadAsync(fileSource, settings, cancellationToken);
-                    foreach (Document d in loaded)
-                    {
-                        // Build a fresh document if we need to augment metadata
-                        IDictionary<string, object> metaBase = d.Metadata ?? new Dictionary<string, object>();
-                        Dictionary<string, object> meta = new Dictionary<string, object>(metaBase)
-                        {
-                            ["directoryRoot"] = path,
-                            ["relativePath"] = Path.GetRelativePath(path, file)
-                        };
-                        docs.Add(new Document
-                        {
-                            PageContent = d.PageContent,
-                            Metadata = meta
-                        });
-                        stats.FilesLoaded++;
-                    }
-                    if (_useCache && _cache is not null && !skipByCache) _cache.UpdateHash(file);
-                    if (debug) Console.WriteLine($"[ingest] loaded {file} docs={loaded.Count}");
-                }
-                catch (Exception ex)
-                {
-                    if (debug) Console.WriteLine($"[ingest] error {file} {ex.Message}");
-                    docs.Add(new Document
-                    {
-                        PageContent = string.Empty,
-                        Metadata = new Dictionary<string, object>
-                        {
-                            ["error"] = ex.Message,
-                            ["path"] = file
-                        }
-                    });
-                    stats.Errors++;
-                }
+
+                await LoadFileIntoDocsAsync(file, path, settings, cancellationToken, docs, stats, debug);
+
+                if (_useCache) _cache?.UpdateHash(file);
+                if (debug) System.Diagnostics.Trace.TraceInformation("[ingest] loaded {0}", file);
             }
         }
+
         if (_useCache) _cache?.Persist();
-        if (stats != null)
-        {
-            stats.Elapsed = DateTime.UtcNow - start;
-            if (debug) Console.WriteLine($"[ingest] summary {stats}");
-        }
+        stats.Elapsed = DateTime.UtcNow - start;
+        if (debug) System.Diagnostics.Trace.TraceInformation("[ingest] summary {0}", stats);
+
         return docs;
     }
 
-    // internal hook to pass stats object without altering interface signature
-    private DirectoryIngestionStats? _optionsStats;
     public void AttachStats(DirectoryIngestionStats stats) => _optionsStats = stats;
+
+    private bool ShouldSkipFile(string file, string rootPath)
+    {
+        if (_excludeDirs is not null)
+        {
+            string rel = Path.GetRelativePath(rootPath, Path.GetDirectoryName(file)!);
+            string[] parts = rel.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (parts.Any(p => _excludeDirs.Contains(p.ToLowerInvariant())))
+                return true;
+        }
+
+        if (_maxFileBytes is not null)
+        {
+            try
+            {
+                if (new FileInfo(file).Length > _maxFileBytes)
+                    return true;
+            }
+            catch (IOException) { /* ignore inaccessible files */ }
+        }
+
+        if (_allowedExtensions is not null)
+        {
+            string ext = Path.GetExtension(file).ToLowerInvariant();
+            if (!_allowedExtensions.Contains(ext))
+                return true;
+        }
+
+        return false;
+    }
+
+    private async Task LoadFileIntoDocsAsync(
+        string file,
+        string rootPath,
+        DocumentLoaderSettings? settings,
+        CancellationToken cancellationToken,
+        List<Document> docs,
+        DirectoryIngestionStats stats,
+        bool debug)
+    {
+        try
+        {
+            DataSource fileSource = DataSource.FromPath(file);
+            IReadOnlyCollection<Document> loaded = await new TInner().LoadAsync(fileSource, settings, cancellationToken);
+
+            foreach (Document d in loaded)
+            {
+                docs.Add(BuildDocumentWithMeta(d, rootPath, file));
+                stats.FilesLoaded++;
+            }
+
+            if (debug) System.Diagnostics.Trace.TraceInformation("[ingest] loaded {0} docs={1}", file, loaded.Count);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            if (debug) System.Diagnostics.Trace.TraceWarning("[ingest] error {0} {1}", file, ex.Message);
+            docs.Add(new Document
+            {
+                PageContent = string.Empty,
+                Metadata = new Dictionary<string, object> { ["error"] = ex.Message, ["path"] = file }
+            });
+            stats.Errors++;
+        }
+    }
+
+    private static Document BuildDocumentWithMeta(Document source, string rootPath, string filePath)
+    {
+        IDictionary<string, object> metaBase = source.Metadata ?? new Dictionary<string, object>();
+        Dictionary<string, object> meta = new(metaBase)
+        {
+            ["directoryRoot"] = rootPath,
+            ["relativePath"] = Path.GetRelativePath(rootPath, filePath)
+        };
+        return new Document { PageContent = source.PageContent, Metadata = meta };
+    }
 }

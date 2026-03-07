@@ -22,7 +22,16 @@ public sealed record CouncilDecision(
     /// <summary>
     /// Gets whether the council reached consensus (all votes agree).
     /// </summary>
-    public bool IsConsensus => Votes.Values.All(v => v.Position == Votes.Values.First().Position);
+    public bool IsConsensus
+    {
+        get
+        {
+            var values = Votes.Values;
+            if (!values.Any()) return false;
+            var firstPosition = values.First().Position;
+            return values.All(v => v.Position == firstPosition);
+        }
+    }
 
     /// <summary>
     /// Gets the majority position if one exists.

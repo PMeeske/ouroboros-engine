@@ -160,7 +160,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
             {
                 // Expected during shutdown
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
                 observer.OnError(ex);
             }
@@ -207,7 +207,8 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
                 ? new TranscriptionResult(result.Text, _config.SpeechRecognitionLanguage, result.Duration.TotalSeconds)
                 : Result<TranscriptionResult, string>.Failure($"Recognition failed: {result.Reason}");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<TranscriptionResult, string>.Failure(ex.Message);
         }
@@ -217,8 +218,9 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
     public async Task<Result<TranscriptionResult, string>> TranscribeStreamAsync(
         Stream audioStream, string fileName, TranscriptionOptions? options = null, CancellationToken ct = default)
     {
-        var bytes = new byte[audioStream.Length];
-        _ = await audioStream.ReadAsync(bytes, ct);
+        using var ms = new MemoryStream();
+        await audioStream.CopyToAsync(ms, ct);
+        var bytes = ms.ToArray();
         return await TranscribeBytesAsync(bytes, fileName, options, ct);
     }
 
@@ -241,7 +243,8 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
                 ? new TranscriptionResult(result.Text, _config.SpeechRecognitionLanguage, result.Duration.TotalSeconds)
                 : Result<TranscriptionResult, string>.Failure($"Recognition failed: {result.Reason}");
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException ex)
         {
             return Result<TranscriptionResult, string>.Failure(ex.Message);
         }
@@ -384,7 +387,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
             if (_recognizer != null)
             {
                 try { await _recognizer.StopContinuousRecognitionAsync(); }
-                catch { /* Best effort */ }
+                catch (InvalidOperationException) { /* Best effort */ }
                 _recognizer.Dispose();
             }
 

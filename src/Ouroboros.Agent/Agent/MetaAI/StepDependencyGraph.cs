@@ -76,7 +76,7 @@ public sealed class StepDependencyGraph
         }
     }
 
-    private bool HasDependency(PlanStep current, PlanStep previous)
+    private static bool HasDependency(PlanStep current, PlanStep previous)
     {
         // Check if current step references previous step's action or expected outcome
         string prevActionRef = $"${previous.Action}";

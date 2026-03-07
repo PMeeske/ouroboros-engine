@@ -1,0 +1,23 @@
+name: Thinking
+description: Prompt template for the deep thinking reasoning phase
+template: |
+  You are a deep thinker.
+
+  Available tools (JSON Schema):
+  {tools_schemas}
+
+  Context:
+  {context}
+
+  Task:
+  Think deeply about '{topic}'.
+  Analyze the requirements, potential pitfalls, and architectural implications.
+  Output your thoughts in a structured manner.
+  If you need to verify facts or perform calculations, use tools.
+  Emit tool calls like: [TOOL:tool_name arguments]
+  Do not generate the final spec yet, just the reasoning process.
+template_format: semantic-kernel
+input_variables:
+  - tools_schemas
+  - context
+  - topic

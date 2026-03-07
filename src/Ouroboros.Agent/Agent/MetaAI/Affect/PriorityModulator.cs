@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Priority Modulator Implementation
 // Phase 3: Affective Dynamics - Threat/opportunity appraisal
@@ -206,7 +205,7 @@ public sealed class PriorityModulator : IPriorityModulator
         }
     }
 
-    private double CalculateThreatLevel(PrioritizedTask task, AffectiveState state)
+    private static double CalculateThreatLevel(PrioritizedTask task, AffectiveState state)
     {
         // Threat increases with:
         // - High stress
@@ -237,7 +236,7 @@ public sealed class PriorityModulator : IPriorityModulator
             0.0, 1.0);
     }
 
-    private double CalculateOpportunityScore(PrioritizedTask task, AffectiveState state)
+    private static double CalculateOpportunityScore(PrioritizedTask task, AffectiveState state)
     {
         // Opportunity increases with:
         // - High curiosity
@@ -261,7 +260,7 @@ public sealed class PriorityModulator : IPriorityModulator
             0.0, 1.0);
     }
 
-    private double CalculateModulatedPriority(PrioritizedTask task, AffectiveState state)
+    private static double CalculateModulatedPriority(PrioritizedTask task, AffectiveState state)
     {
         double basePriority = task.BasePriority;
 
@@ -279,14 +278,12 @@ public sealed class PriorityModulator : IPriorityModulator
         }
 
         double curiosityModifier = 1.0;
-        if (state.Curiosity > 0.5)
+        if (state.Curiosity > 0.5 &&
+            (task.Description.Contains("new", StringComparison.OrdinalIgnoreCase) ||
+             task.Description.Contains("explore", StringComparison.OrdinalIgnoreCase)))
         {
             // High curiosity boosts novel tasks
-            if (task.Description.Contains("new", StringComparison.OrdinalIgnoreCase) ||
-                task.Description.Contains("explore", StringComparison.OrdinalIgnoreCase))
-            {
-                curiosityModifier = 1.2;
-            }
+            curiosityModifier = 1.2;
         }
 
         double confidenceModifier = 1.0;

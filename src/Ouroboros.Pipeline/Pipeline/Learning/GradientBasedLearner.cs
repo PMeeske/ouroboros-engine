@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Pipeline.Learning;
+namespace Ouroboros.Pipeline.Learning;
 
 /// <summary>
 /// Thread-safe gradient-based online learner implementing stochastic gradient descent
@@ -76,6 +76,7 @@ public sealed class GradientBasedLearner : IOnlineLearner
 
             return Result<IReadOnlyList<LearningUpdate>, string>.Success(updates);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<IReadOnlyList<LearningUpdate>, string>.Failure(
@@ -180,6 +181,7 @@ public sealed class GradientBasedLearner : IOnlineLearner
 
             return Result<int, string>.Success(appliedCount);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<int, string>.Failure($"Failed to apply updates: {ex.Message}");
@@ -282,7 +284,7 @@ public sealed class GradientBasedLearner : IOnlineLearner
         return updates;
     }
 
-    private double ComputeConfidence(Feedback feedback)
+    private static double ComputeConfidence(Feedback feedback)
     {
         // Base confidence by feedback type
         var baseConfidence = feedback.Type switch
@@ -319,7 +321,7 @@ public sealed class GradientBasedLearner : IOnlineLearner
         return _config.LearningRate / (Math.Sqrt(newSquaredGrad) + epsilon);
     }
 
-    private List<LearningUpdate> AggregateUpdates(List<LearningUpdate> updates)
+    private static List<LearningUpdate> AggregateUpdates(List<LearningUpdate> updates)
     {
         var grouped = updates.GroupBy(u => u.ParameterName);
         var aggregated = new List<LearningUpdate>();

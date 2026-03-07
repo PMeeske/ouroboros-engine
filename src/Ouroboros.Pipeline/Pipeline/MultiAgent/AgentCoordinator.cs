@@ -10,12 +10,15 @@ namespace Ouroboros.Pipeline.MultiAgent;
 /// Orchestrates multiple agents to collaboratively execute goals through task decomposition and delegation.
 /// Follows functional programming principles with immutable state and monadic error handling.
 /// </summary>
-public sealed class AgentCoordinator : IAgentCoordinator
+public sealed class AgentCoordinator : IAgentCoordinator, IDisposable
 {
     private AgentTeam _team;
     private readonly IMessageBus _messageBus;
-    private IDelegationStrategy _delegationStrategy;
+    private volatile IDelegationStrategy _delegationStrategy;
+    private readonly ITaskExecutor _taskExecutor;
     private readonly object _teamLock = new();
+    private readonly SemaphoreSlim _agentSelectionLock = new(1, 1);
+    private volatile bool _disposed;
 
     /// <inheritdoc />
     public AgentTeam Team
@@ -34,9 +37,10 @@ public sealed class AgentCoordinator : IAgentCoordinator
     /// </summary>
     /// <param name="team">The team of agents to coordinate.</param>
     /// <param name="messageBus">The message bus for inter-agent communication.</param>
-    /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
-    public AgentCoordinator(AgentTeam team, IMessageBus messageBus)
-        : this(team, messageBus, DelegationStrategyFactory.RoundRobin())
+    /// <param name="taskExecutor">Optional task executor; defaults to <see cref="DefaultTaskExecutor"/>.</param>
+    /// <exception cref="ArgumentNullException">Thrown when any required parameter is null.</exception>
+    public AgentCoordinator(AgentTeam team, IMessageBus messageBus, ITaskExecutor? taskExecutor = null)
+        : this(team, messageBus, DelegationStrategyFactory.RoundRobin(), taskExecutor)
     {
     }
 
@@ -46,8 +50,9 @@ public sealed class AgentCoordinator : IAgentCoordinator
     /// <param name="team">The team of agents to coordinate.</param>
     /// <param name="messageBus">The message bus for inter-agent communication.</param>
     /// <param name="strategy">The delegation strategy for task assignment.</param>
-    /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
-    public AgentCoordinator(AgentTeam team, IMessageBus messageBus, IDelegationStrategy strategy)
+    /// <param name="taskExecutor">Optional task executor; defaults to <see cref="DefaultTaskExecutor"/>.</param>
+    /// <exception cref="ArgumentNullException">Thrown when any required parameter is null.</exception>
+    public AgentCoordinator(AgentTeam team, IMessageBus messageBus, IDelegationStrategy strategy, ITaskExecutor? taskExecutor = null)
     {
         ArgumentNullException.ThrowIfNull(team);
         ArgumentNullException.ThrowIfNull(messageBus);
@@ -56,6 +61,7 @@ public sealed class AgentCoordinator : IAgentCoordinator
         _team = team;
         _messageBus = messageBus;
         _delegationStrategy = strategy;
+        _taskExecutor = taskExecutor ?? new DefaultTaskExecutor();
     }
 
     /// <inheritdoc />
@@ -68,6 +74,7 @@ public sealed class AgentCoordinator : IAgentCoordinator
     /// <inheritdoc />
     public async Task<Result<CoordinationResult, string>> ExecuteAsync(Goal goal, CancellationToken ct = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, nameof(AgentCoordinator));
         ArgumentNullException.ThrowIfNull(goal);
 
         DateTime startTime = DateTime.UtcNow;
@@ -127,14 +134,9 @@ public sealed class AgentCoordinator : IAgentCoordinator
                     CoordinationResult.Failure(goal, $"{failedCount} tasks failed during execution.", completedTasks, duration));
             }
         }
-        catch (OperationCanceledException)
-        {
-            TimeSpan duration = DateTime.UtcNow - startTime;
-            return Result<CoordinationResult, string>.Failure($"Coordination was cancelled after {duration.TotalSeconds:F2} seconds.");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            TimeSpan duration = DateTime.UtcNow - startTime;
             return Result<CoordinationResult, string>.Failure($"Coordination failed: {ex.Message}");
         }
     }
@@ -142,6 +144,7 @@ public sealed class AgentCoordinator : IAgentCoordinator
     /// <inheritdoc />
     public async Task<Result<CoordinationResult, string>> ExecuteParallelAsync(IReadOnlyList<Goal> goals, CancellationToken ct = default)
     {
+        ObjectDisposedException.ThrowIf(_disposed, nameof(AgentCoordinator));
         ArgumentNullException.ThrowIfNull(goals);
 
         if (goals.Count == 0)
@@ -203,14 +206,9 @@ public sealed class AgentCoordinator : IAgentCoordinator
                     CoordinationResult.Failure(compositeGoal, $"{failedGoals}/{goals.Count} goals failed.", allTasks, duration));
             }
         }
-        catch (OperationCanceledException)
-        {
-            TimeSpan duration = DateTime.UtcNow - startTime;
-            return Result<CoordinationResult, string>.Failure($"Parallel coordination was cancelled after {duration.TotalSeconds:F2} seconds.");
-        }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            TimeSpan duration = DateTime.UtcNow - startTime;
             return Result<CoordinationResult, string>.Failure($"Parallel coordination failed: {ex.Message}");
         }
     }
@@ -260,6 +258,13 @@ public sealed class AgentCoordinator : IAgentCoordinator
         return tasks;
     }
 
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _disposed = true;
+        _agentSelectionLock.Dispose();
+    }
+
     /// <summary>
     /// Executes a single task by assigning it to an appropriate agent.
     /// </summary>
@@ -272,43 +277,57 @@ public sealed class AgentCoordinator : IAgentCoordinator
         Dictionary<Guid, AgentIdentity> participatingAgents,
         CancellationToken ct)
     {
-        // Get available agents
-        IReadOnlyList<AgentState> availableAgents = Team.GetAvailableAgents();
+        // Synchronize agent selection to prevent race conditions during parallel execution.
+        // Without this lock, multiple concurrent tasks could select the same idle agent
+        // before any of them mark it as busy.
+        AgentState selectedAgent;
+        AgentTask assignedTask;
 
-        if (availableAgents.Count == 0)
+        await _agentSelectionLock.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            return Result<AgentTask, string>.Failure("No available agents to execute the task.");
+            // Get available agents
+            IReadOnlyList<AgentState> availableAgents = Team.GetAvailableAgents();
+
+            if (availableAgents.Count == 0)
+            {
+                return Result<AgentTask, string>.Failure("No available agents to execute the task.");
+            }
+
+            // Select an agent using the delegation strategy
+            DelegationCriteria criteria = DelegationCriteria.FromGoal(task.Goal);
+            DelegationResult delegationResult = _delegationStrategy.SelectAgent(criteria, Team);
+
+            if (!delegationResult.HasMatch)
+            {
+                return Result<AgentTask, string>.Failure($"Delegation strategy could not select an appropriate agent: {delegationResult.Reasoning}");
+            }
+
+            Option<AgentState> selectedAgentOption = Team.GetAgent(delegationResult.SelectedAgentId!.Value);
+
+            if (!selectedAgentOption.HasValue)
+            {
+                return Result<AgentTask, string>.Failure("Selected agent is no longer available.");
+            }
+
+            selectedAgent = selectedAgentOption.Value!;
+
+            // Track participating agent
+            participatingAgents.TryAdd(selectedAgent.Identity.Id, selectedAgent.Identity);
+
+            // Update team state to mark agent as busy before releasing the lock
+            lock (_teamLock)
+            {
+                _team = _team.UpdateAgent(selectedAgent.Identity.Id, selectedAgent.StartTask(task.Id));
+            }
+
+            // Assign and start the task
+            assignedTask = task.AssignTo(selectedAgent.Identity.Id).Start();
         }
-
-        // Select an agent using the delegation strategy
-        DelegationCriteria criteria = DelegationCriteria.FromGoal(task.Goal);
-        DelegationResult delegationResult = _delegationStrategy.SelectAgent(criteria, Team);
-
-        if (!delegationResult.HasMatch)
+        finally
         {
-            return Result<AgentTask, string>.Failure($"Delegation strategy could not select an appropriate agent: {delegationResult.Reasoning}");
+            _agentSelectionLock.Release();
         }
-
-        Option<AgentState> selectedAgentOption = Team.GetAgent(delegationResult.SelectedAgentId!.Value);
-
-        if (!selectedAgentOption.HasValue)
-        {
-            return Result<AgentTask, string>.Failure("Selected agent is no longer available.");
-        }
-
-        AgentState selectedAgent = selectedAgentOption.Value!;
-
-        // Track participating agent
-        participatingAgents.TryAdd(selectedAgent.Identity.Id, selectedAgent.Identity);
-
-        // Update team state
-        lock (_teamLock)
-        {
-            _team = _team.UpdateAgent(selectedAgent.Identity.Id, selectedAgent.StartTask(task.Id));
-        }
-
-        // Assign and start the task
-        AgentTask assignedTask = task.AssignTo(selectedAgent.Identity.Id).Start();
 
         try
         {
@@ -321,29 +340,39 @@ public sealed class AgentCoordinator : IAgentCoordinator
 
             await _messageBus.PublishAsync(taskMessage, ct).ConfigureAwait(false);
 
-            // Simulate task execution (in a real implementation, this would await actual work)
-            await Task.Delay(TimeSpan.FromMilliseconds(100), ct).ConfigureAwait(false);
+            // Execute the task via the injected task executor
+            AgentTaskResult executionResult = await _taskExecutor.ExecuteAsync(assignedTask, selectedAgent, ct).ConfigureAwait(false);
 
-            // Complete the task
-            AgentTask completedTask = assignedTask.Complete($"Task completed by agent {selectedAgent.Identity.Name}");
+            // Complete or fail the task based on the execution result
+            AgentTask completedTask = executionResult.Success
+                ? assignedTask.Complete(executionResult.Output)
+                : assignedTask.Fail(executionResult.Output);
 
-            // Update team state to reflect completion
+            // Update team state to reflect completion or failure
             lock (_teamLock)
             {
                 Option<AgentState> currentStateOption = _team.GetAgent(selectedAgent.Identity.Id);
                 if (currentStateOption.HasValue)
                 {
-                    _team = _team.UpdateAgent(selectedAgent.Identity.Id, currentStateOption.Value!.CompleteTask());
+                    AgentState updatedState = executionResult.Success
+                        ? currentStateOption.Value!.CompleteTask()
+                        : currentStateOption.Value!.FailTask();
+                    _team = _team.UpdateAgent(selectedAgent.Identity.Id, updatedState);
                 }
             }
 
-            // Publish completion message
-            AgentMessage completionMessage = AgentMessage.CreateNotification(
-                senderId: selectedAgent.Identity.Id,
-                topic: "task.completed",
-                payload: $"Task completed: {task.Goal.Description}");
+            // Publish result message
+            string topic = executionResult.Success ? "task.completed" : "task.failed";
+            string payload = executionResult.Success
+                ? $"Task completed: {task.Goal.Description}"
+                : $"Task failed: {task.Goal.Description} - {executionResult.Output}";
 
-            await _messageBus.PublishAsync(completionMessage, ct).ConfigureAwait(false);
+            AgentMessage resultMessage = AgentMessage.CreateNotification(
+                senderId: selectedAgent.Identity.Id,
+                topic: topic,
+                payload: payload);
+
+            await _messageBus.PublishAsync(resultMessage, ct).ConfigureAwait(false);
 
             return Result<AgentTask, string>.Success(completedTask);
         }

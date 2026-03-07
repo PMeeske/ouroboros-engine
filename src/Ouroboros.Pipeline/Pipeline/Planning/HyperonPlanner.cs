@@ -4,10 +4,6 @@
 
 using Ouroboros.Abstractions;
 
-#pragma warning disable SA1309 // Field names should not begin with underscore
-#pragma warning disable SA1101 // Prefix local calls with this
-#pragma warning disable IDE0007 // Use implicit type
-
 namespace Ouroboros.Pipeline.Planning;
 
 using Ouroboros.Core.Hyperon;
@@ -26,7 +22,7 @@ using Ouroboros.Tools.MeTTa;
 /// <item>Providing neuro-symbolic fusion points for LLM integration.</item>
 /// </list>
 /// </remarks>
-public sealed class HyperonPlanner : IAsyncDisposable
+public sealed partial class HyperonPlanner : IAsyncDisposable
 {
     private readonly HyperonMeTTaEngine _engine;
     private readonly HyperonFlowIntegration _flow;
@@ -185,6 +181,7 @@ public sealed class HyperonPlanner : IAsyncDisposable
 
             return ParseToolChain(result.Value);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ToolChain, string>.Failure($"Planning exception: {ex.Message}");
@@ -356,6 +353,7 @@ public sealed class HyperonPlanner : IAsyncDisposable
                 stepResult.Output = current;
                 stepResult.Success = true;
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 stepResult.Error = ex.Message;
@@ -431,25 +429,20 @@ public sealed class HyperonPlanner : IAsyncDisposable
 
         // Parse chain/step expressions
         var tools = new List<string>();
-        var matches = System.Text.RegularExpressions.Regex.Matches(
-            result, @"\(step\s+(\w+)\)|\(chain\s+([\w\s]+)\)");
+        var matches = StepChainRegex().Matches(result);
 
-        foreach (System.Text.RegularExpressions.Match match in matches)
-        {
-            if (match.Groups[1].Success)
-            {
-                tools.Add(match.Groups[1].Value);
-            }
-            else if (match.Groups[2].Success)
-            {
-                tools.AddRange(match.Groups[2].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries));
-            }
-        }
+        tools.AddRange(matches
+            .Cast<System.Text.RegularExpressions.Match>()
+            .SelectMany(match => match.Groups[1].Success
+                ? new[] { match.Groups[1].Value }
+                : match.Groups[2].Success
+                    ? match.Groups[2].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    : Array.Empty<string>()));
 
         // Fallback: try to find tool names directly
         if (tools.Count == 0)
         {
-            var toolMatches = System.Text.RegularExpressions.Regex.Matches(result, @"\b(\w+Tool)\b");
+            var toolMatches = ToolNameRegex().Matches(result);
             foreach (System.Text.RegularExpressions.Match tm in toolMatches)
             {
                 tools.Add(tm.Groups[1].Value);
@@ -464,4 +457,10 @@ public sealed class HyperonPlanner : IAsyncDisposable
     {
         await _flow.DisposeAsync();
     }
+
+    [GeneratedRegex(@"\(step\s+(\w+)\)|\(chain\s+([\w\s]+)\)")]
+    private static partial Regex StepChainRegex();
+
+    [GeneratedRegex(@"\b(\w+Tool)\b")]
+    private static partial Regex ToolNameRegex();
 }

@@ -5,11 +5,14 @@
 
 namespace Ouroboros.Providers;
 
-using LangChain.Providers.Ollama;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
+using OllamaSharp;
+using OllamaSharp.Models;
 using Ouroboros.Core.Configuration;
 using Ouroboros.Domain.Autonomous;
 using Ouroboros.Domain.Vectors;
+using Ouroboros.Providers.Meai;
 using Ouroboros.Providers.SpeechToText;
 using Ouroboros.Providers.TextToSpeech;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,8 +38,6 @@ public static class ServiceCollectionExtensions
         model = string.IsNullOrWhiteSpace(model) ? "llama3" : model;
         embed = string.IsNullOrWhiteSpace(embed) ? "nomic-embed-text" : embed;
 
-        services.TryAddSingleton<OllamaProvider>();
-
         services.TryAddSingleton<Ouroboros.Abstractions.Core.IChatCompletionModel>(sp =>
         {
             (string? endpoint, string? apiKey, ChatEndpointType endpointType) = ChatConfig.Resolve();
@@ -58,52 +59,26 @@ public static class ServiceCollectionExtensions
                 }
             }
 
-            OllamaProvider provider = sp.GetRequiredService<OllamaProvider>();
-            OllamaChatModel chat = new OllamaChatModel(provider, model!);
+            var ollamaClient = new OllamaApiClient(new Uri(Configuration.DefaultEndpoints.Ollama), model!);
+            var adapter = new OllamaChatAdapter(ollamaClient, model!);
             try
             {
-                string n = (model ?? string.Empty).ToLowerInvariant();
-                if (n.StartsWith("deepseek-coder:33b"))
-                {
-                    chat.Settings = OllamaPresets.DeepSeekCoder33B;
-                }
-                else if (n.StartsWith("llama3"))
-                {
-                    chat.Settings = OllamaPresets.Llama3General;
-                }
-                else if (n.StartsWith("deepseek-r1:32") || n.Contains("32b"))
-                {
-                    chat.Settings = OllamaPresets.DeepSeekR1_32B_Reason;
-                }
-                else if (n.StartsWith("deepseek-r1:14") || n.Contains("14b"))
-                {
-                    chat.Settings = OllamaPresets.DeepSeekR1_14B_Reason;
-                }
-                else if (n.Contains("mistral") && (n.Contains("7b") || !n.Contains("large")))
-                {
-                    chat.Settings = OllamaPresets.Mistral7BGeneral;
-                }
-                else if (n.StartsWith("qwen2.5") || n.Contains("qwen"))
-                {
-                    chat.Settings = OllamaPresets.Qwen25_7B_General;
-                }
-                else if (n.StartsWith("phi3") || n.Contains("phi-3"))
-                {
-                    chat.Settings = OllamaPresets.Phi3MiniGeneral;
-                }
+                (RequestOptions? preset, string? keepAlive) = GetPresetForModel(model!);
+                adapter.Options = preset;
+                adapter.KeepAlive = keepAlive;
             }
             catch
             {
                 // Best-effort mapping; if detection fails we keep provider defaults.
             }
 
-            return new OllamaChatAdapter(chat);
+            return adapter;
         });
 
         services.TryAddSingleton<IEmbeddingModel>(sp =>
         {
-            OllamaProvider provider = sp.GetRequiredService<OllamaProvider>();
-            return new OllamaEmbeddingAdapter(new OllamaEmbeddingModel(provider, embed!));
+            var ollamaClient = new OllamaApiClient(new Uri(Configuration.DefaultEndpoints.Ollama), embed!);
+            return new OllamaEmbeddingAdapter(ollamaClient, embed!);
         });
 
         services.TryAddSingleton<ToolRegistry>();
@@ -115,6 +90,90 @@ public static class ServiceCollectionExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Registers a MEAI <see cref="IChatClient"/> in the container.
+    /// If the resolved <see cref="Ouroboros.Abstractions.Core.IChatCompletionModel"/>
+    /// implements <see cref="Ouroboros.Abstractions.Core.IChatClientBridge"/>
+    /// (e.g. <see cref="OllamaChatAdapter"/>), the native client is returned directly
+    /// for zero-overhead interop. Otherwise, a <see cref="CompletionModelChatClientAdapter"/> wraps the model.
+    /// </summary>
+    public static IServiceCollection AddMeaiChatClient(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddSingleton<IChatClient>(sp =>
+        {
+            var model = sp.GetRequiredService<Ouroboros.Abstractions.Core.IChatCompletionModel>();
+            return model is Ouroboros.Abstractions.Core.IChatClientBridge bridge
+                ? bridge.GetChatClient()
+                : new CompletionModelChatClientAdapter(model);
+        });
+
+        services.TryAddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(sp =>
+        {
+            var model = sp.GetRequiredService<IEmbeddingModel>();
+            return model is Ouroboros.Abstractions.Core.IEmbeddingGeneratorBridge bridge
+                ? bridge.GetEmbeddingGenerator()
+                : new EmbeddingModelGeneratorAdapter(model);
+        });
+
+        // Reverse bridge: when IEmbeddingGenerator is registered externally
+        // (e.g. via Semantic Kernel or MEAI) but no IEmbeddingModel exists,
+        // wrap the generator so legacy consumers still resolve.
+        services.TryAddSingleton<IEmbeddingModel>(sp =>
+        {
+            var generator = sp.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
+            // Unwrap if the generator is already our forward adapter (avoid double-wrapping)
+            if (generator.GetService(typeof(IEmbeddingModel)) is IEmbeddingModel inner)
+                return inner;
+            return new EmbeddingGeneratorModelAdapter(generator);
+        });
+
+        services.TryAddSingleton<Ouroboros.Abstractions.Core.IOuroborosChatClient>(sp =>
+        {
+            var model = sp.GetRequiredService<Ouroboros.Abstractions.Core.IChatCompletionModel>();
+            if (model is Ouroboros.Abstractions.Core.IOuroborosChatClient ouroClient)
+                return ouroClient;
+            throw new InvalidOperationException(
+                $"The resolved IChatCompletionModel ({model.GetType().Name}) does not implement IOuroborosChatClient. " +
+                "Migrate the provider to IOuroborosChatClient or use IChatClient via AddMeaiChatClient() instead.");
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Resolves the appropriate <see cref="RequestOptions"/> preset and KeepAlive duration
+    /// for a given Ollama model name. Returns <c>(null, null)</c> when no preset is recognized.
+    /// </summary>
+    private static (RequestOptions? Preset, string? KeepAlive) GetPresetForModel(string model)
+    {
+        string n = (model ?? string.Empty).ToLowerInvariant();
+
+        if (n.StartsWith("deepseek-coder:33b"))
+            return (OllamaPresets.DeepSeekCoder33B, OllamaPresets.DeepSeekCoder33BKeepAlive);
+
+        if (n.StartsWith("llama3"))
+            return (OllamaPresets.Llama3General, OllamaPresets.Llama3GeneralKeepAlive);
+
+        if (n.StartsWith("deepseek-r1:32") || n.Contains("32b"))
+            return (OllamaPresets.DeepSeekR1_32B_Reason, OllamaPresets.DeepSeekR1_32B_ReasonKeepAlive);
+
+        if (n.StartsWith("deepseek-r1:14") || n.Contains("14b"))
+            return (OllamaPresets.DeepSeekR1_14B_Reason, OllamaPresets.DeepSeekR1_14B_ReasonKeepAlive);
+
+        if (n.Contains("mistral") && (n.Contains("7b") || !n.Contains("large")))
+            return (OllamaPresets.Mistral7BGeneral, OllamaPresets.Mistral7BGeneralKeepAlive);
+
+        if (n.StartsWith("qwen2.5") || n.Contains("qwen"))
+            return (OllamaPresets.Qwen25_7B_General, OllamaPresets.Qwen25_7B_GeneralKeepAlive);
+
+        if (n.StartsWith("phi3") || n.Contains("phi-3"))
+            return (OllamaPresets.Phi3MiniGeneral, OllamaPresets.Phi3MiniGeneralKeepAlive);
+
+        return (null, null);
     }
 
     /// <summary>

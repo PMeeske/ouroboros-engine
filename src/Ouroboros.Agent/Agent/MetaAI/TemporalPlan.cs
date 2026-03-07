@@ -6,4 +6,5 @@
 public sealed record TemporalPlan(
     string Goal,
     List<ScheduledTask> Tasks,
-    TimeSpan TotalDuration);
+    TimeSpan TotalDuration,
+    DateTime CreatedAt = default) : IPlan;

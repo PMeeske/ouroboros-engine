@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Experience Replay - Train on stored experiences
 // ==========================================================
@@ -79,6 +78,7 @@ public sealed class ExperienceReplay : IExperienceReplay
 
             return Result<TrainingResult, string>.Success(result);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<TrainingResult, string>.Failure($"Training failed: {ex.Message}");
@@ -142,8 +142,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         ExperienceReplayConfig config,
         CancellationToken ct = default)
     {
-                var statsResult = await _memory.GetStatisticsAsync();
-        MemoryStatistics stats = statsResult.IsSuccess ? statsResult.Value : new MemoryStatistics(0, 0, 0, 0, 0);
+                _ = await _memory.GetStatisticsAsync();
 
         // Get all experiences and filter
         MemoryQuery query = new MemoryQuery(
@@ -181,7 +180,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         return qualityFiltered;
     }
 
-    private string ExtractGoalType(string goal)
+    private static string ExtractGoalType(string goal)
     {
         // Simple categorization - in production use more sophisticated NLP
         string goalLower = goal.ToLowerInvariant();
@@ -198,7 +197,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         return "general";
     }
 
-    private List<string> FindCommonActions(List<Experience> experiences)
+    private static List<string> FindCommonActions(List<Experience> experiences)
     {
         // Find actions that appear in all successful experiences
         List<List<string>> actionLists = experiences
@@ -218,34 +217,32 @@ public sealed class ExperienceReplay : IExperienceReplay
         return commonActions;
     }
 
-    private string BuildPatternAnalysisPrompt(List<Experience> experiences)
+    private static string BuildPatternAnalysisPrompt(List<Experience> experiences)
     {
-        string prompt = "Analyze the following successful experiences and identify common patterns:\n\n";
+        var sb = new System.Text.StringBuilder();
+        sb.Append("Analyze the following successful experiences and identify common patterns:\n\n");
 
         foreach (Experience? exp in experiences.Take(5))
         {
-            prompt += $"Goal: {exp.Goal}\n";
-            prompt += $"Steps: {string.Join(" -> ", exp.Plan.Steps.Select(s => s.Action))}\n";
-            prompt += $"Quality: {exp.Verification.QualityScore:P0}\n\n";
+            sb.Append($"Goal: {exp.Goal}\n");
+            sb.Append($"Steps: {string.Join(" -> ", exp.Plan.Steps.Select(s => s.Action))}\n");
+            sb.Append($"Quality: {exp.Verification.QualityScore:P0}\n\n");
         }
 
-        prompt += "What are the common successful patterns? List them briefly.";
+        sb.Append("What are the common successful patterns? List them briefly.");
 
-        return prompt;
+        return sb.ToString();
     }
 
-    private List<string> ExtractInsights(string analysis)
+    private static List<string> ExtractInsights(string analysis)
     {
         // Simple extraction - in production use more sophisticated parsing
         List<string> insights = new List<string>();
         string[] lines = analysis.Split('\n');
 
-        foreach (string line in lines)
+        foreach (string line in lines.Where(l => l.Trim().StartsWith('-') || l.Trim().StartsWith('\u2022')))
         {
-            if (line.Trim().StartsWith("-") || line.Trim().StartsWith("•"))
-            {
-                insights.Add(line.Trim().TrimStart('-', '•').Trim());
-            }
+            insights.Add(line.Trim().TrimStart('-', '\u2022').Trim());
         }
 
         return insights;

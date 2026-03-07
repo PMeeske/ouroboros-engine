@@ -77,6 +77,7 @@ Please provide a comprehensive response addressing the topic based on the contex
                 var result = await IntelligentReasoningArrow(mind, embed, topic, query, k)(branch);
                 return Result<PipelineBranch, string>.Success(result);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 return Result<PipelineBranch, string>.Failure($"Intelligent reasoning failed: {ex.Message}");

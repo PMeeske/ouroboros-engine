@@ -1,4 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 // ==========================================================
 // Phase 2 Enhanced Orchestrator Builder
 // Fluent builder for orchestrator with metacognitive components
@@ -82,6 +81,7 @@ public sealed class Phase2OrchestratorBuilder
     public Phase2OrchestratorBuilder WithSkillExtractionConfig(SkillExtractionConfig config)
     {
         _skillConfig = config ?? throw new ArgumentNullException(nameof(config));
+        _ = _skillConfig;
         return this;
     }
 

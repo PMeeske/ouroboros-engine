@@ -63,10 +63,11 @@ public sealed class TripleExtractionStep
 
             (string response, _) = await this._llm.GenerateWithToolsAsync(prompt);
 
-            List<SemanticTriple> triples = this.ParseTriples(documentId, response);
+            List<SemanticTriple> triples = ParseTriples(documentId, response);
 
             return Result<ExtractionResult, string>.Success(new ExtractionResult(documentId, triples));
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<ExtractionResult, string>.Failure($"Triple extraction failed: {ex.Message}");
@@ -83,41 +84,31 @@ public sealed class TripleExtractionStep
     /// <summary>
     /// Parses LLM output into semantic triples.
     /// </summary>
-    private List<SemanticTriple> ParseTriples(string documentId, string llmOutput)
+    private static List<SemanticTriple> ParseTriples(string documentId, string llmOutput)
     {
         List<SemanticTriple> triples = new();
 
         // Match patterns like (Relation Subject Object) or Relation: Subject -> Object
         Regex triplePattern = new(@"\((\w+)\s+([^\s)]+)\s+([^)]+)\)", RegexOptions.Compiled);
-        
-        foreach (Match match in triplePattern.Matches(llmOutput))
-        {
-            if (match.Groups.Count == 4)
-            {
-                string predicate = match.Groups[1].Value;
-                string obj = match.Groups[3].Value.Trim().Trim('"');
-                
-                triples.Add(new SemanticTriple(documentId, predicate, obj));
-            }
-        }
+
+        triples.AddRange(
+            from Match match in triplePattern.Matches(llmOutput)
+            where match.Groups.Count == 4
+            let predicate = match.Groups[1].Value
+            let subject = match.Groups[2].Value.Trim().Trim('"')
+            let obj = match.Groups[3].Value.Trim().Trim('"')
+            select new SemanticTriple(subject, predicate, obj));
 
         // Also try alternative format: Relation: Object
         Regex simplePattern = new(@"(\w+):\s*(.+)", RegexOptions.Compiled);
-        foreach (string line in llmOutput.Split('\n'))
-        {
-            Match match = simplePattern.Match(line.Trim());
-            if (match.Success && !line.Contains('('))
-            {
-                string predicate = match.Groups[1].Value;
-                string obj = match.Groups[2].Value.Trim().Trim('"');
-                
-                // Only add if it's a valid predicate
-                if (IsValidPredicate(predicate))
-                {
-                    triples.Add(new SemanticTriple(documentId, predicate, obj));
-                }
-            }
-        }
+        triples.AddRange(
+            from string line in llmOutput.Split('\n')
+            let match = simplePattern.Match(line.Trim())
+            where match.Success && !line.Contains('(')
+            let predicate = match.Groups[1].Value
+            let obj = match.Groups[2].Value.Trim().Trim('"')
+            where IsValidPredicate(predicate)
+            select new SemanticTriple(documentId, predicate, obj));
 
         return triples;
     }

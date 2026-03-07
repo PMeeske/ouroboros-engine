@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 namespace Ouroboros.Pipeline.Learning;
 
@@ -81,6 +81,7 @@ public sealed class AdaptiveMetaLearner : IMetaLearner
 
             return Result<LearningStrategy, string>.Success(explored);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<LearningStrategy, string>.Failure($"Strategy adaptation failed: {ex.Message}");
@@ -114,6 +115,7 @@ public sealed class AdaptiveMetaLearner : IMetaLearner
 
             return Result<LearningStrategy, string>.Success(selected);
         }
+        catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             return Result<LearningStrategy, string>.Failure($"Strategy selection failed: {ex.Message}");

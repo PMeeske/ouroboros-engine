@@ -1,11 +1,11 @@
-﻿namespace Ouroboros.Providers;
+namespace Ouroboros.Providers;
 
 /// <summary>
 /// A sub-goal decomposed from a larger request.
 /// Compatible with Pipeline.Planning.Goal - use SubGoalExtensions in Ouroboros.Pipeline
 /// to convert between types when integrating with GoalDecomposer/HierarchicalGoalPlanner.
 /// </summary>
-public sealed record SubGoal(
+public sealed partial record SubGoal(
     string Id,
     string Description,
     SubGoalComplexity Complexity,
@@ -30,9 +30,7 @@ public sealed record SubGoal(
     private static SubGoalComplexity InferComplexity(string text)
     {
         var length = text.Length;
-        var hasMultipleSteps = Regex.IsMatch(
-            text, @"\b(then|next|after|finally|also|and then)\b",
-            RegexOptions.IgnoreCase);
+        var hasMultipleSteps = MultipleStepsRegex().IsMatch(text);
 
         if (length < 50) return SubGoalComplexity.Simple;
         if (length < 200 && !hasMultipleSteps) return SubGoalComplexity.Moderate;
@@ -44,17 +42,17 @@ public sealed record SubGoal(
     {
         var lower = text.ToLowerInvariant();
 
-        if (Regex.IsMatch(lower, @"\b(code|program|function|class|implement|debug|refactor)\b"))
+        if (CodingKeywordsRegex().IsMatch(lower))
             return SubGoalType.Coding;
-        if (Regex.IsMatch(lower, @"\b(calculate|compute|solve|equation|formula|math)\b"))
+        if (MathKeywordsRegex().IsMatch(lower))
             return SubGoalType.Math;
-        if (Regex.IsMatch(lower, @"\b(write|create|compose|generate|story|poem|creative)\b"))
+        if (CreativeKeywordsRegex().IsMatch(lower))
             return SubGoalType.Creative;
-        if (Regex.IsMatch(lower, @"\b(analyze|compare|evaluate|reason|explain why)\b"))
+        if (ReasoningKeywordsRegex().IsMatch(lower))
             return SubGoalType.Reasoning;
-        if (Regex.IsMatch(lower, @"\b(convert|transform|format|translate|summarize)\b"))
+        if (TransformKeywordsRegex().IsMatch(lower))
             return SubGoalType.Transform;
-        if (Regex.IsMatch(lower, @"\b(find|search|lookup|what is|who is|when)\b"))
+        if (RetrievalKeywordsRegex().IsMatch(lower))
             return SubGoalType.Retrieval;
 
         return SubGoalType.Reasoning;
@@ -79,4 +77,25 @@ public sealed record SubGoal(
             _ => PathwayTier.CloudLight
         };
     }
+
+    [GeneratedRegex(@"\b(then|next|after|finally|also|and then)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex MultipleStepsRegex();
+
+    [GeneratedRegex(@"\b(code|program|function|class|implement|debug|refactor)\b")]
+    private static partial Regex CodingKeywordsRegex();
+
+    [GeneratedRegex(@"\b(calculate|compute|solve|equation|formula|math)\b")]
+    private static partial Regex MathKeywordsRegex();
+
+    [GeneratedRegex(@"\b(write|create|compose|generate|story|poem|creative)\b")]
+    private static partial Regex CreativeKeywordsRegex();
+
+    [GeneratedRegex(@"\b(analyze|compare|evaluate|reason|explain why)\b")]
+    private static partial Regex ReasoningKeywordsRegex();
+
+    [GeneratedRegex(@"\b(convert|transform|format|translate|summarize)\b")]
+    private static partial Regex TransformKeywordsRegex();
+
+    [GeneratedRegex(@"\b(find|search|lookup|what is|who is|when)\b")]
+    private static partial Regex RetrievalKeywordsRegex();
 }
