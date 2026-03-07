@@ -49,7 +49,7 @@ public sealed class LlmCostTracker
         ["deepseek-coder"] = new("DeepSeek", 0.14m, 0.28m),
         ["deepseek-reasoner"] = new("DeepSeek", 0.55m, 2.19m, "R1 reasoning model"),
         ["deepseek-v3"] = new("DeepSeek", 0.27m, 1.10m),
-        ["deepseek-v3.1:671b-cloud"] = new("DeepSeek", 0.27m, 1.10m, "Ollama Cloud hosted"),
+        ["devstral-2:123b-cloud"] = new("DeepSeek", 0.27m, 1.10m, "Ollama Cloud hosted"),
 
         // === GOOGLE ===
         ["gemini-2.0-flash"] = new("Google", 0.10m, 0.40m),

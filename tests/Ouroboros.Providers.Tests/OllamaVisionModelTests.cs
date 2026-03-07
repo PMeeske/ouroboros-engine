@@ -6,7 +6,7 @@ public sealed class OllamaVisionModelTests
     [Fact]
     public void DefaultModel_IsQwen3Vl()
     {
-        OllamaVisionModel.DefaultModel.Should().Be("qwen3-vl:235b-cloud");
+        OllamaVisionModel.DefaultModel.Should().Be("devstral-small-2:24b-cloud");
     }
 
     [Fact]

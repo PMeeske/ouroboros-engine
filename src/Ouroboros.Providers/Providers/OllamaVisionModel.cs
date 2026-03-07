@@ -25,7 +25,7 @@ public sealed class OllamaVisionModel : IVisionModel
     /// <summary>
     /// Default vision model — Qwen3-VL 235B cloud for strongest visual understanding.
     /// </summary>
-    public const string DefaultModel = "qwen3-vl:235b-cloud";
+    public const string DefaultModel = "devstral-small-2:24b-cloud";
 
     /// <summary>
     /// Lightweight fallback vision model for faster processing.
@@ -43,7 +43,7 @@ public sealed class OllamaVisionModel : IVisionModel
     /// Initializes a new instance of the <see cref="OllamaVisionModel"/> class.
     /// </summary>
     /// <param name="endpoint">Ollama API endpoint (e.g. <see cref="DefaultEndpoints.Ollama"/>).</param>
-    /// <param name="model">Vision model name (e.g. qwen3-vl:235b-cloud).</param>
+    /// <param name="model">Vision model name (e.g. devstral-small-2:24b-cloud).</param>
     /// <param name="timeout">Request timeout. Defaults to 120 seconds.</param>
     /// <param name="logger">Optional logger.</param>
     public OllamaVisionModel(
