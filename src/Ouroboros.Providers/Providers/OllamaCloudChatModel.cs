@@ -36,6 +36,16 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
         if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
         if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
 
+        // Guard: embedding models (nomic-embed-text, mxbai-embed-large, etc.) cannot generate text.
+        // Replace with the default chat model to prevent fallback noise in output.
+        if (model.Contains("embed", StringComparison.OrdinalIgnoreCase)
+            || model.Contains("nomic", StringComparison.OrdinalIgnoreCase))
+        {
+            System.Diagnostics.Trace.TraceWarning(
+                "[OllamaCloudChatModel] Embedding model '{0}' used as chat model — reset to glm-5:cloud", model);
+            model = "glm-5:cloud";
+        }
+
         _client = new HttpClient
         {
             BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute),
