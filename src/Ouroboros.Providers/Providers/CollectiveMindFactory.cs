@@ -113,6 +113,13 @@ public static class CollectiveMindFactory
         string? endpointType = null,
         ChatRuntimeSettings? settings = null)
     {
+        // Guard: reject embedding model names used as chat models
+        if (model.Contains("embed", StringComparison.OrdinalIgnoreCase)
+            || model.Contains("nomic", StringComparison.OrdinalIgnoreCase))
+        {
+            model = "glm-5:cloud";
+        }
+
         var (resolvedEndpoint, resolvedApiKey, resolvedType) = ChatConfig.ResolveWithOverrides(endpoint, apiKey, endpointType);
 
         var mind = new CollectiveMind();
