@@ -126,8 +126,10 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
                 if (firstChoice.TryGetProperty("message", out System.Text.Json.JsonElement messageElement))
                 {
                     // Extract reasoning_content if present (DeepSeek, o1, etc.)
-                    if (messageElement.TryGetProperty("reasoning_content", out System.Text.Json.JsonElement reasoningElement) &&
-                        reasoningElement.ValueKind == System.Text.Json.JsonValueKind.String)
+                    // Also check "reasoning" (Ollama thinking models use this field name)
+                    if ((messageElement.TryGetProperty("reasoning_content", out System.Text.Json.JsonElement reasoningElement)
+                         || messageElement.TryGetProperty("reasoning", out reasoningElement))
+                        && reasoningElement.ValueKind == System.Text.Json.JsonValueKind.String)
                     {
                         reasoningContent = reasoningElement.GetString();
                     }
@@ -222,7 +224,9 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
                             if (delta.TryGetProperty("delta", out System.Text.Json.JsonElement deltaElement))
                             {
                                 // Check for reasoning_content (structured thinking from API)
-                                if (deltaElement.TryGetProperty("reasoning_content", out System.Text.Json.JsonElement reasoningElement))
+                                // Also check "reasoning" (Ollama thinking models)
+                                if (deltaElement.TryGetProperty("reasoning_content", out System.Text.Json.JsonElement reasoningElement)
+                                    || deltaElement.TryGetProperty("reasoning", out reasoningElement))
                                 {
                                     string? reasoning = reasoningElement.GetString();
                                     if (!string.IsNullOrEmpty(reasoning))
