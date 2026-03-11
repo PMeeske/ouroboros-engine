@@ -89,8 +89,8 @@ public class ToolRegistryMcpBridgeTests
 
         var result = ToolRegistryMcpBridge.ToMcpTools(registry);
 
-        result[0].InputSchema.Should().NotBeNull();
-        result[0].InputSchema!.Value.GetProperty("type").GetString().Should().Be("object");
+        result[0].InputSchema.ValueKind.Should().NotBe(System.Text.Json.JsonValueKind.Undefined);
+        result[0].InputSchema.GetProperty("type").GetString().Should().Be("object");
     }
 
     [Fact]
