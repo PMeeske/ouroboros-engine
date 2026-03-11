@@ -27,7 +27,7 @@ public class GovernanceOutcomeTests
 }
 
 [Trait("Category", "Unit")]
-public class ExecutionModeTests
+public class ExecutionModeGovernanceTests
 {
     [Theory]
     [InlineData(ExecutionMode.Automatic)]

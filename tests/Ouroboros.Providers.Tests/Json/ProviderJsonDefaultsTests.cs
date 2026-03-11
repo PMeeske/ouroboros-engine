@@ -47,8 +47,17 @@ public class ProviderJsonDefaultsTests
     [Fact]
     public void AllInstances_ShouldBeSingletons()
     {
-        JsonDefaults.Indented.Should().BeSameAs(JsonDefaults.Indented);
-        JsonDefaults.CamelCase.Should().BeSameAs(JsonDefaults.CamelCase);
-        JsonDefaults.Default.Should().BeSameAs(JsonDefaults.Default);
+        var indented1 = JsonDefaults.Indented;
+        var indented2 = JsonDefaults.Indented;
+
+        var camelCase1 = JsonDefaults.CamelCase;
+        var camelCase2 = JsonDefaults.CamelCase;
+
+        var default1 = JsonDefaults.Default;
+        var default2 = JsonDefaults.Default;
+
+        indented1.Should().BeSameAs(indented2);
+        camelCase1.Should().BeSameAs(camelCase2);
+        default1.Should().BeSameAs(default2);
     }
 }
