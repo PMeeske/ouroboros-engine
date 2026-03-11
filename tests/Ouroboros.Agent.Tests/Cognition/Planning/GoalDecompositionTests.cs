@@ -89,4 +89,109 @@ public class ModificationEventTests
         evt.SnapshotId.Should().Be(snapshotId);
         evt.Reason.Should().Be("Safety violation");
     }
+
+    [Fact]
+    public void ModificationProposedEvent_SetsEventType()
+    {
+        var id = Guid.NewGuid();
+        var timestamp = DateTime.UtcNow;
+
+        var evt = new ModificationProposedEvent(id, timestamp, null!);
+
+        evt.EventType.Should().Be("ModificationProposed");
+    }
+
+    [Fact]
+    public void ModificationDecidedEvent_SetsEventType()
+    {
+        var id = Guid.NewGuid();
+        var timestamp = DateTime.UtcNow;
+
+        var evt = new ModificationDecidedEvent(id, timestamp, null!);
+
+        evt.EventType.Should().Be("ModificationDecided");
+    }
+
+    [Fact]
+    public void ModificationExecutedEvent_SetsEventType()
+    {
+        var id = Guid.NewGuid();
+        var proposalId = Guid.NewGuid();
+        var timestamp = DateTime.UtcNow;
+
+        var evt = new ModificationExecutedEvent(id, timestamp, proposalId, null!);
+
+        evt.ProposalId.Should().Be(proposalId);
+        evt.EventType.Should().Be("ModificationExecuted");
+    }
+}
+
+[Trait("Category", "Unit")]
+public class GoalDecompositionRecordTests
+{
+    [Fact]
+    public void ShortConstructor_SetsCreatedAtToNow()
+    {
+        var before = DateTimeOffset.UtcNow;
+        var goal = new Goal(Guid.NewGuid(), "Test", GoalType.Primary, 0.5, null,
+            new List<Goal>(), new Dictionary<string, object>(), DateTime.UtcNow, false, null);
+
+        var decomposition = new GoalDecomposition(goal, Array.Empty<GoalStep>(), new HypergridAnalysis());
+        var after = DateTimeOffset.UtcNow;
+
+        decomposition.CreatedAt.Should().BeOnOrAfter(before);
+        decomposition.CreatedAt.Should().BeOnOrBefore(after);
+    }
+
+    [Fact]
+    public void FullConstructor_SetsAllProperties()
+    {
+        var goal = new Goal(Guid.NewGuid(), "Test goal", GoalType.Primary, 0.8, null,
+            new List<Goal>(), new Dictionary<string, object>(), DateTime.UtcNow, false, null);
+        var steps = new List<GoalStep>
+        {
+            new("Step 1", GoalType.Primary, 0.5, DimensionalCoordinate.Origin)
+        };
+        var analysis = new HypergridAnalysis();
+        var createdAt = DateTimeOffset.UtcNow.AddDays(-1);
+
+        var decomposition = new GoalDecomposition(goal, steps, analysis, createdAt);
+
+        decomposition.OriginalGoal.Should().Be(goal);
+        decomposition.Steps.Should().HaveCount(1);
+        decomposition.DimensionalAnalysis.Should().Be(analysis);
+        decomposition.CreatedAt.Should().Be(createdAt);
+    }
+}
+
+[Trait("Category", "Unit")]
+public class GoalStepToGoalTests
+{
+    [Fact]
+    public void ToGoal_ConvertsCorrectly()
+    {
+        var coord = new DimensionalCoordinate(0.1, 0.2, 0.3, 0.4);
+        var step = new GoalStep("Analyze data", GoalType.Analysis, 0.8, coord);
+
+        var goal = step.ToGoal();
+
+        goal.Description.Should().Be("Analyze data");
+        goal.Type.Should().Be(GoalType.Analysis);
+        goal.Priority.Should().Be(0.8);
+        goal.Metadata.Should().ContainKey("temporal");
+        goal.Metadata["temporal"].Should().Be(0.1);
+        goal.Metadata["executionMode"].Should().Be("Automatic");
+    }
+
+    [Fact]
+    public void ToGoal_WithParent_SetsParent()
+    {
+        var parent = new Goal(Guid.NewGuid(), "Parent", GoalType.Primary, 1.0, null,
+            new List<Goal>(), new Dictionary<string, object>(), DateTime.UtcNow, false, null);
+        var step = new GoalStep("Child", GoalType.Secondary, 0.5, DimensionalCoordinate.Origin);
+
+        var goal = step.ToGoal(parent);
+
+        goal.Parent.Should().Be(parent);
+    }
 }
