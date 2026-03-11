@@ -22,7 +22,7 @@ public sealed class ThoughtFragmentTests
         // Act
         var fragment = new ThoughtFragment(
             id, "test content", "user", 10,
-            SubGoalType.Reasoning, SubGoalComplexity.Medium, PathwayTier.Balanced,
+            SubGoalType.Reasoning, SubGoalComplexity.Moderate, PathwayTier.CloudLight,
             timestamp, tags);
 
         // Assert
@@ -31,8 +31,8 @@ public sealed class ThoughtFragmentTests
         fragment.Source.Should().Be("user");
         fragment.EstimatedTokens.Should().Be(10);
         fragment.GoalType.Should().Be(SubGoalType.Reasoning);
-        fragment.Complexity.Should().Be(SubGoalComplexity.Medium);
-        fragment.PreferredTier.Should().Be(PathwayTier.Balanced);
+        fragment.Complexity.Should().Be(SubGoalComplexity.Moderate);
+        fragment.PreferredTier.Should().Be(PathwayTier.CloudLight);
         fragment.Timestamp.Should().Be(timestamp);
         fragment.Tags.Should().BeEquivalentTo(tags);
     }

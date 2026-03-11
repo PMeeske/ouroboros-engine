@@ -89,8 +89,8 @@ public class OuroborosOrchestratorComplexLogicTests
         Ouroboros.Agent.MetaAI.Affect.IUrgeSystem? urgeSystem = null)
     {
         var tools = ToolRegistry.CreateDefault();
-        var memory = new MockMemoryStore();
-        var safety = new MockSafetyGuard();
+        var memory = new Mock<IMemoryStore>().Object;
+        var safety = new Mock<ISafetyGuard>().Object;
         var engine = meTTa ?? new TrackingMeTTaEngine();
 
         return new OuroborosOrchestrator(
