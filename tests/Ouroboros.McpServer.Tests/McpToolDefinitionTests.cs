@@ -53,7 +53,7 @@ public class McpToolDefinitionTests
             InputSchema = schema,
         };
 
-        definition.InputSchema.Should().NotBeNull();
-        definition.InputSchema!.Value.GetProperty("type").GetString().Should().Be("object");
+        definition.InputSchema.ValueKind.Should().NotBe(System.Text.Json.JsonValueKind.Undefined);
+        definition.InputSchema.GetProperty("type").GetString().Should().Be("object");
     }
 }
