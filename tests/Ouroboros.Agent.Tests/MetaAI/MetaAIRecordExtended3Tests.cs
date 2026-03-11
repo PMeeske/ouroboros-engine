@@ -148,7 +148,7 @@ public class EvaluationResultsTests
 }
 
 [Trait("Category", "Unit")]
-public class TemporalPlanTests
+public class TemporalPlanBasicTests
 {
     [Fact]
     public void Create_ShouldSetAllProperties()

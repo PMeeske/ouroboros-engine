@@ -6,8 +6,11 @@
     <AssemblyName>Ouroboros.Agent</AssemblyName>
     <Product>Ouroboros Agent</Product>
     <Description>AI orchestration and Meta-AI layer for Ouroboros</Description>
-    <InternalsVisibleTo Include="Ouroboros.Agent.Tests" />
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ouroboros.Agent.Tests" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Abstractions\Ouroboros.Abstractions.csproj" />
