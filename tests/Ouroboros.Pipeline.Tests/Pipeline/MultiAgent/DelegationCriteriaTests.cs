@@ -9,9 +9,13 @@ public class DelegationCriteriaTests
     [Fact]
     public void FromGoal_SetsDefaults()
     {
+        // Arrange
         var goal = Goal.Atomic("test goal");
+
+        // Act
         var criteria = DelegationCriteria.FromGoal(goal);
 
+        // Assert
         criteria.Goal.Should().Be(goal);
         criteria.RequiredCapabilities.Should().BeEmpty();
         criteria.MinProficiency.Should().Be(0.0);
@@ -22,55 +26,101 @@ public class DelegationCriteriaTests
     [Fact]
     public void FromGoal_ThrowsOnNull()
     {
+        // Act
         var act = () => DelegationCriteria.FromGoal(null!);
+
+        // Assert
         act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void WithMinProficiency_UpdatesValue()
     {
-        var goal = Goal.Atomic("goal");
-        var criteria = DelegationCriteria.FromGoal(goal).WithMinProficiency(0.8);
+        // Arrange
+        var criteria = DelegationCriteria.FromGoal(Goal.Atomic("goal"));
 
-        criteria.MinProficiency.Should().Be(0.8);
+        // Act
+        var updated = criteria.WithMinProficiency(0.8);
+
+        // Assert
+        updated.MinProficiency.Should().Be(0.8);
     }
 
     [Fact]
-    public void WithMinProficiency_ThrowsOnInvalidRange()
+    public void WithMinProficiency_ThrowsOnNegativeValue()
     {
+        // Arrange
         var criteria = DelegationCriteria.FromGoal(Goal.Atomic("goal"));
 
+        // Act
         var act = () => criteria.WithMinProficiency(-0.1);
-        act.Should().Throw<ArgumentOutOfRangeException>();
 
-        var act2 = () => criteria.WithMinProficiency(1.1);
-        act2.Should().Throw<ArgumentOutOfRangeException>();
+        // Assert
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void WithMinProficiency_ThrowsOnValueAboveOne()
+    {
+        // Arrange
+        var criteria = DelegationCriteria.FromGoal(Goal.Atomic("goal"));
+
+        // Act
+        var act = () => criteria.WithMinProficiency(1.1);
+
+        // Assert
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
     public void WithPreferredRole_SetsRole()
     {
-        var criteria = DelegationCriteria.FromGoal(Goal.Atomic("goal"))
-            .WithPreferredRole(AgentRole.Planner);
+        // Arrange
+        var criteria = DelegationCriteria.FromGoal(Goal.Atomic("goal"));
 
-        criteria.PreferredRole.Should().Be(AgentRole.Planner);
+        // Act
+        var updated = criteria.WithPreferredRole(AgentRole.Planner);
+
+        // Assert
+        updated.PreferredRole.Should().Be(AgentRole.Planner);
     }
 
     [Fact]
     public void RequireCapability_AddsCapability()
     {
-        var criteria = DelegationCriteria.FromGoal(Goal.Atomic("goal"))
-            .RequireCapability("coding");
+        // Arrange
+        var criteria = DelegationCriteria.FromGoal(Goal.Atomic("goal"));
 
-        criteria.RequiredCapabilities.Should().Contain("coding");
+        // Act
+        var updated = criteria.RequireCapability("coding");
+
+        // Assert
+        updated.RequiredCapabilities.Should().Contain("coding");
+    }
+
+    [Fact]
+    public void RequireCapability_ThrowsOnNull()
+    {
+        // Arrange
+        var criteria = DelegationCriteria.FromGoal(Goal.Atomic("goal"));
+
+        // Act
+        var act = () => criteria.RequireCapability(null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void WithAvailabilityPreference_UpdatesFlag()
     {
-        var criteria = DelegationCriteria.FromGoal(Goal.Atomic("goal"))
-            .WithAvailabilityPreference(false);
+        // Arrange
+        var criteria = DelegationCriteria.FromGoal(Goal.Atomic("goal"));
 
-        criteria.PreferAvailable.Should().BeFalse();
+        // Act
+        var updated = criteria.WithAvailabilityPreference(false);
+
+        // Assert
+        updated.PreferAvailable.Should().BeFalse();
     }
 }
