@@ -12,9 +12,9 @@ public class SimpleRewardPredictorTests
     public async Task PredictAsync_WithZeroWeightsAndZeroBias_ReturnsZero()
     {
         var predictor = new SimpleRewardPredictor(new float[] { 0, 0, 0 }, 0.0f);
-        var state = new State("s1", new float[] { 0.5f, 0.5f, 0.5f }, new Dictionary<string, object>());
+        var state = new State(new Dictionary<string, object>(), new float[] { 0.5f, 0.5f, 0.5f });
         var action = new WmAction("act", new Dictionary<string, object>());
-        var nextState = new State("s2", new float[] { 0.6f, 0.6f, 0.6f }, new Dictionary<string, object>());
+        var nextState = new State(new Dictionary<string, object>(), new float[] { 0.6f, 0.6f, 0.6f });
 
         var result = await predictor.PredictAsync(state, action, nextState);
 
@@ -25,9 +25,9 @@ public class SimpleRewardPredictorTests
     public async Task PredictAsync_WithNonZeroWeights_ReturnsNonZero()
     {
         var predictor = new SimpleRewardPredictor(new float[] { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f }, 0.5f);
-        var state = new State("s1", new float[] { 0.1f, 0.2f, 0.3f }, new Dictionary<string, object>());
+        var state = new State(new Dictionary<string, object>(), new float[] { 0.1f, 0.2f, 0.3f });
         var action = new WmAction("act", new Dictionary<string, object>());
-        var nextState = new State("s2", new float[] { 0.4f, 0.5f, 0.6f }, new Dictionary<string, object>());
+        var nextState = new State(new Dictionary<string, object>(), new float[] { 0.4f, 0.5f, 0.6f });
 
         var result = await predictor.PredictAsync(state, action, nextState);
 
@@ -47,7 +47,7 @@ public class SimpleRewardPredictorTests
     {
         var predictor1 = SimpleRewardPredictor.CreateRandom(5, seed: 123);
         var predictor2 = SimpleRewardPredictor.CreateRandom(5, seed: 123);
-        var state = new State("s", new float[] { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f }, new Dictionary<string, object>());
+        var state = new State(new Dictionary<string, object>(), new float[] { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f });
         var action = new WmAction("a", new Dictionary<string, object>());
 
         var r1 = await predictor1.PredictAsync(state, action, state);
@@ -64,7 +64,7 @@ public class SimpleTerminalPredictorTests
     public async Task PredictAsync_WithHighBias_ReturnsTrue()
     {
         var predictor = new SimpleTerminalPredictor(new float[] { 0, 0 }, 10.0f);
-        var state = new State("s", new float[] { 0, 0 }, new Dictionary<string, object>());
+        var state = new State(new Dictionary<string, object>(), new float[] { 0, 0 });
 
         var result = await predictor.PredictAsync(state);
 
@@ -75,7 +75,7 @@ public class SimpleTerminalPredictorTests
     public async Task PredictAsync_WithVeryNegativeBias_ReturnsFalse()
     {
         var predictor = new SimpleTerminalPredictor(new float[] { 0, 0 }, -10.0f);
-        var state = new State("s", new float[] { 0, 0 }, new Dictionary<string, object>());
+        var state = new State(new Dictionary<string, object>(), new float[] { 0, 0 });
 
         var result = await predictor.PredictAsync(state);
 
@@ -94,7 +94,7 @@ public class SimpleTerminalPredictorTests
     public async Task PredictAsync_WithCustomThreshold_UsesThreshold()
     {
         var predictor = new SimpleTerminalPredictor(new float[] { 0 }, 0.0f, threshold: 0.5f);
-        var state = new State("s", new float[] { 0 }, new Dictionary<string, object>());
+        var state = new State(new Dictionary<string, object>(), new float[] { 0 });
 
         // sigmoid(0) = 0.5, threshold = 0.5 => true
         var result = await predictor.PredictAsync(state);
