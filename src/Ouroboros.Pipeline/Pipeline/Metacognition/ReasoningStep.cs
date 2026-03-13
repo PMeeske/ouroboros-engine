@@ -1,4 +1,4 @@
-// <copyright file="ReflectiveReasoning.cs" company="Ouroboros">
+// <copyright file="ReasoningStep.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
