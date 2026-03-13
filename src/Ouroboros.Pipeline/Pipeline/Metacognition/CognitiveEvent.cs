@@ -1,4 +1,4 @@
-// <copyright file="CognitiveMonitor.cs" company="Ouroboros">
+// <copyright file="CognitiveEvent.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
