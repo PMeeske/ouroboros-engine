@@ -1,4 +1,4 @@
-// <copyright file="OllamaVisionModel.cs" company="Ouroboros">
+﻿// <copyright file="OllamaVisionModel.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -85,7 +85,7 @@ public sealed class OllamaVisionModel : IVisionModel
         try
         {
             Stopwatch sw = Stopwatch.StartNew();
-            string response = await CallOllamaVisionAsync(base64Image, prompt, ct);
+            string response = await CallOllamaVisionAsync(base64Image, prompt, ct).ConfigureAwait(false);
             sw.Stop();
 
             _logger?.LogDebug("Vision analysis completed in {ElapsedMs}ms using {Model}", sw.ElapsedMilliseconds, _model);
@@ -115,7 +115,7 @@ public sealed class OllamaVisionModel : IVisionModel
             return Result<VisionAnalysisResult, string>.Failure($"File not found: {filePath}");
         }
 
-        byte[] imageData = await File.ReadAllBytesAsync(filePath, ct);
+        byte[] imageData = await File.ReadAllBytesAsync(filePath, ct).ConfigureAwait(false);
         string extension = Path.GetExtension(filePath).TrimStart('.').ToLowerInvariant();
         string imageFormat = extension switch
         {
@@ -127,7 +127,7 @@ public sealed class OllamaVisionModel : IVisionModel
             _ => "jpeg",
         };
 
-        return await AnalyzeImageAsync(imageData, imageFormat, options, ct);
+        return await AnalyzeImageAsync(imageData, imageFormat, options, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -141,7 +141,7 @@ public sealed class OllamaVisionModel : IVisionModel
 
         try
         {
-            string response = await CallOllamaVisionAsync(base64Image, question, ct);
+            string response = await CallOllamaVisionAsync(base64Image, question, ct).ConfigureAwait(false);
             return Result<string, string>.Success(response);
         }
         catch (HttpRequestException ex)
@@ -166,7 +166,7 @@ public sealed class OllamaVisionModel : IVisionModel
 
         try
         {
-            string response = await CallOllamaVisionAsync(base64Image, prompt, ct);
+            string response = await CallOllamaVisionAsync(base64Image, prompt, ct).ConfigureAwait(false);
             List<DetectedObject> objects = ParseDetectedObjects(response, maxObjects);
             return Result<IReadOnlyList<DetectedObject>, string>.Success(objects);
         }
@@ -192,7 +192,7 @@ public sealed class OllamaVisionModel : IVisionModel
 
         try
         {
-            string response = await CallOllamaVisionAsync(base64Image, prompt, ct);
+            string response = await CallOllamaVisionAsync(base64Image, prompt, ct).ConfigureAwait(false);
             List<DetectedFace> faces = ParseDetectedFaces(response, analyzeEmotion);
             return Result<IReadOnlyList<DetectedFace>, string>.Success(faces);
         }
@@ -212,10 +212,10 @@ public sealed class OllamaVisionModel : IVisionModel
     {
         try
         {
-            var models = await _ollamaClient.ListLocalModelsAsync(ct);
+            var models = await _ollamaClient.ListLocalModelsAsync(ct).ConfigureAwait(false);
             return models.Any(m => m.Name.Contains(_model, StringComparison.OrdinalIgnoreCase));
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return false;
         }
@@ -230,7 +230,7 @@ public sealed class OllamaVisionModel : IVisionModel
             Prompt = prompt,
             Images = new[] { base64Image },
             Stream = false,
-        }, ct))
+        }, ct).ConfigureAwait(false))
         {
             if (chunk?.Response is not null)
             {
@@ -350,7 +350,7 @@ public sealed class OllamaVisionModel : IVisionModel
                 }
             }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Fall back to extracting object mentions from natural language
             // VLMs often describe objects without strict JSON
@@ -395,7 +395,7 @@ public sealed class OllamaVisionModel : IVisionModel
                 }
             }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Natural language responses may not contain JSON
         }

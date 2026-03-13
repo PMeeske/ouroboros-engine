@@ -1,4 +1,4 @@
-// <copyright file="SpeechToTextTool.cs" company="Ouroboros">
+﻿// <copyright file="SpeechToTextTool.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -60,7 +60,17 @@ public sealed class SpeechToTextTool : ITool
     /// <returns>A new SpeechToTextTool instance.</returns>
     public static SpeechToTextTool CreateWithWhisper(string apiKey)
     {
-        return new SpeechToTextTool(new WhisperSpeechToTextService(apiKey));
+        var service = new WhisperSpeechToTextService(apiKey);
+        try
+        {
+            var tool = new SpeechToTextTool(service);
+            service = null!; // Ownership transferred
+            return tool;
+        }
+        finally
+        {
+            (service as IDisposable)?.Dispose();
+        }
     }
 
     /// <summary>
@@ -96,11 +106,11 @@ public sealed class SpeechToTextTool : ITool
 
             if (args.TranslateToEnglish)
             {
-                result = await _service.TranslateToEnglishAsync(args.FilePath, options, ct);
+                result = await _service.TranslateToEnglishAsync(args.FilePath, options, ct).ConfigureAwait(false);
             }
             else
             {
-                result = await _service.TranscribeFileAsync(args.FilePath, options, ct);
+                result = await _service.TranscribeFileAsync(args.FilePath, options, ct).ConfigureAwait(false);
             }
 
             return result.Match(
@@ -151,7 +161,7 @@ public sealed class SpeechToTextTool : ITool
                 args.TranslateToEnglish = trans2.GetBoolean();
             }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Plain text - treat as file path
             args.FilePath = input.Trim().Trim('"', '\'');

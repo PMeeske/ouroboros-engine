@@ -26,8 +26,8 @@ public static class CollectiveMindDslExtensions
         MindOperation<TResult> operation,
         CancellationToken ct = default)
     {
-        await config.ExecuteAsync(mind, ct);
-        return await operation.ExecuteAsync(mind, ct);
+        await config.ExecuteAsync(mind, ct).ConfigureAwait(false);
+        return await operation.ExecuteAsync(mind, ct).ConfigureAwait(false);
     }
 
     /// <summary>

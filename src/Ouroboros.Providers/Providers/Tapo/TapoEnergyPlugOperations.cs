@@ -24,7 +24,7 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync("p110/on", deviceName, ct);
+        return await ExecuteActionAsync("p110/on", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync("p110/off", deviceName, ct);
+        return await ExecuteActionAsync("p110/off", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<JsonDocument>.Failure("Device name is required");
 
-        return await GetJsonResponseAsync("p110/get-device-info", deviceName, ct);
+        return await GetJsonResponseAsync("p110/get-device-info", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<JsonDocument>.Failure("Device name is required");
 
-        return await GetJsonResponseAsync("p110/get-device-usage", deviceName, ct);
+        return await GetJsonResponseAsync("p110/get-device-usage", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -68,7 +68,7 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<JsonDocument>.Failure("Device name is required");
 
-        return await GetJsonResponseAsync("p110/get-energy-usage", deviceName, ct);
+        return await GetJsonResponseAsync("p110/get-energy-usage", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -79,7 +79,7 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<JsonDocument>.Failure("Device name is required");
 
-        return await GetJsonResponseAsync("p110/get-current-power", deviceName, ct);
+        return await GetJsonResponseAsync("p110/get-current-power", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
         return await GetJsonResponseAsync(
             $"p110/get-hourly-energy-data?start_date={startDate:yyyy-MM-dd}{endDateParam}",
             deviceName,
-            ct);
+            ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -115,7 +115,7 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
         return await GetJsonResponseAsync(
             $"p110/get-daily-energy-data?start_date={startDate:yyyy-MM-dd}",
             deviceName,
-            ct);
+            ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -132,7 +132,7 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
         return await GetJsonResponseAsync(
             $"p110/get-monthly-energy-data?start_date={startDate:yyyy-MM-dd}",
             deviceName,
-            ct);
+            ct).ConfigureAwait(false);
     }
 
 

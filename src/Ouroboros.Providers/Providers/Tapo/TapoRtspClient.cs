@@ -1,4 +1,4 @@
-// <copyright file="TapoRtspClient.cs" company="Ouroboros">
+﻿// <copyright file="TapoRtspClient.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -123,12 +123,12 @@ public sealed class TapoRtspClient : IDisposable
             process.Start();
 
             using var memoryStream = new MemoryStream();
-            await process.StandardOutput.BaseStream.CopyToAsync(memoryStream, ct);
-            await process.WaitForExitAsync(ct);
+            await process.StandardOutput.BaseStream.CopyToAsync(memoryStream, ct).ConfigureAwait(false);
+            await process.WaitForExitAsync(ct).ConfigureAwait(false);
 
             if (process.ExitCode != 0)
             {
-                var error = await process.StandardError.ReadToEndAsync(ct);
+                var error = await process.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
                 _logger?.LogError("FFmpeg error: {Error}", error);
                 return Result<TapoCameraFrame>.Failure($"FFmpeg failed: {error}");
             }
@@ -164,7 +164,7 @@ public sealed class TapoRtspClient : IDisposable
             return Result<TapoCameraFrame>.Success(frame);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             _logger?.LogError(ex, "Failed to capture frame from {CameraIp}", _cameraIp);
             return Result<TapoCameraFrame>.Failure($"Frame capture failed: {ex.Message}");
@@ -224,7 +224,7 @@ public sealed class TapoRtspClient : IDisposable
                 using var frameStream = new MemoryStream();
 
                 // Read JPEG frame (starts with FFD8, ends with FFD9)
-                var frameData = await ReadJpegFrameAsync(stream, ct);
+                var frameData = await ReadJpegFrameAsync(stream, ct).ConfigureAwait(false);
                 if (frameData == null || frameData.Length == 0)
                 {
                     continue;
@@ -320,7 +320,7 @@ public sealed class TapoRtspClient : IDisposable
                 _ffmpegProcess.Dispose();
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger?.LogWarning(ex, "Error stopping FFmpeg process");
             }
@@ -371,7 +371,7 @@ public sealed class TapoRtspClient : IDisposable
 
             try
             {
-                await process.WaitForExitAsync(timeoutCts.Token);
+                await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -386,12 +386,12 @@ public sealed class TapoRtspClient : IDisposable
             }
             else
             {
-                var error = await errorTask;
+                var error = await errorTask.ConfigureAwait(false);
                 return Result<string>.Failure($"Connection failed: {error}");
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<string>.Failure($"Connection test failed: {ex.Message}");
         }

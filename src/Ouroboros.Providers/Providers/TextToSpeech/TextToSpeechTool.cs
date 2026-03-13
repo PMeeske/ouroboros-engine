@@ -1,4 +1,4 @@
-// <copyright file="TextToSpeechTool.cs" company="Ouroboros">
+﻿// <copyright file="TextToSpeechTool.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -65,7 +65,17 @@ public sealed class TextToSpeechTool : ITool
     /// <returns>A new TextToSpeechTool instance.</returns>
     public static TextToSpeechTool CreateWithOpenAi(string apiKey, string model = "tts-1")
     {
-        return new TextToSpeechTool(new OpenAiTextToSpeechService(apiKey, model: model));
+        var service = new OpenAiTextToSpeechService(apiKey, model: model);
+        try
+        {
+            var tool = new TextToSpeechTool(service);
+            service = null!; // Ownership transferred
+            return tool;
+        }
+        finally
+        {
+            service?.Dispose();
+        }
     }
 
     /// <inheritdoc />
@@ -94,14 +104,14 @@ public sealed class TextToSpeechTool : ITool
                 args.Text,
                 args.OutputPath,
                 options,
-                ct);
+                ct).ConfigureAwait(false);
 
             return result.Match(
                 path => Result<string, string>.Success($"Audio saved to: {path}"),
                 error => Result<string, string>.Failure(error));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<string, string>.Failure($"Speech synthesis failed: {ex.Message}");
         }
@@ -163,7 +173,7 @@ public sealed class TextToSpeechTool : ITool
                 args.Speed = speedEl.GetDouble();
             }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Plain text - can't parse without output path
             args.Text = input.Trim();

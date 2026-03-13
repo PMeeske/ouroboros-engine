@@ -1,4 +1,4 @@
-// <copyright file="DuckDuckGoMcpClient.cs" company="Ouroboros">
+﻿// <copyright file="DuckDuckGoMcpClient.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -26,9 +26,25 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
     public DuckDuckGoMcpClient(DuckDuckGoMcpClientOptions? options = null, HttpClient? httpClient = null)
     {
         _options = options ?? new DuckDuckGoMcpClientOptions();
-        _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
+        _httpClient = httpClient ?? CreateDefaultHttpClient();
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(_options.UserAgent);
         _httpClient.Timeout = _options.Timeout;
+    }
+
+    private static HttpClient CreateDefaultHttpClient()
+    {
+        var handler = new SocketsHttpHandler();
+        try
+        {
+            handler.PooledConnectionLifetime = TimeSpan.FromMinutes(2);
+            var client = new HttpClient(handler, disposeHandler: true);
+            handler = null!; // Ownership transferred to HttpClient
+            return client;
+        }
+        finally
+        {
+            handler?.Dispose();
+        }
     }
 
     /// <inheritdoc/>
@@ -50,12 +66,12 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
             var url = $"{_options.SearchBaseUrl}/html/?q={Uri.EscapeDataString(query)}" +
                       $"&kl={region}&p={safeSearch}";
 
-            var response = await _httpClient.GetAsync(url, ct);
+            var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<IReadOnlyList<DuckDuckGoSearchResult>, string>.Failure(
                     $"Search failed: {response.StatusCode}");
 
-            var html = await response.Content.ReadAsStringAsync(ct);
+            var html = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var results = ParseHtmlSearchResults(html, maxResults);
             return Result<IReadOnlyList<DuckDuckGoSearchResult>, string>.Success(results);
         }
@@ -79,12 +95,12 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
             var url = $"{_options.SearchBaseUrl}/html/?q={Uri.EscapeDataString(query)}" +
                       $"&kl={region}&iar=news";
 
-            var response = await _httpClient.GetAsync(url, ct);
+            var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<IReadOnlyList<DuckDuckGoNewsResult>, string>.Failure(
                     $"News search failed: {response.StatusCode}");
 
-            var html = await response.Content.ReadAsStringAsync(ct);
+            var html = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var results = ParseHtmlNewsResults(html, maxResults);
             return Result<IReadOnlyList<DuckDuckGoNewsResult>, string>.Success(results);
         }
@@ -105,12 +121,12 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
             var url = $"{_options.InstantAnswerBaseUrl}/?q={Uri.EscapeDataString(query)}" +
                       "&format=json&no_redirect=1&no_html=1&skip_disambig=1";
 
-            var response = await _httpClient.GetAsync(url, ct);
+            var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<DuckDuckGoInstantAnswer, string>.Failure(
                     $"Instant answer failed: {response.StatusCode}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json).RootElement;
 
             var topics = new List<DuckDuckGoRelatedTopic>();

@@ -32,7 +32,7 @@ public static class MindDsl
         {
             var original = mind.ThinkingMode;
             mind.ThinkingMode = CollectiveThinkingMode.Racing;
-            try { return await mind.GenerateWithThinkingAsync(prompt, ct); }
+            try { return await mind.GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false); }
             finally { mind.ThinkingMode = original; }
         });
 
@@ -44,7 +44,7 @@ public static class MindDsl
         {
             var original = mind.ThinkingMode;
             mind.ThinkingMode = CollectiveThinkingMode.Ensemble;
-            try { return await mind.GenerateWithThinkingAsync(prompt, ct); }
+            try { return await mind.GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false); }
             finally { mind.ThinkingMode = original; }
         });
 
@@ -56,7 +56,7 @@ public static class MindDsl
         {
             var original = mind.ThinkingMode;
             mind.ThinkingMode = CollectiveThinkingMode.Sequential;
-            try { return await mind.GenerateWithThinkingAsync(prompt, ct); }
+            try { return await mind.GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false); }
             finally { mind.ThinkingMode = original; }
         });
 
@@ -122,7 +122,7 @@ public static class MindDsl
         {
             var original = mind.ThinkingMode;
             mind.ThinkingMode = CollectiveThinkingMode.Decomposed;
-            try { return await mind.GenerateWithThinkingAsync(prompt, ct); }
+            try { return await mind.GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false); }
             finally { mind.ThinkingMode = original; }
         });
 
@@ -136,7 +136,7 @@ public static class MindDsl
             var originalConfig = mind.DecompositionConfig;
             mind.ThinkingMode = CollectiveThinkingMode.Decomposed;
             mind.DecompositionConfig = config;
-            try { return await mind.GenerateWithThinkingAsync(prompt, ct); }
+            try { return await mind.GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false); }
             finally
             {
                 mind.ThinkingMode = originalMode;
@@ -220,7 +220,7 @@ public static class MindDsl
             var results = new List<T>();
             foreach (var op in operations)
             {
-                results.Add(await op.ExecuteAsync(mind, ct));
+                results.Add(await op.ExecuteAsync(mind, ct).ConfigureAwait(false));
             }
             return results;
         });
@@ -232,7 +232,7 @@ public static class MindDsl
         MindOperation<IReadOnlyList<T>>.FromAsync(async (mind, ct) =>
         {
             var tasks = operations.Select(op => op.ExecuteAsync(mind, ct));
-            return await Task.WhenAll(tasks);
+            return await Task.WhenAll(tasks).ConfigureAwait(false);
         });
 
     /// <summary>
@@ -241,8 +241,8 @@ public static class MindDsl
     public static MindOperation<T> WithFallback<T>(MindOperation<T> primary, MindOperation<T> fallback) =>
         MindOperation<T>.FromAsync(async (mind, ct) =>
         {
-            try { return await primary.ExecuteAsync(mind, ct); }
-            catch (Exception ex) when (ex is not OperationCanceledException) { return await fallback.ExecuteAsync(mind, ct); }
+            try { return await primary.ExecuteAsync(mind, ct).ConfigureAwait(false); }
+            catch (Exception ex) when (ex is not OperationCanceledException) { return await fallback.ExecuteAsync(mind, ct).ConfigureAwait(false); }
         });
 
     /// <summary>
@@ -254,10 +254,10 @@ public static class MindDsl
             int attempt = 0;
             while (true)
             {
-                try { return await operation.ExecuteAsync(mind, ct); }
-                catch when (++attempt < maxRetries)
+                try { return await operation.ExecuteAsync(mind, ct).ConfigureAwait(false); }
+                catch (Exception ex) when (ex is not OperationCanceledException && ++attempt < maxRetries)
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(100 * Math.Pow(2, attempt)), ct);
+                    await Task.Delay(TimeSpan.FromMilliseconds(100 * Math.Pow(2, attempt)), ct).ConfigureAwait(false);
                 }
             }
         });

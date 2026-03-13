@@ -24,7 +24,7 @@ public sealed class TapoPowerStripOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<JsonDocument>.Failure("Device name is required");
 
-        return await GetJsonResponseAsync("p300/get-device-info", deviceName, ct);
+        return await GetJsonResponseAsync("p300/get-device-info", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ public sealed class TapoPowerStripOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<JsonDocument>.Failure("Device name is required");
 
-        return await GetJsonResponseAsync("p300/get-child-device-list", deviceName, ct);
+        return await GetJsonResponseAsync("p300/get-child-device-list", deviceName, ct).ConfigureAwait(false);
     }
 
 }

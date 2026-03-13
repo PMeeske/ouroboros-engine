@@ -1,4 +1,4 @@
-using Polly;
+﻿using Polly;
 using Polly.CircuitBreaker;
 
 namespace Ouroboros.Providers;
@@ -170,7 +170,7 @@ public sealed partial class CollectiveMind
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
-        var response = await GenerateWithThinkingAsync(prompt, ct);
+        var response = await GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
         return response.Content;
     }
 
@@ -179,12 +179,12 @@ public sealed partial class CollectiveMind
     {
         return ThinkingMode switch
         {
-            CollectiveThinkingMode.Racing => await ThinkWithRacing(prompt, ct),
-            CollectiveThinkingMode.Sequential => await ThinkSequentially(prompt, ct),
-            CollectiveThinkingMode.Ensemble => await ThinkWithEnsemble(prompt, ct),
-            CollectiveThinkingMode.Adaptive => await ThinkAdaptively(prompt, ct),
-            CollectiveThinkingMode.Decomposed => await ThinkWithDecomposition(prompt, ct),
-            _ => await ThinkSequentially(prompt, ct)
+            CollectiveThinkingMode.Racing => await ThinkWithRacing(prompt, ct).ConfigureAwait(false),
+            CollectiveThinkingMode.Sequential => await ThinkSequentially(prompt, ct).ConfigureAwait(false),
+            CollectiveThinkingMode.Ensemble => await ThinkWithEnsemble(prompt, ct).ConfigureAwait(false),
+            CollectiveThinkingMode.Adaptive => await ThinkAdaptively(prompt, ct).ConfigureAwait(false),
+            CollectiveThinkingMode.Decomposed => await ThinkWithDecomposition(prompt, ct).ConfigureAwait(false),
+            _ => await ThinkSequentially(prompt, ct).ConfigureAwait(false)
         };
     }
 
@@ -207,12 +207,12 @@ public sealed partial class CollectiveMind
             {
                 return await pathway.CircuitBreaker.ExecuteAsync(async () =>
                 {
-                    var result = await QueryPathway(pathway, prompt, cts.Token);
+                    var result = await QueryPathway(pathway, prompt, cts.Token).ConfigureAwait(false);
                     sw.Stop();
                     pathway.RecordActivation(sw.Elapsed);
                     _thoughtStream.OnNext($"✓ '{pathway.Name}' responded in {sw.ElapsedMilliseconds}ms");
                     return (Pathway: pathway, Result: result, Success: true);
-                });
+                }).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -224,10 +224,10 @@ public sealed partial class CollectiveMind
 
         while (tasks.Count > 0)
         {
-            var completed = await Task.WhenAny(tasks);
+            var completed = await Task.WhenAny(tasks).ConfigureAwait(false);
             tasks.Remove(completed);
 
-            var result = await completed;
+            var result = await completed.ConfigureAwait(false);
             if (result.Success && !string.IsNullOrEmpty(result.Result.Content))
             {
                 cts.Cancel();
@@ -261,8 +261,8 @@ public sealed partial class CollectiveMind
             {
                 var result = await pathway.CircuitBreaker.ExecuteAsync(async () =>
                 {
-                    return await QueryPathway(pathway, prompt, ct);
-                });
+                    return await QueryPathway(pathway, prompt, ct).ConfigureAwait(false);
+                }).ConfigureAwait(false);
 
                 sw.Stop();
 
@@ -284,7 +284,7 @@ public sealed partial class CollectiveMind
                 _thoughtStream.OnNext($"⏸️ '{pathway.Name}' circuit is open, skipping...");
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex) // Intentional: circuit-breaker fallback across provider types
+            catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: circuit-breaker fallback across provider types
             {
                 pathway.RecordInhibition();
                 errors.Add($"{pathway.Name}: {ex.Message}");
@@ -309,22 +309,22 @@ public sealed partial class CollectiveMind
         if (healthyCount == 1)
         {
             _thoughtStream.OnNext("🧠 Adaptive: Single pathway mode");
-            return await ThinkSequentially(prompt, ct);
+            return await ThinkSequentially(prompt, ct).ConfigureAwait(false);
         }
 
         if (prompt.Length > 500 || prompt.Contains("analyze") || prompt.Contains("compare"))
         {
             _thoughtStream.OnNext("🧠 Adaptive: Complex query detected, using ensemble");
-            return await ThinkWithEnsemble(prompt, ct);
+            return await ThinkWithEnsemble(prompt, ct).ConfigureAwait(false);
         }
 
         if (prompt.Length < 100)
         {
             _thoughtStream.OnNext("🧠 Adaptive: Simple query detected, racing for speed");
-            return await ThinkWithRacing(prompt, ct);
+            return await ThinkWithRacing(prompt, ct).ConfigureAwait(false);
         }
 
         _thoughtStream.OnNext("🧠 Adaptive: Using balanced sequential mode");
-        return await ThinkSequentially(prompt, ct);
+        return await ThinkSequentially(prompt, ct).ConfigureAwait(false);
     }
 }

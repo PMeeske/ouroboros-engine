@@ -1,4 +1,4 @@
-// <copyright file="FirecrawlMcpClient.cs" company="Ouroboros">
+﻿// <copyright file="FirecrawlMcpClient.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -33,7 +33,7 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
         }
 
         _options = options;
-        _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
+        _httpClient = httpClient ?? CreateDefaultHttpClient();
         _httpClient.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/'));
         _httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", options.ResolveApiKey());
@@ -42,6 +42,22 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
         _httpClient.Timeout = options.Timeout;
 
         _jsonOptions = JsonDefaults.CamelCase;
+    }
+
+    private static HttpClient CreateDefaultHttpClient()
+    {
+        var handler = new SocketsHttpHandler();
+        try
+        {
+            handler.PooledConnectionLifetime = TimeSpan.FromMinutes(2);
+            var client = new HttpClient(handler, disposeHandler: true);
+            handler = null!; // Ownership transferred to HttpClient
+            return client;
+        }
+        finally
+        {
+            handler?.Dispose();
+        }
     }
 
     /// <inheritdoc/>
@@ -63,18 +79,18 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
                 if (options.TimeoutMs.HasValue) body["timeout"] = options.TimeoutMs.Value;
             }
 
-            var content = new StringContent(
+            using var content = new StringContent(
                 JsonSerializer.Serialize(body, _jsonOptions), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync($"/{_options.ApiVersion}/scrape", content, ct);
+            var response = await _httpClient.PostAsync($"/{_options.ApiVersion}/scrape", content, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var err = await response.Content.ReadAsStringAsync(ct);
+                var err = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 return Result<FirecrawlScrapeResult, string>.Failure(
                     $"Scrape failed: {response.StatusCode} — {err}");
             }
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json).RootElement;
             var data = doc.TryGetProperty("data", out var d) ? d : doc;
 
@@ -109,17 +125,17 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
                 if (options.ExcludePatterns != null) body["excludePaths"] = options.ExcludePatterns;
             }
 
-            var content = new StringContent(
+            using var content = new StringContent(
                 JsonSerializer.Serialize(body, _jsonOptions), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync($"/{_options.ApiVersion}/crawl", content, ct);
+            var response = await _httpClient.PostAsync($"/{_options.ApiVersion}/crawl", content, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var err = await response.Content.ReadAsStringAsync(ct);
+                var err = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 return Result<string, string>.Failure($"Crawl failed: {response.StatusCode} — {err}");
             }
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json).RootElement;
             var jobId = doc.TryGetProperty("id", out var id) ? id.GetString()!
                 : doc.TryGetProperty("jobId", out var jid) ? jid.GetString()!
@@ -145,12 +161,12 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/{_options.ApiVersion}/crawl/{jobId}", ct);
+            var response = await _httpClient.GetAsync($"/{_options.ApiVersion}/crawl/{jobId}", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<FirecrawlCrawlStatus, string>.Failure(
                     $"GetCrawlStatus failed: {response.StatusCode}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json).RootElement;
 
             var results = new List<FirecrawlScrapeResult>();
@@ -194,18 +210,18 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
                 ["limit"] = maxResults
             };
 
-            var content = new StringContent(
+            using var content = new StringContent(
                 JsonSerializer.Serialize(body, _jsonOptions), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync($"/{_options.ApiVersion}/search", content, ct);
+            var response = await _httpClient.PostAsync($"/{_options.ApiVersion}/search", content, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var err = await response.Content.ReadAsStringAsync(ct);
+                var err = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 return Result<IReadOnlyList<FirecrawlSearchResult>, string>.Failure(
                     $"Search failed: {response.StatusCode} — {err}");
             }
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json).RootElement;
             var dataArray = doc.TryGetProperty("data", out var d) ? d : doc;
 
@@ -252,17 +268,17 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
                 ["schema"] = schemaObj
             };
 
-            var content = new StringContent(
+            using var content = new StringContent(
                 JsonSerializer.Serialize(body, _jsonOptions), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync($"/{_options.ApiVersion}/extract", content, ct);
+            var response = await _httpClient.PostAsync($"/{_options.ApiVersion}/extract", content, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var err = await response.Content.ReadAsStringAsync(ct);
+                var err = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 return Result<string, string>.Failure($"Extract failed: {response.StatusCode} — {err}");
             }
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return Result<string, string>.Success(json);
         }
         catch (OperationCanceledException) { throw; }
@@ -284,17 +300,17 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
         try
         {
             var body = new Dictionary<string, object> { ["url"] = url };
-            var content = new StringContent(
+            using var content = new StringContent(
                 JsonSerializer.Serialize(body, _jsonOptions), Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync($"/{_options.ApiVersion}/map", content, ct);
+            var response = await _httpClient.PostAsync($"/{_options.ApiVersion}/map", content, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var err = await response.Content.ReadAsStringAsync(ct);
+                var err = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 return Result<IReadOnlyList<string>, string>.Failure($"Map failed: {response.StatusCode} — {err}");
             }
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json).RootElement;
             var urls = new List<string>();
 

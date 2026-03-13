@@ -1,4 +1,4 @@
-namespace Ouroboros.Providers
+﻿namespace Ouroboros.Providers
 {
     /// <summary>
     /// Simulated LLM provider for testing purposes.
@@ -12,7 +12,7 @@ namespace Ouroboros.Providers
         /// <returns>A simulated response.</returns>
         public async Task<string> GenerateAsync(string prompt)
         {
-            await Task.Delay(10); // Simulate async operation
+            await Task.Delay(10).ConfigureAwait(false); // Simulate async operation
 
             if (prompt.Contains("suggestions"))
                 return "[{\"step\":\"UseDraft\",\"explanation\":\"Generate draft\",\"confidence\":0.9}]";

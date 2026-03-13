@@ -1,4 +1,4 @@
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace Ouroboros.Providers;
@@ -143,7 +143,7 @@ public sealed partial class MasterModelElection
             }
 
             var decision = await _masterPathway.CircuitBreaker.ExecuteAsync(async () =>
-                await _masterPathway.Model.GenerateTextAsync(decisionPrompt.ToString(), ct));
+                await _masterPathway.Model.GenerateTextAsync(decisionPrompt.ToString(), ct).ConfigureAwait(false)).ConfigureAwait(false);
 
             // Parse the selected number
             var match = DigitRegex().Match(decision);
@@ -155,7 +155,7 @@ public sealed partial class MasterModelElection
                 return (winner, votes, $"Master model selected response #{selected}");
             }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Fall back to weighted majority
         }

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Abstractions;
 
@@ -28,7 +28,7 @@ public sealed class TapoLightBulbOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync("l510/on", deviceName, ct);
+        return await ExecuteActionAsync("l510/on", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -41,7 +41,7 @@ public sealed class TapoLightBulbOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync("l510/off", deviceName, ct);
+        return await ExecuteActionAsync("l510/off", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ public sealed class TapoLightBulbOperations : TapoDeviceOperationsBase
         if (level > 100)
             return Result<Unit>.Failure("Brightness level must be between 0 and 100");
 
-        return await ExecuteActionAsync($"l510/set-brightness?level={level}", deviceName, ct);
+        return await ExecuteActionAsync($"l510/set-brightness?level={level}", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public sealed class TapoLightBulbOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<JsonDocument>.Failure("Device name is required");
 
-        return await GetJsonResponseAsync("l510/get-device-info", deviceName, ct);
+        return await GetJsonResponseAsync("l510/get-device-info", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -84,6 +84,6 @@ public sealed class TapoLightBulbOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<JsonDocument>.Failure("Device name is required");
 
-        return await GetJsonResponseAsync("l510/get-device-usage", deviceName, ct);
+        return await GetJsonResponseAsync("l510/get-device-usage", deviceName, ct).ConfigureAwait(false);
     }
 }

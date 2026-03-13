@@ -66,7 +66,7 @@ public sealed partial class MasterModelElection : IDisposable
         }
 
         // Score all candidates
-        var scored = await ScoreCandidatesAsync(validCandidates, originalPrompt, ct);
+        var scored = await ScoreCandidatesAsync(validCandidates, originalPrompt, ct).ConfigureAwait(false);
 
         // Apply election strategy
         var (winner, votes, rationale) = _strategy switch
@@ -74,10 +74,10 @@ public sealed partial class MasterModelElection : IDisposable
             ElectionStrategy.Majority => ElectByMajority(scored),
             ElectionStrategy.WeightedMajority => ElectByWeightedMajority(scored),
             ElectionStrategy.BordaCount => ElectByBordaCount(scored),
-            ElectionStrategy.Condorcet => await ElectByCondorcetAsync(scored, originalPrompt, ct),
+            ElectionStrategy.Condorcet => await ElectByCondorcetAsync(scored, originalPrompt, ct).ConfigureAwait(false),
             ElectionStrategy.InstantRunoff => ElectByInstantRunoff(scored),
             ElectionStrategy.ApprovalVoting => ElectByApproval(scored, threshold: 0.6),
-            ElectionStrategy.MasterDecision => await ElectByMasterDecisionAsync(scored, originalPrompt, ct),
+            ElectionStrategy.MasterDecision => await ElectByMasterDecisionAsync(scored, originalPrompt, ct).ConfigureAwait(false),
             _ => ElectByMajority(scored)
         };
 
@@ -141,7 +141,7 @@ public sealed partial class MasterModelElection : IDisposable
         // If master pathway available, get its evaluation
         if (_masterPathway?.IsHealthy == true)
         {
-            scored = await EnhanceWithMasterEvaluationAsync(scored, originalPrompt, ct);
+            scored = await EnhanceWithMasterEvaluationAsync(scored, originalPrompt, ct).ConfigureAwait(false);
         }
 
         return scored;
@@ -160,7 +160,7 @@ public sealed partial class MasterModelElection : IDisposable
             var evaluationPrompt = BuildEvaluationPrompt(candidates, originalPrompt);
 
             var masterResponse = await _masterPathway!.CircuitBreaker.ExecuteAsync(async () =>
-                await _masterPathway.Model.GenerateTextAsync(evaluationPrompt, ct));
+                await _masterPathway.Model.GenerateTextAsync(evaluationPrompt, ct).ConfigureAwait(false)).ConfigureAwait(false);
 
             var masterScores = ParseMasterScores(masterResponse, candidates.Count);
 
@@ -176,7 +176,7 @@ public sealed partial class MasterModelElection : IDisposable
                 "Master model evaluation complete",
                 DateTime.UtcNow));
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Master evaluation failed, use heuristic scores only
             _electionEvents.OnNext(new ElectionEvent(

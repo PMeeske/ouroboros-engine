@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -41,11 +41,11 @@ public abstract class TapoDeviceOperationsBase
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             AddAuthorizationHeader(request);
             
-            var response = await HttpClient.SendAsync(request, ct);
+            var response = await HttpClient.SendAsync(request, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
-                var error = await response.Content.ReadAsStringAsync(ct);
+                var error = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 Logger?.LogError("Action {Action} failed for device {Device}: {Error}", action, deviceName, error);
                 return Result<Unit>.Failure($"Action failed: {response.StatusCode}");
             }
@@ -61,7 +61,7 @@ public abstract class TapoDeviceOperationsBase
             Logger?.LogError(ex, "HTTP error executing action {Action} for device {Device}", action, deviceName);
             return Result<Unit>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Logger?.LogError(ex, "Error executing action {Action} for device {Device}", action, deviceName);
             return Result<Unit>.Failure($"Action failed: {ex.Message}");
@@ -81,16 +81,16 @@ public abstract class TapoDeviceOperationsBase
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             AddAuthorizationHeader(request);
             
-            var response = await HttpClient.SendAsync(request, ct);
+            var response = await HttpClient.SendAsync(request, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
-                var error = await response.Content.ReadAsStringAsync(ct);
+                var error = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 Logger?.LogError("Action {Action} failed for device {Device}: {Error}", action, deviceName, error);
                 return Result<JsonDocument>.Failure($"Action failed: {response.StatusCode}");
             }
 
-            var json = await response.Content.ReadFromJsonAsync<JsonDocument>(JsonOptions, ct);
+            var json = await response.Content.ReadFromJsonAsync<JsonDocument>(JsonOptions, ct).ConfigureAwait(false);
             return json != null
                 ? Result<JsonDocument>.Success(json)
                 : Result<JsonDocument>.Failure("Empty response");
@@ -104,7 +104,7 @@ public abstract class TapoDeviceOperationsBase
             Logger?.LogError(ex, "HTTP error executing action {Action} for device {Device}", action, deviceName);
             return Result<JsonDocument>.Failure($"HTTP error: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (System.Text.Json.JsonException ex)
         {
             Logger?.LogError(ex, "Error executing action {Action} for device {Device}", action, deviceName);
             return Result<JsonDocument>.Failure($"Action failed: {ex.Message}");

@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using Polly;
 using Polly.Retry;
 
@@ -108,7 +108,7 @@ public sealed class LiteLLMEmbeddingModel : IEmbeddingModel
                 }
             }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // LiteLLM proxy not reachable or error occurred -> fall back to deterministic embedding
         }

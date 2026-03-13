@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -98,16 +98,16 @@ public sealed class TapoRestClient : IDisposable
         try
         {
             var loginRequest = new { password };
-            var response = await _httpClient.PostAsJsonAsync("/login", loginRequest, _jsonOptions, ct);
+            var response = await _httpClient.PostAsJsonAsync("/login", loginRequest, _jsonOptions, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
-                var error = await response.Content.ReadAsStringAsync(ct);
+                var error = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger?.LogError("Login failed with status {StatusCode}: {Error}", response.StatusCode, error);
                 return Result<string>.Failure($"Login failed: {response.StatusCode}");
             }
 
-            _sessionId = await response.Content.ReadAsStringAsync(ct);
+            _sessionId = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             
             _logger?.LogInformation("Successfully authenticated with Tapo REST API");
             return Result<string>.Success(_sessionId);
@@ -143,15 +143,15 @@ public sealed class TapoRestClient : IDisposable
             using var request = new HttpRequestMessage(HttpMethod.Get, "/devices");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
             
-            var response = await _httpClient.SendAsync(request, ct);
+            var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var error = await response.Content.ReadAsStringAsync(ct);
+                var error = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger?.LogError("Get devices failed: {Error}", error);
                 return Result<List<TapoDevice>>.Failure($"Get devices failed: {response.StatusCode}");
             }
 
-            var devices = await response.Content.ReadFromJsonAsync<List<TapoDevice>>(_jsonOptions, ct);
+            var devices = await response.Content.ReadFromJsonAsync<List<TapoDevice>>(_jsonOptions, ct).ConfigureAwait(false);
             return devices != null
                 ? Result<List<TapoDevice>>.Success(devices)
                 : Result<List<TapoDevice>>.Failure("No devices returned");
@@ -187,15 +187,15 @@ public sealed class TapoRestClient : IDisposable
             using var request = new HttpRequestMessage(HttpMethod.Get, "/actions");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
             
-            var response = await _httpClient.SendAsync(request, ct);
+            var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var error = await response.Content.ReadAsStringAsync(ct);
+                var error = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger?.LogError("Get actions failed: {Error}", error);
                 return Result<List<string>>.Failure($"Get actions failed: {response.StatusCode}");
             }
 
-            var actions = await response.Content.ReadFromJsonAsync<List<string>>(_jsonOptions, ct);
+            var actions = await response.Content.ReadFromJsonAsync<List<string>>(_jsonOptions, ct).ConfigureAwait(false);
             return actions != null
                 ? Result<List<string>>.Success(actions)
                 : Result<List<string>>.Failure("No actions returned");
@@ -235,11 +235,11 @@ public sealed class TapoRestClient : IDisposable
             using var request = new HttpRequestMessage(HttpMethod.Get, $"/refresh-session?device={Uri.EscapeDataString(deviceName)}");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
             
-            var response = await _httpClient.SendAsync(request, ct);
+            var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
-                var error = await response.Content.ReadAsStringAsync(ct);
+                var error = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger?.LogError("Session refresh failed for device {Device}: {Error}", deviceName, error);
                 return Result<Unit>.Failure($"Session refresh failed: {response.StatusCode}");
             }
@@ -278,11 +278,11 @@ public sealed class TapoRestClient : IDisposable
             using var request = new HttpRequestMessage(HttpMethod.Post, "/reload-config");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
             
-            var response = await _httpClient.SendAsync(request, ct);
+            var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
-                var error = await response.Content.ReadAsStringAsync(ct);
+                var error = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger?.LogError("Config reload failed: {Error}", error);
                 return Result<Unit>.Failure($"Config reload failed: {response.StatusCode}");
             }
@@ -321,15 +321,15 @@ public sealed class TapoRestClient : IDisposable
             using var request = new HttpRequestMessage(HttpMethod.Post, "/discover");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
 
-            var response = await _httpClient.SendAsync(request, ct);
+            var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                var error = await response.Content.ReadAsStringAsync(ct);
+                var error = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 _logger?.LogError("Discovery failed: {Error}", error);
                 return Result<List<TapoDevice>>.Failure($"Discovery failed: {response.StatusCode}");
             }
 
-            var devices = await response.Content.ReadFromJsonAsync<List<TapoDevice>>(_jsonOptions, ct);
+            var devices = await response.Content.ReadFromJsonAsync<List<TapoDevice>>(_jsonOptions, ct).ConfigureAwait(false);
             return devices != null
                 ? Result<List<TapoDevice>>.Success(devices)
                 : Result<List<TapoDevice>>.Failure("No devices returned from discovery");
@@ -359,11 +359,11 @@ public sealed class TapoRestClient : IDisposable
     {
         try
         {
-            var response = await _httpClient.GetAsync("/health", ct);
+            var response = await _httpClient.GetAsync("/health", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<string>.Failure($"Health check failed: {response.StatusCode}");
 
-            var body = await response.Content.ReadAsStringAsync(ct);
+            var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return Result<string>.Success(body);
         }
         catch (OperationCanceledException)

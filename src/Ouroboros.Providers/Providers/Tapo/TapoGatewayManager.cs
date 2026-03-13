@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Ouroboros.Providers.Tapo;
@@ -49,7 +49,7 @@ public sealed class TapoGatewayManager : IAsyncDisposable
         Port = port;
 
         // Find Python executable
-        var pythonPath = await FindPythonAsync(ct);
+        var pythonPath = await FindPythonAsync(ct).ConfigureAwait(false);
         if (pythonPath == null)
         {
             _logger?.LogError("Python not found. Install Python 3.10+ to use the Tapo Gateway");
@@ -111,11 +111,11 @@ public sealed class TapoGatewayManager : IAsyncDisposable
             _logger?.LogInformation("Gateway process started (PID {Pid}), waiting for health check...", _process.Id);
 
             // Wait for the gateway to become healthy
-            var healthy = await WaitForHealthAsync(TimeSpan.FromSeconds(30), ct);
+            var healthy = await WaitForHealthAsync(TimeSpan.FromSeconds(30), ct).ConfigureAwait(false);
             if (!healthy)
             {
                 _logger?.LogError("Gateway failed health check after 30s");
-                await StopAsync();
+                await StopAsync().ConfigureAwait(false);
                 return false;
             }
 
@@ -123,7 +123,7 @@ public sealed class TapoGatewayManager : IAsyncDisposable
             return true;
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             _logger?.LogError(ex, "Failed to start gateway process");
             return false;
@@ -148,7 +148,7 @@ public sealed class TapoGatewayManager : IAsyncDisposable
 
             try
             {
-                var response = await httpClient.GetAsync($"{BaseUrl}/health", ct);
+                var response = await httpClient.GetAsync($"{BaseUrl}/health", ct).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                     return true;
             }
@@ -161,7 +161,7 @@ public sealed class TapoGatewayManager : IAsyncDisposable
                 // HTTP timeout - server not ready
             }
 
-            await Task.Delay(500, ct);
+            await Task.Delay(500, ct).ConfigureAwait(false);
         }
 
         return false;
@@ -181,11 +181,11 @@ public sealed class TapoGatewayManager : IAsyncDisposable
             {
                 _logger?.LogInformation("Stopping gateway process (PID {Pid})...", _process.Id);
                 _process.Kill(entireProcessTree: true);
-                await _process.WaitForExitAsync();
+                await _process.WaitForExitAsync().ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogWarning(ex, "Error stopping gateway process");
         }
@@ -220,15 +220,15 @@ public sealed class TapoGatewayManager : IAsyncDisposable
                 using var proc = Process.Start(psi);
                 if (proc == null) continue;
 
-                var output = await proc.StandardOutput.ReadToEndAsync(ct);
-                var error = await proc.StandardError.ReadToEndAsync(ct);
-                await proc.WaitForExitAsync(ct);
+                var output = await proc.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
+                var error = await proc.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
+                await proc.WaitForExitAsync(ct).ConfigureAwait(false);
 
                 var version = (output + error).Trim();
                 if (version.StartsWith("Python 3", StringComparison.OrdinalIgnoreCase))
                     return name;
             }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // This executable name not found
             }
@@ -239,6 +239,6 @@ public sealed class TapoGatewayManager : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await StopAsync();
+        await StopAsync().ConfigureAwait(false);
     }
 }

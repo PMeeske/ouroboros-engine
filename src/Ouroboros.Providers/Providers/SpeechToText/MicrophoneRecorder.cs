@@ -1,4 +1,4 @@
-// <copyright file="MicrophoneRecorder.cs" company="Ouroboros">
+﻿// <copyright file="MicrophoneRecorder.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -52,11 +52,11 @@ public static partial class MicrophoneRecorder
                 return Result<string, string>.Failure("Failed to start audio recorder");
             }
 
-            await process.WaitForExitAsync(ct);
+            await process.WaitForExitAsync(ct).ConfigureAwait(false);
 
             if (process.ExitCode != 0)
             {
-                string error = await process.StandardError.ReadToEndAsync(ct);
+                string error = await process.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
                 return Result<string, string>.Failure($"Recording failed: {error}");
             }
 
@@ -131,17 +131,17 @@ public static partial class MicrophoneRecorder
             Task processTask = process.WaitForExitAsync(ct);
 
             // Wait for either key press or process exit
-            await Task.WhenAny(keyTask, processTask);
+            await Task.WhenAny(keyTask, processTask).ConfigureAwait(false);
 
             // If process is still running, kill it
             if (!process.HasExited)
             {
                 process.Kill();
-                await process.WaitForExitAsync(ct);
+                await process.WaitForExitAsync(ct).ConfigureAwait(false);
             }
 
             // Give a moment for file to be finalized
-            await Task.Delay(100, ct);
+            await Task.Delay(100, ct).ConfigureAwait(false);
 
             if (!File.Exists(filePath))
             {
@@ -176,14 +176,14 @@ public static partial class MicrophoneRecorder
         string format = "wav",
         CancellationToken ct = default)
     {
-        Result<string, string> recordResult = await RecordAsync(durationSeconds, null, format, ct);
+        Result<string, string> recordResult = await RecordAsync(durationSeconds, null, format, ct).ConfigureAwait(false);
 
         return await recordResult.Match<Task<Result<byte[], string>>>(
             async path =>
             {
                 try
                 {
-                    byte[] data = await File.ReadAllBytesAsync(path, ct);
+                    byte[] data = await File.ReadAllBytesAsync(path, ct).ConfigureAwait(false);
 
                     // Clean up temp file
                     try
@@ -202,7 +202,7 @@ public static partial class MicrophoneRecorder
                     return Result<byte[], string>.Failure($"Failed to read recording: {ex.Message}");
                 }
             },
-            error => Task.FromResult(Result<byte[], string>.Failure(error)));
+            error => Task.FromResult(Result<byte[], string>.Failure(error))).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -235,15 +235,15 @@ public static partial class MicrophoneRecorder
     {
         if (OperatingSystem.IsWindows())
         {
-            return await RunCommandAsync("ffmpeg", "-list_devices true -f dshow -i dummy 2>&1");
+            return await RunCommandAsync("ffmpeg", "-list_devices true -f dshow -i dummy 2>&1").ConfigureAwait(false);
         }
         else if (OperatingSystem.IsMacOS())
         {
-            return await RunCommandAsync("ffmpeg", "-f avfoundation -list_devices true -i \"\" 2>&1");
+            return await RunCommandAsync("ffmpeg", "-f avfoundation -list_devices true -i \"\" 2>&1").ConfigureAwait(false);
         }
         else if (OperatingSystem.IsLinux())
         {
-            return await RunCommandAsync("arecord", "-l");
+            return await RunCommandAsync("arecord", "-l").ConfigureAwait(false);
         }
 
         return "Unable to list devices on this platform";

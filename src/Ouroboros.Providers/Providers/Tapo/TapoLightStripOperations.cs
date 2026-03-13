@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Abstractions;
 
@@ -26,7 +26,7 @@ public sealed class TapoLightStripOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync("l900/on", deviceName, ct);
+        return await ExecuteActionAsync("l900/on", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ public sealed class TapoLightStripOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync("l900/off", deviceName, ct);
+        return await ExecuteActionAsync("l900/off", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -51,7 +51,7 @@ public sealed class TapoLightStripOperations : TapoDeviceOperationsBase
         if (level > 100)
             return Result<Unit>.Failure("Brightness level must be between 0 and 100");
 
-        return await ExecuteActionAsync($"l900/set-brightness?level={level}", deviceName, ct);
+        return await ExecuteActionAsync($"l900/set-brightness?level={level}", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -65,7 +65,7 @@ public sealed class TapoLightStripOperations : TapoDeviceOperationsBase
         return await ExecuteActionAsync(
             $"l900/set-color?color.red={color.Red}&color.green={color.Green}&color.blue={color.Blue}",
             deviceName,
-            ct);
+            ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -82,7 +82,7 @@ public sealed class TapoLightStripOperations : TapoDeviceOperationsBase
         if (saturation > 100)
             return Result<Unit>.Failure("Saturation must be between 0 and 100");
 
-        return await ExecuteActionAsync($"l900/set-hue-saturation?hue={hue}&saturation={saturation}", deviceName, ct);
+        return await ExecuteActionAsync($"l900/set-hue-saturation?hue={hue}&saturation={saturation}", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -93,7 +93,7 @@ public sealed class TapoLightStripOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync($"l900/set-color-temperature?color_temperature={temperature}", deviceName, ct);
+        return await ExecuteActionAsync($"l900/set-color-temperature?color_temperature={temperature}", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -104,7 +104,7 @@ public sealed class TapoLightStripOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<JsonDocument>.Failure("Device name is required");
 
-        return await GetJsonResponseAsync("l900/get-device-info", deviceName, ct);
+        return await GetJsonResponseAsync("l900/get-device-info", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -115,6 +115,6 @@ public sealed class TapoLightStripOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<JsonDocument>.Failure("Device name is required");
 
-        return await GetJsonResponseAsync("l900/get-device-usage", deviceName, ct);
+        return await GetJsonResponseAsync("l900/get-device-usage", deviceName, ct).ConfigureAwait(false);
     }
 }

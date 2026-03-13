@@ -1,4 +1,4 @@
-// <copyright file="ServiceCollectionExtensions.cs" company="Ouroboros">
+﻿// <copyright file="ServiceCollectionExtensions.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
@@ -53,7 +53,7 @@ public static class ServiceCollectionExtensions
                         _ => new HttpOpenAiCompatibleChatModel(endpoint!, apiKey!, model!),
                     };
                 }
-                catch
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     // Ignore and fall back to local Ollama below.
                 }
@@ -67,7 +67,7 @@ public static class ServiceCollectionExtensions
                 adapter.Options = preset;
                 adapter.KeepAlive = keepAlive;
             }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // Best-effort mapping; if detection fails we keep provider defaults.
             }

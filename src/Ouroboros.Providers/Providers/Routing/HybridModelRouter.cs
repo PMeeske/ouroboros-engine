@@ -1,4 +1,4 @@
-// <copyright file="HybridModelRouter.cs" company="Ouroboros">
+﻿// <copyright file="HybridModelRouter.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
@@ -54,11 +54,11 @@ public sealed class HybridModelRouter : Ouroboros.Abstractions.Core.IChatComplet
         try
         {
             // Attempt generation with selected model
-            string result = await selectedModel.GenerateTextAsync(prompt, ct);
+            string result = await selectedModel.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             return result;
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // If selected model fails and we have a fallback, try it
             if (_config.FallbackModel != null && selectedModel != _config.FallbackModel)
@@ -66,10 +66,10 @@ public sealed class HybridModelRouter : Ouroboros.Abstractions.Core.IChatComplet
                 System.Diagnostics.Trace.TraceWarning("[HybridModelRouter] Primary model failed ({0}), trying fallback", ex.Message);
                 try
                 {
-                    return await _config.FallbackModel.GenerateTextAsync(prompt, ct);
+                    return await _config.FallbackModel.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception fallbackEx)
+                catch (Exception fallbackEx) when (fallbackEx is not OperationCanceledException)
                 {
                     System.Diagnostics.Trace.TraceWarning("[HybridModelRouter] Fallback also failed: {0}", fallbackEx.Message);
                 }

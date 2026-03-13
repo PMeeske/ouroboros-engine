@@ -1,4 +1,4 @@
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
 
 namespace Ouroboros.Providers;
 
@@ -154,7 +154,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
-        var response = await GenerateWithThinkingAsync(prompt, ct);
+        var response = await GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
         return response.HasThinking ? response.ToFormattedString() : response.Content;
     }
 
@@ -193,11 +193,11 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 ThinkingResponse result;
                 if (model is IThinkingChatModel thinkingModel)
                 {
-                    result = await thinkingModel.GenerateWithThinkingAsync(prompt, ct);
+                    result = await thinkingModel.GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
                 }
                 else
                 {
-                    string text = await model.GenerateTextAsync(prompt, ct);
+                    string text = await model.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
                     result = new ThinkingResponse(null, text);
                 }
 
@@ -289,7 +289,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                             {
                                 hasContent = true;
                                 observer.OnNext(chunk);
-                            }, token);
+                            }, token).ConfigureAwait(false);
 
                         if (hasContent)
                         {
@@ -303,7 +303,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                     else
                     {
                         // Fall back to non-streaming
-                        string result = await model.GenerateTextAsync(prompt, token);
+                        string result = await model.GenerateTextAsync(prompt, token).ConfigureAwait(false);
                         if (!result.Contains("-fallback:"))
                         {
                             Interlocked.Increment(ref stats.SuccessfulRequests);
@@ -323,7 +323,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                     return;
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     Interlocked.Increment(ref stats.FailedRequests);
                     Interlocked.Increment(ref stats.ConsecutiveFailures);

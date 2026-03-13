@@ -1,4 +1,4 @@
-// <copyright file="AudioPlayer.cs" company="Ouroboros">
+﻿// <copyright file="AudioPlayer.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -31,15 +31,15 @@ public static class AudioPlayer
 
         try
         {
-            await File.WriteAllBytesAsync(tempFile, audioData, ct);
-            return await PlayFileAsync(tempFile, ct);
+            await File.WriteAllBytesAsync(tempFile, audioData, ct).ConfigureAwait(false);
+            return await PlayFileAsync(tempFile, ct).ConfigureAwait(false);
         }
         finally
         {
             // Clean up temp file after a delay to ensure playback started
             _ = Task.Run(async () =>
             {
-                await Task.Delay(30000, CancellationToken.None); // Wait 30 seconds
+                await Task.Delay(30000, CancellationToken.None).ConfigureAwait(false); // Wait 30 seconds
                 try
                 {
                     if (File.Exists(tempFile))
@@ -47,7 +47,7 @@ public static class AudioPlayer
                         File.Delete(tempFile);
                     }
                 }
-                catch
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     // Ignore cleanup errors
                 }
@@ -86,11 +86,11 @@ public static class AudioPlayer
                 return Result<bool, string>.Failure("Failed to start audio player");
             }
 
-            await process.WaitForExitAsync(ct);
+            await process.WaitForExitAsync(ct).ConfigureAwait(false);
             return Result<bool, string>.Success(true);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             return Result<bool, string>.Failure($"Playback failed: {ex.Message}");
         }
@@ -216,7 +216,7 @@ public static class AudioPlayer
             process?.WaitForExit(1000);
             return process?.ExitCode == 0;
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return false;
         }

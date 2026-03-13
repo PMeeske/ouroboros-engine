@@ -1,4 +1,4 @@
-// <copyright file="WhisperNetService.Audio.cs" company="Ouroboros">
+﻿// <copyright file="WhisperNetService.Audio.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -18,7 +18,7 @@ public sealed partial class WhisperNetService
         try
         {
             // Read WAV file and convert to float samples
-            await using var fileStream = File.OpenRead(wavPath);
+            using var fileStream = File.OpenRead(wavPath);
             using var reader = new BinaryReader(fileStream);
 
             // Read WAV header
@@ -27,10 +27,10 @@ public sealed partial class WhisperNetService
             {
                 // Try to convert with ffmpeg first
                 string convertedPath = Path.Combine(Path.GetTempPath(), $"whisper_converted_{Guid.NewGuid()}.wav");
-                var convertResult = await ConvertToWavAsync(wavPath, ct, convertedPath);
+                var convertResult = await ConvertToWavAsync(wavPath, ct, convertedPath).ConfigureAwait(false);
                 if (convertResult.IsSuccess)
                 {
-                    var samples = await ReadAudioSamplesAsync(convertedPath, ct);
+                    var samples = await ReadAudioSamplesAsync(convertedPath, ct).ConfigureAwait(false);
                     try { File.Delete(convertedPath); } catch (IOException) { /* Intentional: best-effort temp file cleanup */ }
                     return samples;
                 }
@@ -172,7 +172,7 @@ public sealed partial class WhisperNetService
                 return Result<string, string>.Failure("Failed to start ffmpeg");
             }
 
-            await process.WaitForExitAsync(ct);
+            await process.WaitForExitAsync(ct).ConfigureAwait(false);
 
             if (process.ExitCode != 0 || !File.Exists(outputPath))
             {

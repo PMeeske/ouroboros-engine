@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
@@ -140,10 +140,10 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
 
         if (pathway.Model is IThinkingChatModel thinkingModel)
         {
-            return await thinkingModel.GenerateWithThinkingAsync(prompt, ct);
+            return await thinkingModel.GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
         }
 
-        string result = await pathway.Model.GenerateTextAsync(prompt, ct);
+        string result = await pathway.Model.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
         return new ThinkingResponse(null, result);
     }
 
@@ -209,17 +209,17 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
                     if (pathway.Model is IStreamingThinkingChatModel streaming)
                     {
                         await streaming.StreamWithThinkingAsync(prompt, token)
-                            .ForEachAsync(chunk => observer.OnNext(chunk), token);
+                            .ForEachAsync(chunk => observer.OnNext(chunk), token).ConfigureAwait(false);
                     }
                     else
                     {
-                        string result = await pathway.Model.GenerateTextAsync(prompt, token);
+                        string result = await pathway.Model.GenerateTextAsync(prompt, token).ConfigureAwait(false);
                         observer.OnNext((false, result));
                     }
 
                     pathway.RecordActivation(TimeSpan.Zero);
                     observer.OnCompleted();
-                });
+                }).ConfigureAwait(false);
             }
             catch (OperationCanceledException) { throw; }
             catch (InvalidOperationException ex)

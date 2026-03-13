@@ -1,4 +1,4 @@
-// <copyright file="TapoEmbodimentProvider.Sensors.cs" company="Ouroboros">
+﻿// <copyright file="TapoEmbodimentProvider.Sensors.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -130,7 +130,7 @@ public sealed partial class TapoEmbodimentProvider
             return Result<PerceptionData>.Failure($"RTSP client not found for camera '{cameraName}'");
         }
 
-        var frameResult = await rtspClient.CaptureFrameAsync(ct);
+        var frameResult = await rtspClient.CaptureFrameAsync(ct).ConfigureAwait(false);
         if (frameResult.IsFailure)
         {
             return Result<PerceptionData>.Failure($"Frame capture failed: {frameResult.Error}");
@@ -179,7 +179,7 @@ public sealed partial class TapoEmbodimentProvider
             MaxObjects: _visionConfig.MaxObjectsPerFrame,
             ConfidenceThreshold: _visionConfig.ConfidenceThreshold);
 
-        var result = await _visionModel.AnalyzeImageAsync(frameData, "jpeg", options, ct);
+        var result = await _visionModel.AnalyzeImageAsync(frameData, "jpeg", options, ct).ConfigureAwait(false);
 
         if (result.IsSuccess)
         {
@@ -217,10 +217,10 @@ public sealed partial class TapoEmbodimentProvider
             return Result<string>.Failure("REST client not configured - using RTSP mode");
         }
 
-        var result = await _tapoClient.LoginAsync(serverPassword, ct);
+        var result = await _tapoClient.LoginAsync(serverPassword, ct).ConfigureAwait(false);
         if (result.IsSuccess)
         {
-            await RefreshDeviceInventoryAsync(ct);
+            await RefreshDeviceInventoryAsync(ct).ConfigureAwait(false);
         }
 
         return result;

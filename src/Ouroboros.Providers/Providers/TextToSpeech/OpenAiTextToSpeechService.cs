@@ -1,4 +1,4 @@
-// <copyright file="OpenAiTextToSpeechService.cs" company="Ouroboros">
+﻿// <copyright file="OpenAiTextToSpeechService.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -53,7 +53,23 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
         _endpoint = endpoint ?? "https://api.openai.com/v1";
         _defaultModel = model;
         _ownsClient = httpClient == null;
-        _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
+        _httpClient = httpClient ?? CreateDefaultHttpClient();
+    }
+
+    private static HttpClient CreateDefaultHttpClient()
+    {
+        var handler = new SocketsHttpHandler();
+        try
+        {
+            handler.PooledConnectionLifetime = TimeSpan.FromMinutes(2);
+            var client = new HttpClient(handler, disposeHandler: true);
+            handler = null!; // Ownership transferred to HttpClient
+            return client;
+        }
+        finally
+        {
+            handler?.Dispose();
+        }
     }
 
     /// <inheritdoc/>
@@ -100,22 +116,22 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
             request.Content = content;
 
-            HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
+            HttpResponseMessage response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
-                string errorText = await response.Content.ReadAsStringAsync(ct);
+                string errorText = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 return Result<SpeechResult, string>.Failure(
                     $"TTS API error ({response.StatusCode}): {errorText}");
             }
 
-            byte[] audioData = await response.Content.ReadAsByteArrayAsync(ct);
+            byte[] audioData = await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
 
             return Result<SpeechResult, string>.Success(
                 new SpeechResult(audioData, format));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (System.Text.Json.JsonException ex)
         {
             return Result<SpeechResult, string>.Failure($"Speech synthesis failed: {ex.Message}");
         }
@@ -138,7 +154,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
             }
         }
 
-        Result<SpeechResult, string> result = await SynthesizeAsync(text, options, ct);
+        Result<SpeechResult, string> result = await SynthesizeAsync(text, options, ct).ConfigureAwait(false);
 
         return result.Match(
             speech =>
@@ -155,7 +171,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
                     return Result<string, string>.Success(outputPath);
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                catch (IOException ex)
                 {
                     return Result<string, string>.Failure($"Failed to save audio file: {ex.Message}");
                 }
@@ -170,7 +186,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
         TextToSpeechOptions? options = null,
         CancellationToken ct = default)
     {
-        Result<SpeechResult, string> result = await SynthesizeAsync(text, options, ct);
+        Result<SpeechResult, string> result = await SynthesizeAsync(text, options, ct).ConfigureAwait(false);
 
         return result.Match(
             speech =>
@@ -181,7 +197,7 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
                     return Result<string, string>.Success(speech.Format);
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     return Result<string, string>.Failure($"Failed to write audio stream: {ex.Message}");
                 }
@@ -202,10 +218,10 @@ public sealed class OpenAiTextToSpeechService : ITextToSpeechService, IDisposabl
             using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"{_endpoint}/models");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
-            HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
+            HttpResponseMessage response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             return response.IsSuccessStatusCode;
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return false;
         }

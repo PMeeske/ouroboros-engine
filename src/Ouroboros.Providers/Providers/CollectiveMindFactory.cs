@@ -205,7 +205,7 @@ public static class CollectiveMindFactory
                 mind.AddPathway(name, type, model, endpoint, apiKey, settings);
             }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Provider not available, skip silently
         }

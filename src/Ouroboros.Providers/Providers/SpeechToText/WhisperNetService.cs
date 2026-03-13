@@ -1,4 +1,4 @@
-// <copyright file="WhisperNetService.cs" company="Ouroboros">
+﻿// <copyright file="WhisperNetService.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -97,7 +97,7 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
 
         if (extension != ".wav")
         {
-            var convertResult = await ConvertToWavAsync(filePath, ct);
+            var convertResult = await ConvertToWavAsync(filePath, ct).ConfigureAwait(false);
             if (!convertResult.IsSuccess)
             {
                 return Result<TranscriptionResult, string>.Failure(convertResult.Error!);
@@ -108,14 +108,14 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
 
         try
         {
-            var initResult = await EnsureInitializedAsync(ct);
+            var initResult = await EnsureInitializedAsync(ct).ConfigureAwait(false);
             if (!initResult.IsSuccess)
             {
                 return Result<TranscriptionResult, string>.Failure(initResult.Error!);
             }
 
             // Read and process audio
-            var samples = await ReadAudioSamplesAsync(wavPath, ct);
+            var samples = await ReadAudioSamplesAsync(wavPath, ct).ConfigureAwait(false);
             if (samples == null || samples.Length == 0)
             {
                 return Result<TranscriptionResult, string>.Failure("Failed to read audio samples");
@@ -125,7 +125,7 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
             var segments = new List<TranscriptionSegment>();
             var fullText = new System.Text.StringBuilder();
 
-            await foreach (var segment in _processor!.ProcessAsync(samples, ct))
+            await foreach (var segment in _processor!.ProcessAsync(samples, ct).ConfigureAwait(false))
             {
                 string text = segment.Text?.Trim() ?? "";
                 if (!string.IsNullOrEmpty(text))
@@ -175,12 +175,12 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
         string tempPath = Path.Combine(Path.GetTempPath(), $"whisper_{Guid.NewGuid()}{Path.GetExtension(fileName)}");
         try
         {
-            await using FileStream fileStream = File.Create(tempPath);
-            await audioStream.CopyToAsync(fileStream, ct);
-            await fileStream.FlushAsync(ct);
+            using FileStream fileStream = File.Create(tempPath);
+            await audioStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
+            await fileStream.FlushAsync(ct).ConfigureAwait(false);
             fileStream.Close();
 
-            return await TranscribeFileAsync(tempPath, options, ct);
+            return await TranscribeFileAsync(tempPath, options, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -198,8 +198,8 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
         TranscriptionOptions? options = null,
         CancellationToken ct = default)
     {
-        await using MemoryStream stream = new(audioData);
-        return await TranscribeStreamAsync(stream, fileName, options, ct);
+        using MemoryStream stream = new MemoryStream(audioData);
+        return await TranscribeStreamAsync(stream, fileName, options, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -211,7 +211,7 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
         // Whisper.net handles translation via language detection
         options ??= new TranscriptionOptions();
         var translationOptions = options with { Language = "en" };
-        return await TranscribeFileAsync(filePath, translationOptions, ct);
+        return await TranscribeFileAsync(filePath, translationOptions, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -219,7 +219,7 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
     {
         try
         {
-            var result = await EnsureInitializedAsync(ct);
+            var result = await EnsureInitializedAsync(ct).ConfigureAwait(false);
             return result.IsSuccess;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -235,7 +235,7 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
             return Result<bool, string>.Success(true);
         }
 
-        await _initLock.WaitAsync(ct);
+        await _initLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             if (_isInitialized && _processor != null)
@@ -260,9 +260,9 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
                 {
                     using var httpClient = new System.Net.Http.HttpClient();
                     var downloader = new WhisperGgmlDownloader(httpClient);
-                    await using var modelStream = await downloader.GetGgmlModelAsync(_modelType);
-                    await using var fileStream = File.Create(modelPath);
-                    await modelStream.CopyToAsync(fileStream, ct);
+                    using var modelStream = await downloader.GetGgmlModelAsync(_modelType).ConfigureAwait(false);
+                    using var fileStream = File.Create(modelPath);
+                    await modelStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
                     System.Diagnostics.Trace.TraceInformation("[whisper.net] Model downloaded to {0}", modelPath);
                 }
                 catch (OperationCanceledException) { throw; }

@@ -1,4 +1,4 @@
-// <copyright file="TapoEmbodimentProvider.cs" company="Ouroboros">
+﻿// <copyright file="TapoEmbodimentProvider.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -182,14 +182,14 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
             if (_rtspClientFactory != null)
             {
                 _logger?.LogInformation("Initializing RTSP camera connections...");
-                await InitializePtzClientsAsync(ct);
-                await RefreshRtspCameraInventoryAsync(ct);
+                await InitializePtzClientsAsync(ct).ConfigureAwait(false);
+                await RefreshRtspCameraInventoryAsync(ct).ConfigureAwait(false);
             }
 
             if (_tapoClient != null)
             {
                 _logger?.LogInformation("Initializing REST API device connections...");
-                var devicesResult = await _tapoClient.GetDevicesAsync(ct);
+                var devicesResult = await _tapoClient.GetDevicesAsync(ct).ConfigureAwait(false);
 
                 if (devicesResult.IsFailure)
                 {
@@ -198,7 +198,7 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
                 }
                 else
                 {
-                    await RefreshDeviceInventoryAsync(ct);
+                    await RefreshDeviceInventoryAsync(ct).ConfigureAwait(false);
                 }
             }
 
@@ -219,7 +219,7 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
             return Result<EmbodimentCapabilities>.Success(_capabilities);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to connect to Tapo provider");
             return Result<EmbodimentCapabilities>.Failure($"Connection failed: {ex.Message}");
@@ -240,11 +240,11 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
 
             RaiseEvent(EmbodimentProviderEventType.Disconnected);
 
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
             return Result<Unit>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Error disconnecting from Tapo provider");
             return Result<Unit>.Failure($"Disconnect failed: {ex.Message}");

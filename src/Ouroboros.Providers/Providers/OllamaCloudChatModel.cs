@@ -1,4 +1,4 @@
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
 using OllamaSharp;
 using OllamaSharp.Models;
 using Polly;
@@ -160,7 +160,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
         {
             // Deliberate cancellation (e.g. Racing mode found a winner) — not an error, don't log
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             System.Diagnostics.Trace.TraceWarning("[OllamaCloudChatModel] Error: {0}: {1}", ex.GetType().Name, ex.Message);
         }
@@ -174,7 +174,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
     /// <inheritdoc/>
     public async Task<ThinkingResponse> GenerateWithThinkingAsync(string prompt, CancellationToken ct = default)
     {
-        string rawText = await GenerateTextAsync(prompt, ct);
+        string rawText = await GenerateTextAsync(prompt, ct).ConfigureAwait(false);
         return ThinkingResponse.FromRawText(rawText);
     }
 
@@ -261,7 +261,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 observer.OnCompleted();
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 observer.OnError(ex);
             }
@@ -317,7 +317,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 observer.OnCompleted();
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 observer.OnError(ex);
             }

@@ -1,4 +1,4 @@
-// <copyright file="WhisperSpeechToTextService.cs" company="Ouroboros">
+﻿// <copyright file="WhisperSpeechToTextService.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -55,7 +55,23 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
         _endpoint = endpoint ?? "https://api.openai.com/v1";
         _model = model;
         _ownsClient = httpClient == null;
-        _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) });
+        _httpClient = httpClient ?? CreateDefaultHttpClient();
+    }
+
+    private static HttpClient CreateDefaultHttpClient()
+    {
+        var handler = new SocketsHttpHandler();
+        try
+        {
+            handler.PooledConnectionLifetime = TimeSpan.FromMinutes(2);
+            var client = new HttpClient(handler, disposeHandler: true);
+            handler = null!; // Ownership transferred to HttpClient
+            return client;
+        }
+        finally
+        {
+            handler?.Dispose();
+        }
     }
 
     /// <inheritdoc/>
@@ -85,8 +101,8 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
 
         try
         {
-            await using FileStream stream = File.OpenRead(filePath);
-            return await TranscribeStreamAsync(stream, Path.GetFileName(filePath), options, ct);
+            using FileStream stream = File.OpenRead(filePath);
+            return await TranscribeStreamAsync(stream, Path.GetFileName(filePath), options, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (IOException ex)
@@ -107,7 +123,7 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
             audioStream,
             fileName,
             options,
-            ct);
+            ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -117,8 +133,8 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
         TranscriptionOptions? options = null,
         CancellationToken ct = default)
     {
-        await using MemoryStream stream = new MemoryStream(audioData);
-        return await TranscribeStreamAsync(stream, fileName, options, ct);
+        using MemoryStream stream = new MemoryStream(audioData);
+        return await TranscribeStreamAsync(stream, fileName, options, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -134,13 +150,13 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
 
         try
         {
-            await using FileStream stream = File.OpenRead(filePath);
+            using FileStream stream = File.OpenRead(filePath);
             return await SendTranscriptionRequestAsync(
                 $"{_endpoint}/audio/translations",
                 stream,
                 Path.GetFileName(filePath),
                 options,
-                ct);
+                ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (IOException ex)
@@ -162,7 +178,7 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
             using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"{_endpoint}/models");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
-            HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
+            HttpResponseMessage response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             return response.IsSuccessStatusCode;
         }
         catch (HttpRequestException)
@@ -239,40 +255,37 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
         {
             using MultipartFormDataContent content = new MultipartFormDataContent();
 
-            // Add the audio file
-            StreamContent streamContent = new StreamContent(audioStream);
-            string mimeType = GetMimeType(Path.GetExtension(fileName));
-            streamContent.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
-            content.Add(streamContent, "file", fileName);
+            // Add the audio file (ownership transferred to MultipartFormDataContent)
+            AddStreamPart(content, audioStream, Path.GetExtension(fileName), fileName);
 
-            // Add model
-            content.Add(new StringContent(_model), "model");
+            // Add model (ownership transferred to MultipartFormDataContent)
+            AddStringPart(content, _model, "model");
 
             // Add optional parameters
             options ??= new TranscriptionOptions();
 
             if (!string.IsNullOrEmpty(options.Language))
             {
-                content.Add(new StringContent(options.Language), "language");
+                AddStringPart(content, options.Language, "language");
             }
 
             if (!string.IsNullOrEmpty(options.Prompt))
             {
-                content.Add(new StringContent(options.Prompt), "prompt");
+                AddStringPart(content, options.Prompt, "prompt");
             }
 
             if (options.Temperature.HasValue)
             {
-                content.Add(new StringContent(options.Temperature.Value.ToString("F2")), "temperature");
+                AddStringPart(content, options.Temperature.Value.ToString("F2"), "temperature");
             }
 
             // Request verbose_json for rich response
             string responseFormat = options.ResponseFormat == "text" ? "text" : "verbose_json";
-            content.Add(new StringContent(responseFormat), "response_format");
+            AddStringPart(content, responseFormat, "response_format");
 
             if (!string.IsNullOrEmpty(options.TimestampGranularity))
             {
-                content.Add(new StringContent(options.TimestampGranularity), "timestamp_granularities[]");
+                AddStringPart(content, options.TimestampGranularity, "timestamp_granularities[]");
             }
 
             // Send request
@@ -280,8 +293,8 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
             request.Content = content;
 
-            HttpResponseMessage response = await _httpClient.SendAsync(request, ct);
-            string responseText = await response.Content.ReadAsStringAsync(ct);
+            HttpResponseMessage response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
+            string responseText = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -302,6 +315,41 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
         catch (HttpRequestException ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Transcription failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Adds a string part to multipart content. Ownership is transferred to the parent content.
+    /// </summary>
+    private static void AddStringPart(MultipartFormDataContent parent, string value, string name)
+    {
+        StringContent? part = null;
+        try
+        {
+            part = new StringContent(value);
+            parent.Add(part, name);
+            part = null; // Ownership transferred
+        }
+        finally
+        {
+            part?.Dispose();
+        }
+    }
+
+    private static void AddStreamPart(MultipartFormDataContent parent, Stream stream, string extension, string fileName)
+    {
+        StreamContent? part = null;
+        try
+        {
+            part = new StreamContent(stream);
+            string mimeType = GetMimeType(extension);
+            part.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
+            parent.Add(part, "file", fileName);
+            part = null; // Ownership transferred
+        }
+        finally
+        {
+            part?.Dispose();
         }
     }
 

@@ -1,4 +1,4 @@
-// <copyright file="DockerMcpClient.cs" company="Ouroboros">
+﻿// <copyright file="DockerMcpClient.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -45,12 +45,12 @@ public sealed partial class DockerMcpClient : IDockerMcpClient, IDisposable
         try
         {
             var url = $"/{_options.ApiVersion}/containers/json?all={all.ToString().ToLowerInvariant()}";
-            var response = await _httpClient.GetAsync(url, ct);
+            var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<IReadOnlyList<DockerContainerInfo>, string>.Failure(
                     $"Failed to list containers: {response.StatusCode}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var items = JsonDocument.Parse(json).RootElement;
             var containers = new List<DockerContainerInfo>();
 
@@ -77,12 +77,12 @@ public sealed partial class DockerMcpClient : IDockerMcpClient, IDisposable
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/{_options.ApiVersion}/containers/{containerId}/json", ct);
+            var response = await _httpClient.GetAsync($"/{_options.ApiVersion}/containers/{containerId}/json", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<DockerContainerInfo, string>.Failure(
                     $"Failed to inspect container '{containerId}': {response.StatusCode}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var el = JsonDocument.Parse(json).RootElement;
             return Result<DockerContainerInfo, string>.Success(ParseContainerInspect(el));
         }
@@ -106,12 +106,12 @@ public sealed partial class DockerMcpClient : IDockerMcpClient, IDisposable
         try
         {
             var url = $"/{_options.ApiVersion}/containers/{containerId}/logs?stdout=true&stderr=true&tail={tail}";
-            var response = await _httpClient.GetAsync(url, ct);
+            var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<string, string>.Failure(
                     $"Failed to get logs for '{containerId}': {response.StatusCode}");
 
-            var logs = await response.Content.ReadAsStringAsync(ct);
+            var logs = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return Result<string, string>.Success(StripDockerStreamHeaders(logs));
         }
         catch (OperationCanceledException) { throw; }
@@ -129,7 +129,7 @@ public sealed partial class DockerMcpClient : IDockerMcpClient, IDisposable
         try
         {
             var response = await _httpClient.PostAsync(
-                $"/{_options.ApiVersion}/containers/{containerId}/start", null, ct);
+                $"/{_options.ApiVersion}/containers/{containerId}/start", null, ct).ConfigureAwait(false);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
                 return Result<string, string>.Success($"Container '{containerId}' already running");
@@ -156,7 +156,7 @@ public sealed partial class DockerMcpClient : IDockerMcpClient, IDisposable
         try
         {
             var response = await _httpClient.PostAsync(
-                $"/{_options.ApiVersion}/containers/{containerId}/stop?t={timeoutSeconds}", null, ct);
+                $"/{_options.ApiVersion}/containers/{containerId}/stop?t={timeoutSeconds}", null, ct).ConfigureAwait(false);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
                 return Result<string, string>.Success($"Container '{containerId}' already stopped");
@@ -183,7 +183,7 @@ public sealed partial class DockerMcpClient : IDockerMcpClient, IDisposable
         try
         {
             var url = $"/{_options.ApiVersion}/containers/{containerId}?force={force.ToString().ToLowerInvariant()}";
-            var response = await _httpClient.DeleteAsync(url, ct);
+            var response = await _httpClient.DeleteAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<string, string>.Failure(
                     $"Failed to remove container '{containerId}': {response.StatusCode}");
@@ -203,12 +203,12 @@ public sealed partial class DockerMcpClient : IDockerMcpClient, IDisposable
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/{_options.ApiVersion}/images/json", ct);
+            var response = await _httpClient.GetAsync($"/{_options.ApiVersion}/images/json", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<IReadOnlyList<DockerImageInfo>, string>.Failure(
                     $"Failed to list images: {response.StatusCode}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var items = JsonDocument.Parse(json).RootElement;
             var images = new List<DockerImageInfo>();
 
@@ -251,14 +251,14 @@ public sealed partial class DockerMcpClient : IDockerMcpClient, IDisposable
         try
         {
             var response = await _httpClient.PostAsync(
-                $"/{_options.ApiVersion}/images/create?fromImage={Uri.EscapeDataString(image)}", null, ct);
+                $"/{_options.ApiVersion}/images/create?fromImage={Uri.EscapeDataString(image)}", null, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
                 return Result<string, string>.Failure(
                     $"Failed to pull image '{image}': {response.StatusCode}");
 
             // Docker sends streaming JSON; read all to confirm success
-            await response.Content.ReadAsStringAsync(ct);
+            await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return Result<string, string>.Success($"Image '{image}' pulled successfully");
         }
         catch (OperationCanceledException) { throw; }
@@ -274,12 +274,12 @@ public sealed partial class DockerMcpClient : IDockerMcpClient, IDisposable
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/{_options.ApiVersion}/networks", ct);
+            var response = await _httpClient.GetAsync($"/{_options.ApiVersion}/networks", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<IReadOnlyList<DockerNetworkInfo>, string>.Failure(
                     $"Failed to list networks: {response.StatusCode}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var items = JsonDocument.Parse(json).RootElement;
             var networks = new List<DockerNetworkInfo>();
 
@@ -313,12 +313,12 @@ public sealed partial class DockerMcpClient : IDockerMcpClient, IDisposable
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/{_options.ApiVersion}/volumes", ct);
+            var response = await _httpClient.GetAsync($"/{_options.ApiVersion}/volumes", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<IReadOnlyList<DockerVolumeInfo>, string>.Failure(
                     $"Failed to list volumes: {response.StatusCode}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json).RootElement;
             var volumes = new List<DockerVolumeInfo>();
 
@@ -394,27 +394,27 @@ public sealed partial class DockerMcpClient : IDockerMcpClient, IDisposable
             };
 
             var nameQuery = !string.IsNullOrWhiteSpace(name) ? $"?name={Uri.EscapeDataString(name)}" : "";
-            var content = new StringContent(
+            using var content = new StringContent(
                 JsonSerializer.Serialize(createBody, _jsonOptions),
                 Encoding.UTF8, "application/json");
 
             // Create
             var createResponse = await _httpClient.PostAsync(
-                $"/{_options.ApiVersion}/containers/create{nameQuery}", content, ct);
+                $"/{_options.ApiVersion}/containers/create{nameQuery}", content, ct).ConfigureAwait(false);
 
             if (!createResponse.IsSuccessStatusCode)
             {
-                var err = await createResponse.Content.ReadAsStringAsync(ct);
+                var err = await createResponse.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 return Result<string, string>.Failure($"Failed to create container: {createResponse.StatusCode} — {err}");
             }
 
-            var createJson = await createResponse.Content.ReadAsStringAsync(ct);
+            var createJson = await createResponse.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var createDoc = JsonDocument.Parse(createJson);
             var containerId = createDoc.RootElement.GetProperty("Id").GetString()!;
 
             // Start
             var startResponse = await _httpClient.PostAsync(
-                $"/{_options.ApiVersion}/containers/{containerId}/start", null, ct);
+                $"/{_options.ApiVersion}/containers/{containerId}/start", null, ct).ConfigureAwait(false);
 
             if (!startResponse.IsSuccessStatusCode)
                 return Result<string, string>.Failure(

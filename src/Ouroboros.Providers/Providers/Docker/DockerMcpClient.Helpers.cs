@@ -1,4 +1,4 @@
-// <copyright file="DockerMcpClient.Helpers.cs" company="Ouroboros">
+﻿// <copyright file="DockerMcpClient.Helpers.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -13,52 +13,59 @@ public sealed partial class DockerMcpClient
 {
     private static HttpClient CreateHttpClient(DockerMcpClientOptions options)
     {
-        HttpMessageHandler handler;
+        HttpMessageHandler handler = CreateHandler(options);
+        try
+        {
+            var client = new HttpClient(handler, disposeHandler: true) { Timeout = options.Timeout };
+            handler = null!; // Ownership transferred to HttpClient
 
+            if (!string.IsNullOrWhiteSpace(options.BaseUrl))
+            {
+                client.BaseAddress = new Uri(options.BaseUrl);
+            }
+            else
+            {
+                client.BaseAddress = new Uri("http://localhost");
+            }
+
+            return client;
+        }
+        finally
+        {
+            (handler as IDisposable)?.Dispose();
+        }
+    }
+
+    private static HttpMessageHandler CreateHandler(DockerMcpClientOptions options)
+    {
         if (!string.IsNullOrWhiteSpace(options.BaseUrl))
         {
-            handler = new HttpClientHandler();
+            return new HttpClientHandler();
         }
-        else if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+
+        if (Environment.OSVersion.Platform == PlatformID.Win32NT)
         {
-            handler = new SocketsHttpHandler
+            var h = new SocketsHttpHandler();
+            h.ConnectCallback = async (context, ct) =>
             {
-                ConnectCallback = async (context, ct) =>
-                {
-                    var pipeName = options.PipePath.Replace(@"//./pipe/", "");
-                    var pipe = new System.IO.Pipes.NamedPipeClientStream(
-                        ".", pipeName, System.IO.Pipes.PipeDirection.InOut,
-                        System.IO.Pipes.PipeOptions.Asynchronous);
-                    await pipe.ConnectAsync(ct);
-                    return pipe;
-                }
+                var pipeName = options.PipePath.Replace(@"//./pipe/", "");
+                var pipe = new System.IO.Pipes.NamedPipeClientStream(
+                    ".", pipeName, System.IO.Pipes.PipeDirection.InOut,
+                    System.IO.Pipes.PipeOptions.Asynchronous);
+                await pipe.ConnectAsync(ct).ConfigureAwait(false);
+                return pipe;
             };
-        }
-        else
-        {
-            handler = new SocketsHttpHandler
-            {
-                ConnectCallback = async (context, ct) =>
-                {
-                    var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-                    await socket.ConnectAsync(new UnixDomainSocketEndPoint(options.SocketPath), ct);
-                    return new NetworkStream(socket, ownsSocket: true);
-                }
-            };
+            return h;
         }
 
-        var client = new HttpClient(handler) { Timeout = options.Timeout };
-
-        if (!string.IsNullOrWhiteSpace(options.BaseUrl))
+        var handler = new SocketsHttpHandler();
+        handler.ConnectCallback = async (context, ct) =>
         {
-            client.BaseAddress = new Uri(options.BaseUrl);
-        }
-        else
-        {
-            client.BaseAddress = new Uri("http://localhost");
-        }
-
-        return client;
+            var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+            await socket.ConnectAsync(new UnixDomainSocketEndPoint(options.SocketPath), ct).ConfigureAwait(false);
+            return new NetworkStream(socket, ownsSocket: true);
+        };
+        return handler;
     }
 
     private static DockerContainerInfo ParseContainerSummary(JsonElement el)

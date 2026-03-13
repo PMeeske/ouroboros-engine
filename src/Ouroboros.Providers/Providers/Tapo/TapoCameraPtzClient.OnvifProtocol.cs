@@ -1,4 +1,4 @@
-// <copyright file="TapoCameraPtzClient.OnvifProtocol.cs" company="Ouroboros">
+﻿// <copyright file="TapoCameraPtzClient.OnvifProtocol.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -31,7 +31,7 @@ public sealed partial class TapoCameraPtzClient
 
             var soapBody = BuildOnvifContinuousMove(
                 _profileToken ?? "profile_1", panSpeed, tiltSpeed, zoomSpeed);
-            var startResult = await SendOnvifCommandAsync(soapBody, ct);
+            var startResult = await SendOnvifCommandAsync(soapBody, ct).ConfigureAwait(false);
 
             if (startResult.IsFailure)
             {
@@ -39,10 +39,10 @@ public sealed partial class TapoCameraPtzClient
             }
 
             // Wait for the specified duration
-            await Task.Delay(durationMs, ct);
+            await Task.Delay(durationMs, ct).ConfigureAwait(false);
 
             // Stop the movement
-            await StopAsync(ct);
+            await StopAsync(ct).ConfigureAwait(false);
 
             sw.Stop();
 
@@ -68,7 +68,7 @@ public sealed partial class TapoCameraPtzClient
         }
         catch (OperationCanceledException)
         {
-            await StopAsync(CancellationToken.None);
+            await StopAsync(CancellationToken.None).ConfigureAwait(false);
             return Result<PtzMoveResult>.Failure("Movement cancelled");
         }
         catch (HttpRequestException ex)
@@ -84,19 +84,19 @@ public sealed partial class TapoCameraPtzClient
         {
             // Inject WS-Security header into SOAP envelope
             var authenticatedEnvelope = InjectWsseHeader(soapEnvelope);
-            var content = new StringContent(authenticatedEnvelope, Encoding.UTF8, "application/soap+xml");
+            using var content = new StringContent(authenticatedEnvelope, Encoding.UTF8, "application/soap+xml");
             content.Headers.Add("SOAPAction", "\"\"");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, _onvifUrl)
+            using var request = new HttpRequestMessage(HttpMethod.Post, _onvifUrl)
             {
                 Content = content
             };
 
-            var response = await _httpClient.SendAsync(request, ct);
+            var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
-                var body = await response.Content.ReadAsStringAsync(ct);
+                var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 return Result<string>.Success(body);
             }
 
@@ -104,17 +104,17 @@ public sealed partial class TapoCameraPtzClient
             if (response.StatusCode == HttpStatusCode.NotFound ||
                 response.StatusCode == HttpStatusCode.ServiceUnavailable)
             {
-                return await TryAlternateOnvifPortAsync(soapEnvelope, ct);
+                return await TryAlternateOnvifPortAsync(soapEnvelope, ct).ConfigureAwait(false);
             }
 
-            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            var errorBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return Result<string>.Failure(
                 $"ONVIF returned {response.StatusCode}: {errorBody}");
         }
         catch (HttpRequestException ex) when (ex.InnerException is System.Net.Sockets.SocketException)
         {
             // Port 2020 not available, try port 80
-            return await TryAlternateOnvifPortAsync(soapEnvelope, ct);
+            return await TryAlternateOnvifPortAsync(soapEnvelope, ct).ConfigureAwait(false);
         }
         catch (TaskCanceledException)
         {
@@ -143,18 +143,18 @@ public sealed partial class TapoCameraPtzClient
             {
                 try
                 {
-                    var content = new StringContent(soapEnvelope, Encoding.UTF8, "application/soap+xml");
-                    var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
-                    var response = await _httpClient.SendAsync(request, ct);
+                    using var content = new StringContent(soapEnvelope, Encoding.UTF8, "application/soap+xml");
+                    using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
+                    var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode)
                     {
-                        var body = await response.Content.ReadAsStringAsync(ct);
+                        var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                         _logger?.LogDebug("ONVIF succeeded on alternate URL: {Url}", url);
                         return Result<string>.Success(body);
                     }
                 }
-                catch
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     // Try next URL
                 }
@@ -184,13 +184,13 @@ public sealed partial class TapoCameraPtzClient
         var mediaUrl = $"http://{_cameraIp}:2020/onvif/media_service";
         try
         {
-            var content = new StringContent(getProfilesSoap, Encoding.UTF8, "application/soap+xml");
-            var request = new HttpRequestMessage(HttpMethod.Post, mediaUrl) { Content = content };
-            var response = await _httpClient.SendAsync(request, ct);
+            using var content = new StringContent(getProfilesSoap, Encoding.UTF8, "application/soap+xml");
+            using var request = new HttpRequestMessage(HttpMethod.Post, mediaUrl) { Content = content };
+            var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
-                var body = await response.Content.ReadAsStringAsync(ct);
+                var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
                 // Parse profile token from SOAP response
                 var tokenStart = body.IndexOf("token=\"", StringComparison.Ordinal);
                 if (tokenStart >= 0)

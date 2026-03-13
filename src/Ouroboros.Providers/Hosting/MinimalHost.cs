@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
 namespace Ouroboros.Interop.Hosting;
@@ -25,14 +25,14 @@ public static class MinimalHost
             | HostStepExtensions.Use(c => { c.AddCommandLine(args); return c; });
 
         // Apply configuration to settings
-        settings.Configuration = await configDef.Build()(settings.Configuration);
+        settings.Configuration = await configDef.Build()(settings.Configuration).ConfigureAwait(false);
 
         // Host builder pipeline (extensible)
         StepDefinition<HostApplicationBuilder, HostApplicationBuilder> hostDef = new StepDefinition<HostApplicationBuilder, HostApplicationBuilder>(b => b)
             // Add interchangeable model registration (OpenAI key presence => remote reflective provider else local Ollama)
             | HostStepExtensions.AddInterchangeableLlm();
 
-        HostApplicationBuilder builder = await hostDef.Build()(Host.CreateApplicationBuilder(settings));
+        HostApplicationBuilder builder = await hostDef.Build()(Host.CreateApplicationBuilder(settings)).ConfigureAwait(false);
         return builder.Build();
     }
 }

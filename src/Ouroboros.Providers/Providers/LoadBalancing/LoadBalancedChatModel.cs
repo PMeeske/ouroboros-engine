@@ -1,4 +1,4 @@
-// <copyright file="LoadBalancedChatModel.cs" company="Ouroboros">
+﻿// <copyright file="LoadBalancedChatModel.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
@@ -115,7 +115,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
             {
                 // Select a provider
                 Result<ProviderSelectionResult<Ouroboros.Abstractions.Core.IChatCompletionModel>, string> selectionResult =
-                    await _loadBalancer.SelectProviderAsync();
+                    await _loadBalancer.SelectProviderAsync().ConfigureAwait(false);
 
                 if (selectionResult.IsFailure)
                 {
@@ -136,7 +136,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
 
                 try
                 {
-                    string result = await selection.Provider.GenerateTextAsync(prompt, ct);
+                    string result = await selection.Provider.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
                     sw.Stop();
 
                     // Record successful execution

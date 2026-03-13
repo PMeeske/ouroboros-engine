@@ -1,4 +1,4 @@
-// <copyright file="LocalWindowsTtsService.cs" company="Ouroboros">
+﻿// <copyright file="LocalWindowsTtsService.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -82,7 +82,7 @@ Add-Type -AssemblyName System.Speech
 $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
 $synth.GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name }
 ";
-            var result = await RunPowerShellAsync(script);
+            var result = await RunPowerShellAsync(script).ConfigureAwait(false);
             return result.Match(
                 output => Result<List<string>, string>.Success(
                     output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()),
@@ -185,7 +185,7 @@ Write-Output 'OK'
 ";
             }
 
-            var runResult = await RunPowerShellAsync(script, ct);
+            var runResult = await RunPowerShellAsync(script, ct).ConfigureAwait(false);
 
             if (runResult.IsSuccess)
             {
@@ -194,7 +194,7 @@ Write-Output 'OK'
                     return Result<SpeechResult, string>.Failure("TTS failed to create audio file");
                 }
 
-                byte[] audioData = await File.ReadAllBytesAsync(tempFile, ct);
+                byte[] audioData = await File.ReadAllBytesAsync(tempFile, ct).ConfigureAwait(false);
 
                 // Clean up temp file
                 try { File.Delete(tempFile); } catch (IOException) { /* Intentional: best-effort temp file cleanup */ }
@@ -304,7 +304,7 @@ Write-Output 'OK'
         TextToSpeechOptions? options = null,
         CancellationToken ct = default)
     {
-        var result = await SynthesizeAsync(text, options, ct);
+        var result = await SynthesizeAsync(text, options, ct).ConfigureAwait(false);
 
         if (result.IsSuccess)
         {
@@ -316,7 +316,7 @@ Write-Output 'OK'
                     Directory.CreateDirectory(directory);
                 }
 
-                await File.WriteAllBytesAsync(outputPath, result.Value.AudioData, ct);
+                await File.WriteAllBytesAsync(outputPath, result.Value.AudioData, ct).ConfigureAwait(false);
                 return Result<string, string>.Success(outputPath);
             }
             catch (OperationCanceledException) { throw; }
@@ -338,13 +338,13 @@ Write-Output 'OK'
         TextToSpeechOptions? options = null,
         CancellationToken ct = default)
     {
-        var result = await SynthesizeAsync(text, options, ct);
+        var result = await SynthesizeAsync(text, options, ct).ConfigureAwait(false);
 
         if (result.IsSuccess)
         {
             try
             {
-                await outputStream.WriteAsync(result.Value.AudioData, ct);
+                await outputStream.WriteAsync(result.Value.AudioData, ct).ConfigureAwait(false);
                 return Result<string, string>.Success("wav");
             }
             catch (OperationCanceledException) { throw; }
@@ -367,7 +367,7 @@ Write-Output 'OK'
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task SpeakAsync(string text, CancellationToken ct = default)
     {
-        var result = await SpeakDirectAsync(text, ct);
+        var result = await SpeakDirectAsync(text, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             System.Diagnostics.Trace.TraceWarning("[Local TTS] Error: {0}", result.Error);
@@ -382,7 +382,7 @@ Write-Output 'OK'
     /// <returns>Result indicating success or failure.</returns>
     public async Task<Result<bool, string>> SpeakDirectAsync(string text, CancellationToken ct = default)
     {
-        return await SpeakWithToneAsync(text, _rate, _volume, ct);
+        return await SpeakWithToneAsync(text, _rate, _volume, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -429,7 +429,7 @@ $speechText = @'
 $synth.Speak($speechText)
 ";
 
-            var result = await RunPowerShellAsync(script, ct);
+            var result = await RunPowerShellAsync(script, ct).ConfigureAwait(false);
             return result.Match(
                 _ => Result<bool, string>.Success(true),
                 error => Result<bool, string>.Failure(error));
@@ -474,10 +474,10 @@ $synth.Speak($speechText)
                 return Result<string, string>.Failure("Failed to start PowerShell");
             }
 
-            string output = await process.StandardOutput.ReadToEndAsync(ct);
-            string error = await process.StandardError.ReadToEndAsync(ct);
+            string output = await process.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
+            string error = await process.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
 
-            await process.WaitForExitAsync(ct);
+            await process.WaitForExitAsync(ct).ConfigureAwait(false);
 
             if (process.ExitCode != 0 && !string.IsNullOrWhiteSpace(error))
             {

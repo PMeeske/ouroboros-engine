@@ -1,4 +1,4 @@
-// <copyright file="AzureNeuralTtsService.cs" company="Ouroboros">
+﻿// <copyright file="AzureNeuralTtsService.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -287,9 +287,9 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
             try
             {
                 _currentSynthesisCts?.Cancel();
-                await _synthesizer.StopSpeakingAsync();
+                await _synthesizer.StopSpeakingAsync().ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // Ignore errors during stop
             }
@@ -326,8 +326,8 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     {
         if (string.IsNullOrWhiteSpace(text)) return;
 
-        await StopSpeakingAsync();
-        await _speechLock.WaitAsync(ct);
+        await StopSpeakingAsync().ConfigureAwait(false);
+        await _speechLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             _isSynthesizing = true;
@@ -340,7 +340,7 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
             {
                 await RetryPipeline.ExecuteAsync(async token =>
                 {
-                    using SpeechSynthesisResult result = await _synthesizer!.SpeakSsmlAsync(ssml);
+                    using SpeechSynthesisResult result = await _synthesizer!.SpeakSsmlAsync(ssml).ConfigureAwait(false);
                     if (result.Reason == ResultReason.Canceled)
                     {
                         var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
@@ -354,8 +354,8 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
                         System.Diagnostics.Debug.WriteLine($"[Azure TTS] Synthesis complete, {result.AudioData.Length} bytes");
                         try { OnAudioSynthesized?.Invoke(result.AudioData); } catch (Exception ex) when (ex is not OperationCanceledException) { }
                     }
-                }, ct);
-            }, ct);
+                }, ct).ConfigureAwait(false);
+            }, ct).ConfigureAwait(false);
         }
         catch (BrokenCircuitException)
         {
@@ -368,7 +368,7 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
             await FallbackSpeakWithEdgeTtsAsync(text, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             System.Diagnostics.Trace.TraceWarning("[TTS] {0}: {1} -- falling back to Edge TTS Jenny", ex.GetType().Name, ex.Message);
             await FallbackSpeakWithEdgeTtsAsync(text, ct).ConfigureAwait(false);
@@ -401,7 +401,7 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
             var isWhisper = options?.IsWhisper ?? false;
             var ssml      = BuildSsml(text, isWhisper, cultureOverride: null, rate);
 
-            using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
+            using var result = await _synthesizer!.SpeakSsmlAsync(ssml).ConfigureAwait(false);
 
             if (result.Reason == ResultReason.SynthesizingAudioCompleted)
             {
@@ -422,7 +422,7 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
             return await FallbackSynthesizeWithEdgeTtsAsync(text, options, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             System.Diagnostics.Trace.TraceWarning("[Azure TTS] {0}: {1} -- falling back to Edge TTS Jenny", ex.GetType().Name, ex.Message);
             return await FallbackSynthesizeWithEdgeTtsAsync(text, options, ct).ConfigureAwait(false);
@@ -436,10 +436,10 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         TextToSpeechOptions? options = null,
         CancellationToken ct = default)
     {
-        var result = await SynthesizeAsync(text, options, ct);
+        var result = await SynthesizeAsync(text, options, ct).ConfigureAwait(false);
         if (result.IsSuccess)
         {
-            await File.WriteAllBytesAsync(outputPath, result.Value.AudioData, ct);
+            await File.WriteAllBytesAsync(outputPath, result.Value.AudioData, ct).ConfigureAwait(false);
             return Result<string, string>.Success(outputPath);
         }
 
@@ -453,10 +453,10 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         TextToSpeechOptions? options = null,
         CancellationToken ct = default)
     {
-        var result = await SynthesizeAsync(text, options, ct);
+        var result = await SynthesizeAsync(text, options, ct).ConfigureAwait(false);
         if (result.IsSuccess)
         {
-            await outputStream.WriteAsync(result.Value.AudioData, ct);
+            await outputStream.WriteAsync(result.Value.AudioData, ct).ConfigureAwait(false);
             return Result<string, string>.Success("audio/wav");
         }
 
@@ -494,7 +494,7 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             System.Diagnostics.Trace.TraceWarning("[TTS] Edge TTS fallback error: {0}", ex.Message);
         }
@@ -514,7 +514,7 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
             return await EdgeTtsFallback.Value.SynthesizeAsync(text, options, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<SpeechResult, string>.Failure(
                 $"Both Azure TTS and Edge TTS fallback failed: {ex.Message}");

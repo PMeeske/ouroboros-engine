@@ -1,4 +1,4 @@
-// <copyright file="ToolAwareChatModel.cs" company="Ouroboros">
+﻿// <copyright file="ToolAwareChatModel.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -31,8 +31,8 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
     /// <returns>A tuple containing the final text and list of tool executions.</returns>
     public async Task<(string Text, List<ToolExecution> Tools)> GenerateWithToolsAsync(string prompt, CancellationToken ct = default)
     {
-        string result = await llm.GenerateTextAsync(prompt, ct);
-        return await ProcessToolCallsAsync(result, ct);
+        string result = await llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
+        return await ProcessToolCallsAsync(result, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -46,15 +46,15 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
         if (llm is not IThinkingChatModel thinkingModel)
         {
             // Fallback: use regular generation and wrap in ThinkingResponse
-            string result = await llm.GenerateTextAsync(prompt, ct);
-            var (processedText, tools) = await ProcessToolCallsAsync(result, ct);
+            string result = await llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
+            var (processedText, tools) = await ProcessToolCallsAsync(result, ct).ConfigureAwait(false);
             return (new ThinkingResponse(null, processedText), tools);
         }
 
-        ThinkingResponse response = await thinkingModel.GenerateWithThinkingAsync(prompt, ct);
+        ThinkingResponse response = await thinkingModel.GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
 
         // Process tool calls in the content only (not in thinking)
-        var (processedContent, toolCalls) = await ProcessToolCallsAsync(response.Content, ct);
+        var (processedContent, toolCalls) = await ProcessToolCallsAsync(response.Content, ct).ConfigureAwait(false);
 
         return (response with { Content = processedContent }, toolCalls);
     }
@@ -69,11 +69,11 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
     {
         try
         {
-            (string text, List<ToolExecution> tools) = await this.GenerateWithToolsAsync(prompt, ct);
+            (string text, List<ToolExecution> tools) = await this.GenerateWithToolsAsync(prompt, ct).ConfigureAwait(false);
             return Result<(string, List<ToolExecution>), string>.Success((text, tools));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<(string, List<ToolExecution>), string>.Failure($"Tool-aware generation failed: {ex.Message}");
         }
@@ -89,11 +89,11 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
     {
         try
         {
-            var result = await GenerateWithThinkingAndToolsAsync(prompt, ct);
+            var result = await GenerateWithThinkingAndToolsAsync(prompt, ct).ConfigureAwait(false);
             return Result<(ThinkingResponse, List<ToolExecution>), string>.Success(result);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<(ThinkingResponse, List<ToolExecution>), string>.Failure($"Tool-aware generation with thinking failed: {ex.Message}");
         }
@@ -150,7 +150,7 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
             // ── Permission gate (Crush: [a]/[s]/[d] before every tool call) ──
             if (BeforeInvoke != null)
             {
-                var allowed = await BeforeInvoke(name, args, ct);
+                var allowed = await BeforeInvoke(name, args, ct).ConfigureAwait(false);
                 if (!allowed)
                 {
                     modifiedResult = modifiedResult.Replace(fullMatch, $"[TOOL-RESULT:{name}] denied by user");
@@ -162,13 +162,13 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
             var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
-                Result<string, string> toolResult = await tool.InvokeAsync(args, ct);
+                Result<string, string> toolResult = await tool.InvokeAsync(args, ct).ConfigureAwait(false);
                 output = toolResult.Match(
                     success => success,
                     error => $"error: {error}");
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 output = $"error: {ex.Message}";
             }

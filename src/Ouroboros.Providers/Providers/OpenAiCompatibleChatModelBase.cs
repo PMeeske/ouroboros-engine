@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Reactive.Linq;
 using Polly;
 using Polly.Retry;
@@ -60,7 +60,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
-        var response = await GenerateWithThinkingAsync(prompt, ct);
+        var response = await GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
         // Return combined thinking + content for backward compatibility if thinking is present
         return response.HasThinking ? response.ToFormattedString() : response.Content;
     }
@@ -158,7 +158,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
 
             return new ThinkingResponse(null, string.Empty);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Remote endpoint not reachable → fall back to indicating failure.
         }
@@ -290,7 +290,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
                 observer.OnCompleted();
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (HttpRequestException ex)
             {
                 observer.OnError(ex);
             }

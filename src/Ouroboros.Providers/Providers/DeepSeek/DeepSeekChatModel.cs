@@ -1,4 +1,4 @@
-// <copyright file="DeepSeekChatModel.cs" company="Ouroboros">
+﻿// <copyright file="DeepSeekChatModel.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
@@ -135,11 +135,11 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
     {
         if (_underlyingModel is IThinkingChatModel thinkingModel)
         {
-            return await thinkingModel.GenerateWithThinkingAsync(prompt, ct);
+            return await thinkingModel.GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
         }
 
         // Fallback: parse thinking from raw text
-        string result = await GenerateTextAsync(prompt, ct);
+        string result = await GenerateTextAsync(prompt, ct).ConfigureAwait(false);
         return ThinkingResponse.FromRawText(result);
     }
 
@@ -161,7 +161,7 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
         // Ultimate fallback to non-streaming
         return System.Reactive.Linq.Observable.FromAsync(async () =>
         {
-            var response = await GenerateWithThinkingAsync(prompt, ct);
+            var response = await GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
             return (response.HasThinking, response.ToFormattedString());
         });
     }
@@ -175,6 +175,6 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
         }
 
         // Fallback to non-streaming
-        return System.Reactive.Linq.Observable.FromAsync(async () => await GenerateTextAsync(prompt, ct));
+        return System.Reactive.Linq.Observable.FromAsync(async () => await GenerateTextAsync(prompt, ct).ConfigureAwait(false));
     }
 }

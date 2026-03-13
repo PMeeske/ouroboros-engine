@@ -1,4 +1,4 @@
-// <copyright file="HuggingFaceInferenceProvider.cs" company="Ouroboros">
+﻿// <copyright file="HuggingFaceInferenceProvider.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -70,7 +70,7 @@ public sealed class HuggingFaceInferenceProvider : IDisposable
         {
             throw;
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             return Result<List<ClassificationResult>, string>.Failure(
                 $"HF request failed: {ex.Message}");
@@ -118,7 +118,7 @@ public sealed class HuggingFaceInferenceProvider : IDisposable
         {
             throw;
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             return Result<ZeroShotResult, string>.Failure(
                 $"HF request failed: {ex.Message}");
@@ -159,7 +159,7 @@ public sealed class HuggingFaceInferenceProvider : IDisposable
         {
             throw;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<float[], string>.Failure(
                 $"HF embed failed: {ex.Message}");
@@ -211,7 +211,7 @@ public sealed class HuggingFaceInferenceProvider : IDisposable
         {
             throw;
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure(
                 $"HF generate failed: {ex.Message}");
@@ -259,7 +259,7 @@ public sealed class HuggingFaceInferenceProvider : IDisposable
 
             return results;
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return [];
         }
@@ -296,7 +296,7 @@ public sealed class HuggingFaceInferenceProvider : IDisposable
                 scoreArray.FirstOrDefault(),
                 dict);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new ZeroShotResult(string.Empty, 0, new Dictionary<string, double>());
         }
@@ -320,7 +320,7 @@ public sealed class HuggingFaceInferenceProvider : IDisposable
 
             return root.GetProperty("generated_text").GetString() ?? string.Empty;
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return string.Empty;
         }

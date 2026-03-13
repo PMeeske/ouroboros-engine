@@ -1,4 +1,4 @@
-// <copyright file="TapoEmbodimentProvider.Inventory.cs" company="Ouroboros">
+﻿// <copyright file="TapoEmbodimentProvider.Inventory.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -89,7 +89,7 @@ public sealed partial class TapoEmbodimentProvider
             return;
         }
 
-        var devicesResult = await _tapoClient.GetDevicesAsync(ct);
+        var devicesResult = await _tapoClient.GetDevicesAsync(ct).ConfigureAwait(false);
         if (devicesResult.IsFailure)
         {
             _logger?.LogWarning("Could not refresh device inventory: {Error}", devicesResult.Error);

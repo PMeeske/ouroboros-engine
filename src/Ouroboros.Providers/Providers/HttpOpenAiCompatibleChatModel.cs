@@ -86,7 +86,7 @@ public sealed class HttpOpenAiCompatibleChatModel : Ouroboros.Abstractions.Core.
                 return s;
             }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Remote backend not reachable → fall back to indicating failure.
         }

@@ -1,4 +1,4 @@
-// <copyright file="ProviderLoadBalancer.cs" company="Ouroboros">
+﻿// <copyright file="ProviderLoadBalancer.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
@@ -158,7 +158,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
             Health: health);
 
         return await Task.FromResult(
-            Result<ProviderSelectionResult<T>, string>.Success(result));
+            Result<ProviderSelectionResult<T>, string>.Success(result)).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>

@@ -1,4 +1,4 @@
-// <copyright file="AzureNeuralTtsService.Streaming.cs" company="Ouroboros">
+﻿// <copyright file="AzureNeuralTtsService.Streaming.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -32,7 +32,7 @@ public sealed partial class AzureNeuralTtsService
             .BufferIntoSentences()
             .SelectMany(sentence => Observable.FromAsync<SpeechChunk?>(async token =>
             {
-                var result = await SynthesizeChunkAsync(sentence, options, token);
+                var result = await SynthesizeChunkAsync(sentence, options, token).ConfigureAwait(false);
                 return result.IsSuccess ? result.Value : null;
             }))
             .Where(chunk => chunk != null)
@@ -65,7 +65,7 @@ public sealed partial class AzureNeuralTtsService
                     var sentence = sentences[i];
                     var isLast = i == sentences.Count - 1;
 
-                    var result = await SynthesizeChunkAsync(sentence, options, _currentSynthesisCts.Token);
+                    var result = await SynthesizeChunkAsync(sentence, options, _currentSynthesisCts.Token).ConfigureAwait(false);
 
                     if (result.IsSuccess)
                     {
@@ -88,7 +88,7 @@ public sealed partial class AzureNeuralTtsService
                 observer.OnCompleted();
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 observer.OnError(ex);
             }
@@ -119,7 +119,7 @@ public sealed partial class AzureNeuralTtsService
             var isWhisper = options?.IsWhisper ?? false;
             var ssml      = BuildSsml(text, isWhisper, cultureOverride: null, rate);
 
-            using var result = await _synthesizer!.SpeakSsmlAsync(ssml);
+            using var result = await _synthesizer!.SpeakSsmlAsync(ssml).ConfigureAwait(false);
 
             if (result.Reason == ResultReason.SynthesizingAudioCompleted)
             {
@@ -141,7 +141,7 @@ public sealed partial class AzureNeuralTtsService
             return Result<SpeechChunk, string>.Failure("Speech synthesis failed");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<SpeechChunk, string>.Failure($"Azure TTS error: {ex.Message}");
         }

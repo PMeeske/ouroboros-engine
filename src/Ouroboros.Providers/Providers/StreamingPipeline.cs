@@ -101,7 +101,7 @@ public sealed class StreamingPipeline
                 thinkingBuilder.Append(chunk.Chunk);
             else
                 contentBuilder.Append(chunk.Chunk);
-        }, ct);
+        }, ct).ConfigureAwait(false);
 
         return new ThinkingResponse(
             thinkingBuilder.Length > 0 ? thinkingBuilder.ToString() : null,

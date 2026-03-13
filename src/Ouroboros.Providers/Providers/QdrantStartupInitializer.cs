@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Core.Configuration;
 
@@ -25,7 +25,7 @@ public sealed class QdrantStartupInitializer : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger?.LogInformation("Starting Qdrant collection discovery...");
-        await _registry.DiscoverAsync(cancellationToken);
+        await _registry.DiscoverAsync(cancellationToken).ConfigureAwait(false);
         _logger?.LogInformation(
             "Qdrant startup complete: {Count} collection mappings active",
             _registry.GetAllMappings().Count);

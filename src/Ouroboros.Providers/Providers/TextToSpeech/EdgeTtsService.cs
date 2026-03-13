@@ -1,4 +1,4 @@
-// <copyright file="EdgeTtsService.cs" company="Ouroboros">
+﻿// <copyright file="EdgeTtsService.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -145,12 +145,12 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
         try
         {
             byte[] audioData = await CircuitBreakerPipeline.ExecuteAsync(
-                async token => await SynthesizeInternalAsync(text, options, token),
-                ct);
+                async token => await SynthesizeInternalAsync(text, options, token).ConfigureAwait(false),
+                ct).ConfigureAwait(false);
             return Result<SpeechResult, string>.Success(new SpeechResult(audioData, "mp3"));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<SpeechResult, string>.Failure($"Edge TTS error: {ex.Message}");
         }
@@ -163,7 +163,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
         TextToSpeechOptions? options = null,
         CancellationToken ct = default)
     {
-        Result<SpeechResult, string> result = await SynthesizeAsync(text, options, ct);
+        Result<SpeechResult, string> result = await SynthesizeAsync(text, options, ct).ConfigureAwait(false);
 
         if (result.IsSuccess)
         {
@@ -175,11 +175,11 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
                     Directory.CreateDirectory(directory);
                 }
 
-                await File.WriteAllBytesAsync(outputPath, result.Value.AudioData, ct);
+                await File.WriteAllBytesAsync(outputPath, result.Value.AudioData, ct).ConfigureAwait(false);
                 return Result<string, string>.Success(outputPath);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (IOException ex)
             {
                 return Result<string, string>.Failure($"Failed to save audio: {ex.Message}");
             }
@@ -195,11 +195,11 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
         TextToSpeechOptions? options = null,
         CancellationToken ct = default)
     {
-        Result<SpeechResult, string> result = await SynthesizeAsync(text, options, ct);
+        Result<SpeechResult, string> result = await SynthesizeAsync(text, options, ct).ConfigureAwait(false);
 
         if (result.IsSuccess)
         {
-            await outputStream.WriteAsync(result.Value.AudioData, ct);
+            await outputStream.WriteAsync(result.Value.AudioData, ct).ConfigureAwait(false);
             return Result<string, string>.Success("mp3");
         }
 
@@ -244,7 +244,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
         ws.Options.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0");
 
         string url = $"{WssUrl}?TrustedClientToken={TrustedClientToken}&ConnectionId={requestId}";
-        await ws.ConnectAsync(new Uri(url), ct);
+        await ws.ConnectAsync(new Uri(url), ct).ConfigureAwait(false);
 
         // Send config message
         string configMessage = $"X-Timestamp:{timestamp}\r\n" +
@@ -269,7 +269,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             Encoding.UTF8.GetBytes(configMessage),
             WebSocketMessageType.Text,
             true,
-            ct);
+            ct).ConfigureAwait(false);
 
         // Send SSML message
         string ssmlMessage = $"X-RequestId:{requestId}\r\n" +
@@ -282,7 +282,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             Encoding.UTF8.GetBytes(ssmlMessage),
             WebSocketMessageType.Text,
             true,
-            ct);
+            ct).ConfigureAwait(false);
 
         // Receive audio data
         using MemoryStream audioStream = new();
@@ -291,7 +291,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
 
         while (ws.State == WebSocketState.Open)
         {
-            WebSocketReceiveResult result = await ws.ReceiveAsync(buffer, ct);
+            WebSocketReceiveResult result = await ws.ReceiveAsync(buffer, ct).ConfigureAwait(false);
 
             if (result.MessageType == WebSocketMessageType.Close)
             {

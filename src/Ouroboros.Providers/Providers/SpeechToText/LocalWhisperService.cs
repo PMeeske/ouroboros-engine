@@ -1,4 +1,4 @@
-// <copyright file="LocalWhisperService.cs" company="Ouroboros">
+﻿// <copyright file="LocalWhisperService.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -71,7 +71,7 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
 
         try
         {
-            return await RunWhisperAsync(filePath, options, ct);
+            return await RunWhisperAsync(filePath, options, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
@@ -95,12 +95,12 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
         string tempPath = Path.Combine(Path.GetTempPath(), $"whisper_{Guid.NewGuid()}{Path.GetExtension(fileName)}");
         try
         {
-            await using FileStream fileStream = File.Create(tempPath);
-            await audioStream.CopyToAsync(fileStream, ct);
-            await fileStream.FlushAsync(ct);
+            using FileStream fileStream = File.Create(tempPath);
+            await audioStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
+            await fileStream.FlushAsync(ct).ConfigureAwait(false);
             fileStream.Close();
 
-            return await TranscribeFileAsync(tempPath, options, ct);
+            return await TranscribeFileAsync(tempPath, options, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -110,7 +110,7 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
                 {
                     File.Delete(tempPath);
                 }
-                catch
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     // ignore cleanup errors
                 }
@@ -125,8 +125,8 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
         TranscriptionOptions? options = null,
         CancellationToken ct = default)
     {
-        await using MemoryStream stream = new MemoryStream(audioData);
-        return await TranscribeStreamAsync(stream, fileName, options, ct);
+        using MemoryStream stream = new MemoryStream(audioData);
+        return await TranscribeStreamAsync(stream, fileName, options, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -139,7 +139,7 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
 
         // Add translation flag via prompt or special handling
         TranscriptionOptions translationOptions = options with { Prompt = "--translate " + (options.Prompt ?? string.Empty) };
-        return await TranscribeFileAsync(filePath, translationOptions, ct);
+        return await TranscribeFileAsync(filePath, translationOptions, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -167,7 +167,7 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
 
             return Task.FromResult(false);
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Task.FromResult(false);
         }
@@ -265,7 +265,7 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
 
             return process.ExitCode == 0 && output.Contains("ok");
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return false;
         }
@@ -327,7 +327,7 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
 
             return false;
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return false;
         }
@@ -370,7 +370,7 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
                     }
                 }
             }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // Fall through to plain text parsing
             }

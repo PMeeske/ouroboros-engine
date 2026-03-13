@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Reactive.Linq;
 using Anthropic.SDK;
 using Anthropic.SDK.Messaging;
@@ -64,7 +64,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
-        ThinkingResponse response = await GenerateWithThinkingAsync(prompt, ct);
+        ThinkingResponse response = await GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
         return response.HasThinking ? response.ToFormattedString() : response.Content;
     }
 

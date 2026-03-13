@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 
 namespace Ouroboros.Providers;
 
@@ -33,21 +33,21 @@ public sealed partial class CollectiveMind
             try
             {
                 var result = await pathway.CircuitBreaker.ExecuteAsync(async () =>
-                    await QueryPathway(pathway, prompt, ct));
+                    await QueryPathway(pathway, prompt, ct).ConfigureAwait(false)).ConfigureAwait(false);
                 sw.Stop();
                 pathway.RecordActivation(sw.Elapsed);
 
                 return ResponseCandidate<ThinkingResponse>.Create(result, pathway.Name, sw.Elapsed);
             }
             catch (OperationCanceledException) { throw; }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 pathway.RecordInhibition();
                 return ResponseCandidate<ThinkingResponse>.Invalid(pathway.Name);
             }
         });
 
-        var candidates = (await Task.WhenAll(tasks)).ToList();
+        var candidates = (await Task.WhenAll(tasks).ConfigureAwait(false)).ToList();
         var validCandidates = candidates.Where(c => c.IsValid && !string.IsNullOrEmpty(c.Value.Content)).ToList();
 
         if (validCandidates.Count == 0)
@@ -67,7 +67,7 @@ public sealed partial class CollectiveMind
 
         if (_election != null)
         {
-            var electionResult = await _election.RunElectionAsync(validCandidates, prompt, ct);
+            var electionResult = await _election.RunElectionAsync(validCandidates, prompt, ct).ConfigureAwait(false);
 
             // Aggregate costs from all queried pathways
             foreach (var c in validCandidates)

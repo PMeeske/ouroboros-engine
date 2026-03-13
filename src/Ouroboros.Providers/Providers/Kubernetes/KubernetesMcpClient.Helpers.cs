@@ -15,43 +15,51 @@ public sealed partial class KubernetesMcpClient
     private static HttpClient CreateHttpClient(KubernetesMcpClientOptions options)
     {
         var handler = new HttpClientHandler();
-        if (options.SkipTlsVerify)
+        try
         {
-            handler.ServerCertificateCustomValidationCallback =
-                HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+            if (options.SkipTlsVerify)
+            {
+                handler.ServerCertificateCustomValidationCallback =
+                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+            }
+
+            var client = new HttpClient(handler, disposeHandler: true) { Timeout = options.Timeout };
+            handler = null!; // Ownership transferred to HttpClient
+
+            // Resolve base URL
+            var baseUrl = options.BaseUrl;
+            if (string.IsNullOrWhiteSpace(baseUrl))
+            {
+                var host = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST");
+                var port = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_PORT") ?? "443";
+                baseUrl = $"https://{host}:{port}";
+            }
+
+            client.BaseAddress = new Uri(baseUrl);
+
+            // Resolve token
+            var token = options.Token;
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                const string saTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token";
+                if (File.Exists(saTokenPath))
+                    token = File.ReadAllText(saTokenPath).Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+
+            client.DefaultRequestHeaders.Accept.Add(
+                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+
+            return client;
         }
-
-        var client = new HttpClient(handler) { Timeout = options.Timeout };
-
-        // Resolve base URL
-        var baseUrl = options.BaseUrl;
-        if (string.IsNullOrWhiteSpace(baseUrl))
+        finally
         {
-            var host = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST");
-            var port = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_PORT") ?? "443";
-            baseUrl = $"https://{host}:{port}";
+            handler?.Dispose();
         }
-
-        client.BaseAddress = new Uri(baseUrl);
-
-        // Resolve token
-        var token = options.Token;
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            const string saTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token";
-            if (File.Exists(saTokenPath))
-                token = File.ReadAllText(saTokenPath).Trim();
-        }
-
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-
-        client.DefaultRequestHeaders.Accept.Add(
-            new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-
-        return client;
     }
 
     private static string BuildResourceUrl(string apiVersion, string kind, string ns, string? name = null)

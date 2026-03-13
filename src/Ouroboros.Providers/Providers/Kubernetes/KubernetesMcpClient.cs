@@ -1,4 +1,4 @@
-// <copyright file="KubernetesMcpClient.cs" company="Ouroboros">
+﻿// <copyright file="KubernetesMcpClient.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -47,12 +47,12 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
             if (!string.IsNullOrWhiteSpace(labelSelector))
                 url += $"?labelSelector={Uri.EscapeDataString(labelSelector)}";
 
-            var response = await _httpClient.GetAsync(url, ct);
+            var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<IReadOnlyList<KubernetesPodInfo>, string>.Failure(
-                    $"Failed to list pods: {response.StatusCode} — {await response.Content.ReadAsStringAsync(ct)}");
+                    $"Failed to list pods: {response.StatusCode} — {await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false)}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json);
             var pods = ParsePodList(doc.RootElement);
             return Result<IReadOnlyList<KubernetesPodInfo>, string>.Success(pods);
@@ -76,12 +76,12 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/api/v1/namespaces/{ns}/pods/{name}", ct);
+            var response = await _httpClient.GetAsync($"/api/v1/namespaces/{ns}/pods/{name}", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<KubernetesPodInfo, string>.Failure(
                     $"Failed to get pod '{name}': {response.StatusCode}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json);
             return Result<KubernetesPodInfo, string>.Success(ParsePod(doc.RootElement));
         }
@@ -110,12 +110,12 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
             if (!string.IsNullOrWhiteSpace(container))
                 url += $"&container={Uri.EscapeDataString(container)}";
 
-            var response = await _httpClient.GetAsync(url, ct);
+            var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<string, string>.Failure(
                     $"Failed to get logs for pod '{podName}': {response.StatusCode}");
 
-            var logs = await response.Content.ReadAsStringAsync(ct);
+            var logs = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return Result<string, string>.Success(logs);
         }
         catch (OperationCanceledException) { throw; }
@@ -137,12 +137,12 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
             if (!string.IsNullOrWhiteSpace(labelSelector))
                 url += $"?labelSelector={Uri.EscapeDataString(labelSelector)}";
 
-            var response = await _httpClient.GetAsync(url, ct);
+            var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<IReadOnlyList<KubernetesDeploymentInfo>, string>.Failure(
                     $"Failed to list deployments: {response.StatusCode}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json);
             var deployments = ParseDeploymentList(doc.RootElement);
             return Result<IReadOnlyList<KubernetesDeploymentInfo>, string>.Success(deployments);
@@ -172,19 +172,19 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
                 spec = new { replicas }
             }, _jsonOptions);
 
-            var content = new StringContent(patch, Encoding.UTF8, "application/strategic-merge-patch+json");
-            var request = new HttpRequestMessage(HttpMethod.Patch,
+            using var content = new StringContent(patch, Encoding.UTF8, "application/strategic-merge-patch+json");
+            using var request = new HttpRequestMessage(HttpMethod.Patch,
                 $"/apis/apps/v1/namespaces/{ns}/deployments/{deploymentName}")
             {
                 Content = content
             };
 
-            var response = await _httpClient.SendAsync(request, ct);
+            var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<KubernetesDeploymentInfo, string>.Failure(
                     $"Failed to scale deployment '{deploymentName}': {response.StatusCode}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json);
             return Result<KubernetesDeploymentInfo, string>.Success(ParseDeployment(doc.RootElement));
         }
@@ -206,12 +206,12 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
     {
         try
         {
-            var response = await _httpClient.GetAsync($"/api/v1/namespaces/{ns}/services", ct);
+            var response = await _httpClient.GetAsync($"/api/v1/namespaces/{ns}/services", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<IReadOnlyList<KubernetesServiceInfo>, string>.Failure(
                     $"Failed to list services: {response.StatusCode}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json);
             var services = ParseServiceList(doc.RootElement);
             return Result<IReadOnlyList<KubernetesServiceInfo>, string>.Success(services);
@@ -233,12 +233,12 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
     {
         try
         {
-            var response = await _httpClient.GetAsync("/api/v1/namespaces", ct);
+            var response = await _httpClient.GetAsync("/api/v1/namespaces", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<IReadOnlyList<string>, string>.Failure(
                     $"Failed to list namespaces: {response.StatusCode}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json);
             var items = doc.RootElement.GetProperty("items");
             var names = new List<string>();
@@ -275,14 +275,14 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
             var apiVersion = doc.RootElement.GetProperty("apiVersion").GetString()!;
 
             var url = BuildResourceUrl(apiVersion, kind, ns, name);
-            var content = new StringContent(manifest, Encoding.UTF8, "application/json");
+            using var content = new StringContent(manifest, Encoding.UTF8, "application/json");
 
             // Try PUT (update), fall back to POST (create) on 404
-            var response = await _httpClient.PutAsync(url, content, ct);
+            var response = await _httpClient.PutAsync(url, content, ct).ConfigureAwait(false);
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 var createUrl = BuildResourceUrl(apiVersion, kind, ns);
-                response = await _httpClient.PostAsync(createUrl, content, ct);
+                response = await _httpClient.PostAsync(createUrl, content, ct).ConfigureAwait(false);
             }
 
             if (!response.IsSuccessStatusCode)
@@ -320,7 +320,7 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
             };
 
             var url = BuildResourceUrl(apiVersion, kind.ToLowerInvariant(), ns, name);
-            var response = await _httpClient.DeleteAsync(url, ct);
+            var response = await _httpClient.DeleteAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
                 return Result<string, string>.Failure(
                     $"Failed to delete {kind}/{name}: {response.StatusCode}");

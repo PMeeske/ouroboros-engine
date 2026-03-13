@@ -1,4 +1,4 @@
-using System.Reactive.Linq;
+﻿using System.Reactive.Linq;
 using System.Text;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
@@ -83,7 +83,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
 
             return string.Empty;
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Deterministic fallback keeps the pipeline running in offline scenarios.
             return $"[ollama-fallback:{_modelName}] {prompt}";
@@ -93,7 +93,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
     /// <inheritdoc/>
     public async Task<ThinkingResponse> GenerateWithThinkingAsync(string prompt, CancellationToken ct = default)
     {
-        string rawText = await GenerateTextAsync(prompt, ct);
+        string rawText = await GenerateTextAsync(prompt, ct).ConfigureAwait(false);
         return ThinkingResponse.FromRawText(rawText);
     }
 
@@ -169,7 +169,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
                 observer.OnCompleted();
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 observer.OnError(ex);
             }
@@ -209,7 +209,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
                 observer.OnCompleted();
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 observer.OnError(ex);
             }

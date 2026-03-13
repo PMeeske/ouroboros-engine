@@ -1,4 +1,4 @@
-using Ouroboros.Diagnostics;
+﻿using Ouroboros.Diagnostics;
 
 namespace Ouroboros.Providers;
 
@@ -31,7 +31,7 @@ public static class EmbeddingExtensions
                 Telemetry.RecordVectors(1);
             }
             catch (OperationCanceledException) { throw; }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 Telemetry.RecordEmbeddingFailure();
                 results.Add(Array.Empty<float>());

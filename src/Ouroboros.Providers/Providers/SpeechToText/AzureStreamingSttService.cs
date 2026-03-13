@@ -1,4 +1,4 @@
-// <copyright file="AzureStreamingSttService.cs" company="Ouroboros">
+﻿// <copyright file="AzureStreamingSttService.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -119,7 +119,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
 
                 recognizer.SessionStopped += (_, _) => observer.OnCompleted();
 
-                await recognizer.StartContinuousRecognitionAsync();
+                await recognizer.StartContinuousRecognitionAsync().ConfigureAwait(false);
                 recognitionStarted.TrySetResult(true);
 
                 // Pump audio chunks into the push stream
@@ -147,14 +147,14 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
                 // Wait for cancellation
                 try
                 {
-                    await Task.Delay(Timeout.Infinite, linkedCts.Token);
+                    await Task.Delay(Timeout.Infinite, linkedCts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
                     // Expected
                 }
 
-                await recognizer.StopContinuousRecognitionAsync();
+                await recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -189,7 +189,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
         CancellationToken ct = default)
     {
         var session = new AzureStreamingSession(_config, options);
-        await session.InitializeAsync(ct);
+        await session.InitializeAsync(ct).ConfigureAwait(false);
         return session;
     }
 
@@ -201,7 +201,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
         {
             using var audioConfig = AudioConfig.FromWavFileInput(filePath);
             using var recognizer = new SpeechRecognizer(_config, audioConfig);
-            var result = await recognizer.RecognizeOnceAsync();
+            var result = await recognizer.RecognizeOnceAsync().ConfigureAwait(false);
 
             return result.Reason == ResultReason.RecognizedSpeech
                 ? new TranscriptionResult(result.Text, _config.SpeechRecognitionLanguage, result.Duration.TotalSeconds)
@@ -219,9 +219,9 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
         Stream audioStream, string fileName, TranscriptionOptions? options = null, CancellationToken ct = default)
     {
         using var ms = new MemoryStream();
-        await audioStream.CopyToAsync(ms, ct);
+        await audioStream.CopyToAsync(ms, ct).ConfigureAwait(false);
         var bytes = ms.ToArray();
-        return await TranscribeBytesAsync(bytes, fileName, options, ct);
+        return await TranscribeBytesAsync(bytes, fileName, options, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -237,7 +237,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
 
             using var audioConfig = AudioConfig.FromStreamInput(pushStream);
             using var recognizer = new SpeechRecognizer(_config, audioConfig);
-            var result = await recognizer.RecognizeOnceAsync();
+            var result = await recognizer.RecognizeOnceAsync().ConfigureAwait(false);
 
             return result.Reason == ResultReason.RecognizedSpeech
                 ? new TranscriptionResult(result.Text, _config.SpeechRecognitionLanguage, result.Duration.TotalSeconds)
@@ -349,7 +349,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
                 _voiceActivity.OnCompleted();
             };
 
-            await _recognizer.StartContinuousRecognitionAsync();
+            await _recognizer.StartContinuousRecognitionAsync().ConfigureAwait(false);
             _isActive = true;
         }
 
@@ -368,7 +368,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
             _pushStream?.Close();
             if (_recognizer != null)
             {
-                await _recognizer.StopContinuousRecognitionAsync();
+                await _recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false);
             }
 
             _isActive = false;
@@ -386,7 +386,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
 
             if (_recognizer != null)
             {
-                try { await _recognizer.StopContinuousRecognitionAsync(); }
+                try { await _recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false); }
                 catch (InvalidOperationException) { /* Best effort */ }
                 _recognizer.Dispose();
             }

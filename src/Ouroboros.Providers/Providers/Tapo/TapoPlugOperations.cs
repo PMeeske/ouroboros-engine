@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Abstractions;
 
@@ -26,7 +26,7 @@ public sealed class TapoPlugOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync("p100/on", deviceName, ct);
+        return await ExecuteActionAsync("p100/on", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ public sealed class TapoPlugOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<Unit>.Failure("Device name is required");
 
-        return await ExecuteActionAsync("p100/off", deviceName, ct);
+        return await ExecuteActionAsync("p100/off", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -48,7 +48,7 @@ public sealed class TapoPlugOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<JsonDocument>.Failure("Device name is required");
 
-        return await GetJsonResponseAsync("p100/get-device-info", deviceName, ct);
+        return await GetJsonResponseAsync("p100/get-device-info", deviceName, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public sealed class TapoPlugOperations : TapoDeviceOperationsBase
         if (string.IsNullOrWhiteSpace(deviceName))
             return Result<JsonDocument>.Failure("Device name is required");
 
-        return await GetJsonResponseAsync("p100/get-device-usage", deviceName, ct);
+        return await GetJsonResponseAsync("p100/get-device-usage", deviceName, ct).ConfigureAwait(false);
     }
 
 

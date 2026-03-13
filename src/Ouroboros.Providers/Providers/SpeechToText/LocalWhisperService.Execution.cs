@@ -1,4 +1,4 @@
-// <copyright file="LocalWhisperService.Execution.cs" company="Ouroboros">
+﻿// <copyright file="LocalWhisperService.Execution.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -20,7 +20,7 @@ public sealed partial class LocalWhisperService
         // Prefer Python whisper if available
         if (IsPythonWhisperAvailable())
         {
-            return await RunPythonWhisperAsync(filePath, options, ct);
+            return await RunPythonWhisperAsync(filePath, options, ct).ConfigureAwait(false);
         }
 
         // Fall back to native whisper CLI
@@ -45,10 +45,10 @@ public sealed partial class LocalWhisperService
             Task<string> outputTask = process.StandardOutput.ReadToEndAsync(ct);
             Task<string> errorTask = process.StandardError.ReadToEndAsync(ct);
 
-            await process.WaitForExitAsync(ct);
+            await process.WaitForExitAsync(ct).ConfigureAwait(false);
 
-            string output = await outputTask;
-            string error = await errorTask;
+            string output = await outputTask.ConfigureAwait(false);
+            string error = await errorTask.ConfigureAwait(false);
 
             if (process.ExitCode != 0)
             {
@@ -142,10 +142,10 @@ print(json.dumps(output, ensure_ascii=False))
             Task<string> outputTask = process.StandardOutput.ReadToEndAsync(ct);
             Task<string> errorTask = process.StandardError.ReadToEndAsync(ct);
 
-            await process.WaitForExitAsync(ct);
+            await process.WaitForExitAsync(ct).ConfigureAwait(false);
 
-            string output = await outputTask;
-            string error = await errorTask;
+            string output = await outputTask.ConfigureAwait(false);
+            string error = await errorTask.ConfigureAwait(false);
 
             if (string.IsNullOrWhiteSpace(output) && process.ExitCode != 0)
             {

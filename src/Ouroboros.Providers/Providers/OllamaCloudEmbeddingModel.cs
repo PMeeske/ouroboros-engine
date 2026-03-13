@@ -1,4 +1,4 @@
-using OllamaSharp;
+﻿using OllamaSharp;
 using OllamaSharp.Models;
 using Polly;
 using Polly.Retry;
@@ -65,7 +65,7 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
                 return [.. embeddings[0]];
             }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Remote Ollama Cloud not reachable → fall back to deterministic embedding
         }

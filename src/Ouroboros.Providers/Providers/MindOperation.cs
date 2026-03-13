@@ -44,14 +44,14 @@ public sealed class MindOperation<T>
 
     // Functor: map
     public MindOperation<TResult> Select<TResult>(Func<T, TResult> selector) =>
-        new(async (mind, ct) => selector(await _execute(mind, ct)), _stream);
+        new(async (mind, ct) => selector(await _execute(mind, ct).ConfigureAwait(false)), _stream);
 
     // Monad: flatMap
     public MindOperation<TResult> SelectMany<TResult>(Func<T, MindOperation<TResult>> selector) =>
         new(async (mind, ct) =>
         {
-            T result = await _execute(mind, ct);
-            return await selector(result).ExecuteAsync(mind, ct);
+            T result = await _execute(mind, ct).ConfigureAwait(false);
+            return await selector(result).ExecuteAsync(mind, ct).ConfigureAwait(false);
         });
 
     // LINQ support
@@ -60,8 +60,8 @@ public sealed class MindOperation<T>
         Func<T, TIntermediate, TResult> resultSelector) =>
         new(async (mind, ct) =>
         {
-            T first = await _execute(mind, ct);
-            TIntermediate second = await selector(first).ExecuteAsync(mind, ct);
+            T first = await _execute(mind, ct).ConfigureAwait(false);
+            TIntermediate second = await selector(first).ExecuteAsync(mind, ct).ConfigureAwait(false);
             return resultSelector(first, second);
         });
 
@@ -71,7 +71,7 @@ public sealed class MindOperation<T>
         {
             var task1 = _execute(mind, ct);
             var task2 = other.ExecuteAsync(mind, ct);
-            await Task.WhenAll(task1, task2);
+            await Task.WhenAll(task1, task2).ConfigureAwait(false);
             return (task1.Result, task2.Result);
         });
 }

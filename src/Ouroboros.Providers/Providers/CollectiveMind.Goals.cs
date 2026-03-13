@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -23,21 +23,21 @@ public sealed partial class CollectiveMind
         if (decomposer == null)
             throw new InvalidOperationException("No pathways available for goal decomposition");
 
-        var subGoals = await DecomposeIntoSubGoals(decomposer, prompt, ct);
+        var subGoals = await DecomposeIntoSubGoals(decomposer, prompt, ct).ConfigureAwait(false);
 
         if (subGoals.Count == 0 || (subGoals.Count == 1 && subGoals[0].Complexity <= _decompositionConfig.DecompositionThreshold))
         {
             _thoughtStream.OnNext("🎯 Request is simple enough - executing directly");
-            return await ThinkSequentially(prompt, ct);
+            return await ThinkSequentially(prompt, ct).ConfigureAwait(false);
         }
 
         _thoughtStream.OnNext($"🎯 Decomposed into {subGoals.Count} sub-goals");
 
         // Step 2: Route and execute sub-goals
-        var results = await ExecuteSubGoalsAsync(subGoals, ct);
+        var results = await ExecuteSubGoalsAsync(subGoals, ct).ConfigureAwait(false);
 
         // Step 3: Synthesize results
-        var synthesis = await SynthesizeResultsAsync(decomposer, prompt, subGoals, results, ct);
+        var synthesis = await SynthesizeResultsAsync(decomposer, prompt, subGoals, results, ct).ConfigureAwait(false);
 
         return synthesis;
     }
@@ -74,14 +74,14 @@ public sealed partial class CollectiveMind
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var response = await decomposer.CircuitBreaker.ExecuteAsync(async () =>
-                await QueryPathway(decomposer, decompositionPrompt, ct));
+                await QueryPathway(decomposer, decompositionPrompt, ct).ConfigureAwait(false)).ConfigureAwait(false);
             sw.Stop();
             decomposer.RecordActivation(sw.Elapsed);
 
             return ParseSubGoals(response.Content);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) // Intentional: LLM provider fallback to single-goal mode
+        catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: LLM provider fallback to single-goal mode
         {
             _thoughtStream.OnNext($"⚠️ Decomposition failed: {ex.Message}, falling back to single goal");
             decomposer.RecordInhibition();
@@ -237,13 +237,13 @@ public sealed partial class CollectiveMind
             {
                 _thoughtStream.OnNext($"⚡ Executing {ready.Count} independent sub-goals in parallel");
                 var tasks = ready.Select(g => ExecuteSubGoalAsync(g, results, ct));
-                await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks).ConfigureAwait(false);
             }
             else
             {
                 foreach (var goal in ready)
                 {
-                    await ExecuteSubGoalAsync(goal, results, ct);
+                    await ExecuteSubGoalAsync(goal, results, ct).ConfigureAwait(false);
                 }
             }
 
@@ -283,7 +283,7 @@ public sealed partial class CollectiveMind
                 : $"Context from previous steps:\n{context}\n\nTask: {goal.Description}";
 
             var response = await pathway.CircuitBreaker.ExecuteAsync(async () =>
-                await QueryPathway(pathway, fullPrompt, ct));
+                await QueryPathway(pathway, fullPrompt, ct).ConfigureAwait(false)).ConfigureAwait(false);
 
             sw.Stop();
             pathway.RecordActivation(sw.Elapsed);
@@ -296,7 +296,7 @@ public sealed partial class CollectiveMind
             _thoughtStream.OnNext($"✓ '{goal.Id}' completed by {pathway.Name} in {sw.ElapsedMilliseconds}ms");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) // Intentional: sub-goal isolation across provider types
+        catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: sub-goal isolation across provider types
         {
             sw.Stop();
             pathway.RecordInhibition();
@@ -430,7 +430,7 @@ public sealed partial class CollectiveMind
         try
         {
             var response = await synthesizer.CircuitBreaker.ExecuteAsync(async () =>
-                await QueryPathway(synthesizer, synthesisPrompt, ct));
+                await QueryPathway(synthesizer, synthesisPrompt, ct).ConfigureAwait(false)).ConfigureAwait(false);
             sw.Stop();
             synthesizer.RecordActivation(sw.Elapsed);
             AggregateCosts(synthesizer);
@@ -454,7 +454,7 @@ public sealed partial class CollectiveMind
             return new ThinkingResponse(thinking.ToString(), response.Content);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) // Intentional: synthesis fallback across provider types
+        catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: synthesis fallback across provider types
         {
             sw.Stop();
             synthesizer.RecordInhibition();

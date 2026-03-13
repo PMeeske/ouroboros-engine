@@ -1,4 +1,4 @@
-// <copyright file="TapoCameraPtzClient.cs" company="Ouroboros">
+﻿// <copyright file="TapoCameraPtzClient.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -88,7 +88,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
             _logger?.LogInformation("Initializing PTZ for camera at {CameraIp}", _cameraIp);
 
             // Try ONVIF GetProfiles to discover media profile token
-            var profileResult = await GetOnvifProfileTokenAsync(ct);
+            var profileResult = await GetOnvifProfileTokenAsync(ct).ConfigureAwait(false);
             if (profileResult.IsSuccess)
             {
                 _profileToken = profileResult.Value;
@@ -141,7 +141,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
         int durationMs = DefaultMoveDurationMs,
         CancellationToken ct = default)
     {
-        return await ContinuousMoveAsync(-Math.Abs(speed), 0, 0, durationMs, ct);
+        return await ContinuousMoveAsync(-Math.Abs(speed), 0, 0, durationMs, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -155,7 +155,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
         int durationMs = DefaultMoveDurationMs,
         CancellationToken ct = default)
     {
-        return await ContinuousMoveAsync(Math.Abs(speed), 0, 0, durationMs, ct);
+        return await ContinuousMoveAsync(Math.Abs(speed), 0, 0, durationMs, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -169,7 +169,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
         int durationMs = DefaultMoveDurationMs,
         CancellationToken ct = default)
     {
-        return await ContinuousMoveAsync(0, Math.Abs(speed), 0, durationMs, ct);
+        return await ContinuousMoveAsync(0, Math.Abs(speed), 0, durationMs, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -183,7 +183,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
         int durationMs = DefaultMoveDurationMs,
         CancellationToken ct = default)
     {
-        return await ContinuousMoveAsync(0, -Math.Abs(speed), 0, durationMs, ct);
+        return await ContinuousMoveAsync(0, -Math.Abs(speed), 0, durationMs, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -199,7 +199,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
         int durationMs = DefaultMoveDurationMs,
         CancellationToken ct = default)
     {
-        return await ContinuousMoveAsync(panSpeed, tiltSpeed, 0, durationMs, ct);
+        return await ContinuousMoveAsync(panSpeed, tiltSpeed, 0, durationMs, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -213,7 +213,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
         try
         {
             var soapBody = BuildOnvifStop(_profileToken ?? "profile_1");
-            var result = await SendOnvifCommandAsync(soapBody, ct);
+            var result = await SendOnvifCommandAsync(soapBody, ct).ConfigureAwait(false);
 
             if (result.IsSuccess)
             {
@@ -243,7 +243,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
         try
         {
             var soapBody = BuildOnvifGotoHomePosition(_profileToken ?? "profile_1");
-            var result = await SendOnvifCommandAsync(soapBody, ct);
+            var result = await SendOnvifCommandAsync(soapBody, ct).ConfigureAwait(false);
 
             if (result.IsSuccess)
             {
@@ -276,7 +276,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
         try
         {
             var soapBody = BuildOnvifSetPreset(_profileToken ?? "profile_1", presetName);
-            var result = await SendOnvifCommandAsync(soapBody, ct);
+            var result = await SendOnvifCommandAsync(soapBody, ct).ConfigureAwait(false);
 
             if (result.IsSuccess)
             {
@@ -309,7 +309,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
         try
         {
             var soapBody = BuildOnvifGotoPreset(_profileToken ?? "profile_1", presetToken);
-            var result = await SendOnvifCommandAsync(soapBody, ct);
+            var result = await SendOnvifCommandAsync(soapBody, ct).ConfigureAwait(false);
 
             if (result.IsSuccess)
             {
@@ -346,15 +346,15 @@ public sealed partial class TapoCameraPtzClient : IDisposable
             var sw = Stopwatch.StartNew();
 
             // Pan left for 3 seconds
-            var leftResult = await ContinuousMoveAsync(-speed, 0, 0, 3000, ct);
+            var leftResult = await ContinuousMoveAsync(-speed, 0, 0, 3000, ct).ConfigureAwait(false);
             if (leftResult.IsFailure) return leftResult;
 
             // Pan right for 6 seconds (left + center + right)
-            var rightResult = await ContinuousMoveAsync(speed, 0, 0, 6000, ct);
+            var rightResult = await ContinuousMoveAsync(speed, 0, 0, 6000, ct).ConfigureAwait(false);
             if (rightResult.IsFailure) return rightResult;
 
             // Return to center
-            var centerResult = await ContinuousMoveAsync(-speed, 0, 0, 3000, ct);
+            var centerResult = await ContinuousMoveAsync(-speed, 0, 0, 3000, ct).ConfigureAwait(false);
             if (centerResult.IsFailure) return centerResult;
 
             sw.Stop();
@@ -379,7 +379,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     {
         try
         {
-            var stopResult = await StopAsync(ct);
+            var stopResult = await StopAsync(ct).ConfigureAwait(false);
             return stopResult.IsSuccess
                 ? Result<string>.Success($"PTZ control available at {_cameraIp}")
                 : Result<string>.Failure($"PTZ not responding: {stopResult.Error}");

@@ -1,4 +1,4 @@
-// <copyright file="MicrophoneRecorder.Platform.cs" company="Ouroboros">
+﻿// <copyright file="MicrophoneRecorder.Platform.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -209,7 +209,7 @@ public static partial class MicrophoneRecorder
 
             return preferredDevice ?? audioDevices[0];
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Ignore errors
         }
@@ -236,7 +236,7 @@ public static partial class MicrophoneRecorder
             process?.WaitForExit(1000);
             return process?.ExitCode == 0;
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return false;
         }
@@ -263,9 +263,9 @@ public static partial class MicrophoneRecorder
                 return "Failed to start process";
             }
 
-            string output = await process.StandardOutput.ReadToEndAsync();
-            string error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
+            string output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+            string error = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
+            await process.WaitForExitAsync().ConfigureAwait(false);
 
             return string.IsNullOrEmpty(output) ? error : output;
         }

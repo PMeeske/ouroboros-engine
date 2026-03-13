@@ -1,4 +1,4 @@
-using Microsoft.Extensions.AI;
+﻿using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OllamaSharp.Models;
 using Ouroboros.Abstractions.Core;
@@ -44,7 +44,7 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGenerato
                 return firstVector;
             }
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // OllamaSharp communication error - fall through to fallback
         }
@@ -100,7 +100,7 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGenerato
             }
             return sb.ToString();
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Ultimate fallback: ASCII only
             var ascii = new System.Text.StringBuilder();
