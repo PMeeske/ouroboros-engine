@@ -38,7 +38,6 @@ public sealed class TransformerStatePredictor : IStatePredictor
         float[] ffnBias2)
     {
         _embeddingSize = embeddingSize;
-        _ = _embeddingSize;
         _headDim = headDim;
         _queryWeights = queryWeights;
         _keyWeights = keyWeights;

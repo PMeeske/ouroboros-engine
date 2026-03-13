@@ -18,8 +18,10 @@ public sealed class ParallelExecutor
         ISafetyGuard safety,
         Func<PlanStep, CancellationToken, Task<StepResult>> executeStep)
     {
-        _safety = safety ?? throw new ArgumentNullException(nameof(safety));
-        _executeStep = executeStep ?? throw new ArgumentNullException(nameof(executeStep));
+        ArgumentNullException.ThrowIfNull(safety);
+        _safety = safety;
+        ArgumentNullException.ThrowIfNull(executeStep);
+        _executeStep = executeStep;
     }
 
     /// <summary>

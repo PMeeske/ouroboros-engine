@@ -1,5 +1,5 @@
-// <copyright file="SymbolicPlanSelector.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="SymbolicPlanSelector.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Abstractions;
@@ -23,7 +23,8 @@ public sealed class SymbolicPlanSelector
     /// <param name="engine">The MeTTa engine for symbolic reasoning.</param>
     public SymbolicPlanSelector(IMeTTaEngine engine)
     {
-        this._engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        this._engine = engine;
     }
 
     /// <summary>

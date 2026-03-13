@@ -50,14 +50,20 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
         IMeTTaEngine mettaEngine,
         FormMeTTaBridge? formBridge = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _tools = tools ?? throw new ArgumentNullException(nameof(tools));
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
-        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
-        _router = router ?? throw new ArgumentNullException(nameof(router));
-        _ = _router;
-        _safety = safety ?? throw new ArgumentNullException(nameof(safety));
-        _mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
+        ArgumentNullException.ThrowIfNull(tools);
+        _tools = tools;
+        ArgumentNullException.ThrowIfNull(memory);
+        _memory = memory;
+        ArgumentNullException.ThrowIfNull(skills);
+        _skills = skills;
+        ArgumentNullException.ThrowIfNull(router);
+        _router = router;
+        ArgumentNullException.ThrowIfNull(safety);
+        _safety = safety;
+        ArgumentNullException.ThrowIfNull(mettaEngine);
+        _mettaEngine = mettaEngine;
         _representation = new MeTTaRepresentation(mettaEngine, formBridge);
         _formBridge = formBridge;
 

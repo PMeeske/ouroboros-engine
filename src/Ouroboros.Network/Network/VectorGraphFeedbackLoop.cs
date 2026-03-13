@@ -1,5 +1,5 @@
-// <copyright file="VectorGraphFeedbackLoop.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="VectorGraphFeedbackLoop.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using System.Text.RegularExpressions;
@@ -67,9 +67,12 @@ public sealed partial class VectorGraphFeedbackLoop
         IEmbeddingModel embeddingModel,
         FeedbackLoopConfig? config = null)
     {
-        _store = store ?? throw new ArgumentNullException(nameof(store));
-        _mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
-        _embeddingModel = embeddingModel ?? throw new ArgumentNullException(nameof(embeddingModel));
+        ArgumentNullException.ThrowIfNull(store);
+        _store = store;
+        ArgumentNullException.ThrowIfNull(mettaEngine);
+        _mettaEngine = mettaEngine;
+        ArgumentNullException.ThrowIfNull(embeddingModel);
+        _embeddingModel = embeddingModel;
         _config = config ?? new FeedbackLoopConfig();
         _embeddingCache = new Dictionary<Guid, float[]>();
     }

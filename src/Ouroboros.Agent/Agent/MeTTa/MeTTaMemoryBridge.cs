@@ -19,8 +19,10 @@ public sealed class MeTTaMemoryBridge
     /// <param name="memory">The memory store to extract facts from.</param>
     public MeTTaMemoryBridge(IMeTTaEngine engine, MemoryStore memory)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        ArgumentNullException.ThrowIfNull(engine);
+        _engine = engine;
+        ArgumentNullException.ThrowIfNull(memory);
+        _memory = memory;
     }
 
     /// <summary>

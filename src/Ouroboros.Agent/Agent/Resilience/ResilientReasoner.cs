@@ -1,5 +1,5 @@
-// <copyright file="ResilientReasoner.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="ResilientReasoner.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 
@@ -42,9 +42,9 @@ public sealed class ResilientReasoner : IReasoner
         CircuitBreakerConfig? config = null,
         ILogger<ResilientReasoner>? logger = null)
     {
-        _bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
+        ArgumentNullException.ThrowIfNull(bridge);
+        _bridge = bridge;
         _llm = llm;
-        _ = _llm;
         _config = config ?? new CircuitBreakerConfig();
         _logger = logger;
         

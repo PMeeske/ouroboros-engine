@@ -8,7 +8,7 @@ using Ouroboros.Abstractions.Core;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Core.Hyperon;
 using Plan = Ouroboros.Agent.MetaAI.Plan;
-using PlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using PlanStep = Ouroboros.Agent.PlanStep;
 using ToolRegistry = Ouroboros.Tools.ToolRegistry;
 
 namespace Ouroboros.Tests.Evolution;

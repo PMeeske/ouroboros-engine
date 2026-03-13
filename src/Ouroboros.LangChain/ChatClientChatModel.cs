@@ -31,7 +31,8 @@ public class ChatClientChatModel : ChatModel
     public ChatClientChatModel(IChatClient client)
         : base("ouroboros-meai")
     {
-        _client = client ?? throw new ArgumentNullException(nameof(client));
+        ArgumentNullException.ThrowIfNull(client);
+        _client = client;
     }
 
     /// <summary>
@@ -49,7 +50,8 @@ public class ChatClientChatModel : ChatModel
     public ChatClientChatModel(IChatClient client, string modelId)
         : base(modelId)
     {
-        _client = client ?? throw new ArgumentNullException(nameof(client));
+        ArgumentNullException.ThrowIfNull(client);
+        _client = client;
     }
 
     /// <inheritdoc />

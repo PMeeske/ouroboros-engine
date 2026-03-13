@@ -1,5 +1,5 @@
-// <copyright file="InterpretabilityEngineTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="InterpretabilityEngineTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using FluentAssertions;

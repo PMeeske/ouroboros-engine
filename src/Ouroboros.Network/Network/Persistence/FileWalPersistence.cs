@@ -1,5 +1,5 @@
-// <copyright file="FileWalPersistence.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="FileWalPersistence.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using System.Runtime.CompilerServices;
@@ -25,7 +25,8 @@ public sealed class FileWalPersistence : IGraphPersistence
     /// <param name="walFilePath">The path to the WAL file.</param>
     public FileWalPersistence(string walFilePath)
     {
-        _walFilePath = walFilePath ?? throw new ArgumentNullException(nameof(walFilePath));
+        ArgumentNullException.ThrowIfNull(walFilePath);
+        _walFilePath = walFilePath;
         _writeLock = new SemaphoreSlim(1, 1);
 
         // Ensure directory exists

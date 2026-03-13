@@ -1,5 +1,5 @@
-// <copyright file="ResearchSkillExtractor.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="ResearchSkillExtractor.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 // ==========================================================
@@ -27,9 +27,12 @@ public sealed class ResearchSkillExtractor
         Ouroboros.Abstractions.Core.IChatCompletionModel model,
         ResearchKnowledgeSource researchSource)
     {
-        _skillRegistry = skillRegistry ?? throw new ArgumentNullException(nameof(skillRegistry));
-        _model = model ?? throw new ArgumentNullException(nameof(model));
-        _researchSource = researchSource ?? throw new ArgumentNullException(nameof(researchSource));
+        ArgumentNullException.ThrowIfNull(skillRegistry);
+        _skillRegistry = skillRegistry;
+        ArgumentNullException.ThrowIfNull(model);
+        _model = model;
+        ArgumentNullException.ThrowIfNull(researchSource);
+        _researchSource = researchSource;
     }
 
     /// <summary>

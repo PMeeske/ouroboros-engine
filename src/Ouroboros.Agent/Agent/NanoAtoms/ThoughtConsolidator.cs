@@ -28,7 +28,8 @@ public sealed class ThoughtConsolidator
         NanoAtomConfig config,
         Ouroboros.Abstractions.Core.IChatCompletionModel? synthesisModel = null)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config;
         _synthesisModel = synthesisModel;
     }
 

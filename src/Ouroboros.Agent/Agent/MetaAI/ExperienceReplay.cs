@@ -18,9 +18,12 @@ public sealed class ExperienceReplay : IExperienceReplay
         ISkillRegistry skills,
         Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
-        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        ArgumentNullException.ThrowIfNull(memory);
+        _memory = memory;
+        ArgumentNullException.ThrowIfNull(skills);
+        _skills = skills;
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
     }
 
     /// <summary>

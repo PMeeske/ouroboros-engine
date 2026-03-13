@@ -34,7 +34,6 @@ public sealed partial class ConsolidatedMind : Ouroboros.Abstractions.Core.IChat
     {
         _config = config ?? new MindConfig();
         _tools = tools;
-        _ = _tools;
     }
 
     /// <summary>

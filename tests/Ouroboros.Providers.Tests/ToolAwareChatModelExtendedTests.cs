@@ -1,5 +1,5 @@
-// <copyright file="ToolAwareChatModelExtendedTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="ToolAwareChatModelExtendedTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Tests.Providers;
@@ -111,7 +111,7 @@ public class ToolAwareChatModelExtendedTests
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
 
         // Act
-        var (text, tools) = await toolAwareModel.GenerateWithToolsAsync("Calculate");
+        var (_, tools) = await toolAwareModel.GenerateWithToolsAsync("Calculate");
 
         // Assert
         tools.Should().HaveCount(2);
@@ -128,7 +128,7 @@ public class ToolAwareChatModelExtendedTests
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
 
         // Act
-        var (text, tools) = await toolAwareModel.GenerateWithToolsAsync("test");
+        var (text, _) = await toolAwareModel.GenerateWithToolsAsync("test");
 
         // Assert
         text.Should().Contain("error");
@@ -145,7 +145,7 @@ public class ToolAwareChatModelExtendedTests
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
 
         // Act
-        var (text, tools) = await toolAwareModel.GenerateWithToolsAsync("test");
+        var (_, tools) = await toolAwareModel.GenerateWithToolsAsync("test");
 
         // Assert
         tools.Should().HaveCount(1);
@@ -180,7 +180,7 @@ public class ToolAwareChatModelExtendedTests
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
 
         // Act
-        var (text, tools) = await toolAwareModel.GenerateWithToolsAsync("test");
+        var (_, tools) = await toolAwareModel.GenerateWithToolsAsync("test");
 
         // Assert
         tools.Should().HaveCount(1);
@@ -292,7 +292,7 @@ public class ToolAwareChatModelExtendedTests
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
 
         // Act
-        var (text, tools) = await toolAwareModel.GenerateWithToolsAsync("test");
+        var (_, tools) = await toolAwareModel.GenerateWithToolsAsync("test");
 
         // Assert
         tools.Should().HaveCount(3);
@@ -310,7 +310,7 @@ public class ToolAwareChatModelExtendedTests
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
 
         // Act
-        var (text, tools) = await toolAwareModel.GenerateWithToolsAsync("test");
+        var (text, _) = await toolAwareModel.GenerateWithToolsAsync("test");
 
         // Assert
         text.Should().Contain("The answer to 2+2 is");
@@ -333,7 +333,7 @@ public class ToolAwareChatModelExtendedTests
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
 
         // Act
-        var (text, tools) = await toolAwareModel.GenerateWithToolsAsync("test");
+        var (_, tools) = await toolAwareModel.GenerateWithToolsAsync("test");
 
         // Assert
         tools.Should().HaveCount(1);
@@ -357,7 +357,7 @@ public class ToolAwareChatModelExtendedTests
         var toolAwareModel = new ToolAwareChatModel(mockModel, registry);
 
         // Act
-        var (text, tools) = await toolAwareModel.GenerateWithToolsAsync("test");
+        var (_, tools) = await toolAwareModel.GenerateWithToolsAsync("test");
 
         // Assert - Both tools should be attempted
         tools.Should().HaveCount(2);

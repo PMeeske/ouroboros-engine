@@ -1,4 +1,4 @@
-﻿using PlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+﻿using PlanStep = Ouroboros.Agent.PlanStep;
 
 namespace Ouroboros.Tests.Database.Storage;
 

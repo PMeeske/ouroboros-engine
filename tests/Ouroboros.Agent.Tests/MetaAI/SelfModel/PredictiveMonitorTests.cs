@@ -1,5 +1,5 @@
-// <copyright file="PredictiveMonitorTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="PredictiveMonitorTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Abstractions;
@@ -109,8 +109,8 @@ public class PredictiveMonitorTests
     {
         // Arrange
         Forecast f1 = _sut.CreateForecast("first", "m", 10.0, 0.8, DateTime.UtcNow.AddHours(3));
-        Forecast f2 = _sut.CreateForecast("second", "m", 20.0, 0.8, DateTime.UtcNow.AddHours(1));
-        Forecast f3 = _sut.CreateForecast("third", "m", 30.0, 0.8, DateTime.UtcNow.AddHours(2));
+        _ = _sut.CreateForecast("second", "m", 20.0, 0.8, DateTime.UtcNow.AddHours(1));
+        _ = _sut.CreateForecast("third", "m", 30.0, 0.8, DateTime.UtcNow.AddHours(2));
 
         // Resolve one so it is no longer pending
         _sut.UpdateForecastOutcome(f1.Id, 10.0);

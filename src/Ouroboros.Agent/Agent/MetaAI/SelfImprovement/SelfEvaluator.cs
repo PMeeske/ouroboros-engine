@@ -29,12 +29,16 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
         IMetaAIPlannerOrchestrator orchestrator,
         SelfEvaluatorConfig? config = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
-        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
-        _ = _orchestrator;
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
+        ArgumentNullException.ThrowIfNull(capabilities);
+        _capabilities = capabilities;
+        ArgumentNullException.ThrowIfNull(skills);
+        _skills = skills;
+        ArgumentNullException.ThrowIfNull(memory);
+        _memory = memory;
+        ArgumentNullException.ThrowIfNull(orchestrator);
+        _orchestrator = orchestrator;
         _config = config ?? new SelfEvaluatorConfig();
     }
 

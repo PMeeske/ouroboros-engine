@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Decorator that adds caching to an existing orchestrator.
@@ -17,8 +17,10 @@ public sealed class CachingModelOrchestrator : IModelOrchestrator
         IOrchestrationCache cache,
         TimeSpan ttl)
     {
-        _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        ArgumentNullException.ThrowIfNull(inner);
+        _inner = inner;
+        ArgumentNullException.ThrowIfNull(cache);
+        _cache = cache;
         _ttl = ttl;
     }
 

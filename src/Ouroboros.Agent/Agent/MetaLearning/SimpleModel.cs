@@ -1,5 +1,5 @@
-// <copyright file="SimpleModel.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="SimpleModel.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Domain.MetaLearning;
@@ -24,7 +24,8 @@ public class SimpleModel : IModel
         Func<string, Dictionary<string, object>, string> predictionFunc,
         Dictionary<string, object>? initialParameters = null)
     {
-        _predictionFunc = predictionFunc ?? throw new ArgumentNullException(nameof(predictionFunc));
+        ArgumentNullException.ThrowIfNull(predictionFunc);
+        _predictionFunc = predictionFunc;
         _parameters = initialParameters ?? new Dictionary<string, object>();
     }
 

@@ -1,11 +1,11 @@
-// <copyright file="IdentityGraphTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="IdentityGraphTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Agent.MetaAI.SelfModel;
 using AgentCapability = Ouroboros.Agent.MetaAI.AgentCapability;
 using Plan = Ouroboros.Agent.MetaAI.Plan;
-using PlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using PlanStep = Ouroboros.Agent.PlanStep;
 
 namespace Ouroboros.Agent.Tests.MetaAI.SelfModel;
 

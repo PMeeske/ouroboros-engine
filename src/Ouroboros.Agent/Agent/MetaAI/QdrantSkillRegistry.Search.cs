@@ -1,5 +1,5 @@
-// <copyright file="QdrantSkillRegistry.Search.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="QdrantSkillRegistry.Search.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 

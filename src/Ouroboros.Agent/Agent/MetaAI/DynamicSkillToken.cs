@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// A dynamically created DSL token from a learned skill.
@@ -12,8 +12,10 @@ public sealed class DynamicSkillToken
     /// </summary>
     public DynamicSkillToken(Skill skill, Ouroboros.Abstractions.Core.IChatCompletionModel model)
     {
-        Skill = skill ?? throw new ArgumentNullException(nameof(skill));
-        _model = model ?? throw new ArgumentNullException(nameof(model));
+        ArgumentNullException.ThrowIfNull(skill);
+        Skill = skill;
+        ArgumentNullException.ThrowIfNull(model);
+        _model = model;
     }
 
     /// <summary>

@@ -28,8 +28,10 @@ public sealed class NanoAtomChain
         Ouroboros.Abstractions.Core.IChatCompletionModel model,
         NanoAtomConfig config)
     {
-        _model = model ?? throw new ArgumentNullException(nameof(model));
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(model);
+        _model = model;
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config;
     }
 
     /// <summary>

@@ -32,7 +32,8 @@ public sealed class PlanStrategyFitness : IFitnessFunction<PlanStrategyGene>
         double qualityWeight = 0.3,
         double speedWeight = 0.2)
     {
-        _atom = atom ?? throw new ArgumentNullException(nameof(atom));
+        ArgumentNullException.ThrowIfNull(atom);
+        _atom = atom;
         
         // Normalize weights to sum to 1.0
         double totalWeight = successRateWeight + qualityWeight + speedWeight;

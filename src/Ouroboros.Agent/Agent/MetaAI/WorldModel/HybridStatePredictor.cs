@@ -22,8 +22,10 @@ public sealed class HybridStatePredictor : IStatePredictor
     /// <param name="gnn">The GNN-based predictor for relational reasoning.</param>
     public HybridStatePredictor(TransformerStatePredictor transformer, GnnStatePredictor gnn)
     {
-        _transformer = transformer ?? throw new ArgumentNullException(nameof(transformer));
-        _gnn = gnn ?? throw new ArgumentNullException(nameof(gnn));
+        ArgumentNullException.ThrowIfNull(transformer);
+        _transformer = transformer;
+        ArgumentNullException.ThrowIfNull(gnn);
+        _gnn = gnn;
     }
 
     /// <inheritdoc/>

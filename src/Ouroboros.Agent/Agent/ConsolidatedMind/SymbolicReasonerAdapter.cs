@@ -28,7 +28,8 @@ public sealed partial class SymbolicReasonerAdapter : Ouroboros.Abstractions.Cor
     /// <param name="bridge">The neural-symbolic bridge to use for reasoning.</param>
     public SymbolicReasonerAdapter(INeuralSymbolicBridge bridge)
     {
-        _bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
+        ArgumentNullException.ThrowIfNull(bridge);
+        _bridge = bridge;
         _engine = null;
     }
 
@@ -39,7 +40,8 @@ public sealed partial class SymbolicReasonerAdapter : Ouroboros.Abstractions.Cor
     /// <param name="engine">The MeTTa engine to use for reasoning.</param>
     public SymbolicReasonerAdapter(IMeTTaEngine engine)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        _engine = engine;
         _bridge = null;
     }
 

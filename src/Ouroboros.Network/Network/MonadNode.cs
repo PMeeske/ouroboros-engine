@@ -1,5 +1,5 @@
-// <copyright file="MonadNode.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="MonadNode.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using System.Security.Cryptography;
@@ -61,8 +61,10 @@ public sealed record MonadNode
         ImmutableArray<Guid> parentIds)
     {
         this.Id = id;
-        this.TypeName = typeName ?? throw new ArgumentNullException(nameof(typeName));
-        this.PayloadJson = payloadJson ?? throw new ArgumentNullException(nameof(payloadJson));
+        ArgumentNullException.ThrowIfNull(typeName);
+        this.TypeName = typeName;
+        ArgumentNullException.ThrowIfNull(payloadJson);
+        this.PayloadJson = payloadJson;
         this.CreatedAt = createdAt;
         this.ParentIds = parentIds;
         this.Hash = this.ComputeHash();

@@ -1,5 +1,5 @@
-// <copyright file="TransitionReplayEngine.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="TransitionReplayEngine.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Network;
@@ -18,7 +18,8 @@ public sealed class TransitionReplayEngine
     /// <param name="dag">The Merkle-DAG to replay from.</param>
     public TransitionReplayEngine(MerkleDag dag)
     {
-        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
+        ArgumentNullException.ThrowIfNull(dag);
+        _dag = dag;
     }
 
     /// <summary>

@@ -23,8 +23,8 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
         double minConfidenceThreshold = 0.7,
         double humanOversightThreshold = 0.5)
     {
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
-        _ = _orchestrator;
+        ArgumentNullException.ThrowIfNull(orchestrator);
+        _orchestrator = orchestrator;
         _minConfidenceThreshold = Math.Clamp(minConfidenceThreshold, 0.0, 1.0);
         _humanOversightThreshold = Math.Clamp(humanOversightThreshold, 0.0, 1.0);
     }

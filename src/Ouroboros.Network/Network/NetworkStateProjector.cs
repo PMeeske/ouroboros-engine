@@ -1,5 +1,5 @@
-// <copyright file="NetworkStateProjector.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="NetworkStateProjector.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Network;
@@ -20,7 +20,8 @@ public sealed class NetworkStateProjector
     /// <param name="dag">The Merkle-DAG to project from.</param>
     public NetworkStateProjector(MerkleDag dag)
     {
-        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
+        ArgumentNullException.ThrowIfNull(dag);
+        _dag = dag;
         _currentEpoch = 0;
         _snapshots = new List<GlobalNetworkState>();
     }

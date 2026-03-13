@@ -25,8 +25,10 @@ public sealed class ToolSelector
     /// <param name="llm">The LLM for tool selection.</param>
     public ToolSelector(IReadOnlyList<ITool> tools, Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
-        _tools = tools ?? throw new ArgumentNullException(nameof(tools));
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        ArgumentNullException.ThrowIfNull(tools);
+        _tools = tools;
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
     }
 
     /// <summary>

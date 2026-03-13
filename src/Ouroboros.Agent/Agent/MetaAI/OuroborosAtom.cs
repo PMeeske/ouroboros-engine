@@ -49,8 +49,10 @@ public sealed class OuroborosAtom
     /// <param name="name">Human-readable name for this instance.</param>
     public OuroborosAtom(string instanceId, SafetyConstraints safetyConstraints, string name = "Ouroboros")
     {
-        InstanceId = instanceId ?? throw new ArgumentNullException(nameof(instanceId));
-        Name = name ?? throw new ArgumentNullException(nameof(name));
+        ArgumentNullException.ThrowIfNull(instanceId);
+        InstanceId = instanceId;
+        ArgumentNullException.ThrowIfNull(name);
+        Name = name;
         CreatedAt = DateTime.UtcNow;
         CurrentPhase = ImprovementPhase.Plan;
         CycleCount = 0;
@@ -144,7 +146,8 @@ public sealed class OuroborosAtom
     /// <param name="goal">The goal to pursue.</param>
     public void SetGoal(string goal)
     {
-        CurrentGoal = goal ?? throw new ArgumentNullException(nameof(goal));
+        ArgumentNullException.ThrowIfNull(goal);
+        CurrentGoal = goal;
         UpdateSelfModel("current_goal", goal);
         UpdateSelfModel("goal_set_at", DateTime.UtcNow);
     }

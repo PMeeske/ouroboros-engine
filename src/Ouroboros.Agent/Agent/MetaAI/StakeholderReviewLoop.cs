@@ -13,7 +13,8 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
 
     public StakeholderReviewLoop(IReviewSystemProvider reviewSystem)
     {
-        _reviewSystem = reviewSystem ?? throw new ArgumentNullException(nameof(reviewSystem));
+        ArgumentNullException.ThrowIfNull(reviewSystem);
+        _reviewSystem = reviewSystem;
     }
 
     /// <summary>

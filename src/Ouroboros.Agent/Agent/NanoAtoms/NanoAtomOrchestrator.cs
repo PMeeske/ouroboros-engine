@@ -42,8 +42,10 @@ public sealed class NanoAtomOrchestrator
         ISafetyGuard? safetyGuard = null)
         : base("NanoAtomOrchestrator", orchestratorConfig ?? OrchestratorConfig.Default(), safetyGuard)
     {
-        _model = model ?? throw new ArgumentNullException(nameof(model));
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(model);
+        _model = model;
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config;
     }
 
     /// <inheritdoc/>

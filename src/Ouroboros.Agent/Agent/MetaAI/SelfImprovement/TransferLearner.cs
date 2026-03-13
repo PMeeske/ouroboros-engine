@@ -24,10 +24,12 @@ public sealed partial class TransferLearner : ITransferLearner
         IMemoryStore memory,
         TransferLearningConfig? config = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
-        _ = _memory;
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
+        ArgumentNullException.ThrowIfNull(skills);
+        _skills = skills;
+        ArgumentNullException.ThrowIfNull(memory);
+        _memory = memory;
         _config = config ?? new TransferLearningConfig();
     }
 

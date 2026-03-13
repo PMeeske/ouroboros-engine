@@ -27,7 +27,8 @@ public sealed class ThoughtFragmenter
         NanoAtomConfig config,
         Ouroboros.Abstractions.Core.IChatCompletionModel? decompositionModel = null)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config;
         _decompositionModel = decompositionModel;
     }
 

@@ -1,5 +1,5 @@
-// <copyright file="QdrantSkillRegistry.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="QdrantSkillRegistry.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 // ==========================================================
@@ -49,7 +49,8 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
         QdrantSettings settings,
         IEmbeddingModel? embedding = null)
     {
-        _client = client ?? throw new ArgumentNullException(nameof(client));
+        ArgumentNullException.ThrowIfNull(client);
+        _client = client;
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(settings);
         _embedding = embedding;
@@ -66,7 +67,8 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
         IEmbeddingModel? embedding = null,
         QdrantSkillConfig? config = null)
     {
-        _client = client ?? throw new ArgumentNullException(nameof(client));
+        ArgumentNullException.ThrowIfNull(client);
+        _client = client;
         _embedding = embedding;
         _config = config ?? new QdrantSkillConfig();
         _disposeClient = false;
