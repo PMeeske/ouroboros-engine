@@ -6,8 +6,11 @@
     <AssemblyName>Ouroboros.Pipeline</AssemblyName>
     <Product>Ouroboros Pipeline</Product>
     <Description>Pipeline implementations including reasoning, ingestion, and replay for Ouroboros</Description>
-    <InternalsVisibleTo Include="Ouroboros.Pipeline.Tests" />
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ouroboros.Pipeline.Tests" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Abstractions\Ouroboros.Abstractions.csproj" />

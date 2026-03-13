@@ -6,8 +6,11 @@
     <AssemblyName>Ouroboros.Providers</AssemblyName>
     <Product>Ouroboros Providers</Product>
     <Description>External service providers and adapters for Ouroboros</Description>
-    <InternalsVisibleTo Include="Ouroboros.Providers.Tests" />
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Ouroboros.Providers.Tests" />
+  </ItemGroup>
 
   <!-- Remove local model duplicates; use the canonical definitions from Ouroboros.Abstractions -->
   <ItemGroup>
