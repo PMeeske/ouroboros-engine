@@ -1,5 +1,5 @@
-// <copyright file="WorldModelEngineTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="WorldModelEngineTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using FluentAssertions;
@@ -306,7 +306,7 @@ public class WorldModelEngineTests
     public async Task PredictNextStateAsync_WithNullModel_ReturnsFailure()
     {
         // Arrange
-        var engine = new WorldModelEngine(DefaultSeed);
+        _ = new WorldModelEngine(DefaultSeed);
         var state = CreateTestState();
         var action = CreateTestAction();
 

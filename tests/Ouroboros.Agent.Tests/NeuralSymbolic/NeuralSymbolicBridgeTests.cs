@@ -1,5 +1,5 @@
-// <copyright file="NeuralSymbolicBridgeTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="NeuralSymbolicBridgeTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Abstractions.Core;

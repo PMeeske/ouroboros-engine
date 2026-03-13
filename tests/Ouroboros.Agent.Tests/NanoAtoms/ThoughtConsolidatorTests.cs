@@ -1,5 +1,5 @@
-// <copyright file="ThoughtConsolidatorTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="ThoughtConsolidatorTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Agent.NanoAtoms;

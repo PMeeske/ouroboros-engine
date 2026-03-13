@@ -1,5 +1,5 @@
-// <copyright file="IntentionPredictionTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="IntentionPredictionTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using FluentAssertions;

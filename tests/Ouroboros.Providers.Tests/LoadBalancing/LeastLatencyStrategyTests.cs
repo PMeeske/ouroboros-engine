@@ -1,5 +1,5 @@
-// <copyright file="LeastLatencyStrategyTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="LeastLatencyStrategyTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Providers.LoadBalancing.Strategies;

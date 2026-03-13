@@ -136,7 +136,6 @@ public sealed class AttentionController
         int dropped = Math.Max(0, boosted.Count - effectiveCapacity);
         var allocated = boosted.Take(effectiveCapacity).ToList();
 
-        double totalPriority = allocated.Sum(t => t.AllocatedPriority);
         double capacityUsed = effectiveCapacity > 0
             ? Math.Min((double)allocated.Count / effectiveCapacity, 1.0)
             : 0.0;
