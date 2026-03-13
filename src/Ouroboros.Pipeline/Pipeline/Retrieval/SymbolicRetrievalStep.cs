@@ -21,7 +21,8 @@ public sealed class SymbolicRetrievalStep
     /// <param name="engine">The MeTTa engine for symbolic retrieval.</param>
     public SymbolicRetrievalStep(IMeTTaEngine engine)
     {
-        this._engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        this._engine = engine;
     }
 
     /// <summary>

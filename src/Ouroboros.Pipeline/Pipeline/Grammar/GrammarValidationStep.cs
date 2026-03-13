@@ -35,7 +35,8 @@ public sealed class GrammarValidationStep
         HyperonMeTTaEngine? engine = null,
         ILogger<GrammarValidationStep>? logger = null)
     {
-        _validator = validator ?? throw new ArgumentNullException(nameof(validator));
+        ArgumentNullException.ThrowIfNull(validator);
+        _validator = validator;
         _engine = engine;
         _logger = logger;
     }

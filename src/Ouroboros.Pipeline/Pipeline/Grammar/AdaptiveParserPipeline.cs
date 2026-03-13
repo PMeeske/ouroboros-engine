@@ -47,9 +47,12 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
         DynamicParserFactory compilerFactory,
         ILogger<AdaptiveParserPipeline>? logger = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _validator = validator ?? throw new ArgumentNullException(nameof(validator));
-        _compilerFactory = compilerFactory ?? throw new ArgumentNullException(nameof(compilerFactory));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
+        ArgumentNullException.ThrowIfNull(validator);
+        _validator = validator;
+        ArgumentNullException.ThrowIfNull(compilerFactory);
+        _compilerFactory = compilerFactory;
         _logger = logger;
     }
 

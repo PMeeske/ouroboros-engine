@@ -56,10 +56,14 @@ public sealed record PipelineBranch
     /// </summary>
     private PipelineBranch(string name, IVectorStore store, DataSource source, ImmutableList<PipelineEvent> events)
     {
-        Name = name ?? throw new ArgumentNullException(nameof(name));
-        Store = store ?? throw new ArgumentNullException(nameof(store));
-        Source = source ?? throw new ArgumentNullException(nameof(source));
-        _events = events ?? throw new ArgumentNullException(nameof(events));
+        ArgumentNullException.ThrowIfNull(name);
+        Name = name;
+        ArgumentNullException.ThrowIfNull(store);
+        Store = store;
+        ArgumentNullException.ThrowIfNull(source);
+        Source = source;
+        ArgumentNullException.ThrowIfNull(events);
+        _events = events;
     }
 
     /// <summary>

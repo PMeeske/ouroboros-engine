@@ -32,7 +32,8 @@ public sealed class OuroborosOrchestratorBuilder
     /// <returns>This builder for chaining.</returns>
     public OuroborosOrchestratorBuilder WithLLM(Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
         return this;
     }
 
@@ -43,7 +44,8 @@ public sealed class OuroborosOrchestratorBuilder
     /// <returns>This builder for chaining.</returns>
     public OuroborosOrchestratorBuilder WithTools(ToolRegistry tools)
     {
-        _tools = tools ?? throw new ArgumentNullException(nameof(tools));
+        ArgumentNullException.ThrowIfNull(tools);
+        _tools = tools;
         return this;
     }
 
@@ -54,7 +56,8 @@ public sealed class OuroborosOrchestratorBuilder
     /// <returns>This builder for chaining.</returns>
     public OuroborosOrchestratorBuilder WithMemory(IMemoryStore memory)
     {
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        ArgumentNullException.ThrowIfNull(memory);
+        _memory = memory;
         return this;
     }
 
@@ -65,7 +68,8 @@ public sealed class OuroborosOrchestratorBuilder
     /// <returns>This builder for chaining.</returns>
     public OuroborosOrchestratorBuilder WithSafety(ISafetyGuard safety)
     {
-        _safety = safety ?? throw new ArgumentNullException(nameof(safety));
+        ArgumentNullException.ThrowIfNull(safety);
+        _safety = safety;
         return this;
     }
 
@@ -76,7 +80,8 @@ public sealed class OuroborosOrchestratorBuilder
     /// <returns>This builder for chaining.</returns>
     public OuroborosOrchestratorBuilder WithMeTTaEngine(IMeTTaEngine engine)
     {
-        _mettaEngine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        _mettaEngine = engine;
         return this;
     }
 
@@ -88,7 +93,8 @@ public sealed class OuroborosOrchestratorBuilder
     /// <returns>This builder for chaining.</returns>
     public OuroborosOrchestratorBuilder WithAtom(OuroborosAtom atom)
     {
-        _atom = atom ?? throw new ArgumentNullException(nameof(atom));
+        ArgumentNullException.ThrowIfNull(atom);
+        _atom = atom;
         return this;
     }
 
@@ -99,7 +105,8 @@ public sealed class OuroborosOrchestratorBuilder
     /// <returns>This builder for chaining.</returns>
     public OuroborosOrchestratorBuilder WithConfiguration(OrchestratorConfig config)
     {
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(config);
+        _config = config;
         return this;
     }
 

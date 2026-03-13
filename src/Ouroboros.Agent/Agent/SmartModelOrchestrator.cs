@@ -50,8 +50,8 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
         IMetricsStore? metricsStore,
         string fallbackModel = "default")
     {
-        _baseTools = baseTools ?? throw new ArgumentNullException(nameof(baseTools));
-        _ = _baseTools;
+        ArgumentNullException.ThrowIfNull(baseTools);
+        _baseTools = baseTools;
         _toolSelector = new DynamicToolSelector(baseTools);
         _metricsStore = metricsStore;
         _fallbackModel = fallbackModel;

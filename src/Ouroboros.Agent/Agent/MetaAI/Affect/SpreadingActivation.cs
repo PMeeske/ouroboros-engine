@@ -40,7 +40,8 @@ public sealed class SpreadingActivation
         double spreadFactor = 0.5,
         double activationThreshold = 0.1)
     {
-        _space = space ?? throw new ArgumentNullException(nameof(space));
+        ArgumentNullException.ThrowIfNull(space);
+        _space = space;
         _decayRate = decayRate;
         _spreadFactor = spreadFactor;
         _activationThreshold = activationThreshold;

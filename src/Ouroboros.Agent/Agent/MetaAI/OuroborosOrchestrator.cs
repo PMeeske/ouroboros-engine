@@ -95,18 +95,22 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
         Affect.SpreadingActivation? spreading = null)
         : base("OuroborosOrchestrator", configuration ?? OrchestratorConfig.Default(), safety)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _tools = tools ?? throw new ArgumentNullException(nameof(tools));
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
-        _safety = safety ?? throw new ArgumentNullException(nameof(safety));
-        _mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
+        ArgumentNullException.ThrowIfNull(tools);
+        _tools = tools;
+        ArgumentNullException.ThrowIfNull(memory);
+        _memory = memory;
+        ArgumentNullException.ThrowIfNull(safety);
+        _safety = safety;
+        ArgumentNullException.ThrowIfNull(mettaEngine);
+        _mettaEngine = mettaEngine;
         _atom = atom ?? OuroborosAtom.CreateDefault();
         _strategyEvolver = strategyEvolver;
         _logger = logger ?? NullLogger<OuroborosOrchestrator>.Instance;
         _toolSelector = new ToolSelector(_tools.All.ToList(), _llm);
         _valenceMonitor = valenceMonitor;
         _priorityModulator = priorityModulator;
-        _ = _priorityModulator;
         _urgeSystem = urgeSystem;
         _spreading = spreading;
     }

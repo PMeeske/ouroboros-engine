@@ -21,8 +21,10 @@ public sealed class PipelineBranchReifier
     /// <param name="projector">The network state projector.</param>
     public PipelineBranchReifier(MerkleDag dag, NetworkStateProjector projector)
     {
-        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
-        _projector = projector ?? throw new ArgumentNullException(nameof(projector));
+        ArgumentNullException.ThrowIfNull(dag);
+        _dag = dag;
+        ArgumentNullException.ThrowIfNull(projector);
+        _projector = projector;
         _eventToNodeMapping = new Dictionary<Guid, Guid>();
     }
 

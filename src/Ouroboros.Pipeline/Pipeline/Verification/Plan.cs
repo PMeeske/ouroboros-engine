@@ -31,7 +31,8 @@ public sealed record Plan
     /// <param name="actions">The actions in the plan.</param>
     public Plan(string description, IEnumerable<PlanAction>? actions = null)
     {
-        this.Description = description ?? throw new ArgumentNullException(nameof(description));
+        ArgumentNullException.ThrowIfNull(description);
+        this.Description = description;
         this._actions = actions?.ToImmutableList() ?? ImmutableList<PlanAction>.Empty;
     }
 

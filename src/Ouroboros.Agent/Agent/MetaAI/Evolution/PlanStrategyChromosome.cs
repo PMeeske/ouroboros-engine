@@ -20,7 +20,8 @@ public sealed class PlanStrategyChromosome : IChromosome<PlanStrategyGene>
     /// <param name="fitness">The fitness score of this chromosome.</param>
     public PlanStrategyChromosome(IReadOnlyList<PlanStrategyGene> genes, double fitness = 0.0)
     {
-        Genes = genes ?? throw new ArgumentNullException(nameof(genes));
+        ArgumentNullException.ThrowIfNull(genes);
+        Genes = genes;
         Fitness = fitness;
     }
 

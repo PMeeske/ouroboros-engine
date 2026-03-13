@@ -19,9 +19,12 @@ public sealed partial class SkillExtractor : ISkillExtractor
 
     public SkillExtractor(Ouroboros.Abstractions.Core.IChatCompletionModel llm, ISkillRegistry skillRegistry, IEthicsFramework ethics)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _skillRegistry = skillRegistry ?? throw new ArgumentNullException(nameof(skillRegistry));
-        _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
+        ArgumentNullException.ThrowIfNull(skillRegistry);
+        _skillRegistry = skillRegistry;
+        ArgumentNullException.ThrowIfNull(ethics);
+        _ethics = ethics;
     }
 
     /// <summary>

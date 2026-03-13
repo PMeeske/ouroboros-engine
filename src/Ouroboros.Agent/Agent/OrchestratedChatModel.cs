@@ -20,7 +20,8 @@ public sealed class OrchestratedChatModel : Ouroboros.Abstractions.Core.IChatCom
 
     public OrchestratedChatModel(IModelOrchestrator orchestrator, bool trackMetrics = true)
     {
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        ArgumentNullException.ThrowIfNull(orchestrator);
+        _orchestrator = orchestrator;
         _trackMetrics = trackMetrics;
     }
 

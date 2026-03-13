@@ -31,8 +31,10 @@ public sealed partial class NeuralSymbolicBridge : INeuralSymbolicBridge
         ISymbolicKnowledgeBase knowledgeBase,
         ConfidenceConfig? confidenceConfig = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _knowledgeBase = knowledgeBase ?? throw new ArgumentNullException(nameof(knowledgeBase));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
+        ArgumentNullException.ThrowIfNull(knowledgeBase);
+        _knowledgeBase = knowledgeBase;
         _confidenceConfig = confidenceConfig ?? new ConfidenceConfig();
     }
 

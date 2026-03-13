@@ -17,8 +17,10 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
         IMetaAIPlannerOrchestrator orchestrator,
         Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        ArgumentNullException.ThrowIfNull(orchestrator);
+        _orchestrator = orchestrator;
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
 
         // Register default triggers
         RegisterDefaultTriggers();

@@ -35,9 +35,11 @@ public sealed partial class EpisodicMemoryEngine : IEpisodicMemoryEngine, IAsync
         IEmbeddingModel embeddingModel,
         ILogger<EpisodicMemoryEngine>? logger = null)
     {
-        _qdrantClient = qdrantClient ?? throw new ArgumentNullException(nameof(qdrantClient));
+        ArgumentNullException.ThrowIfNull(qdrantClient);
+        _qdrantClient = qdrantClient;
         ArgumentNullException.ThrowIfNull(registry);
-        _embeddingModel = embeddingModel ?? throw new ArgumentNullException(nameof(embeddingModel));
+        ArgumentNullException.ThrowIfNull(embeddingModel);
+        _embeddingModel = embeddingModel;
         _collectionName = registry.GetCollectionName(QdrantCollectionRole.EpisodicMemory);
         _logger = logger;
         _disposeClient = false;
@@ -57,9 +59,12 @@ public sealed partial class EpisodicMemoryEngine : IEpisodicMemoryEngine, IAsync
         string collectionName = "episodic_memory",
         ILogger<EpisodicMemoryEngine>? logger = null)
     {
-        _qdrantClient = qdrantClient ?? throw new ArgumentNullException(nameof(qdrantClient));
-        _embeddingModel = embeddingModel ?? throw new ArgumentNullException(nameof(embeddingModel));
-        _collectionName = collectionName ?? throw new ArgumentNullException(nameof(collectionName));
+        ArgumentNullException.ThrowIfNull(qdrantClient);
+        _qdrantClient = qdrantClient;
+        ArgumentNullException.ThrowIfNull(embeddingModel);
+        _embeddingModel = embeddingModel;
+        ArgumentNullException.ThrowIfNull(collectionName);
+        _collectionName = collectionName;
         _logger = logger;
         _disposeClient = false;
     }

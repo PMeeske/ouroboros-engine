@@ -51,7 +51,8 @@ public sealed class NanoAtomModel : Ouroboros.Abstractions.Core.IChatCompletionM
         NanoAtomConfig? config = null,
         Ouroboros.Abstractions.Core.IChatCompletionModel? synthesisModel = null)
     {
-        _innerModel = innerModel ?? throw new ArgumentNullException(nameof(innerModel));
+        ArgumentNullException.ThrowIfNull(innerModel);
+        _innerModel = innerModel;
         _config = config ?? NanoAtomConfig.Default();
         _synthesisModel = synthesisModel;
     }

@@ -25,7 +25,8 @@ public sealed class FileWalPersistence : IGraphPersistence
     /// <param name="walFilePath">The path to the WAL file.</param>
     public FileWalPersistence(string walFilePath)
     {
-        _walFilePath = walFilePath ?? throw new ArgumentNullException(nameof(walFilePath));
+        ArgumentNullException.ThrowIfNull(walFilePath);
+        _walFilePath = walFilePath;
         _writeLock = new SemaphoreSlim(1, 1);
 
         // Ensure directory exists

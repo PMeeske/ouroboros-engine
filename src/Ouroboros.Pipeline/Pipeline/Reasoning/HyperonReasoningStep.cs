@@ -45,7 +45,8 @@ public class HyperonReasoningStep : IDisposable
     public HyperonReasoningStep(string stepName, HyperonMeTTaEngine engine)
     {
         _stepName = stepName;
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        _engine = engine;
         _flow = new HyperonFlowIntegration(_engine);
     }
 

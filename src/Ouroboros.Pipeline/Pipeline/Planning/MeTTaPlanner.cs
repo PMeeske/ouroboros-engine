@@ -23,7 +23,8 @@ public sealed class MeTTaPlanner
     /// <param name="engine">The MeTTa engine for backward chaining.</param>
     public MeTTaPlanner(IMeTTaEngine engine)
     {
-        this._engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        this._engine = engine;
     }
 
     /// <summary>

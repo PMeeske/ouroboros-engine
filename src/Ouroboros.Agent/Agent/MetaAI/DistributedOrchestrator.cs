@@ -20,7 +20,8 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
         ISafetyGuard safety,
         DistributedOrchestrationConfig? config = null)
     {
-        _safety = safety ?? throw new ArgumentNullException(nameof(safety));
+        ArgumentNullException.ThrowIfNull(safety);
+        _safety = safety;
         _config = config ?? new DistributedOrchestrationConfig(
             HeartbeatTimeout: TimeSpan.FromMinutes(5));
     }

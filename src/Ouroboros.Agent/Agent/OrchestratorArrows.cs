@@ -207,7 +207,8 @@ public static class OrchestratorArrows
             ISafetyGuard? safetyGuard = null)
             : base(name, config, safetyGuard)
         {
-            _executionArrow = executionArrow ?? throw new ArgumentNullException(nameof(executionArrow));
+            ArgumentNullException.ThrowIfNull(executionArrow);
+            _executionArrow = executionArrow;
         }
 
         protected override Task<TOutput> ExecuteCoreAsync(TInput input, OrchestratorContext context)

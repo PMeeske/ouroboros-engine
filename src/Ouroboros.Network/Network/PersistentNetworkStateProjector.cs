@@ -46,11 +46,14 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
         Func<string, CancellationToken, Task<float[]>> embeddingFunc,
         ILogger<PersistentNetworkStateProjector>? logger = null)
     {
-        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
-        _qdrantClient = client ?? throw new ArgumentNullException(nameof(client));
+        ArgumentNullException.ThrowIfNull(dag);
+        _dag = dag;
+        ArgumentNullException.ThrowIfNull(client);
+        _qdrantClient = client;
         _disposeClient = false;
         ArgumentNullException.ThrowIfNull(registry);
-        _embeddingFunc = embeddingFunc ?? throw new ArgumentNullException(nameof(embeddingFunc));
+        ArgumentNullException.ThrowIfNull(embeddingFunc);
+        _embeddingFunc = embeddingFunc;
         _logger = logger ?? NullLogger<PersistentNetworkStateProjector>.Instance;
         _snapshotCollectionName = registry.GetCollectionName(QdrantCollectionRole.NetworkSnapshots);
         _learningsCollectionName = registry.GetCollectionName(QdrantCollectionRole.NetworkLearnings);

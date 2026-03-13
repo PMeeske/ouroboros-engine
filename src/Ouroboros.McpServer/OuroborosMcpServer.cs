@@ -24,7 +24,8 @@ public sealed class OuroborosMcpServer
     /// <param name="options">Optional server configuration. Defaults are used when null.</param>
     public OuroborosMcpServer(ToolRegistry registry, McpServerOptions? options = null)
     {
-        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        ArgumentNullException.ThrowIfNull(registry);
+        _registry = registry;
         _options = options ?? new McpServerOptions();
     }
 

@@ -23,8 +23,10 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         ToolRegistry tools,
         CapabilityRegistryConfig? config = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _tools = tools ?? throw new ArgumentNullException(nameof(tools));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
+        ArgumentNullException.ThrowIfNull(tools);
+        _tools = tools;
         _config = config ?? new CapabilityRegistryConfig(
             CapabilityExpirationTime: TimeSpan.FromDays(30));
     }

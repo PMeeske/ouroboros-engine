@@ -37,10 +37,10 @@ public sealed class GrammarEvolutionStep : IDisposable
         HyperonMeTTaEngine? engine = null,
         ILogger<GrammarEvolutionStep>? logger = null)
     {
-        _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
+        ArgumentNullException.ThrowIfNull(pipeline);
+        _pipeline = pipeline;
         _engine = engine;
         _logger = logger;
-        _ = _logger; // S4487: field retained for DI; logger usage deferred to future diagnostics
     }
 
     /// <summary>

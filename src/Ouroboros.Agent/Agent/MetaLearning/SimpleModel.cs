@@ -24,7 +24,8 @@ public class SimpleModel : IModel
         Func<string, Dictionary<string, object>, string> predictionFunc,
         Dictionary<string, object>? initialParameters = null)
     {
-        _predictionFunc = predictionFunc ?? throw new ArgumentNullException(nameof(predictionFunc));
+        ArgumentNullException.ThrowIfNull(predictionFunc);
+        _predictionFunc = predictionFunc;
         _parameters = initialParameters ?? new Dictionary<string, object>();
     }
 

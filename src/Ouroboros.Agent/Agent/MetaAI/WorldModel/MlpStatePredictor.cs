@@ -39,11 +39,8 @@ public sealed class MlpStatePredictor : IStatePredictor
         float[] biasOutput)
     {
         _inputSize = inputSize;
-        _ = _inputSize;
         _hiddenSize = hiddenSize;
-        _ = _hiddenSize;
         _outputSize = outputSize;
-        _ = _outputSize;
         _weightsInputHidden = weightsInputHidden;
         _biasHidden = biasHidden;
         _weightsHiddenOutput = weightsHiddenOutput;

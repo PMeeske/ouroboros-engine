@@ -24,8 +24,10 @@ public sealed class SkillBasedDslExtension
     /// </summary>
     public SkillBasedDslExtension(ISkillRegistry skillRegistry, Ouroboros.Abstractions.Core.IChatCompletionModel model)
     {
-        _skillRegistry = skillRegistry ?? throw new ArgumentNullException(nameof(skillRegistry));
-        _model = model ?? throw new ArgumentNullException(nameof(model));
+        ArgumentNullException.ThrowIfNull(skillRegistry);
+        _skillRegistry = skillRegistry;
+        ArgumentNullException.ThrowIfNull(model);
+        _model = model;
     }
 
     /// <summary>

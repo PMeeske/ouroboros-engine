@@ -35,7 +35,8 @@ public sealed class Phase2OrchestratorBuilder
     /// </summary>
     public Phase2OrchestratorBuilder WithLLM(Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
         return this;
     }
 
@@ -44,7 +45,8 @@ public sealed class Phase2OrchestratorBuilder
     /// </summary>
     public Phase2OrchestratorBuilder WithTools(ToolRegistry tools)
     {
-        _tools = tools ?? throw new ArgumentNullException(nameof(tools));
+        ArgumentNullException.ThrowIfNull(tools);
+        _tools = tools;
         return this;
     }
 
@@ -53,7 +55,8 @@ public sealed class Phase2OrchestratorBuilder
     /// </summary>
     public Phase2OrchestratorBuilder WithMemory(IMemoryStore memory)
     {
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        ArgumentNullException.ThrowIfNull(memory);
+        _memory = memory;
         return this;
     }
 
@@ -62,7 +65,8 @@ public sealed class Phase2OrchestratorBuilder
     /// </summary>
     public Phase2OrchestratorBuilder WithMemoryConfig(PersistentMemoryConfig config)
     {
-        _memoryConfig = config ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(config);
+        _memoryConfig = config;
         return this;
     }
 
@@ -71,7 +75,8 @@ public sealed class Phase2OrchestratorBuilder
     /// </summary>
     public Phase2OrchestratorBuilder WithSkills(ISkillRegistry skills)
     {
-        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
+        ArgumentNullException.ThrowIfNull(skills);
+        _skills = skills;
         return this;
     }
 
@@ -80,8 +85,8 @@ public sealed class Phase2OrchestratorBuilder
     /// </summary>
     public Phase2OrchestratorBuilder WithSkillExtractionConfig(SkillExtractionConfig config)
     {
-        _skillConfig = config ?? throw new ArgumentNullException(nameof(config));
-        _ = _skillConfig;
+        ArgumentNullException.ThrowIfNull(config);
+        _skillConfig = config;
         return this;
     }
 
@@ -90,7 +95,8 @@ public sealed class Phase2OrchestratorBuilder
     /// </summary>
     public Phase2OrchestratorBuilder WithCapabilityConfig(CapabilityRegistryConfig config)
     {
-        _capabilityConfig = config ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(config);
+        _capabilityConfig = config;
         return this;
     }
 
@@ -99,7 +105,8 @@ public sealed class Phase2OrchestratorBuilder
     /// </summary>
     public Phase2OrchestratorBuilder WithGoalConfig(GoalHierarchyConfig config)
     {
-        _goalConfig = config ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(config);
+        _goalConfig = config;
         return this;
     }
 
@@ -108,7 +115,8 @@ public sealed class Phase2OrchestratorBuilder
     /// </summary>
     public Phase2OrchestratorBuilder WithEvaluatorConfig(SelfEvaluatorConfig config)
     {
-        _evaluatorConfig = config ?? throw new ArgumentNullException(nameof(config));
+        ArgumentNullException.ThrowIfNull(config);
+        _evaluatorConfig = config;
         return this;
     }
 
@@ -117,7 +125,8 @@ public sealed class Phase2OrchestratorBuilder
     /// </summary>
     public Phase2OrchestratorBuilder WithSafety(ISafetyGuard safety)
     {
-        _safety = safety ?? throw new ArgumentNullException(nameof(safety));
+        ArgumentNullException.ThrowIfNull(safety);
+        _safety = safety;
         return this;
     }
 
@@ -126,7 +135,8 @@ public sealed class Phase2OrchestratorBuilder
     /// </summary>
     public Phase2OrchestratorBuilder WithEthics(IEthicsFramework ethics)
     {
-        _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
+        ArgumentNullException.ThrowIfNull(ethics);
+        _ethics = ethics;
         return this;
     }
 

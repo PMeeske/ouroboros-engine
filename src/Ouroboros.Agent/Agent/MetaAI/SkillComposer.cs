@@ -14,8 +14,10 @@ public sealed class SkillComposer : ISkillComposer
 
     public SkillComposer(ISkillRegistry skills, IMemoryStore memory)
     {
-        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
+        ArgumentNullException.ThrowIfNull(skills);
+        _skills = skills;
+        ArgumentNullException.ThrowIfNull(memory);
+        _memory = memory;
     }
 
     /// <summary>

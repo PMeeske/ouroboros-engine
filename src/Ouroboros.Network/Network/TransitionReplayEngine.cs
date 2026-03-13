@@ -18,7 +18,8 @@ public sealed class TransitionReplayEngine
     /// <param name="dag">The Merkle-DAG to replay from.</param>
     public TransitionReplayEngine(MerkleDag dag)
     {
-        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
+        ArgumentNullException.ThrowIfNull(dag);
+        _dag = dag;
     }
 
     /// <summary>

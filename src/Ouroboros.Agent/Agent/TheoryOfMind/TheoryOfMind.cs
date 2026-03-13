@@ -27,7 +27,8 @@ public sealed class TheoryOfMind : ITheoryOfMind
     /// <param name="llm">LLM for inference and reasoning</param>
     public TheoryOfMind(Ouroboros.Abstractions.Core.IChatCompletionModel llm)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
     }
 
     /// <summary>

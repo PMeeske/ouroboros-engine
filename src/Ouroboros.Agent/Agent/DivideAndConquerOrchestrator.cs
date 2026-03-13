@@ -24,7 +24,8 @@ public sealed class DivideAndConquerOrchestrator
         Ouroboros.Abstractions.Core.IChatCompletionModel model,
         DivideAndConquerConfig? config = null)
     {
-        _model = model ?? throw new ArgumentNullException(nameof(model));
+        ArgumentNullException.ThrowIfNull(model);
+        _model = model;
         _config = config ?? new DivideAndConquerConfig();
     }
 

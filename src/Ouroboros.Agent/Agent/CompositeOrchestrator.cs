@@ -26,7 +26,8 @@ public sealed class CompositeOrchestrator<TInput, TOutput> : OrchestratorBase<TI
         Func<TInput, OrchestratorContext, Task<TOutput>> executeFunc)
         : base(name, config)
     {
-        _executeFunc = executeFunc ?? throw new ArgumentNullException(nameof(executeFunc));
+        ArgumentNullException.ThrowIfNull(executeFunc);
+        _executeFunc = executeFunc;
     }
 
     /// <summary>

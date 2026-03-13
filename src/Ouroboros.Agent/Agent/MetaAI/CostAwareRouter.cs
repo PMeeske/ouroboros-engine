@@ -17,9 +17,10 @@ public sealed class CostAwareRouter : ICostAwareRouter
         IUncertaintyRouter uncertaintyRouter,
         IMetaAIPlannerOrchestrator orchestrator)
     {
-        _uncertaintyRouter = uncertaintyRouter ?? throw new ArgumentNullException(nameof(uncertaintyRouter));
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
-        _ = _orchestrator;
+        ArgumentNullException.ThrowIfNull(uncertaintyRouter);
+        _uncertaintyRouter = uncertaintyRouter;
+        ArgumentNullException.ThrowIfNull(orchestrator);
+        _orchestrator = orchestrator;
 
         // Register default costs
         RegisterDefaultCosts();

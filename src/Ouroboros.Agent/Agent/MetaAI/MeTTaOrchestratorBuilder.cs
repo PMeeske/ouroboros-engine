@@ -97,7 +97,8 @@ public sealed class MeTTaOrchestratorBuilder
     /// <returns>This builder for chaining.</returns>
     public MeTTaOrchestratorBuilder WithFormReasoning(FormMeTTaBridge bridge)
     {
-        _formBridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
+        ArgumentNullException.ThrowIfNull(bridge);
+        _formBridge = bridge;
         _enableFormReasoning = true;
         return this;
     }
@@ -121,7 +122,8 @@ public sealed class MeTTaOrchestratorBuilder
     /// <returns>This builder for chaining.</returns>
     public MeTTaOrchestratorBuilder WithAgentRuntime(MeTTaAgentRuntime runtime)
     {
-        _agentRuntime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+        ArgumentNullException.ThrowIfNull(runtime);
+        _agentRuntime = runtime;
         return this;
     }
 

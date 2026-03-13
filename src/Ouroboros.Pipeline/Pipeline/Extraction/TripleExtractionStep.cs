@@ -37,7 +37,8 @@ public sealed class TripleExtractionStep
     /// <param name="llm">The LLM to use for extraction.</param>
     public TripleExtractionStep(ToolAwareChatModel llm)
     {
-        this._llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        ArgumentNullException.ThrowIfNull(llm);
+        this._llm = llm;
     }
 
     /// <summary>

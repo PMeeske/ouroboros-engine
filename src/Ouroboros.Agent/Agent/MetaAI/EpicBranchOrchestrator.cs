@@ -21,7 +21,8 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
         IDistributedOrchestrator distributor,
         EpicBranchConfig? config = null)
     {
-        _distributor = distributor ?? throw new ArgumentNullException(nameof(distributor));
+        ArgumentNullException.ThrowIfNull(distributor);
+        _distributor = distributor;
         _config = config ?? new EpicBranchConfig();
     }
 

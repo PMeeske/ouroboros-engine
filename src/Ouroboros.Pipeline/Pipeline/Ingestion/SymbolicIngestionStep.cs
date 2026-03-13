@@ -29,9 +29,12 @@ public sealed class SymbolicIngestionStep
         TripleExtractionStep extractor,
         IEmbeddingModel embedModel)
     {
-        this._engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        this._extractor = extractor ?? throw new ArgumentNullException(nameof(extractor));
-        this._embedModel = embedModel ?? throw new ArgumentNullException(nameof(embedModel));
+        ArgumentNullException.ThrowIfNull(engine);
+        this._engine = engine;
+        ArgumentNullException.ThrowIfNull(extractor);
+        this._extractor = extractor;
+        ArgumentNullException.ThrowIfNull(embedModel);
+        this._embedModel = embedModel;
     }
 
     /// <summary>

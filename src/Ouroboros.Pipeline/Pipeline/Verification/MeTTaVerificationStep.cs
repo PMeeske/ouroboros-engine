@@ -32,7 +32,8 @@ public sealed class MeTTaVerificationStep
     /// <param name="context">The security context for verification.</param>
     public MeTTaVerificationStep(IMeTTaEngine engine, SafeContext context = SafeContext.ReadOnly)
     {
-        this._engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        this._engine = engine;
         this._context = context;
     }
 

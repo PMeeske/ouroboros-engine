@@ -32,11 +32,12 @@ public sealed partial class MetaLearner : IMetaLearner
         IMemoryStore memory,
         MetaLearnerConfig? config = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _skillRegistry = skillRegistry ?? throw new ArgumentNullException(nameof(skillRegistry));
-        _ = _skillRegistry;
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
-        _ = _memory;
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
+        ArgumentNullException.ThrowIfNull(skillRegistry);
+        _skillRegistry = skillRegistry;
+        ArgumentNullException.ThrowIfNull(memory);
+        _memory = memory;
         _config = config ?? new MetaLearnerConfig();
     }
 

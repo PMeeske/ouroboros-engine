@@ -25,7 +25,8 @@ public partial class MetaLearningEngine : IMetaLearningEngine
     /// <param name="seed">Random seed for reproducibility (optional).</param>
     public MetaLearningEngine(IEmbeddingModel embeddingModel, int? seed = null)
     {
-        _embeddingModel = embeddingModel ?? throw new ArgumentNullException(nameof(embeddingModel));
+        ArgumentNullException.ThrowIfNull(embeddingModel);
+        _embeddingModel = embeddingModel;
         _random = seed.HasValue ? new SeededRandomProvider(seed.Value) : new SeededRandomProvider();
     }
 

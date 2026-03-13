@@ -23,7 +23,8 @@ public sealed class SymbolicPlanSelector
     /// <param name="engine">The MeTTa engine for symbolic reasoning.</param>
     public SymbolicPlanSelector(IMeTTaEngine engine)
     {
-        this._engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        this._engine = engine;
     }
 
     /// <summary>

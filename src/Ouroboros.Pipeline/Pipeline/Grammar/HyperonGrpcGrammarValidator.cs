@@ -44,7 +44,8 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
     /// <param name="logger">Optional logger.</param>
     public HyperonGrpcGrammarValidator(GrpcChannel channel, ILogger<HyperonGrpcGrammarValidator>? logger = null)
     {
-        _channel = channel ?? throw new ArgumentNullException(nameof(channel));
+        ArgumentNullException.ThrowIfNull(channel);
+        _channel = channel;
         _logger = logger;
         _client = new HyperonGrammarService.HyperonGrammarServiceClient(_channel);
     }

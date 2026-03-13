@@ -43,7 +43,8 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
     /// <param name="engine">The Hyperon engine to use.</param>
     public HyperonPlanner(HyperonMeTTaEngine engine)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        _engine = engine;
         _flow = new HyperonFlowIntegration(_engine);
     }
 
