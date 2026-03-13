@@ -76,7 +76,7 @@ public static class CollectiveMindFactory
     /// Creates a local-only collective using Ollama.
     /// Provides resilience features (circuit breaker, health tracking) for a single local provider.
     /// </summary>
-    public static CollectiveMind CreateLocal(string model = "llama3.2", string endpoint = DefaultEndpoints.Ollama, ChatRuntimeSettings? settings = null)
+    public static CollectiveMind CreateLocal(string model = "glm-5:cloud", string endpoint = DefaultEndpoints.Ollama, ChatRuntimeSettings? settings = null)
     {
         var mind = new CollectiveMind();
         mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, model, endpoint, settings: settings);
@@ -140,7 +140,7 @@ public static class CollectiveMindFactory
         var mind = new CollectiveMind();
 
         // Add mix of local and cloud providers for routing flexibility
-        mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, "llama3.2", settings: settings);
+        mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, "glm-5:cloud", settings: settings);
         TryAddProvider(mind, "Groq", ChatEndpointType.Groq, "llama-3.1-70b-versatile", settings);
         TryAddProvider(mind, "DeepSeek", ChatEndpointType.DeepSeek, "deepseek-chat", settings);
         TryAddProvider(mind, "Anthropic", ChatEndpointType.Anthropic, "claude-sonnet-4-20250514", settings);
@@ -155,7 +155,7 @@ public static class CollectiveMindFactory
     /// Prefers local Ollama for simple tasks, escalates to cloud only when needed.
     /// </summary>
     public static CollectiveMind CreateLocalFirstDecomposed(
-        string localModel = "llama3.2",
+        string localModel = "glm-5:cloud",
         string localEndpoint = DefaultEndpoints.Ollama,
         ChatRuntimeSettings? settings = null)
     {
