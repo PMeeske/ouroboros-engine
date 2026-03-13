@@ -12,14 +12,14 @@ public class StepDependencyGraphTests
     [Fact]
     public void Constructor_EmptySteps_DoesNotThrow()
     {
-        var act = () => new StepDependencyGraph(new List<Ouroboros.Agent.MetaAI.PlanStep>());
+        var act = () => new StepDependencyGraph(new List<Ouroboros.Agent.PlanStep>());
         act.Should().NotThrow();
     }
 
     [Fact]
     public void GetParallelGroups_EmptySteps_ReturnsEmpty()
     {
-        var graph = new StepDependencyGraph(new List<Ouroboros.Agent.MetaAI.PlanStep>());
+        var graph = new StepDependencyGraph(new List<Ouroboros.Agent.PlanStep>());
         var groups = graph.GetParallelGroups();
         groups.Should().BeEmpty();
     }
@@ -27,7 +27,7 @@ public class StepDependencyGraphTests
     [Fact]
     public void GetParallelGroups_IndependentSteps_AllInOneGroup()
     {
-        var steps = new List<Ouroboros.Agent.MetaAI.PlanStep>
+        var steps = new List<Ouroboros.Agent.PlanStep>
         {
             CreateStep("analyze", new Dictionary<string, object> { ["input"] = "data" }),
             CreateStep("summarize", new Dictionary<string, object> { ["input"] = "data" }),
@@ -44,7 +44,7 @@ public class StepDependencyGraphTests
     [Fact]
     public void GetParallelGroups_SequentialDependencies_OnePerGroup()
     {
-        var steps = new List<Ouroboros.Agent.MetaAI.PlanStep>
+        var steps = new List<Ouroboros.Agent.PlanStep>
         {
             CreateStep("fetch", new Dictionary<string, object> { ["url"] = "http://example.com" }),
             CreateStep("process", new Dictionary<string, object> { ["data"] = "$fetch" }),
@@ -60,7 +60,7 @@ public class StepDependencyGraphTests
     [Fact]
     public void GetParallelGroups_MixedDependencies_GroupsCorrectly()
     {
-        var steps = new List<Ouroboros.Agent.MetaAI.PlanStep>
+        var steps = new List<Ouroboros.Agent.PlanStep>
         {
             CreateStep("stepA", new Dictionary<string, object> { ["input"] = "raw" }),
             CreateStep("stepB", new Dictionary<string, object> { ["input"] = "raw" }),
@@ -79,7 +79,7 @@ public class StepDependencyGraphTests
     [Fact]
     public void GetParallelGroups_SingleStep_ReturnsOneGroupWithOneItem()
     {
-        var steps = new List<Ouroboros.Agent.MetaAI.PlanStep>
+        var steps = new List<Ouroboros.Agent.PlanStep>
         {
             CreateStep("only", new Dictionary<string, object> { ["x"] = "y" }),
         };
@@ -91,8 +91,8 @@ public class StepDependencyGraphTests
         groups[0].Should().HaveCount(1);
     }
 
-    private static Ouroboros.Agent.MetaAI.PlanStep CreateStep(string action, Dictionary<string, object> parameters)
+    private static Ouroboros.Agent.PlanStep CreateStep(string action, Dictionary<string, object> parameters)
     {
-        return new Ouroboros.Agent.MetaAI.PlanStep(action, parameters, $"Expected outcome for {action}", 0.8);
+        return new Ouroboros.Agent.PlanStep(action, parameters, $"Expected outcome for {action}", 0.8);
     }
 }

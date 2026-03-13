@@ -1,5 +1,5 @@
-// <copyright file="Plan.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="Plan.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Pipeline.Verification;
@@ -31,7 +31,8 @@ public sealed record Plan
     /// <param name="actions">The actions in the plan.</param>
     public Plan(string description, IEnumerable<PlanAction>? actions = null)
     {
-        this.Description = description ?? throw new ArgumentNullException(nameof(description));
+        ArgumentNullException.ThrowIfNull(description);
+        this.Description = description;
         this._actions = actions?.ToImmutableList() ?? ImmutableList<PlanAction>.Empty;
     }
 

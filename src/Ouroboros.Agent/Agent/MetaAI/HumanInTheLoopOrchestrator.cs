@@ -16,7 +16,8 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
         IMetaAIPlannerOrchestrator orchestrator,
         IHumanFeedbackProvider? feedbackProvider = null)
     {
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        ArgumentNullException.ThrowIfNull(orchestrator);
+        _orchestrator = orchestrator;
         _feedbackProvider = feedbackProvider ?? new ConsoleFeedbackProvider();
     }
 
@@ -25,7 +26,8 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
     /// </summary>
     public void SetFeedbackProvider(IHumanFeedbackProvider provider)
     {
-        _feedbackProvider = provider ?? throw new ArgumentNullException(nameof(provider));
+        ArgumentNullException.ThrowIfNull(provider);
+        _feedbackProvider = provider;
     }
 
     /// <summary>

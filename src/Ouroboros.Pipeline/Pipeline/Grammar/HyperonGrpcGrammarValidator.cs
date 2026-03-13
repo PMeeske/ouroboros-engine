@@ -1,5 +1,5 @@
-// <copyright file="HyperonGrpcGrammarValidator.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="HyperonGrpcGrammarValidator.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 
@@ -44,7 +44,8 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
     /// <param name="logger">Optional logger.</param>
     public HyperonGrpcGrammarValidator(GrpcChannel channel, ILogger<HyperonGrpcGrammarValidator>? logger = null)
     {
-        _channel = channel ?? throw new ArgumentNullException(nameof(channel));
+        ArgumentNullException.ThrowIfNull(channel);
+        _channel = channel;
         _logger = logger;
         _client = new HyperonGrammarService.HyperonGrammarServiceClient(_channel);
     }

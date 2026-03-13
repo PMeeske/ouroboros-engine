@@ -30,11 +30,16 @@ public sealed partial class CuriosityEngine : ICuriosityEngine
         Core.Ethics.IEthicsFramework ethics,
         CuriosityEngineConfig? config = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
-        _skills = skills ?? throw new ArgumentNullException(nameof(skills));
-        _safety = safety ?? throw new ArgumentNullException(nameof(safety));
-        _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
+        ArgumentNullException.ThrowIfNull(memory);
+        _memory = memory;
+        ArgumentNullException.ThrowIfNull(skills);
+        _skills = skills;
+        ArgumentNullException.ThrowIfNull(safety);
+        _safety = safety;
+        ArgumentNullException.ThrowIfNull(ethics);
+        _ethics = ethics;
         _config = config ?? new CuriosityEngineConfig();
     }
 

@@ -1,5 +1,5 @@
-// <copyright file="ToolBinder.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="ToolBinder.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Pipeline.Planning;
@@ -18,7 +18,8 @@ public sealed class ToolBinder
     /// <param name="registry">The tool registry containing available tools.</param>
     public ToolBinder(ToolRegistry registry)
     {
-        this._registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        ArgumentNullException.ThrowIfNull(registry);
+        this._registry = registry;
     }
 
     /// <summary>

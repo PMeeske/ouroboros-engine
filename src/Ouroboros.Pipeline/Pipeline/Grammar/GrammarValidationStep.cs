@@ -1,5 +1,5 @@
-// <copyright file="GrammarValidationStep.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="GrammarValidationStep.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 
@@ -35,7 +35,8 @@ public sealed class GrammarValidationStep
         HyperonMeTTaEngine? engine = null,
         ILogger<GrammarValidationStep>? logger = null)
     {
-        _validator = validator ?? throw new ArgumentNullException(nameof(validator));
+        ArgumentNullException.ThrowIfNull(validator);
+        _validator = validator;
         _engine = engine;
         _logger = logger;
     }

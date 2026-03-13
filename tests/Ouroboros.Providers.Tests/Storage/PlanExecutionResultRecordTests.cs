@@ -1,6 +1,6 @@
 ﻿using Ouroboros.Agent.MetaAI;
 using Plan = Ouroboros.Agent.MetaAI.Plan;
-using PlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using PlanStep = Ouroboros.Agent.PlanStep;
 
 namespace Ouroboros.Tests.Database.Storage;
 

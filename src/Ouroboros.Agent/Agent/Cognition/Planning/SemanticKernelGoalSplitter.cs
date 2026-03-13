@@ -25,7 +25,8 @@ public sealed class SemanticKernelGoalSplitter : IGoalSplitter
         Core.Ethics.IEthicsFramework? ethics = null,
         GoalSplitterConfig? config = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
         _router = router ?? new HypergridRouter();
         _ethics = ethics;
         _config = config ?? new GoalSplitterConfig();

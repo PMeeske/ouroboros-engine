@@ -1,5 +1,5 @@
-// <copyright file="CollectiveMindGoalIntegration.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="CollectiveMindGoalIntegration.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Agent.MetaAI;
@@ -25,9 +25,9 @@ public sealed class CollectiveMindGoalIntegration
     /// <param name="goalHierarchy">Optional GoalHierarchy for ethics-aware goal management.</param>
     public CollectiveMindGoalIntegration(CollectiveMind mind, IGoalHierarchy? goalHierarchy = null)
     {
-        _mind = mind ?? throw new ArgumentNullException(nameof(mind));
+        ArgumentNullException.ThrowIfNull(mind);
+        _mind = mind;
         _goalHierarchy = goalHierarchy;
-        _ = _goalHierarchy;
     }
 
     /// <summary>

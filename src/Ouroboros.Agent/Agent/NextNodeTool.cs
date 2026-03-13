@@ -57,11 +57,11 @@ public sealed class NextNodeTool : ITool
 
     public NextNodeTool(IMeTTaEngine engine, ToolRegistry registry)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        ArgumentNullException.ThrowIfNull(engine);
+        _engine = engine;
+        ArgumentNullException.ThrowIfNull(registry);
+        _registry = registry;
         _representation = new MeTTaRepresentation(engine);
-        _ = _engine;
-        _ = _registry;
     }
 
     /// <inheritdoc />

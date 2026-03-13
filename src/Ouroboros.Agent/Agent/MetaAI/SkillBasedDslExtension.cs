@@ -1,5 +1,5 @@
-// <copyright file="SkillBasedDslExtension.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="SkillBasedDslExtension.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 // ==========================================================
@@ -24,8 +24,10 @@ public sealed class SkillBasedDslExtension
     /// </summary>
     public SkillBasedDslExtension(ISkillRegistry skillRegistry, Ouroboros.Abstractions.Core.IChatCompletionModel model)
     {
-        _skillRegistry = skillRegistry ?? throw new ArgumentNullException(nameof(skillRegistry));
-        _model = model ?? throw new ArgumentNullException(nameof(model));
+        ArgumentNullException.ThrowIfNull(skillRegistry);
+        _skillRegistry = skillRegistry;
+        ArgumentNullException.ThrowIfNull(model);
+        _model = model;
     }
 
     /// <summary>

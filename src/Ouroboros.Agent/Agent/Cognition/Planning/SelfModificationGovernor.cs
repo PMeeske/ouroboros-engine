@@ -30,10 +30,14 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
         IHumanApprovalProvider approval,
         IEventStore eventStore)
     {
-        _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
-        _safety = safety ?? throw new ArgumentNullException(nameof(safety));
-        _approval = approval ?? throw new ArgumentNullException(nameof(approval));
-        _eventStore = eventStore ?? throw new ArgumentNullException(nameof(eventStore));
+        ArgumentNullException.ThrowIfNull(ethics);
+        _ethics = ethics;
+        ArgumentNullException.ThrowIfNull(safety);
+        _safety = safety;
+        ArgumentNullException.ThrowIfNull(approval);
+        _approval = approval;
+        ArgumentNullException.ThrowIfNull(eventStore);
+        _eventStore = eventStore;
     }
 
     public async Task<Result<GovernanceDecision, string>> ProposeAsync(

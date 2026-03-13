@@ -1,5 +1,5 @@
-// <copyright file="EpisodicMemoryEngine.Retrieval.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="EpisodicMemoryEngine.Retrieval.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Abstractions;

@@ -1,5 +1,5 @@
-// <copyright file="TransitionEdge.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="TransitionEdge.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using System.Security.Cryptography;
@@ -88,8 +88,10 @@ public sealed record TransitionEdge
         this.Id = id;
         this.InputIds = inputIds;
         this.OutputId = outputId;
-        this.OperationName = operationName ?? throw new ArgumentNullException(nameof(operationName));
-        this.OperationSpecJson = operationSpecJson ?? throw new ArgumentNullException(nameof(operationSpecJson));
+        ArgumentNullException.ThrowIfNull(operationName);
+        this.OperationName = operationName;
+        ArgumentNullException.ThrowIfNull(operationSpecJson);
+        this.OperationSpecJson = operationSpecJson;
         this.CreatedAt = createdAt;
         this.Confidence = confidence;
         this.DurationMs = durationMs;

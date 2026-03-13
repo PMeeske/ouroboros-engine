@@ -1,5 +1,5 @@
-// <copyright file="MlpStatePredictor.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="MlpStatePredictor.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Agent.MetaAI.WorldModel;
@@ -39,11 +39,8 @@ public sealed class MlpStatePredictor : IStatePredictor
         float[] biasOutput)
     {
         _inputSize = inputSize;
-        _ = _inputSize;
         _hiddenSize = hiddenSize;
-        _ = _hiddenSize;
         _outputSize = outputSize;
-        _ = _outputSize;
         _weightsInputHidden = weightsInputHidden;
         _biasHidden = biasHidden;
         _weightsHiddenOutput = weightsHiddenOutput;

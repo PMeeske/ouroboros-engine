@@ -30,7 +30,8 @@ public sealed partial class MeTTaRepresentation
     /// <param name="formBridge">Optional Laws of Form bridge for certainty tracking.</param>
     public MeTTaRepresentation(IMeTTaEngine engine, FormMeTTaBridge? formBridge = null)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        _engine = engine;
         _formBridge = formBridge;
     }
 

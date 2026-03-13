@@ -28,8 +28,10 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
         IMeTTaEngine engine,
         IEnumerable<IAgentProviderFactory> providers)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _providers = providers?.ToList() ?? throw new ArgumentNullException(nameof(providers));
+        ArgumentNullException.ThrowIfNull(engine);
+        _engine = engine;
+        ArgumentNullException.ThrowIfNull(providers);
+        _providers = providers.ToList();
     }
 
     /// <summary>

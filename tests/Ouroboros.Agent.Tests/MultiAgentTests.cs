@@ -507,7 +507,7 @@ public class MultiAgentTests
         AgentMessage? receivedMessage = null;
         TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
 
-        Subscription subscription = bus.Subscribe(agentId, null, async msg =>
+        _ = bus.Subscribe(agentId, null, async msg =>
         {
             receivedMessage = msg;
             tcs.SetResult(true);
@@ -537,7 +537,7 @@ public class MultiAgentTests
         Guid receiverId = Guid.NewGuid();
 
         // Subscribe receiver to respond
-        Subscription subscription = bus.Subscribe(receiverId, null, async request =>
+        _ = bus.Subscribe(receiverId, null, async request =>
         {
             if (request.Type == MessageType.Request)
             {
@@ -568,9 +568,8 @@ public class MultiAgentTests
         Guid agentId = Guid.NewGuid();
         List<AgentMessage> receivedMessages = new List<AgentMessage>();
         TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
-        int expectedCount = 0;
 
-        Subscription subscription = bus.Subscribe(agentId, "specific.topic", async msg =>
+        _ = bus.Subscribe(agentId, "specific.topic", async msg =>
         {
             receivedMessages.Add(msg);
             if (receivedMessages.Count >= 1)
@@ -665,7 +664,7 @@ public class MultiAgentTests
         int receiveCount = 0;
         TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
 
-        Subscription sub1 = bus.Subscribe(Guid.NewGuid(), "broadcast", async msg =>
+        _ = bus.Subscribe(Guid.NewGuid(), "broadcast", async msg =>
         {
             Interlocked.Increment(ref receiveCount);
             if (receiveCount >= 3)
@@ -676,7 +675,7 @@ public class MultiAgentTests
             await Task.CompletedTask;
         });
 
-        Subscription sub2 = bus.Subscribe(Guid.NewGuid(), "broadcast", async msg =>
+        _ = bus.Subscribe(Guid.NewGuid(), "broadcast", async msg =>
         {
             Interlocked.Increment(ref receiveCount);
             if (receiveCount >= 3)
@@ -687,7 +686,7 @@ public class MultiAgentTests
             await Task.CompletedTask;
         });
 
-        Subscription sub3 = bus.Subscribe(Guid.NewGuid(), "broadcast", async msg =>
+        _ = bus.Subscribe(Guid.NewGuid(), "broadcast", async msg =>
         {
             Interlocked.Increment(ref receiveCount);
             if (receiveCount >= 3)
@@ -734,7 +733,7 @@ public class MultiAgentTests
     {
         // Arrange
         InMemoryMessageBus bus = new InMemoryMessageBus();
-        Subscription sub = bus.Subscribe(Guid.NewGuid(), null, _ => Task.CompletedTask);
+        _ = bus.Subscribe(Guid.NewGuid(), null, _ => Task.CompletedTask);
 
         // Act
         bus.Dispose();

@@ -3,7 +3,7 @@
 // </copyright>
 
 using FluentAssertions;
-using MetaAIPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using MetaAIPlanStep = Ouroboros.Agent.PlanStep;
 
 namespace Ouroboros.Tests.MetaAI;
 

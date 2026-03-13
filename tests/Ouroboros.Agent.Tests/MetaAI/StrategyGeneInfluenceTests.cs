@@ -1,5 +1,5 @@
-// <copyright file="StrategyGeneInfluenceTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="StrategyGeneInfluenceTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 

@@ -26,7 +26,8 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
     /// <param name="mettaEngine">The MeTTa engine to use.</param>
     public SymbolicKnowledgeBase(IMeTTaEngine mettaEngine)
     {
-        _mettaEngine = mettaEngine ?? throw new ArgumentNullException(nameof(mettaEngine));
+        ArgumentNullException.ThrowIfNull(mettaEngine);
+        _mettaEngine = mettaEngine;
     }
 
     /// <inheritdoc/>

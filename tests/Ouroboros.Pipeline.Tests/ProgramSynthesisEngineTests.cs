@@ -1,5 +1,5 @@
-// <copyright file="ProgramSynthesisEngineTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="ProgramSynthesisEngineTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Unit = Ouroboros.Abstractions.Unit;

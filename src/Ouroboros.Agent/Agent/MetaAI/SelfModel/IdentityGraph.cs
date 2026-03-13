@@ -29,8 +29,10 @@ public sealed class IdentityGraph : IIdentityGraph
         string? persistencePath = null)
     {
         _agentId = agentId;
-        _agentName = agentName ?? throw new ArgumentNullException(nameof(agentName));
-        _capabilityRegistry = capabilityRegistry ?? throw new ArgumentNullException(nameof(capabilityRegistry));
+        ArgumentNullException.ThrowIfNull(agentName);
+        _agentName = agentName;
+        ArgumentNullException.ThrowIfNull(capabilityRegistry);
+        _capabilityRegistry = capabilityRegistry;
         _persistencePath = persistencePath;
 
         // Initialize default resources

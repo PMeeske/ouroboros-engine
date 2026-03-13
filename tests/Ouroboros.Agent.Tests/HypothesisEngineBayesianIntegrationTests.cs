@@ -114,21 +114,20 @@ public sealed class HypothesisEngineBayesianIntegrationTests
     [Fact]
     public void TestHypothesisScenario_PerfectExecution_StrongUpdate()
     {
-        // Simulates TestHypothesisAsync with perfect execution quality
+        // Simulates TestHypothesisAsync with perfect execution quality (supported=true)
         double prior = 0.5;
-        bool supported = true;
         double qualityFactor = 1.0; // Perfect execution
-        
+
         // Base likelihoods for supporting result
         double likelihoodIfTrue = 0.85;
         double likelihoodIfFalse = 0.25;
-        
+
         // Adjust by quality (quality = 1.0 means no adjustment)
         double adjustedTrue = likelihoodIfTrue + (0.5 - likelihoodIfTrue) * (1.0 - qualityFactor);
         double adjustedFalse = likelihoodIfFalse + (0.5 - likelihoodIfFalse) * (1.0 - qualityFactor);
-        
+
         double posterior = BayesianConfidence.Update(prior, adjustedTrue, adjustedFalse);
-        
+
         // Assert
         Assert.True(posterior > prior, "Should increase confidence");
         Assert.True(posterior > 0.7, $"Expected strong increase with perfect quality, got {posterior:F4}");
@@ -137,9 +136,8 @@ public sealed class HypothesisEngineBayesianIntegrationTests
     [Fact]
     public void TestHypothesisScenario_PoorExecution_WeakUpdate()
     {
-        // Simulates TestHypothesisAsync with poor execution quality
+        // Simulates TestHypothesisAsync with poor execution quality (supported=true)
         double prior = 0.5;
-        bool supported = true;
         double qualityFactor = 0.3; // Poor execution
         
         // Base likelihoods for supporting result

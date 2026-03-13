@@ -26,8 +26,10 @@ public sealed partial class MeTTaAgentTool : ITool
     /// <param name="engine">The MeTTa engine for symbolic operations.</param>
     public MeTTaAgentTool(MeTTaAgentRuntime runtime, IMeTTaEngine engine)
     {
-        _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(runtime);
+        _runtime = runtime;
+        ArgumentNullException.ThrowIfNull(engine);
+        _engine = engine;
     }
 
     /// <inheritdoc/>

@@ -1,5 +1,5 @@
-// <copyright file="MeTTaPlanner.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="MeTTaPlanner.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Abstractions;
@@ -23,7 +23,8 @@ public sealed class MeTTaPlanner
     /// <param name="engine">The MeTTa engine for backward chaining.</param>
     public MeTTaPlanner(IMeTTaEngine engine)
     {
-        this._engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        this._engine = engine;
     }
 
     /// <summary>

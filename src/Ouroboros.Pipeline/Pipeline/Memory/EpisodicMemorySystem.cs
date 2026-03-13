@@ -1,4 +1,4 @@
-﻿using Ouroboros.Core.Configuration;
+using Ouroboros.Core.Configuration;
 using Qdrant.Client;
 
 namespace Ouroboros.Pipeline.Memory;
@@ -17,9 +17,11 @@ public sealed class EpisodicMemorySystem
     /// </summary>
     public EpisodicMemorySystem(QdrantClient qdrantClient, IQdrantCollectionRegistry registry, IEmbeddingModel embeddingModel)
     {
-        _qdrantClient = qdrantClient ?? throw new ArgumentNullException(nameof(qdrantClient));
+        ArgumentNullException.ThrowIfNull(qdrantClient);
+        _qdrantClient = qdrantClient;
         ArgumentNullException.ThrowIfNull(registry);
-        _embeddingModel = embeddingModel ?? throw new ArgumentNullException(nameof(embeddingModel));
+        ArgumentNullException.ThrowIfNull(embeddingModel);
+        _embeddingModel = embeddingModel;
         _collectionName = registry.GetCollectionName(QdrantCollectionRole.EpisodicMemory);
     }
 

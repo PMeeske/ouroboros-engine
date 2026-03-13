@@ -1,5 +1,5 @@
-// <copyright file="PersistentMerkleDag.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="PersistentMerkleDag.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Network.Persistence;
@@ -22,8 +22,10 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
     /// <param name="persistence">The persistence layer.</param>
     private PersistentMerkleDag(MerkleDag dag, IGraphPersistence persistence)
     {
-        _dag = dag ?? throw new ArgumentNullException(nameof(dag));
-        _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
+        ArgumentNullException.ThrowIfNull(dag);
+        _dag = dag;
+        ArgumentNullException.ThrowIfNull(persistence);
+        _persistence = persistence;
     }
 
     /// <summary>

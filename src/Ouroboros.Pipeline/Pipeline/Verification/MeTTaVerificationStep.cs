@@ -1,5 +1,5 @@
-// <copyright file="MeTTaVerificationStep.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="MeTTaVerificationStep.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Abstractions;
@@ -32,7 +32,8 @@ public sealed class MeTTaVerificationStep
     /// <param name="context">The security context for verification.</param>
     public MeTTaVerificationStep(IMeTTaEngine engine, SafeContext context = SafeContext.ReadOnly)
     {
-        this._engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        this._engine = engine;
         this._context = context;
     }
 

@@ -4,9 +4,19 @@ namespace Ouroboros.Pipeline.Reasoning;
 /// Immutable template for generating prompts with variable substitution.
 /// Enhanced with functional programming patterns and Result-based error handling.
 /// </summary>
-public sealed class PromptTemplate(string template)
+public sealed class PromptTemplate
 {
-    private readonly string _template = template ?? throw new ArgumentNullException(nameof(template));
+    private readonly string _template;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PromptTemplate"/> class.
+    /// </summary>
+    /// <param name="template">The template string with placeholders.</param>
+    public PromptTemplate(string template)
+    {
+        ArgumentNullException.ThrowIfNull(template);
+        _template = template;
+    }
 
     /// <summary>
     /// Formats the template with the provided variables using simple string replacement.

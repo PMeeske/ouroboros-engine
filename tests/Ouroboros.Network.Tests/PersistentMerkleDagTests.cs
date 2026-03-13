@@ -1,5 +1,5 @@
-// <copyright file="PersistentMerkleDagTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="PersistentMerkleDagTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Tests.Network;
@@ -319,7 +319,7 @@ public class PersistentMerkleDagTests : IDisposable
         await dag1.FlushAsync();
         await dag1.DisposeAsync();
 
-        var originalSize = new FileInfo(walPath).Length;
+        _ = new FileInfo(walPath).Length;
 
         // Act - Compact
         var compactResult = await WalCompactor.CompactAsync(walPath);

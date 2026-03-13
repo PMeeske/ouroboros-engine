@@ -1,5 +1,5 @@
-// <copyright file="SymbolicRetrievalStep.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="SymbolicRetrievalStep.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Pipeline.Retrieval;
@@ -21,7 +21,8 @@ public sealed class SymbolicRetrievalStep
     /// <param name="engine">The MeTTa engine for symbolic retrieval.</param>
     public SymbolicRetrievalStep(IMeTTaEngine engine)
     {
-        this._engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        this._engine = engine;
     }
 
     /// <summary>

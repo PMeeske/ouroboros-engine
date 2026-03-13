@@ -1,5 +1,5 @@
-// <copyright file="SymbolicIngestionStep.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="SymbolicIngestionStep.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Pipeline.Ingestion;
@@ -29,9 +29,12 @@ public sealed class SymbolicIngestionStep
         TripleExtractionStep extractor,
         IEmbeddingModel embedModel)
     {
-        this._engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        this._extractor = extractor ?? throw new ArgumentNullException(nameof(extractor));
-        this._embedModel = embedModel ?? throw new ArgumentNullException(nameof(embedModel));
+        ArgumentNullException.ThrowIfNull(engine);
+        this._engine = engine;
+        ArgumentNullException.ThrowIfNull(extractor);
+        this._extractor = extractor;
+        ArgumentNullException.ThrowIfNull(embedModel);
+        this._embedModel = embedModel;
     }
 
     /// <summary>

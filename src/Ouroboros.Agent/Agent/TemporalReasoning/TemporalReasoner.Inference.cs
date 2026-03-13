@@ -1,5 +1,5 @@
-// <copyright file="TemporalReasoner.Inference.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="TemporalReasoner.Inference.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using System.Globalization;

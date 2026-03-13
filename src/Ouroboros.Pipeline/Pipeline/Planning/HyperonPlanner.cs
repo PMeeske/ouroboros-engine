@@ -1,5 +1,5 @@
-// <copyright file="HyperonPlanner.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="HyperonPlanner.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Abstractions;
@@ -43,7 +43,8 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
     /// <param name="engine">The Hyperon engine to use.</param>
     public HyperonPlanner(HyperonMeTTaEngine engine)
     {
-        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        _engine = engine;
         _flow = new HyperonFlowIntegration(_engine);
     }
 

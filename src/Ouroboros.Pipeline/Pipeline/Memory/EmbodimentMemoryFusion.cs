@@ -35,9 +35,11 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
         IEmbeddingModel embeddingModel,
         ILogger<EmbodimentMemoryFusion>? logger = null)
     {
-        _qdrantClient = qdrantClient ?? throw new ArgumentNullException(nameof(qdrantClient));
+        ArgumentNullException.ThrowIfNull(qdrantClient);
+        _qdrantClient = qdrantClient;
         ArgumentNullException.ThrowIfNull(registry);
-        _embeddingModel = embeddingModel ?? throw new ArgumentNullException(nameof(embeddingModel));
+        ArgumentNullException.ThrowIfNull(embeddingModel);
+        _embeddingModel = embeddingModel;
         _collectionName = registry.GetCollectionName(QdrantCollectionRole.EmbodimentMemory);
         _logger = logger;
     }
@@ -51,9 +53,12 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
         string collectionName = DefaultCollectionName,
         ILogger<EmbodimentMemoryFusion>? logger = null)
     {
-        _qdrantClient = qdrantClient ?? throw new ArgumentNullException(nameof(qdrantClient));
-        _embeddingModel = embeddingModel ?? throw new ArgumentNullException(nameof(embeddingModel));
-        _collectionName = collectionName ?? throw new ArgumentNullException(nameof(collectionName));
+        ArgumentNullException.ThrowIfNull(qdrantClient);
+        _qdrantClient = qdrantClient;
+        ArgumentNullException.ThrowIfNull(embeddingModel);
+        _embeddingModel = embeddingModel;
+        ArgumentNullException.ThrowIfNull(collectionName);
+        _collectionName = collectionName;
         _logger = logger;
     }
 

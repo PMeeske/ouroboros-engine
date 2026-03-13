@@ -1,5 +1,5 @@
-// <copyright file="SpeechToTextTool.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="SpeechToTextTool.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using System.Text.Json;

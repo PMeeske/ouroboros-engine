@@ -1,5 +1,5 @@
-// <copyright file="CouncilOrchestratorArrowsTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="CouncilOrchestratorArrowsTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;

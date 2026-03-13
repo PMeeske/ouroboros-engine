@@ -1,5 +1,5 @@
-// <copyright file="SandboxedCompilationContextTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="SandboxedCompilationContextTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Pipeline.Grammar;

@@ -1,5 +1,5 @@
-// <copyright file="AtomsToGrammarTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="AtomsToGrammarTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Moq;
@@ -64,7 +64,7 @@ public class AtomsToGrammarTests
                 new List<string>().AsReadOnly() as IReadOnlyList<string>));
 
         // Act
-        var (result, notes) = await _validatorMock.Object.ValidateAtomsAsync(mettaAtoms);
+        var (result, _) = await _validatorMock.Object.ValidateAtomsAsync(mettaAtoms);
 
         // Assert
         result.IsValid.Should().BeTrue();
@@ -92,7 +92,7 @@ public class AtomsToGrammarTests
                 new List<string> { "Structural validation found 1 issue" }.AsReadOnly() as IReadOnlyList<string>));
 
         // Act
-        var (result, notes) = await _validatorMock.Object.ValidateAtomsAsync(mettaAtoms);
+        var (result, _) = await _validatorMock.Object.ValidateAtomsAsync(mettaAtoms);
 
         // Assert
         result.IsValid.Should().BeFalse();

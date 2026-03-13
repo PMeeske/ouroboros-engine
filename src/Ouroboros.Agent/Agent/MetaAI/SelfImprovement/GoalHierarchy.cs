@@ -30,10 +30,12 @@ public sealed partial class GoalHierarchy : IGoalHierarchy
         IGoalSplitter? goalSplitter = null,
         ISelfModificationGovernor? governor = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _safety = safety ?? throw new ArgumentNullException(nameof(safety));
-        _ = _safety;
-        _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
+        ArgumentNullException.ThrowIfNull(safety);
+        _safety = safety;
+        ArgumentNullException.ThrowIfNull(ethics);
+        _ethics = ethics;
         _config = config ?? new GoalHierarchyConfig();
         _goalSplitter = goalSplitter;
         _governor = governor;

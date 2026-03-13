@@ -1,5 +1,5 @@
-// <copyright file="CommonsenseKnowledgeBase.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="CommonsenseKnowledgeBase.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 

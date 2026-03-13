@@ -1,11 +1,11 @@
-// <copyright file="NeuralSymbolicBridgeTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="NeuralSymbolicBridgeTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Agent.MetaAI.Affect;
 using Hypothesis = Ouroboros.Agent.MetaAI.Hypothesis;
-using PlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using PlanStep = Ouroboros.Agent.PlanStep;
 using Skill = Ouroboros.Agent.MetaAI.Skill;
 
 namespace Ouroboros.Agent.Tests.NeuralSymbolic;

@@ -29,7 +29,8 @@ public sealed class ThoughtStream : IAsyncDisposable
     /// <param name="bufferSize">Channel buffer size for backpressure (default 16).</param>
     public ThoughtStream(NanoOuroborosAtom atom, int bufferSize = 16)
     {
-        _atom = atom ?? throw new ArgumentNullException(nameof(atom));
+        ArgumentNullException.ThrowIfNull(atom);
+        _atom = atom;
 
         var options = new BoundedChannelOptions(bufferSize)
         {

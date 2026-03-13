@@ -81,7 +81,8 @@ public sealed partial class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// <param name="autoPersist">Whether to auto-persist after each update.</param>
     public void ConfigureQdrantPersistence(QdrantDagStore store, bool autoPersist = true)
     {
-        _qdrantStore = store ?? throw new ArgumentNullException(nameof(store));
+        ArgumentNullException.ThrowIfNull(store);
+        _qdrantStore = store;
         _autoPersist = autoPersist;
     }
 
@@ -92,7 +93,8 @@ public sealed partial class NetworkStateTracker : IDisposable, IAsyncDisposable
     /// <param name="autoExport">Whether to auto-export after each update.</param>
     public void ConfigureMeTTaExport(IMeTTaEngine engine, bool autoExport = true)
     {
-        _mettaEngine = engine ?? throw new ArgumentNullException(nameof(engine));
+        ArgumentNullException.ThrowIfNull(engine);
+        _mettaEngine = engine;
         _autoExportMeTTa = autoExport;
     }
 

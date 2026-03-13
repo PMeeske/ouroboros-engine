@@ -27,12 +27,15 @@ public sealed partial class HypothesisEngine : IHypothesisEngine
         Core.Ethics.IEthicsFramework ethics,
         HypothesisEngineConfig? config = null)
     {
-        _llm = llm ?? throw new ArgumentNullException(nameof(llm));
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
-        _memory = memory ?? throw new ArgumentNullException(nameof(memory));
-        _ethics = ethics ?? throw new ArgumentNullException(nameof(ethics));
+        ArgumentNullException.ThrowIfNull(llm);
+        _llm = llm;
+        ArgumentNullException.ThrowIfNull(orchestrator);
+        _orchestrator = orchestrator;
+        ArgumentNullException.ThrowIfNull(memory);
+        _memory = memory;
+        ArgumentNullException.ThrowIfNull(ethics);
+        _ethics = ethics;
         _config = config ?? new HypothesisEngineConfig();
-        _ = _config;
     }
 
     /// <summary>

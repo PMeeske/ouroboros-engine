@@ -1,5 +1,5 @@
-// <copyright file="VectorFieldOperationsTests.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="VectorFieldOperationsTests.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Tests.Network;

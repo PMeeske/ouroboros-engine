@@ -1,5 +1,5 @@
-// <copyright file="OperatingCostAuditArrows.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="OperatingCostAuditArrows.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 

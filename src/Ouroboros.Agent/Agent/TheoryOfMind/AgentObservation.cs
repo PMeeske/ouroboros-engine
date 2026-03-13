@@ -1,5 +1,5 @@
-// <copyright file="AgentObservation.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="AgentObservation.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Agent.TheoryOfMind;

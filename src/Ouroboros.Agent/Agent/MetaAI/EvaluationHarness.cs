@@ -15,7 +15,8 @@ public sealed class EvaluationHarness
 
     public EvaluationHarness(IMetaAIPlannerOrchestrator orchestrator)
     {
-        _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
+        ArgumentNullException.ThrowIfNull(orchestrator);
+        _orchestrator = orchestrator;
     }
 
     /// <summary>
