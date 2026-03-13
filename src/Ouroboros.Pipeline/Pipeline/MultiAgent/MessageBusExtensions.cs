@@ -34,7 +34,7 @@ public static class MessageBusExtensions
             return Result<AgentMessage>.Failure($"Request timed out: {ex.Message}");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<AgentMessage>.Failure($"Request failed: {ex.Message}");
         }
@@ -61,7 +61,7 @@ public static class MessageBusExtensions
             return Result<Unit>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit>.Failure($"Publish failed: {ex.Message}");
         }

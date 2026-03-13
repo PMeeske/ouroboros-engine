@@ -1,4 +1,4 @@
-// <copyright file="GlobalProjectionService.cs" company="Ouroboros">
+﻿// <copyright file="GlobalProjectionService.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -29,7 +29,7 @@ public static class GlobalProjectionService
 
             foreach (var branch in branchList)
             {
-                var snapshot = await BranchSnapshot.Capture(branch);
+                var snapshot = await BranchSnapshot.Capture(branch).ConfigureAwait(false);
                 snapshots.Add(snapshot);
             }
 
@@ -67,12 +67,12 @@ public static class GlobalProjectionService
         try
         {
             var arrow = CreateEpochArrow(branches, metadata);
-            var updatedBranch = await arrow(trackingBranch);
+            var updatedBranch = await arrow(trackingBranch).ConfigureAwait(false);
             var epoch = GetLatestEpoch(updatedBranch).Value;
             return Result<(EpochSnapshot, PipelineBranch)>.Success((epoch, updatedBranch));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<(EpochSnapshot, PipelineBranch)>.Failure($"Failed to create epoch snapshot: {ex.Message}");
         }
@@ -161,7 +161,7 @@ public static class GlobalProjectionService
             return Result<ProjectionMetrics>.Success(metrics);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<ProjectionMetrics>.Failure($"Failed to compute metrics: {ex.Message}");
         }

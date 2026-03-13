@@ -1,4 +1,4 @@
-// <copyright file="EpisodicMemoryEngine.Storage.cs" company="Ouroboros">
+﻿// <copyright file="EpisodicMemoryEngine.Storage.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -33,14 +33,14 @@ public sealed partial class EpisodicMemoryEngine
             ArgumentNullException.ThrowIfNull(metadata);
 
             // Ensure collection exists
-            await EnsureCollectionInitializedAsync(ct);
+            await EnsureCollectionInitializedAsync(ct).ConfigureAwait(false);
 
             // Create episode ID
             var episodeId = Guid.NewGuid();
 
             // Generate embedding from goal and outcome
             var embeddingText = $"{context.Goal}\n{result.Output}";
-            var embedding = await _embeddingModel.CreateEmbeddingsAsync(embeddingText, ct);
+            var embedding = await _embeddingModel.CreateEmbeddingsAsync(embeddingText, ct).ConfigureAwait(false);
 
             // Serialize pipeline branch
             var branchJson = SerializePipelineBranch(branch);
@@ -86,14 +86,14 @@ public sealed partial class EpisodicMemoryEngine
                 },
             };
 
-            await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct);
+            await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct).ConfigureAwait(false);
 
             _logger?.LogInformation("Stored episode {EpisodeId} with goal: {Goal}", episodeId, context.Goal);
 
             return Result<EpisodeId, string>.Success(new EpisodeId(episodeId));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to store episode");
             return Result<EpisodeId, string>.Failure($"Failed to store episode: {ex.Message}");
@@ -108,7 +108,7 @@ public sealed partial class EpisodicMemoryEngine
     {
         try
         {
-            await EnsureCollectionInitializedAsync(ct);
+            await EnsureCollectionInitializedAsync(ct).ConfigureAwait(false);
 
             var cutoffTime = DateTime.UtcNow - olderThan;
             _logger?.LogInformation(
@@ -127,7 +127,7 @@ public sealed partial class EpisodicMemoryEngine
                     _collectionName,
                     limit: 100,
                     offset: nextOffset,
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
 
                 foreach (var point in scrollResult.Result)
                 {
@@ -154,17 +154,17 @@ public sealed partial class EpisodicMemoryEngine
             // Apply consolidation strategy
             var consolidationResult = strategy switch
             {
-                ConsolidationStrategy.Compress => await ConsolidateByCompressionAsync(oldEpisodes, ct),
-                ConsolidationStrategy.Abstract => await ConsolidateByAbstractionAsync(oldEpisodes, ct),
-                ConsolidationStrategy.Prune => await ConsolidateByPruningAsync(oldEpisodes, ct),
-                ConsolidationStrategy.Hierarchical => await ConsolidateHierarchicallyAsync(oldEpisodes, ct),
+                ConsolidationStrategy.Compress => await ConsolidateByCompressionAsync(oldEpisodes, ct).ConfigureAwait(false),
+                ConsolidationStrategy.Abstract => await ConsolidateByAbstractionAsync(oldEpisodes, ct).ConfigureAwait(false),
+                ConsolidationStrategy.Prune => await ConsolidateByPruningAsync(oldEpisodes, ct).ConfigureAwait(false),
+                ConsolidationStrategy.Hierarchical => await ConsolidateHierarchicallyAsync(oldEpisodes, ct).ConfigureAwait(false),
                 _ => Result<Unit, string>.Failure($"Unknown consolidation strategy: {strategy}"),
             };
 
             return consolidationResult;
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to consolidate memories");
             return Result<Unit, string>.Failure($"Failed to consolidate memories: {ex.Message}");
@@ -178,7 +178,7 @@ public sealed partial class EpisodicMemoryEngine
             return;
         }
 
-        await _collectionInitLock.WaitAsync(ct);
+        await _collectionInitLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             if (_collectionInitialized)
@@ -187,7 +187,7 @@ public sealed partial class EpisodicMemoryEngine
             }
 
             // Check if collection exists
-            var exists = await _qdrantClient.CollectionExistsAsync(_collectionName, ct);
+            var exists = await _qdrantClient.CollectionExistsAsync(_collectionName, ct).ConfigureAwait(false);
 
             if (!exists)
             {
@@ -197,14 +197,14 @@ public sealed partial class EpisodicMemoryEngine
                 uint vectorSize = 768;
                 try
                 {
-                    float[] probe = await _embeddingModel.CreateEmbeddingsAsync("probe", ct);
+                    float[] probe = await _embeddingModel.CreateEmbeddingsAsync("probe", ct).ConfigureAwait(false);
                     vectorSize = (uint)probe.Length;
                     _logger?.LogInformation(
                         "Probed embedding dimension: {VectorSize} for collection {CollectionName}",
                         vectorSize, _collectionName);
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     _logger?.LogWarning(
                         ex,
@@ -215,7 +215,7 @@ public sealed partial class EpisodicMemoryEngine
                 await _qdrantClient.CreateCollectionAsync(
                     _collectionName,
                     new VectorParams { Size = vectorSize, Distance = Distance.Cosine },
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
             }
 
             _collectionInitialized = true;
@@ -239,7 +239,7 @@ public sealed partial class EpisodicMemoryEngine
             return JsonSerializer.Serialize(branch, JsonDefaults.Default);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogWarning(ex, "Failed to serialize pipeline branch, storing minimal info");
             return $"{{\"name\":\"{branch.Name}\",\"event_count\":{branch.Events.Count}}}";
@@ -336,14 +336,14 @@ public sealed partial class EpisodicMemoryEngine
                     },
                 };
 
-                await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct);
+                await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct).ConfigureAwait(false);
 
                 // Delete the merged (non-representative) episodes
                 var pointIdsToDelete = toMerge
                     .Select(ep => new PointId { Uuid = ep.Id.ToString() })
                     .ToList();
 
-                await _qdrantClient.DeleteAsync(_collectionName, pointIdsToDelete, cancellationToken: ct);
+                await _qdrantClient.DeleteAsync(_collectionName, pointIdsToDelete, cancellationToken: ct).ConfigureAwait(false);
 
                 _logger?.LogInformation(
                     "Compressed group '{Goal}': kept episode {RepId}, merged {MergedCount} episodes, {LessonCount} total lessons",
@@ -388,7 +388,7 @@ public sealed partial class EpisodicMemoryEngine
 
         // Generate embedding from the pattern content
         var embeddingText = $"abstracted_patterns\n{patternContent}";
-        var embedding = await _embeddingModel.CreateEmbeddingsAsync(embeddingText, ct);
+        var embedding = await _embeddingModel.CreateEmbeddingsAsync(embeddingText, ct).ConfigureAwait(false);
 
         var metaContext = ImmutableDictionary<string, object>.Empty
             .Add("consolidated", (object)"abstracted")
@@ -416,7 +416,7 @@ public sealed partial class EpisodicMemoryEngine
             },
         };
 
-        await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct);
+        await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct).ConfigureAwait(false);
 
         _logger?.LogInformation(
             "Stored abstracted meta-episode {MetaId} with {PatternCount} patterns from {EpisodeCount} source episodes (originals preserved)",
@@ -440,7 +440,7 @@ public sealed partial class EpisodicMemoryEngine
             _logger?.LogInformation("Pruning {Count} low-value episodes", episodesToDelete.Count);
 
             var pointIds = episodesToDelete.Select(id => new PointId { Uuid = id.ToString() }).ToList();
-            await _qdrantClient.DeleteAsync(_collectionName, pointIds, cancellationToken: ct);
+            await _qdrantClient.DeleteAsync(_collectionName, pointIds, cancellationToken: ct).ConfigureAwait(false);
         }
 
         return Result<Unit, string>.Success(Unit.Value);
@@ -481,7 +481,7 @@ public sealed partial class EpisodicMemoryEngine
 
             // Generate embedding from the summary
             var embeddingText = $"{parentGoal}\n{summaryContent}";
-            var embedding = await _embeddingModel.CreateEmbeddingsAsync(embeddingText, ct);
+            var embedding = await _embeddingModel.CreateEmbeddingsAsync(embeddingText, ct).ConfigureAwait(false);
 
             var parentId = Guid.NewGuid();
             var parentContext = ImmutableDictionary<string, object>.Empty
@@ -512,7 +512,7 @@ public sealed partial class EpisodicMemoryEngine
                 },
             };
 
-            await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct);
+            await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct).ConfigureAwait(false);
 
             // Link children to parent by updating their metadata with parent reference
             foreach (var child in levelEpisodes)
@@ -540,7 +540,7 @@ public sealed partial class EpisodicMemoryEngine
                     },
                 };
 
-                await _qdrantClient.UpsertAsync(_collectionName, new[] { childPoint }, cancellationToken: ct);
+                await _qdrantClient.UpsertAsync(_collectionName, new[] { childPoint }, cancellationToken: ct).ConfigureAwait(false);
             }
 
             _logger?.LogInformation(

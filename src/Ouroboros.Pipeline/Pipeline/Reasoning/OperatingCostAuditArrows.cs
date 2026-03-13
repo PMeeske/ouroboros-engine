@@ -1,4 +1,4 @@
-// <copyright file="OperatingCostAuditArrows.cs" company="Ouroboros">
+﻿// <copyright file="OperatingCostAuditArrows.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -35,7 +35,7 @@ public static class OperatingCostAuditArrows
             IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(
                 new NoOpEmbeddingModel(),
                 "operating cost categories",
-                amount: 5);
+                amount: 5).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = OperatingCostAuditPrompts.ExtractCostCategories.Format(new()
@@ -45,7 +45,7 @@ public static class OperatingCostAuditArrows
                 ["context"] = context,
             });
 
-            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
             return branch.WithReasoning(new Draft(text), prompt, toolCalls);
         };
 
@@ -65,7 +65,7 @@ public static class OperatingCostAuditArrows
             IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(
                 new NoOpEmbeddingModel(),
                 "operating cost analysis",
-                amount: 5);
+                amount: 5).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = OperatingCostAuditPrompts.AnalyzeMainStatement.Format(new()
@@ -75,7 +75,7 @@ public static class OperatingCostAuditArrows
                 ["context"] = context,
             });
 
-            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
             return branch.WithReasoning(new Draft(text), prompt, toolCalls);
         };
 
@@ -102,7 +102,7 @@ public static class OperatingCostAuditArrows
                 IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(
                     new NoOpEmbeddingModel(),
                     "operating cost analysis",
-                    amount: 5);
+                    amount: 5).ConfigureAwait(false);
                 string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
                 string prompt = OperatingCostAuditPrompts.AnalyzeMainStatement.Format(new()
@@ -112,12 +112,12 @@ public static class OperatingCostAuditArrows
                     ["context"] = context,
                 });
 
-                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
                 PipelineBranch result = branch.WithReasoning(new Draft(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Main statement analysis failed: {ex.Message}");
             }
@@ -148,7 +148,7 @@ public static class OperatingCostAuditArrows
                 ["previous_analysis"] = previousAnalysis,
             });
 
-            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
             return branch.WithReasoning(new Critique(text), prompt, toolCalls);
         };
 
@@ -177,7 +177,7 @@ public static class OperatingCostAuditArrows
                 ["previous_analysis"] = previousAnalysis,
             });
 
-            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
             return branch.WithReasoning(new Critique(text), prompt, toolCalls);
         };
 
@@ -202,7 +202,7 @@ public static class OperatingCostAuditArrows
                 ["critical_gaps"] = criticalGaps,
             });
 
-            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
             return branch.WithReasoning(new FinalSpec(text), prompt, toolCalls);
         };
 
@@ -234,12 +234,12 @@ public static class OperatingCostAuditArrows
                     ["critical_gaps"] = criticalGaps,
                 });
 
-                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
                 PipelineBranch result = branch.WithReasoning(new FinalSpec(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Audit report generation failed: {ex.Message}");
             }

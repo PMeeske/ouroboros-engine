@@ -1,4 +1,4 @@
-// <copyright file="GoalDecomposer.cs" company="Ouroboros">
+﻿// <copyright file="GoalDecomposer.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -68,7 +68,7 @@ public static class GoalDecomposer
 
             try
             {
-                (string response, List<ToolExecution> _) = await llm.GenerateWithToolsAsync(prompt);
+                (string response, List<ToolExecution> _) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
                 return ParseSubGoals(response)
                     .Map(descriptions => parentGoal.WithSubGoals(
                         descriptions.Select(Goal.Atomic).ToArray()));
@@ -77,7 +77,7 @@ public static class GoalDecomposer
             {
                 throw;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<Goal>.Failure($"Goal decomposition failed: {ex.Message}");
             }
@@ -101,7 +101,7 @@ public static class GoalDecomposer
 
         return async branch =>
         {
-            Result<Goal> initialResult = await DecomposeArrow(llm, parentGoal, maxDepth)(branch);
+            Result<Goal> initialResult = await DecomposeArrow(llm, parentGoal, maxDepth)(branch).ConfigureAwait(false);
 
             if (initialResult.IsFailure)
             {
@@ -118,7 +118,7 @@ public static class GoalDecomposer
             List<Goal> decomposedSubGoals = new List<Goal>();
             foreach (Goal subGoal in goal.SubGoals)
             {
-                Result<Goal> subResult = await DecomposeRecursiveArrow(llm, subGoal, maxDepth - 1)(branch);
+                Result<Goal> subResult = await DecomposeRecursiveArrow(llm, subGoal, maxDepth - 1)(branch).ConfigureAwait(false);
                 if (subResult.IsFailure)
                 {
                     return subResult;

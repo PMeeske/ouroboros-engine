@@ -30,11 +30,13 @@ public static class KernelFactory
     {
         ArgumentNullException.ThrowIfNull(model);
 
-        IChatClient chatClient = model is IChatClientBridge bridge
-            ? bridge.GetChatClient()
-            : new CompletionModelChatClientAdapter(model);
+        if (model is IChatClientBridge bridge)
+        {
+            return BuildKernel(bridge.GetChatClient(), tools);
+        }
 
-        return BuildKernel(chatClient, tools);
+        using var adapter = new CompletionModelChatClientAdapter(model);
+        return BuildKernel(adapter, tools);
     }
 
     /// <summary>

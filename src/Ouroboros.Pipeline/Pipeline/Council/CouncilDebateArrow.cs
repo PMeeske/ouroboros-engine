@@ -1,4 +1,4 @@
-// <copyright file="CouncilDebateArrow.cs" company="Ouroboros">
+﻿// <copyright file="CouncilDebateArrow.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -28,7 +28,7 @@ public static class CouncilDebateArrow
         => async branch =>
         {
             config ??= CouncilConfig.Default;
-            var result = await orchestrator.ConveneCouncilAsync(topic, config);
+            var result = await orchestrator.ConveneCouncilAsync(topic, config).ConfigureAwait(false);
 
             return result.Match(
                 decision => branch.WithEvent(CouncilDecisionEvent.Create(topic, decision)),
@@ -67,7 +67,7 @@ public static class CouncilDebateArrow
             try
             {
                 config ??= CouncilConfig.Default;
-                var result = await orchestrator.ConveneCouncilAsync(topic, config);
+                var result = await orchestrator.ConveneCouncilAsync(topic, config).ConfigureAwait(false);
 
                 return result.Match(
                     decision => Result<PipelineBranch, string>.Success(
@@ -75,7 +75,7 @@ public static class CouncilDebateArrow
                     error => Result<PipelineBranch, string>.Failure(error));
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Council debate exception: {ex.Message}");
             }
@@ -96,7 +96,7 @@ public static class CouncilDebateArrow
         {
             config ??= CouncilConfig.Default;
             var topic = questionBuilder(branch);
-            var result = await orchestrator.ConveneCouncilAsync(topic, config);
+            var result = await orchestrator.ConveneCouncilAsync(topic, config).ConfigureAwait(false);
 
             return result.Match(
                 decision => branch.WithEvent(CouncilDecisionEvent.Create(topic, decision)),
@@ -119,12 +119,12 @@ public static class CouncilDebateArrow
         => async branch =>
         {
             // First run the reasoning step
-            var afterReasoning = await reasoningStep(branch);
+            var afterReasoning = await reasoningStep(branch).ConfigureAwait(false);
 
             // Then run council validation
             config ??= CouncilConfig.Default;
             var topic = topicBuilder(afterReasoning);
-            var result = await orchestrator.ConveneCouncilAsync(topic, config);
+            var result = await orchestrator.ConveneCouncilAsync(topic, config).ConfigureAwait(false);
 
             return result.Match(
                 decision => afterReasoning.WithEvent(CouncilDecisionEvent.Create(topic, decision)),

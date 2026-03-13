@@ -1,4 +1,4 @@
-// <copyright file="EpisodicMemoryEngine.cs" company="Ouroboros">
+﻿// <copyright file="EpisodicMemoryEngine.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -79,6 +79,6 @@ public sealed partial class EpisodicMemoryEngine : IEpisodicMemoryEngine, IAsync
 
         _collectionInitLock.Dispose();
 
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 }

@@ -1,4 +1,4 @@
-namespace Ouroboros.Pipeline.Reasoning;
+﻿namespace Ouroboros.Pipeline.Reasoning;
 
 /// <summary>
 /// Immutable template for generating prompts with variable substitution.
@@ -60,7 +60,7 @@ public sealed class PromptTemplate
             return Result<string>.Success(result);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<string>.Failure($"Template formatting failed: {ex.Message}");
         }

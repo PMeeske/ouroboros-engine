@@ -1,4 +1,4 @@
-// <copyright file="CouncilOrchestrator.cs" company="Ouroboros">
+﻿// <copyright file="CouncilOrchestrator.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -104,7 +104,7 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
         try
         {
             // Phase 1: Proposal
-            var proposalRound = await ExecuteProposalPhaseAsync(snapshot, topic, config, ct);
+            var proposalRound = await ExecuteProposalPhaseAsync(snapshot, topic, config, ct).ConfigureAwait(false);
             if (proposalRound.IsFailure)
             {
                 return Result<CouncilDecision, string>.Failure(proposalRound.Error);
@@ -117,7 +117,7 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
             }
 
             // Phase 2: Challenge
-            var challengeRound = await ExecuteChallengePhaseAsync(snapshot, topic, agentProposals, config, ct);
+            var challengeRound = await ExecuteChallengePhaseAsync(snapshot, topic, agentProposals, config, ct).ConfigureAwait(false);
             if (challengeRound.IsFailure)
             {
                 return Result<CouncilDecision, string>.Failure(challengeRound.Error);
@@ -127,7 +127,7 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
 
             // Phase 3: Refinement
             var refinementRound = await ExecuteRefinementPhaseAsync(
-                snapshot, topic, agentProposals, challengeRound.Value.Contributions, config, ct);
+                snapshot, topic, agentProposals, challengeRound.Value.Contributions, config, ct).ConfigureAwait(false);
             if (refinementRound.IsFailure)
             {
                 return Result<CouncilDecision, string>.Failure(refinementRound.Error);
@@ -136,7 +136,7 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
             transcript.Add(refinementRound.Value);
 
             // Phase 4: Voting
-            var votingResult = await ExecuteVotingPhaseAsync(snapshot, topic, transcript, config, ct);
+            var votingResult = await ExecuteVotingPhaseAsync(snapshot, topic, transcript, config, ct).ConfigureAwait(false);
             if (votingResult.IsFailure)
             {
                 return Result<CouncilDecision, string>.Failure(votingResult.Error);
@@ -146,11 +146,11 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
             transcript.Add(votingRound);
 
             // Phase 5: Synthesis
-            var decision = await SynthesizeDecisionAsync(topic, transcript, votes, config, ct);
+            var decision = await SynthesizeDecisionAsync(topic, transcript, votes, config, ct).ConfigureAwait(false);
             return decision;
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<CouncilDecision, string>.Failure($"Council debate failed: {ex.Message}");
         }
@@ -225,7 +225,7 @@ public sealed class CouncilOrchestrator : ICouncilOrchestrator
 
         // Generate synthesis using LLM
         var synthesisPrompt = BuildSynthesisPrompt(topic, transcript, votes, majorityPosition.Key, consensusReached);
-        var (conclusion, _) = await _llm.GenerateWithToolsAsync(synthesisPrompt, ct);
+        var (conclusion, _) = await _llm.GenerateWithToolsAsync(synthesisPrompt, ct).ConfigureAwait(false);
 
         var confidence = consensusReached ? majorityPosition.Value / totalWeight : 0.5;
 

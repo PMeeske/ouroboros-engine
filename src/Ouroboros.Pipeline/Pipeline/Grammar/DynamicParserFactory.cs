@@ -1,4 +1,4 @@
-// <copyright file="DynamicParserFactory.cs" company="Ouroboros">
+﻿// <copyright file="DynamicParserFactory.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -90,10 +90,10 @@ public sealed class DynamicParserFactory : IDisposable
         {
             // Step 1: Write .g4 to temp directory
             string grammarPath = Path.Combine(tempDir, $"{grammarName}.g4");
-            await File.WriteAllTextAsync(grammarPath, grammarG4, ct);
+            await File.WriteAllTextAsync(grammarPath, grammarG4, ct).ConfigureAwait(false);
 
             // Step 2: Run ANTLR tool to generate C# source
-            await RunAntlrToolAsync(grammarPath, tempDir, ct);
+            await RunAntlrToolAsync(grammarPath, tempDir, ct).ConfigureAwait(false);
 
             // Step 3: Compile generated C# with Roslyn
             var csFiles = Directory.GetFiles(tempDir, "*.cs");
@@ -104,7 +104,7 @@ public sealed class DynamicParserFactory : IDisposable
                     CompilationStage.AntlrCodeGeneration);
             }
 
-            var assembly = await CompileWithRoslynAsync(csFiles, grammarName, ct);
+            var assembly = await CompileWithRoslynAsync(csFiles, grammarName, ct).ConfigureAwait(false);
 
             _logger?.LogInformation(
                 "Grammar '{GrammarName}' compiled successfully ({FileCount} source files)",
@@ -121,7 +121,7 @@ public sealed class DynamicParserFactory : IDisposable
                 Directory.Delete(tempDir, recursive: true);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger?.LogWarning(ex, "Failed to clean up temp directory {TempDir}", tempDir);
             }
@@ -209,11 +209,11 @@ public sealed class DynamicParserFactory : IDisposable
                 $"Failed to start ANTLR tool: {fileName}",
                 CompilationStage.AntlrCodeGeneration);
 
-        await process.WaitForExitAsync(ct);
+        await process.WaitForExitAsync(ct).ConfigureAwait(false);
 
         if (process.ExitCode != 0)
         {
-            string errors = await process.StandardError.ReadToEndAsync(ct);
+            string errors = await process.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
             throw new GrammarCompilationException(
                 $"ANTLR code generation failed: {errors}",
                 CompilationStage.AntlrCodeGeneration,
@@ -229,7 +229,7 @@ public sealed class DynamicParserFactory : IDisposable
         var syntaxTrees = new List<SyntaxTree>(csFiles.Length);
         foreach (var file in csFiles)
         {
-            string source = await File.ReadAllTextAsync(file, ct);
+            string source = await File.ReadAllTextAsync(file, ct).ConfigureAwait(false);
             syntaxTrees.Add(CSharpSyntaxTree.ParseText(source, path: file));
         }
 

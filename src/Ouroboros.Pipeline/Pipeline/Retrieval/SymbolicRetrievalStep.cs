@@ -1,4 +1,4 @@
-// <copyright file="SymbolicRetrievalStep.cs" company="Ouroboros">
+﻿// <copyright file="SymbolicRetrievalStep.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -36,7 +36,7 @@ public sealed class SymbolicRetrievalStep
         CancellationToken ct = default)
     {
         string query = $"!(match &self (Status $doc (State \"{status}\")) $doc)";
-        return await this.ExecuteSymbolicQueryAsync(query, ct);
+        return await this.ExecuteSymbolicQueryAsync(query, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -50,7 +50,7 @@ public sealed class SymbolicRetrievalStep
         CancellationToken ct = default)
     {
         string query = $"!(match &self (Topic $doc (Concept \"{topic}\")) $doc)";
-        return await this.ExecuteSymbolicQueryAsync(query, ct);
+        return await this.ExecuteSymbolicQueryAsync(query, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -74,7 +74,7 @@ public sealed class SymbolicRetrievalStep
             ) 
             $doc)";
         
-        return await this.ExecuteSymbolicQueryAsync(query, ct);
+        return await this.ExecuteSymbolicQueryAsync(query, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -109,7 +109,7 @@ public sealed class SymbolicRetrievalStep
             if (!string.IsNullOrEmpty(status) && !string.IsNullOrEmpty(topic))
             {
                 Result<IReadOnlyList<string>, string> result = 
-                    await this.RetrieveByStatusAndTopicAsync(status, topic, ct);
+                    await this.RetrieveByStatusAndTopicAsync(status, topic, ct).ConfigureAwait(false);
                 
                 if (result.IsSuccess)
                 {
@@ -119,7 +119,7 @@ public sealed class SymbolicRetrievalStep
             else if (!string.IsNullOrEmpty(status))
             {
                 Result<IReadOnlyList<string>, string> result = 
-                    await this.RetrieveByStatusAsync(status, ct);
+                    await this.RetrieveByStatusAsync(status, ct).ConfigureAwait(false);
                 
                 if (result.IsSuccess)
                 {
@@ -129,7 +129,7 @@ public sealed class SymbolicRetrievalStep
             else if (!string.IsNullOrEmpty(topic))
             {
                 Result<IReadOnlyList<string>, string> result = 
-                    await this.RetrieveByTopicAsync(topic, ct);
+                    await this.RetrieveByTopicAsync(topic, ct).ConfigureAwait(false);
                 
                 if (result.IsSuccess)
                 {
@@ -139,7 +139,7 @@ public sealed class SymbolicRetrievalStep
 
             // Step 2: Semantic retrieval (vector similarity)
             IReadOnlyCollection<Document> semanticMatches = 
-                await branch.Store.GetSimilarDocuments(embedModel, query, amount: semanticK);
+                await branch.Store.GetSimilarDocuments(embedModel, query, amount: semanticK).ConfigureAwait(false);
 
             HybridRetrievalResult hybridResult = new(
                 query,
@@ -149,7 +149,7 @@ public sealed class SymbolicRetrievalStep
             return Result<HybridRetrievalResult, string>.Success(hybridResult);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<HybridRetrievalResult, string>.Failure(
                 $"Hybrid retrieval failed: {ex.Message}");
@@ -178,7 +178,7 @@ public sealed class SymbolicRetrievalStep
         string query,
         CancellationToken ct)
     {
-        Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct);
+        Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
         return result.Match(
             success => Result<IReadOnlyList<string>, string>.Success(ParseDocumentIds(success)),

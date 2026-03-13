@@ -1,4 +1,4 @@
-// <copyright file="ToolBinder.cs" company="Ouroboros">
+﻿// <copyright file="ToolBinder.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -94,7 +94,7 @@ public sealed class ToolBinder
                     throw new InvalidOperationException($"Tool not found: {toolName}");
                 }
 
-                Result<string, string> result = await tool.InvokeAsync(current);
+                Result<string, string> result = await tool.InvokeAsync(current).ConfigureAwait(false);
                 
                 if (result.IsFailure)
                 {
@@ -125,7 +125,7 @@ public sealed class ToolBinder
                     return Result<string, string>.Failure($"Tool not found: {toolName}");
                 }
 
-                Result<string, string> result = await tool.InvokeAsync(current);
+                Result<string, string> result = await tool.InvokeAsync(current).ConfigureAwait(false);
                 
                 if (result.IsFailure)
                 {
@@ -174,7 +174,7 @@ public sealed class ToolBinder
                 progress?.Report((toolName, i + 1, total));
 
                 ITool? tool = this._registry.Get(toolName);
-                Result<string, string> result = await tool!.InvokeAsync(current);
+                Result<string, string> result = await tool!.InvokeAsync(current).ConfigureAwait(false);
                 
                 if (result.IsFailure)
                 {

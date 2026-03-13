@@ -1,4 +1,4 @@
-using LangChain.DocumentLoaders;
+﻿using LangChain.DocumentLoaders;
 using System.Reactive.Linq;
 
 namespace Ouroboros.Pipeline.Reasoning;
@@ -19,7 +19,7 @@ public static partial class ReasoningArrows
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             PipelineBranch branch = new PipelineBranch("streaming", new TrackedVectorStore(), DataSource.FromPath("."));
-            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = Prompts.Thinking.Format(new()
@@ -38,7 +38,7 @@ public static partial class ReasoningArrows
                 bool toolCalled = false;
                 currentTurnText.Clear();
 
-                await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable())
+                await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable().ConfigureAwait(false))
                 {
                     fullText.Append(chunk);
                     currentTurnText.Append(chunk);
@@ -78,11 +78,11 @@ public static partial class ReasoningArrows
                     {
                         try
                         {
-                            Result<string, string> toolResult = await tool.InvokeAsync(args, ct);
+                            Result<string, string> toolResult = await tool.InvokeAsync(args, ct).ConfigureAwait(false);
                             output = toolResult.Match(success => success, error => $"error: {error}");
                         }
                         catch (OperationCanceledException) { throw; }
-                        catch (Exception ex)
+                        catch (Exception ex) when (ex is not OperationCanceledException)
                         {
                             output = $"error: {ex.Message}";
                         }
@@ -125,7 +125,7 @@ public static partial class ReasoningArrows
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             PipelineBranch branch = inputBranch;
-            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = Prompts.Draft.Format(new()
@@ -137,7 +137,7 @@ public static partial class ReasoningArrows
 
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
 
-            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable())
+            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable().ConfigureAwait(false))
             {
                 fullText.Append(chunk);
                 PipelineBranch updatedBranch = branch.WithReasoning(new Draft(fullText.ToString()), prompt, null);
@@ -167,7 +167,7 @@ public static partial class ReasoningArrows
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
 
-            IReadOnlyCollection<Document> docs = await inputBranch.Store.GetSimilarDocuments(embed, query, amount: k);
+            IReadOnlyCollection<Document> docs = await inputBranch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = Prompts.Critique.Format(new()
@@ -180,7 +180,7 @@ public static partial class ReasoningArrows
 
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
 
-            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable())
+            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable().ConfigureAwait(false))
             {
                 fullText.Append(chunk);
                 PipelineBranch updatedBranch = inputBranch.WithReasoning(new Critique(fullText.ToString()), prompt, null);
@@ -214,7 +214,7 @@ public static partial class ReasoningArrows
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
 
-            IReadOnlyCollection<Document> docs = await inputBranch.Store.GetSimilarDocuments(embed, query, amount: k);
+            IReadOnlyCollection<Document> docs = await inputBranch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = Prompts.Improve.Format(new()
@@ -228,7 +228,7 @@ public static partial class ReasoningArrows
 
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
 
-            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable())
+            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable().ConfigureAwait(false))
             {
                 fullText.Append(chunk);
                 PipelineBranch updatedBranch = inputBranch.WithReasoning(new FinalSpec(fullText.ToString()), prompt, null);
@@ -259,12 +259,12 @@ public static partial class ReasoningArrows
                 await StreamingThinkingArrow(streamingModel, tools, embed, topic, query, k)
                     .Do(tuple => observer.OnNext(("Thinking", tuple.chunk, tuple.branch)))
                     .LastAsync()
-                    .ForEachAsync(tuple => branch = tuple.branch, ct);
+                    .ForEachAsync(tuple => branch = tuple.branch, ct).ConfigureAwait(false);
 
                 await StreamingDraftArrow(streamingModel, tools, embed, branch, topic, query, k)
                     .Do(tuple => observer.OnNext(("Draft", tuple.chunk, tuple.branch)))
                     .LastAsync()
-                    .ForEachAsync(tuple => branch = tuple.branch, ct);
+                    .ForEachAsync(tuple => branch = tuple.branch, ct).ConfigureAwait(false);
 
                 var critiqueResult = StreamingCritiqueArrow(streamingModel, tools, embed, branch, topic, query, k);
                 if (!critiqueResult.IsSuccess)
@@ -276,7 +276,7 @@ public static partial class ReasoningArrows
                 await critiqueResult.Value
                     .Do(tuple => observer.OnNext(("Critique", tuple.chunk, tuple.branch)))
                     .LastAsync()
-                    .ForEachAsync(tuple => branch = tuple.branch, ct);
+                    .ForEachAsync(tuple => branch = tuple.branch, ct).ConfigureAwait(false);
 
                 var improveResult = StreamingImproveArrow(streamingModel, tools, embed, branch, topic, query, k);
                 if (!improveResult.IsSuccess)
@@ -288,12 +288,12 @@ public static partial class ReasoningArrows
                 await improveResult.Value
                     .Do(tuple => observer.OnNext(("Improve", tuple.chunk, tuple.branch)))
                     .LastAsync()
-                    .ForEachAsync(tuple => branch = tuple.branch, ct);
+                    .ForEachAsync(tuple => branch = tuple.branch, ct).ConfigureAwait(false);
 
                 observer.OnCompleted();
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 observer.OnError(ex);
             }

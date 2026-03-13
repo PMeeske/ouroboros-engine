@@ -1,4 +1,4 @@
-using LangChain.Databases;
+﻿using LangChain.Databases;
 using LangChain.DocumentLoaders;
 
 namespace Ouroboros.Pipeline.Branches;
@@ -61,7 +61,7 @@ public sealed class BranchSnapshot
             Text = v.Text,
             Metadata = v.Metadata ?? new Dictionary<string, object>(),
             Embedding = v.Embedding ?? Array.Empty<float>()
-        }));
+        })).ConfigureAwait(false);
 
         PipelineBranch branch = PipelineBranch.WithEvents(Name, store, DataSource.FromPath(Environment.CurrentDirectory), Events);
         return branch;

@@ -1,4 +1,4 @@
-// <copyright file="HierarchicalGoalPlanner.cs" company="Ouroboros">
+﻿// <copyright file="HierarchicalGoalPlanner.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -38,13 +38,13 @@ public static class HierarchicalGoalPlanner
             if (goal.SubGoals.Count == 0)
             {
                 Step<PipelineBranch, PipelineBranch> step = stepSelector(goal);
-                return await step(branch);
+                return await step(branch).ConfigureAwait(false);
             }
 
             PipelineBranch current = branch;
             foreach (Goal subGoal in goal.GetIncompleteSubGoals(current))
             {
-                current = await ExecuteGoalArrow(subGoal, stepSelector)(current);
+                current = await ExecuteGoalArrow(subGoal, stepSelector)(current).ConfigureAwait(false);
             }
 
             return current;
@@ -76,7 +76,7 @@ public static class HierarchicalGoalPlanner
                 if (goal.SubGoals.Count == 0)
                 {
                     Step<PipelineBranch, Result<PipelineBranch>> step = stepSelector(goal);
-                    return await step(branch);
+                    return await step(branch).ConfigureAwait(false);
                 }
 
                 Result<PipelineBranch> current = Result<PipelineBranch>.Success(branch);
@@ -88,7 +88,7 @@ public static class HierarchicalGoalPlanner
                         return current;
                     }
 
-                    current = await ExecuteGoalSafeArrow(subGoal, stepSelector)(current.Value);
+                    current = await ExecuteGoalSafeArrow(subGoal, stepSelector)(current.Value).ConfigureAwait(false);
                 }
 
                 return current;
@@ -97,7 +97,7 @@ public static class HierarchicalGoalPlanner
             {
                 throw;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch>.Failure($"Goal execution failed for '{goal.Description}': {ex.Message}");
             }
@@ -124,14 +124,14 @@ public static class HierarchicalGoalPlanner
 
         return async branch =>
         {
-            Result<Goal> decomposedResult = await GoalDecomposer.DecomposeRecursiveArrow(llm, rootGoal, maxDepth)(branch);
+            Result<Goal> decomposedResult = await GoalDecomposer.DecomposeRecursiveArrow(llm, rootGoal, maxDepth)(branch).ConfigureAwait(false);
 
             if (decomposedResult.IsFailure)
             {
                 return Result<PipelineBranch>.Failure(decomposedResult.Error);
             }
 
-            return await ExecuteGoalSafeArrow(decomposedResult.Value, stepSelector)(branch);
+            return await ExecuteGoalSafeArrow(decomposedResult.Value, stepSelector)(branch).ConfigureAwait(false);
         };
     }
 
@@ -159,7 +159,7 @@ public static class HierarchicalGoalPlanner
 
             if (goal.SubGoals.Count == 0)
             {
-                return await stepSelector(goal)(branch);
+                return await stepSelector(goal)(branch).ConfigureAwait(false);
             }
 
             try
@@ -169,10 +169,10 @@ public static class HierarchicalGoalPlanner
 
                 IEnumerable<Task<Result<PipelineBranch>>> tasks = incompleteGoals.Select(async subGoal =>
                 {
-                    await semaphore.WaitAsync();
+                    await semaphore.WaitAsync().ConfigureAwait(false);
                     try
                     {
-                        return await ExecuteGoalSafeArrow(subGoal, stepSelector)(branch);
+                        return await ExecuteGoalSafeArrow(subGoal, stepSelector)(branch).ConfigureAwait(false);
                     }
                     finally
                     {
@@ -180,7 +180,7 @@ public static class HierarchicalGoalPlanner
                     }
                 });
 
-                Result<PipelineBranch>[] results = await Task.WhenAll(tasks);
+                Result<PipelineBranch>[] results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
                 // Check for any failures
                 List<Result<PipelineBranch>> failures = results.Where(r => r.IsFailure).ToList();
@@ -200,7 +200,7 @@ public static class HierarchicalGoalPlanner
             {
                 throw;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch>.Failure($"Parallel execution failed: {ex.Message}");
             }

@@ -1,4 +1,4 @@
-// <copyright file="EmbodimentMemoryFusion.Search.cs" company="Ouroboros">
+﻿// <copyright file="EmbodimentMemoryFusion.Search.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -23,11 +23,11 @@ public sealed partial class EmbodimentMemoryFusion
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(query);
 
-            await EnsureCollectionInitializedAsync(ct);
+            await EnsureCollectionInitializedAsync(ct).ConfigureAwait(false);
 
             options ??= new MemorySearchOptions();
 
-            var queryEmbedding = await _embeddingModel.CreateEmbeddingsAsync(query, ct);
+            var queryEmbedding = await _embeddingModel.CreateEmbeddingsAsync(query, ct).ConfigureAwait(false);
 
             // Build payload filter from options
             var conditions = new List<Condition>();
@@ -92,7 +92,7 @@ public sealed partial class EmbodimentMemoryFusion
                 queryEmbedding,
                 filter: filter,
                 limit: fetchLimit,
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             var queryKeywords = options.UseSparseKeywords
                 ? new HashSet<string>(ExtractKeywords(query))
@@ -113,7 +113,7 @@ public sealed partial class EmbodimentMemoryFusion
             return Result<List<ScoredMemory>, string>.Success(scored);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to perform hybrid search");
             return Result<List<ScoredMemory>, string>.Failure($"Failed to perform hybrid search: {ex.Message}");
@@ -134,11 +134,11 @@ public sealed partial class EmbodimentMemoryFusion
             ArgumentException.ThrowIfNullOrWhiteSpace(sourceModality);
             ArgumentException.ThrowIfNullOrWhiteSpace(targetModality);
 
-            await EnsureCollectionInitializedAsync(ct);
+            await EnsureCollectionInitializedAsync(ct).ConfigureAwait(false);
 
             // Enrich query with source modality context for cross-modal bridging
             var enrichedQuery = $"[{sourceModality}] {query}";
-            var queryEmbedding = await _embeddingModel.CreateEmbeddingsAsync(enrichedQuery, ct);
+            var queryEmbedding = await _embeddingModel.CreateEmbeddingsAsync(enrichedQuery, ct).ConfigureAwait(false);
 
             // Filter to target modality
             var filter = new Filter
@@ -161,7 +161,7 @@ public sealed partial class EmbodimentMemoryFusion
                 queryEmbedding,
                 filter: filter,
                 limit: (ulong)limit,
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             var results = searchResult
                 .Select(DeserializeScoredPoint)
@@ -174,7 +174,7 @@ public sealed partial class EmbodimentMemoryFusion
             return Result<List<ScoredMemory>, string>.Success(results);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to perform cross-modal search");
             return Result<List<ScoredMemory>, string>.Failure($"Failed to perform cross-modal search: {ex.Message}");
@@ -188,7 +188,7 @@ public sealed partial class EmbodimentMemoryFusion
     {
         try
         {
-            await EnsureCollectionInitializedAsync(ct);
+            await EnsureCollectionInitializedAsync(ct).ConfigureAwait(false);
 
             // Scroll through all memories in paginated fashion
             var allPoints = new List<RetrievedPoint>();
@@ -200,7 +200,7 @@ public sealed partial class EmbodimentMemoryFusion
                     _collectionName,
                     limit: 100,
                     offset: nextOffset,
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
 
                 allPoints.AddRange(scrollResult.Result);
 
@@ -237,7 +237,7 @@ public sealed partial class EmbodimentMemoryFusion
                     vector,
                     limit: 10,
                     scoreThreshold: (float)similarityThreshold,
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
 
                 // Exclude self and already-merged points
                 var cluster = neighbors
@@ -254,7 +254,7 @@ public sealed partial class EmbodimentMemoryFusion
                 clusterContents.AddRange(cluster.Select(n => n.Payload["content"].StringValue));
 
                 var abstractionContent = $"[abstraction] {string.Join(" | ", clusterContents.Take(5))}";
-                var abstractionEmbedding = await _embeddingModel.CreateEmbeddingsAsync(abstractionContent, ct);
+                var abstractionEmbedding = await _embeddingModel.CreateEmbeddingsAsync(abstractionContent, ct).ConfigureAwait(false);
 
                 // Use the highest importance from the cluster
                 var maxImportance = Math.Max(
@@ -282,14 +282,14 @@ public sealed partial class EmbodimentMemoryFusion
                 };
 
                 await _qdrantClient.UpsertAsync(
-                    _collectionName, new[] { abstractionPoint }, cancellationToken: ct);
+                    _collectionName, new[] { abstractionPoint }, cancellationToken: ct).ConfigureAwait(false);
 
                 // Delete merged (non-anchor) points
                 var toDelete = cluster
                     .Select(n => new PointId { Uuid = n.Id.Uuid })
                     .ToList();
 
-                await _qdrantClient.DeleteAsync(_collectionName, toDelete, cancellationToken: ct);
+                await _qdrantClient.DeleteAsync(_collectionName, toDelete, cancellationToken: ct).ConfigureAwait(false);
 
                 foreach (var n in cluster)
                 {
@@ -308,7 +308,7 @@ public sealed partial class EmbodimentMemoryFusion
                 new ConsolidationResult(allPoints.Count, clustersMerged, newAbstractions));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to consolidate memories");
             return Result<ConsolidationResult, string>.Failure($"Failed to consolidate memories: {ex.Message}");
@@ -321,7 +321,7 @@ public sealed partial class EmbodimentMemoryFusion
     {
         try
         {
-            await EnsureCollectionInitializedAsync(ct);
+            await EnsureCollectionInitializedAsync(ct).ConfigureAwait(false);
 
             var totalMemories = 0;
             var totalImportance = 0.0;
@@ -337,7 +337,7 @@ public sealed partial class EmbodimentMemoryFusion
                     _collectionName,
                     limit: 100,
                     offset: nextOffset,
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
 
                 foreach (var point in scrollResult.Result)
                 {
@@ -380,7 +380,7 @@ public sealed partial class EmbodimentMemoryFusion
                 new MemoryDistribution(totalMemories, avgImportance, high, medium, low, byModality));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to get memory distribution");
             return Result<MemoryDistribution, string>.Failure($"Failed to get memory distribution: {ex.Message}");
@@ -415,7 +415,7 @@ public sealed partial class EmbodimentMemoryFusion
                     ? 0.1 * ((double)overlap / queryKeywords.Count)
                     : 0.0;
             }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // Ignore keyword parsing failures
             }
@@ -452,7 +452,7 @@ public sealed partial class EmbodimentMemoryFusion
             {
                 metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(metadataValue.StringValue);
             }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // Ignore metadata deserialization failures
             }

@@ -1,4 +1,4 @@
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 
 namespace Ouroboros.Pipeline.MultiAgent;
@@ -296,7 +296,7 @@ public sealed class InMemoryMessageBus : IMessageBus, IDisposable
             await subscription.Handler(message).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Message handler threw an unhandled exception");
         }

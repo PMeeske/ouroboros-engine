@@ -1,4 +1,4 @@
-// <copyright file="GlobalProjectionArrows.cs" company="Ouroboros">
+﻿// <copyright file="GlobalProjectionArrows.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -33,7 +33,7 @@ public static class GlobalProjectionArrows
             var snapshots = new List<BranchSnapshot>();
             // Use Select for functional-style mapping
             var snapshotTasks = branches.Select(b => BranchSnapshot.Capture(b));
-            snapshots.AddRange(await Task.WhenAll(snapshotTasks));
+            snapshots.AddRange(await Task.WhenAll(snapshotTasks).ConfigureAwait(false));
 
             // Determine epoch number from existing epochs in the branch
             long epochNumber = GetNextEpochNumber(branch);
@@ -68,11 +68,11 @@ public static class GlobalProjectionArrows
         {
             try
             {
-                var result = await CreateEpochArrow(relatedBranches, metadata)(branch);
+                var result = await CreateEpochArrow(relatedBranches, metadata)(branch).ConfigureAwait(false);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Epoch creation failed: {ex.Message}");
             }

@@ -1,4 +1,4 @@
-using LangChain.DocumentLoaders;
+﻿using LangChain.DocumentLoaders;
 
 namespace Ouroboros.Pipeline.Ingestion;
 
@@ -47,7 +47,7 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
             throw new ArgumentException("DataSource must contain a path string for directory loading");
 
         if (File.Exists(path))
-            return await new TInner().LoadAsync(source, settings, cancellationToken);
+            return await new TInner().LoadAsync(source, settings, cancellationToken).ConfigureAwait(false);
 
         if (!Directory.Exists(path))
             throw new DirectoryNotFoundException($"Directory '{path}' not found");
@@ -74,7 +74,7 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
                     continue;
                 }
 
-                await LoadFileIntoDocsAsync(file, path, settings, cancellationToken, docs, stats, debug);
+                await LoadFileIntoDocsAsync(file, path, settings, cancellationToken, docs, stats, debug).ConfigureAwait(false);
 
                 if (_useCache) _cache?.UpdateHash(file);
                 if (debug) System.Diagnostics.Trace.TraceInformation("[ingest] loaded {0}", file);
@@ -132,7 +132,7 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
         try
         {
             DataSource fileSource = DataSource.FromPath(file);
-            IReadOnlyCollection<Document> loaded = await new TInner().LoadAsync(fileSource, settings, cancellationToken);
+            IReadOnlyCollection<Document> loaded = await new TInner().LoadAsync(fileSource, settings, cancellationToken).ConfigureAwait(false);
 
             foreach (Document d in loaded)
             {
@@ -143,7 +143,7 @@ public sealed class DirectoryDocumentLoader<TInner> : IDocumentLoader where TInn
             if (debug) System.Diagnostics.Trace.TraceInformation("[ingest] loaded {0} docs={1}", file, loaded.Count);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             if (debug) System.Diagnostics.Trace.TraceWarning("[ingest] error {0} {1}", file, ex.Message);
             docs.Add(new Document

@@ -1,4 +1,4 @@
-// <copyright file="MeTTaPlanner.cs" company="Ouroboros">
+﻿// <copyright file="MeTTaPlanner.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -46,14 +46,14 @@ public sealed class MeTTaPlanner
         {
             // Execute backward chaining query
             string query = $"!(solve {startType.Name} {endType.Name})";
-            Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct);
+            Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
             return result.Match(
                 success => ParseToolChain(success),
                 error => Result<ToolChain, string>.Failure($"Planning failed: {error}"));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<ToolChain, string>.Failure($"Planning exception: {ex.Message}");
         }
@@ -70,7 +70,7 @@ public sealed class MeTTaPlanner
         CancellationToken ct = default)
     {
         string query = $"!(tools-accepting {inputType.Name})";
-        Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct);
+        Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
         return result.Match(
             success => Result<IReadOnlyList<string>, string>.Success(ParseToolNames(success)),
@@ -88,7 +88,7 @@ public sealed class MeTTaPlanner
         CancellationToken ct = default)
     {
         string query = $"!(tools-producing {outputType.Name})";
-        Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct);
+        Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
         return result.Match(
             success => Result<IReadOnlyList<string>, string>.Success(ParseToolNames(success)),
@@ -110,7 +110,7 @@ public sealed class MeTTaPlanner
         CancellationToken ct = default)
     {
         string fact = $"(: {toolName} (-> {inputType.Name} {outputType.Name}))";
-        return (await this._engine.AddFactAsync(fact, ct)).Map(_ => Unit.Value);
+        return (await this._engine.AddFactAsync(fact, ct).ConfigureAwait(false)).Map(_ => Unit.Value);
     }
 
     /// <summary>
@@ -150,7 +150,7 @@ public sealed class MeTTaPlanner
                 continue;
             }
 
-            var result = await this._engine.AddFactAsync(line, ct);
+            var result = await this._engine.AddFactAsync(line, ct).ConfigureAwait(false);
             if (result.IsFailure)
             {
                 return Result<Unit, string>.Failure(result.Error);

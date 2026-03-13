@@ -1,4 +1,4 @@
-// <copyright file="HyperonGrpcGrammarValidator.cs" company="Ouroboros">
+﻿// <copyright file="HyperonGrpcGrammarValidator.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -56,7 +56,7 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(grammarG4);
 
         var request = new ValidateGrammarRequest { GrammarG4 = grammarG4 };
-        var response = await _client.ValidateGrammarAsync(request, cancellationToken: ct);
+        var response = await _client.ValidateGrammarAsync(request, cancellationToken: ct).ConfigureAwait(false);
 
         var issues = response.Issues
             .Select(MapIssue)
@@ -85,7 +85,7 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
             });
         }
 
-        var response = await _client.CorrectGrammarAsync(request, cancellationToken: ct);
+        var response = await _client.CorrectGrammarAsync(request, cancellationToken: ct).ConfigureAwait(false);
 
         return new GrammarCorrectionResult(
             response.Success,
@@ -103,7 +103,7 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
         var request = new ComposeGrammarsRequest { GrammarName = grammarName };
         request.GrammarFragments.AddRange(fragments);
 
-        var response = await _client.ComposeGrammarsAsync(request, cancellationToken: ct);
+        var response = await _client.ComposeGrammarsAsync(request, cancellationToken: ct).ConfigureAwait(false);
 
         return (response.Success, response.ComposedGrammarG4, response.ConflictsResolved.ToList());
     }
@@ -129,7 +129,7 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
             },
         };
 
-        var response = await _client.RefineGrammarAsync(request, cancellationToken: ct);
+        var response = await _client.RefineGrammarAsync(request, cancellationToken: ct).ConfigureAwait(false);
 
         return new GrammarRefinementResult(
             response.Success,
@@ -151,7 +151,7 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
         };
         request.SampleInputs.AddRange(sampleInputs);
 
-        var response = await _client.StoreProvenGrammarAsync(request, cancellationToken: ct);
+        var response = await _client.StoreProvenGrammarAsync(request, cancellationToken: ct).ConfigureAwait(false);
         return (response.Success, response.GrammarId);
     }
 
@@ -161,7 +161,7 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
         CancellationToken ct = default)
     {
         var request = new RetrieveGrammarRequest { Description = description };
-        var response = await _client.RetrieveGrammarAsync(request, cancellationToken: ct);
+        var response = await _client.RetrieveGrammarAsync(request, cancellationToken: ct).ConfigureAwait(false);
         return (response.Found, response.GrammarG4, response.GrammarId, response.SimilarityScore);
     }
 
@@ -170,11 +170,11 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
     {
         try
         {
-            var response = await _client.HealthCheckAsync(new HealthCheckRequest(), cancellationToken: ct);
+            var response = await _client.HealthCheckAsync(new HealthCheckRequest(), cancellationToken: ct).ConfigureAwait(false);
             return response.Healthy;
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogWarning(ex, "Hyperon grammar sidecar health check failed");
             return false;
@@ -191,7 +191,7 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(mettaAtoms);
 
         var request = new AtomsToGrammarRequest { MettaAtoms = mettaAtoms };
-        var response = await _client.AtomsToGrammarAsync(request, cancellationToken: ct);
+        var response = await _client.AtomsToGrammarAsync(request, cancellationToken: ct).ConfigureAwait(false);
 
         return (response.Success, response.GrammarG4, response.Notes.ToList());
     }
@@ -204,7 +204,7 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(mettaAtoms);
 
         var request = new ValidateAtomsRequest { MettaAtoms = mettaAtoms };
-        var response = await _client.ValidateAtomsAsync(request, cancellationToken: ct);
+        var response = await _client.ValidateAtomsAsync(request, cancellationToken: ct).ConfigureAwait(false);
 
         var issues = response.Issues.Select(MapIssue).ToList();
         var result = new GrammarValidationResult(response.IsValid, issues);
@@ -232,7 +232,7 @@ public sealed class HyperonGrpcGrammarValidator : IGrammarValidator, IDisposable
             });
         }
 
-        var response = await _client.CorrectAtomsAsync(request, cancellationToken: ct);
+        var response = await _client.CorrectAtomsAsync(request, cancellationToken: ct).ConfigureAwait(false);
 
         return (
             response.Success,

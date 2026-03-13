@@ -1,4 +1,4 @@
-// <copyright file="EmbodimentMemoryFusion.cs" company="Ouroboros">
+﻿// <copyright file="EmbodimentMemoryFusion.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -73,12 +73,12 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
             ArgumentException.ThrowIfNullOrWhiteSpace(memory.Content);
             ArgumentException.ThrowIfNullOrWhiteSpace(memory.Modality);
 
-            await EnsureCollectionInitializedAsync(ct);
+            await EnsureCollectionInitializedAsync(ct).ConfigureAwait(false);
 
             var id = Guid.NewGuid();
             var timestamp = memory.Timestamp ?? DateTime.UtcNow;
 
-            var embedding = await _embeddingModel.CreateEmbeddingsAsync(memory.Content, ct);
+            var embedding = await _embeddingModel.CreateEmbeddingsAsync(memory.Content, ct).ConfigureAwait(false);
 
             // Extract keywords for sparse matching
             var keywords = ExtractKeywords(memory.Content);
@@ -103,7 +103,7 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
                 point.Payload["metadata"] = JsonSerializer.Serialize(memory.Metadata);
             }
 
-            await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct);
+            await _qdrantClient.UpsertAsync(_collectionName, new[] { point }, cancellationToken: ct).ConfigureAwait(false);
 
             _logger?.LogInformation(
                 "Stored embodied memory {MemoryId} modality={Modality} importance={Importance:F2}",
@@ -112,7 +112,7 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
             return Result<Guid, string>.Success(id);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to store embodied memory");
             return Result<Guid, string>.Failure($"Failed to store embodied memory: {ex.Message}");
@@ -126,7 +126,7 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
     {
         try
         {
-            await EnsureCollectionInitializedAsync(ct);
+            await EnsureCollectionInitializedAsync(ct).ConfigureAwait(false);
 
             var now = DateTime.UtcNow;
             var updated = 0;
@@ -138,7 +138,7 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
                     _collectionName,
                     limit: 100,
                     offset: nextOffset,
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
 
                 foreach (var point in scrollResult.Result)
                 {
@@ -172,7 +172,7 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
                         }
 
                         await _qdrantClient.UpsertAsync(
-                            _collectionName, new[] { updatePoint }, cancellationToken: ct);
+                            _collectionName, new[] { updatePoint }, cancellationToken: ct).ConfigureAwait(false);
                         updated++;
                     }
                 }
@@ -188,7 +188,7 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
             return Result<int, string>.Success(updated);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to apply temporal decay");
             return Result<int, string>.Failure($"Failed to apply temporal decay: {ex.Message}");
@@ -199,7 +199,7 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
     public async ValueTask DisposeAsync()
     {
         _collectionInitLock.Dispose();
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     private async Task EnsureCollectionInitializedAsync(CancellationToken ct)
@@ -209,7 +209,7 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
             return;
         }
 
-        await _collectionInitLock.WaitAsync(ct);
+        await _collectionInitLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             if (_collectionInitialized)
@@ -217,7 +217,7 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
                 return;
             }
 
-            var exists = await _qdrantClient.CollectionExistsAsync(_collectionName, ct);
+            var exists = await _qdrantClient.CollectionExistsAsync(_collectionName, ct).ConfigureAwait(false);
 
             if (!exists)
             {
@@ -226,14 +226,14 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
                 uint vectorSize = 1536;
                 try
                 {
-                    float[] probe = await _embeddingModel.CreateEmbeddingsAsync("probe", ct);
+                    float[] probe = await _embeddingModel.CreateEmbeddingsAsync("probe", ct).ConfigureAwait(false);
                     vectorSize = (uint)probe.Length;
                     _logger?.LogInformation(
                         "Probed embedding dimension: {VectorSize} for collection {CollectionName}",
                         vectorSize, _collectionName);
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     _logger?.LogWarning(
                         ex,
@@ -244,7 +244,7 @@ public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IA
                 await _qdrantClient.CreateCollectionAsync(
                     _collectionName,
                     new VectorParams { Size = vectorSize, Distance = Distance.Cosine },
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
             }
 
             _collectionInitialized = true;

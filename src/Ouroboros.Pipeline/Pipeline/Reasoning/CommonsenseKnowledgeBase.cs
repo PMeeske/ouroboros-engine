@@ -1,4 +1,4 @@
-// <copyright file="CommonsenseKnowledgeBase.cs" company="Ouroboros">
+﻿// <copyright file="CommonsenseKnowledgeBase.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -74,8 +74,8 @@ public sealed class CommonsenseKnowledgeBase : IDisposable
     {
         if (_loaded) return;
 
-        var facts = await ReadSchemaFacts(ct);
-        await _step.LoadContextAsync("commonsense-kb", facts, ct);
+        var facts = await ReadSchemaFacts(ct).ConfigureAwait(false);
+        await _step.LoadContextAsync("commonsense-kb", facts, ct).ConfigureAwait(false);
         _loaded = true;
     }
 
@@ -91,9 +91,9 @@ public sealed class CommonsenseKnowledgeBase : IDisposable
         CancellationToken ct = default)
     {
         if (!_loaded)
-            await LoadAsync(ct);
+            await LoadAsync(ct).ConfigureAwait(false);
 
-        await _step.LoadContextAsync(domainName, facts, ct);
+        await _step.LoadContextAsync(domainName, facts, ct).ConfigureAwait(false);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ public sealed class CommonsenseKnowledgeBase : IDisposable
     {
         var results = await _step.InferAsync(
             $"(match &self (HasProperty (Entity \"{entityName}\") {property}) True)",
-            ct);
+            ct).ConfigureAwait(false);
         return results.Any(r => r.Contains("True"));
     }
 
@@ -175,7 +175,7 @@ public sealed class CommonsenseKnowledgeBase : IDisposable
     {
         var results = await _step.InferAsync(
             $"(match &self (AgentCanDo (Entity \"{agentName}\") (Entity \"{objectName}\") {affordance}) True)",
-            ct);
+            ct).ConfigureAwait(false);
         return results.Any(r => r.Contains("True"));
     }
 
@@ -215,9 +215,9 @@ public sealed class CommonsenseKnowledgeBase : IDisposable
     private async Task<IReadOnlyList<string>> QueryEntities(string query, CancellationToken ct)
     {
         if (!_loaded)
-            await LoadAsync(ct);
+            await LoadAsync(ct).ConfigureAwait(false);
 
-        return await _step.InferAsync(query, ct);
+        return await _step.InferAsync(query, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -230,7 +230,7 @@ public sealed class CommonsenseKnowledgeBase : IDisposable
 
         if (schemaPath != null)
         {
-            var lines = await File.ReadAllLinesAsync(schemaPath, ct);
+            var lines = await File.ReadAllLinesAsync(schemaPath, ct).ConfigureAwait(false);
             return ParseMeTTaFacts(lines);
         }
 

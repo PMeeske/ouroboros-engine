@@ -1,4 +1,4 @@
-// <copyright file="AdaptiveParserPipeline.cs" company="Ouroboros">
+﻿// <copyright file="AdaptiveParserPipeline.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -77,7 +77,7 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(description);
 
         // Step 1: Try to retrieve a previously proven grammar
-        var (found, existingG4, grammarId, score) = await _validator.RetrieveGrammarAsync(description, ct);
+        var (found, existingG4, grammarId, score) = await _validator.RetrieveGrammarAsync(description, ct).ConfigureAwait(false);
         if (found && score > 0.5)
         {
             _logger?.LogInformation(
@@ -86,7 +86,7 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
                 score);
             try
             {
-                return await _compilerFactory.CompileGrammarAsync(existingG4, ct);
+                return await _compilerFactory.CompileGrammarAsync(existingG4, ct).ConfigureAwait(false);
             }
             catch (GrammarCompilationException ex)
             {
@@ -113,11 +113,11 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
             // Step 2: Generate MeTTa grammar spec atoms via LLM (Logic Transfer Objects)
             if (currentMeTTaAtoms == null)
             {
-                currentMeTTaAtoms = await GenerateMeTTaAtomsAsync(description, sampleInput, ct);
+                currentMeTTaAtoms = await GenerateMeTTaAtomsAsync(description, sampleInput, ct).ConfigureAwait(false);
             }
 
             // Step 3: Validate atoms via Hyperon sidecar
-            var (atomValidation, validationNotes) = await _validator.ValidateAtomsAsync(currentMeTTaAtoms, ct);
+            var (atomValidation, validationNotes) = await _validator.ValidateAtomsAsync(currentMeTTaAtoms, ct).ConfigureAwait(false);
             foreach (var note in validationNotes)
             {
                 _logger?.LogDebug("Atom validation note: {Note}", note);
@@ -130,7 +130,7 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
                     atomValidation.Issues.Count);
 
                 var (corrSuccess, correctedAtoms, corrections, _) =
-                    await _validator.CorrectAtomsAsync(currentMeTTaAtoms, atomValidation.Issues, ct);
+                    await _validator.CorrectAtomsAsync(currentMeTTaAtoms, atomValidation.Issues, ct).ConfigureAwait(false);
 
                 if (corrSuccess)
                 {
@@ -144,7 +144,7 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
 
             // Step 3b: Convert validated atoms to .g4 grammar over the wire
             var (convertSuccess, g4Grammar, convertNotes) =
-                await _validator.AtomsToGrammarAsync(currentMeTTaAtoms, ct);
+                await _validator.AtomsToGrammarAsync(currentMeTTaAtoms, ct).ConfigureAwait(false);
 
             foreach (var note in convertNotes)
             {
@@ -164,7 +164,7 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
             CompiledGrammar compiled;
             try
             {
-                compiled = await _compilerFactory.CompileGrammarAsync(currentGrammar, ct);
+                compiled = await _compilerFactory.CompileGrammarAsync(currentGrammar, ct).ConfigureAwait(false);
             }
             catch (GrammarCompilationException ex)
             {
@@ -192,7 +192,7 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
                     var refinement = await _validator.RefineAsync(
                         currentGrammar,
                         parseResult.Failure!,
-                        ct);
+                        ct).ConfigureAwait(false);
 
                     if (refinement.Success)
                     {
@@ -218,7 +218,7 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
                     description,
                     currentGrammar,
                     [sampleInput],
-                    ct);
+                    ct).ConfigureAwait(false);
             }
 
             return compiled;
@@ -243,8 +243,13 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
     {
         string prompt = BuildMeTTaGenerationPrompt(description, sampleInput);
 
-        var response = await _llm.GenerateAsync(prompt, cancellationToken: ct);
-        string generated = response.ToString();
+        ChatResponse? response = null;
+        await foreach (var chunk in _llm.GenerateAsync(prompt, cancellationToken: ct).ConfigureAwait(false))
+        {
+            response = chunk;
+        }
+
+        string generated = response?.ToString() ?? string.Empty;
 
         return ExtractMeTTaFromResponse(generated);
     }

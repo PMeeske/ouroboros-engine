@@ -1,4 +1,4 @@
-namespace Ouroboros.Pipeline.Planning;
+﻿namespace Ouroboros.Pipeline.Planning;
 
 /// <summary>
 /// Extension methods for integrating MeTTa planning with tool binding.
@@ -21,7 +21,7 @@ public static class ToolBinderExtensions
         MeTTaType endType,
         CancellationToken ct = default)
     {
-        Result<ToolChain, string> planResult = await planner.PlanAsync(startType, endType, ct);
+        Result<ToolChain, string> planResult = await planner.PlanAsync(startType, endType, ct).ConfigureAwait(false);
 
         if (planResult.IsFailure)
         {
@@ -50,7 +50,7 @@ public static class ToolBinderExtensions
         CancellationToken ct = default)
     {
         Result<Step<string, string>, string> bindResult = 
-            await planner.PlanAndBindAsync(binder, startType, endType, ct);
+            await planner.PlanAndBindAsync(binder, startType, endType, ct).ConfigureAwait(false);
 
         if (bindResult.IsFailure)
         {
@@ -59,11 +59,11 @@ public static class ToolBinderExtensions
 
         try
         {
-            string result = await bindResult.Value(input);
+            string result = await bindResult.Value(input).ConfigureAwait(false);
             return Result<string, string>.Success(result);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<string, string>.Failure($"Execution failed: {ex.Message}");
         }

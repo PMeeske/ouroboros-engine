@@ -1,4 +1,4 @@
-// <copyright file="SymbolicPlanSelector.cs" company="Ouroboros">
+﻿// <copyright file="SymbolicPlanSelector.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -52,7 +52,7 @@ public sealed class SymbolicPlanSelector
         foreach (Plan plan in planList)
         {
             // Score each plan based on symbolic constraints
-            Result<PlanCandidate, string> scoreResult = await ScorePlanAsync(plan, context, ct);
+            Result<PlanCandidate, string> scoreResult = await ScorePlanAsync(plan, context, ct).ConfigureAwait(false);
             
             if (scoreResult.IsSuccess)
             {
@@ -94,7 +94,7 @@ public sealed class SymbolicPlanSelector
             string contextAtom = context.ToMeTTaAtom();
             string query = $"!(Allowed {atom} {contextAtom})";
 
-            Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct);
+            Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
             
             bool isAllowed = result.Match(
                 success => ParseBooleanResult(success),
@@ -115,7 +115,7 @@ public sealed class SymbolicPlanSelector
 
         // Query symbolic properties for additional scoring
         string complexityQuery = $"!(PlanComplexity {plan.Actions.Count})";
-        Result<string, string> complexityResult = await this._engine.ExecuteQueryAsync(complexityQuery, ct);
+        Result<string, string> complexityResult = await this._engine.ExecuteQueryAsync(complexityQuery, ct).ConfigureAwait(false);
         
         complexityResult.Match(
             success =>
@@ -150,7 +150,7 @@ public sealed class SymbolicPlanSelector
         string encodedConstraint = EncodeConstraintForPlan(plan, constraint);
         string query = $"!(CheckConstraint {encodedConstraint})";
 
-        Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct);
+        Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
         return result.Match(
             success => Result<bool, string>.Success(ParseBooleanResult(success)),
@@ -171,7 +171,7 @@ public sealed class SymbolicPlanSelector
     {
         ArgumentNullException.ThrowIfNull(plan);
 
-        Result<PlanCandidate, string> scoreResult = await ScorePlanAsync(plan, context, ct);
+        Result<PlanCandidate, string> scoreResult = await ScorePlanAsync(plan, context, ct).ConfigureAwait(false);
 
         return scoreResult.Match(
             candidate => Result<string, string>.Success(
@@ -208,7 +208,7 @@ public sealed class SymbolicPlanSelector
                 continue;
             }
 
-            var result = await this._engine.AddFactAsync(rule, ct);
+            var result = await this._engine.AddFactAsync(rule, ct).ConfigureAwait(false);
             if (result.IsFailure)
             {
                 return Result<Unit, string>.Failure(result.Error);

@@ -1,4 +1,4 @@
-// <copyright file="SymbolicIngestionStep.cs" company="Ouroboros">
+﻿// <copyright file="SymbolicIngestionStep.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -61,7 +61,7 @@ public sealed class SymbolicIngestionStep
             Result<ExtractionResult, string> extractionResult = await this._extractor.ExtractAsync(
                 documentId,
                 content,
-                ct);
+                ct).ConfigureAwait(false);
 
             if (extractionResult.IsFailure)
             {
@@ -74,7 +74,7 @@ public sealed class SymbolicIngestionStep
             foreach (SemanticTriple triple in triples)
             {
                 string fact = triple.ToMeTTaFact();
-                var addResult = await this._engine.AddFactAsync(fact, ct);
+                var addResult = await this._engine.AddFactAsync(fact, ct).ConfigureAwait(false);
                 
                 if (addResult.IsFailure)
                 {
@@ -90,10 +90,10 @@ public sealed class SymbolicIngestionStep
             {
                 Id = documentId,
                 Text = content,
-                Embedding = await this._embedModel.CreateEmbeddingsAsync(content, ct),
+                Embedding = await this._embedModel.CreateEmbeddingsAsync(content, ct).ConfigureAwait(false),
             };
             
-            await branch.Store.AddAsync(new[] { vector });
+            await branch.Store.AddAsync(new[] { vector }).ConfigureAwait(false);
             vectorIds.Add(documentId);
 
             // Step 4: Update branch with ingest event
@@ -103,7 +103,7 @@ public sealed class SymbolicIngestionStep
             return Result<(PipelineBranch, SymbolicIngestionResult), string>.Success((updatedBranch, result));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<(PipelineBranch, SymbolicIngestionResult), string>.Failure(
                 $"Symbolic ingestion failed: {ex.Message}");

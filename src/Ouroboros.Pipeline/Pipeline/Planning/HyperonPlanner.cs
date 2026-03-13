@@ -1,4 +1,4 @@
-// <copyright file="HyperonPlanner.cs" company="Ouroboros">
+﻿// <copyright file="HyperonPlanner.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -131,7 +131,7 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
    (filter (satisfies-all $constraints) (all-paths $goal)))
 ";
 
-        await _engine.LoadMeTTaSourceAsync(planningKb, ct);
+        await _engine.LoadMeTTaSourceAsync(planningKb, ct).ConfigureAwait(false);
 
         // Create planning flow
         _flow.CreateFlow("planning", "Main planning reasoning flow")
@@ -175,7 +175,7 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
             // Use native solve
             Result<string, string> result = await _engine.ExecuteQueryAsync(
                 $"!(solve {startType.Name} {endType.Name})",
-                ct);
+                ct).ConfigureAwait(false);
 
             if (!result.IsSuccess)
                 return Result<ToolChain, string>.Failure(result.Error);
@@ -183,7 +183,7 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
             return ParseToolChain(result.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<ToolChain, string>.Failure($"Planning exception: {ex.Message}");
         }
@@ -214,7 +214,7 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
         // Use meta-planning
         Result<string, string> result = await _engine.ExecuteQueryAsync(
             $"!(meta-plan (solve {startType.Name} {endType.Name}) (PlanningConstraint $c))",
-            ct);
+            ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
             return Result<ToolChain, string>.Failure(result.Error);
@@ -236,7 +236,7 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
     {
         Result<string, string> result = await _engine.ExecuteQueryAsync(
             $"!(optimal-plan {startType.Name} {endType.Name})",
-            ct);
+            ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
             return Result<ToolChain, string>.Failure(result.Error);
@@ -260,7 +260,7 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
         CancellationToken ct = default)
     {
         // Add type signature
-        await _engine.AddFactAsync($"(: {toolName} (-> {inputType.Name} {outputType.Name}))", ct);
+        await _engine.AddFactAsync($"(: {toolName} (-> {inputType.Name} {outputType.Name}))", ct).ConfigureAwait(false);
 
         // Add cost
         _engine.AddAtom(Atom.Expr(
@@ -291,7 +291,7 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
         CancellationToken ct = default)
     {
         // Basic registration
-        await RegisterToolAsync(toolName, inputType, outputType, ct: ct);
+        await RegisterToolAsync(toolName, inputType, outputType, ct: ct).ConfigureAwait(false);
 
         // Add requirements
         foreach (var req in requires)
@@ -350,12 +350,12 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
 
             try
             {
-                current = await executeStep(tool, current, ct);
+                current = await executeStep(tool, current, ct).ConfigureAwait(false);
                 stepResult.Output = current;
                 stepResult.Success = true;
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 stepResult.Error = ex.Message;
                 stepResult.Success = false;
@@ -393,7 +393,7 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
         var tools = string.Join(" ", plan.Tools.Select(t => $"(step {t})"));
         var query = $"!(verify-chain {tools})";
 
-        Result<string, string> result = await _engine.ExecuteQueryAsync(query, ct);
+        Result<string, string> result = await _engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
             return Result<bool, string>.Failure($"Plan verification failed: {result.Error}");
@@ -456,7 +456,7 @@ public sealed partial class HyperonPlanner : IAsyncDisposable
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        await _flow.DisposeAsync();
+        await _flow.DisposeAsync().ConfigureAwait(false);
     }
 
     [GeneratedRegex(@"\(step\s+(\w+)\)|\(chain\s+([\w\s]+)\)")]

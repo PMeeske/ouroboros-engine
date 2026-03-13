@@ -1,4 +1,4 @@
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
 using LangChain.Databases;
 using LangChain.Splitters.Text;
 
@@ -83,7 +83,7 @@ public static class SolutionIngestion
                 string[] lines = File.ReadAllLines(solutionFile);
                 List<string> projectLines = lines.Where(l => l.TrimStart().StartsWith("Project(", StringComparison.OrdinalIgnoreCase)).Take(500).ToList();
                 string meta = $"SOLUTION SUMMARY\nPath: {Path.GetFileName(solutionFile)}\nProject Count: {projectLines.Count}\nProjects:\n" + string.Join('\n', projectLines);
-                await EmbedSyntheticAsync(embed, vectors, meta, solutionFile + "#meta:solution", ct);
+                await EmbedSyntheticAsync(embed, vectors, meta, solutionFile + "#meta:solution", ct).ConfigureAwait(false);
             }
             catch (IOException) { /* ignore meta failures */ }
         }
@@ -104,7 +104,7 @@ public static class SolutionIngestion
                         .Select(e => e.Value)
                         .ToList();
                     string meta = $"PROJECT SUMMARY\nName: {Path.GetFileName(csproj)}\nSDK: {sdk}\nTargetFramework(s): {string.Join(",", tfms)}\nPackages:\n" + string.Join('\n', pkgRefs);
-                    await EmbedSyntheticAsync(embed, vectors, meta, csproj + "#meta:project", ct);
+                    await EmbedSyntheticAsync(embed, vectors, meta, csproj + "#meta:project", ct).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException) { }
             }
@@ -113,7 +113,7 @@ public static class SolutionIngestion
         if (options.MetaOnly)
         {
             if (vectors.Count > 0)
-                await store.AddAsync(vectors);
+                await store.AddAsync(vectors).ConfigureAwait(false);
             return vectors;
         }
 
@@ -140,7 +140,7 @@ public static class SolutionIngestion
                 {
                     try
                     {
-                        float[] embResp = await embed.CreateEmbeddingsAsync(chunk);
+                        float[] embResp = await embed.CreateEmbeddingsAsync(chunk).ConfigureAwait(false);
                         Dictionary<string, object?> meta = new Dictionary<string, object?>
                         {
                             ["path"] = file,
@@ -166,7 +166,7 @@ public static class SolutionIngestion
         }
 
         if (vectors.Count > 0)
-            await store.AddAsync(vectors);
+            await store.AddAsync(vectors).ConfigureAwait(false);
         return vectors;
     }
 
@@ -174,7 +174,7 @@ public static class SolutionIngestion
     {
         try
         {
-            float[] emb = await embed.CreateEmbeddingsAsync(content);
+            float[] emb = await embed.CreateEmbeddingsAsync(content).ConfigureAwait(false);
             Dictionary<string, object?> meta = new Dictionary<string, object?> { ["type"] = "meta" };
             vectors.Add(new Vector
             {

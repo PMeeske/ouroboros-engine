@@ -1,4 +1,4 @@
-// <copyright file="TripleExtractionStep.cs" company="Ouroboros">
+﻿// <copyright file="TripleExtractionStep.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -62,14 +62,14 @@ public sealed class TripleExtractionStep
                 .Replace("{document_id}", documentId)
                 .Replace("{content}", content);
 
-            (string response, _) = await this._llm.GenerateWithToolsAsync(prompt);
+            (string response, _) = await this._llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
 
             List<SemanticTriple> triples = ParseTriples(documentId, response);
 
             return Result<ExtractionResult, string>.Success(new ExtractionResult(documentId, triples));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<ExtractionResult, string>.Failure($"Triple extraction failed: {ex.Message}");
         }

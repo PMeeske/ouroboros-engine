@@ -1,4 +1,4 @@
-using LangChain.Databases;
+﻿using LangChain.Databases;
 using LangChain.DocumentLoaders;
 
 namespace Ouroboros.Pipeline.Replay;
@@ -22,20 +22,20 @@ public sealed class ReplayEngine(ToolAwareChatModel llm, IEmbeddingModel embed)
         PipelineBranch replayed = new PipelineBranch(branch.Name + "_replay", new TrackedVectorStore(), DataSource.FromPath(Environment.CurrentDirectory));
 
         // Copy vectors from the original branch
-        BranchSnapshot snapshot = await BranchSnapshot.Capture(branch);
+        BranchSnapshot snapshot = await BranchSnapshot.Capture(branch).ConfigureAwait(false);
         await replayed.Store.AddAsync(snapshot.Vectors.Select(v => new Vector
         {
             Id = v.Id,
             Text = v.Text,
             Metadata = v.Metadata,
             Embedding = v.Embedding
-        }));
+        })).ConfigureAwait(false);
 
         // Replay each reasoning step with fresh context
         foreach (ReasoningStep ev in branch.Events.OfType<ReasoningStep>())
         {
             // Refresh context with current state
-            IReadOnlyCollection<Document> docs = await replayed.Store.GetSimilarDocuments(embed, query, amount: k);
+            IReadOnlyCollection<Document> docs = await replayed.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             // Update prompt with fresh context and tool schemas
@@ -44,7 +44,7 @@ public sealed class ReplayEngine(ToolAwareChatModel llm, IEmbeddingModel embed)
                 .Replace("{context}", context)
                 .Replace("{tools_schemas}", toolsSchemas);
 
-            (string newText, List<ToolExecution> newTools) = await llm.GenerateWithToolsAsync(prompt);
+            (string newText, List<ToolExecution> newTools) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
 
             ReasoningState newState = ev.StepKind switch
             {

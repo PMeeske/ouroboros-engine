@@ -1,4 +1,4 @@
-// <copyright file="GoalExtensions.cs" company="Ouroboros">
+﻿// <copyright file="GoalExtensions.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -25,7 +25,7 @@ public static class GoalExtensions
         ArgumentNullException.ThrowIfNull(binder);
 
         return result.IsSuccess
-            ? await binder(result.Value)
+            ? await binder(result.Value).ConfigureAwait(false)
             : Result<Goal>.Failure(result.Error);
     }
 
@@ -42,8 +42,8 @@ public static class GoalExtensions
         ArgumentNullException.ThrowIfNull(taskResult);
         ArgumentNullException.ThrowIfNull(binder);
 
-        Result<Goal> result = await taskResult;
-        return await result.BindAsync(binder);
+        Result<Goal> result = await taskResult.ConfigureAwait(false);
+        return await result.BindAsync(binder).ConfigureAwait(false);
     }
 
     /// <summary>

@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Text;
 using System.Xml.Linq;
 
@@ -112,16 +112,16 @@ public static class ZipIngestion
                 {
                     parsed = item.Kind switch
                     {
-                        ZipContentKind.Csv => await SafeCsvAsync(item, csvMaxLines, ct),
-                        ZipContentKind.Xml => await SafeXmlAsync(item, includeXmlText, ct),
-                        ZipContentKind.Text => await ReadTextAsync(item, binaryMaxBytes, ct),
-                        ZipContentKind.Binary => await ReadBinarySummaryAsync(item, binaryMaxBytes, ct),
+                        ZipContentKind.Csv => await SafeCsvAsync(item, csvMaxLines, ct).ConfigureAwait(false),
+                        ZipContentKind.Xml => await SafeXmlAsync(item, includeXmlText, ct).ConfigureAwait(false),
+                        ZipContentKind.Text => await ReadTextAsync(item, binaryMaxBytes, ct).ConfigureAwait(false),
+                        ZipContentKind.Binary => await ReadBinarySummaryAsync(item, binaryMaxBytes, ct).ConfigureAwait(false),
                         _ => null
                     };
                 }
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // Last resort: preserve kind intent
                 parsed = item.Kind switch
@@ -147,10 +147,10 @@ public static class ZipIngestion
     {
         try
         {
-            return await ParseCsvAsync(rec, maxLines, ct);
+            return await ParseCsvAsync(rec, maxLines, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new Dictionary<string, object>
             {
@@ -165,10 +165,10 @@ public static class ZipIngestion
     {
         try
         {
-            return await ParseXmlAsync(rec, includeText, ct);
+            return await ParseXmlAsync(rec, includeText, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new Dictionary<string, object>
             {
@@ -184,13 +184,13 @@ public static class ZipIngestion
     {
         using Stream s = rec.OpenStream();
         using StreamReader reader = new StreamReader(s, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: false);
-        string? headerLine = await reader.ReadLineAsync();
+        string? headerLine = await reader.ReadLineAsync().ConfigureAwait(false);
         if (headerLine == null)
             return new Dictionary<string, object> { ["type"] = "csv", ["empty"] = true };
         string[] header = SplitCsv(headerLine);
         List<string[]> rows = new List<string[]>();
         string? line;
-        while (rows.Count < maxLines && (line = await reader.ReadLineAsync()) != null)
+        while (rows.Count < maxLines && (line = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
         {
             ct.ThrowIfCancellationRequested();
             rows.Add(SplitCsv(line));
@@ -242,7 +242,7 @@ public static class ZipIngestion
     private static async Task<IDictionary<string, object>> ParseXmlAsync(ZipFileRecord rec, bool includeText, CancellationToken ct)
     {
         using Stream s = rec.OpenStream();
-        XDocument doc = await Task.Run(() => XDocument.Load(s), ct);
+        XDocument doc = await Task.Run(() => XDocument.Load(s), ct).ConfigureAwait(false);
         List<XElement> allElements = doc.Descendants().ToList();
         int elementCount = allElements.Count;
         int maxDepth = 0;
@@ -278,7 +278,7 @@ public static class ZipIngestion
         using Stream s = rec.OpenStream();
         using StreamReader reader = new StreamReader(s, Encoding.UTF8, true);
         char[] buffer = new char[maxBytes];
-        int read = await reader.ReadAsync(buffer, 0, buffer.Length);
+        int read = await reader.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
         string text = new(buffer, 0, read);
         return new Dictionary<string, object>
         {
@@ -292,7 +292,7 @@ public static class ZipIngestion
     {
         using Stream s = rec.OpenStream();
         byte[] buf = new byte[Math.Min(maxBytes, rec.Length)];
-        int read = await s.ReadAsync(buf, 0, buf.Length, ct);
+        int read = await s.ReadAsync(buf, 0, buf.Length, ct).ConfigureAwait(false);
         string hash = ComputeSha256(buf.AsSpan(0, read));
         return new Dictionary<string, object>
         {

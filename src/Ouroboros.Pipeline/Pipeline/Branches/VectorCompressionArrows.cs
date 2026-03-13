@@ -1,4 +1,4 @@
-// <copyright file="VectorCompressionArrows.cs" company="Ouroboros">
+﻿// <copyright file="VectorCompressionArrows.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -53,7 +53,7 @@ public static class VectorCompressionArrows
     {
         try
         {
-            var result = await VectorCompressionService.BatchCompressAsync(vectors, config, method);
+            var result = await VectorCompressionService.BatchCompressAsync(vectors, config, method).ConfigureAwait(false);
 
             if (result.IsFailure)
             {
@@ -73,7 +73,7 @@ public static class VectorCompressionArrows
             return Result<(IReadOnlyList<byte[]>, PipelineBranch)>.Success((compressedData, updatedBranch));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<(IReadOnlyList<byte[]>, PipelineBranch)>.Failure($"Batch compression failed: {ex.Message}");
         }

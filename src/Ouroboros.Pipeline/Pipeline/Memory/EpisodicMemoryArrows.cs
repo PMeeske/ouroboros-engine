@@ -1,4 +1,4 @@
-// <copyright file="EpisodicMemoryArrows.cs" company="Ouroboros">
+﻿// <copyright file="EpisodicMemoryArrows.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -41,7 +41,7 @@ public static class EpisodicMemoryArrows
                     context,
                     result,
                     metadata,
-                    collectionName);
+                    collectionName).ConfigureAwait(false);
 
                 if (episodeResult.IsSuccess)
                 {
@@ -55,7 +55,7 @@ public static class EpisodicMemoryArrows
                 return branch;
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return branch; // Gracefully continue even if storage fails
             }
@@ -89,7 +89,7 @@ public static class EpisodicMemoryArrows
                     context,
                     result,
                     metadata,
-                    collectionName);
+                    collectionName).ConfigureAwait(false);
 
                 return episodeResult.Match(
                     episodeId => Result<PipelineBranch, string>.Success(
@@ -101,7 +101,7 @@ public static class EpisodicMemoryArrows
                     error => Result<PipelineBranch, string>.Failure(error));
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Failed to store episode: {ex.Message}");
             }
@@ -134,7 +134,7 @@ public static class EpisodicMemoryArrows
                     query,
                     topK,
                     minSimilarity,
-                    collectionName);
+                    collectionName).ConfigureAwait(false);
 
                 if (episodesResult.IsSuccess)
                 {
@@ -147,7 +147,7 @@ public static class EpisodicMemoryArrows
                 return branch;
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return branch; // Gracefully continue
             }
@@ -173,7 +173,7 @@ public static class EpisodicMemoryArrows
                 query,
                 topK,
                 0.7,
-                collectionName);
+                collectionName).ConfigureAwait(false);
 
             var episodes = episodesResult.IsSuccess
                 ? episodesResult.Value
@@ -213,7 +213,7 @@ public static class EpisodicMemoryArrows
                     goal,
                     topK,
                     0.7,
-                    collectionName);
+                    collectionName).ConfigureAwait(false);
 
                 if (episodesResult.IsSuccess)
                 {
@@ -224,7 +224,7 @@ public static class EpisodicMemoryArrows
                 return (branch, null);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return (branch, null);
             }
@@ -277,7 +277,10 @@ public static class EpisodicMemoryArrows
     {
         // Reuse the logic from EpisodicMemoryEngine but without the class instance
         var engine = new EpisodicMemoryEngine(qdrantClient, embeddingModel, collectionName);
-        return await engine.StoreEpisodeAsync(branch, context, result, metadata, ct);
+        await using (engine.ConfigureAwait(false))
+        {
+            return await engine.StoreEpisodeAsync(branch, context, result, metadata, ct).ConfigureAwait(false);
+        }
     }
 
     private static async Task<Result<ImmutableList<Episode>, string>> RetrieveSimilarEpisodesInternalAsync(
@@ -290,7 +293,10 @@ public static class EpisodicMemoryArrows
         CancellationToken ct = default)
     {
         var engine = new EpisodicMemoryEngine(qdrantClient, embeddingModel, collectionName);
-        return await engine.RetrieveSimilarEpisodesAsync(query, topK, minSimilarity, ct);
+        await using (engine.ConfigureAwait(false))
+        {
+            return await engine.RetrieveSimilarEpisodesAsync(query, topK, minSimilarity, ct).ConfigureAwait(false);
+        }
     }
 
     private static Verification.Plan GeneratePlanFromEpisodes(string goal, ImmutableList<Episode> episodes)

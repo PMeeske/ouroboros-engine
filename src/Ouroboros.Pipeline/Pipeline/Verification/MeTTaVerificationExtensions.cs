@@ -23,8 +23,8 @@ public static class MeTTaVerificationExtensions
         MeTTaVerificationStep verifier = new(engine, context);
         return async input =>
         {
-            Plan plan = await planStep(input);
-            return await verifier.VerifyAsync(plan);
+            Plan plan = await planStep(input).ConfigureAwait(false);
+            return await verifier.VerifyAsync(plan).ConfigureAwait(false);
         };
     }
 }

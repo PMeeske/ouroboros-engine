@@ -1,4 +1,4 @@
-// <copyright file="DagMeTTaExtensions.cs" company="Ouroboros">
+﻿// <copyright file="DagMeTTaExtensions.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -178,7 +178,7 @@ public static class DagMeTTaExtensions
                 continue;
             }
 
-            var result = await engine.AddFactAsync(rule, ct);
+            var result = await engine.AddFactAsync(rule, ct).ConfigureAwait(false);
             if (result.IsFailure)
             {
                 return Result<Unit, string>.Failure($"Failed to add DAG rule: {result.Error}");
@@ -194,7 +194,7 @@ public static class DagMeTTaExtensions
                 continue;
             }
 
-            var result = await engine.AddFactAsync(fact, ct);
+            var result = await engine.AddFactAsync(fact, ct).ConfigureAwait(false);
             if (result.IsFailure)
             {
                 return Result<Unit, string>.Failure($"Failed to add branch fact: {result.Error}");
@@ -223,7 +223,7 @@ public static class DagMeTTaExtensions
         ArgumentException.ThrowIfNullOrEmpty(constraint);
 
         string query = EncodeConstraintQuery(constraint, branchName);
-        Result<string, string> result = await engine.ExecuteQueryAsync(query, ct);
+        Result<string, string> result = await engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
         return result.Match(
             success =>

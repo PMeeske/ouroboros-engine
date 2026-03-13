@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Ouroboros.Pipeline.Branches;
@@ -23,7 +23,7 @@ public static class BranchPersistence
     public static async Task SaveAsync(BranchSnapshot snapshot, string path)
     {
         string json = JsonSerializer.Serialize(snapshot, Options);
-        await File.WriteAllTextAsync(path, json);
+        await File.WriteAllTextAsync(path, json).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -33,7 +33,7 @@ public static class BranchPersistence
     /// <returns>The deserialized branch snapshot</returns>
     public static async Task<BranchSnapshot> LoadAsync(string path)
     {
-        string json = await File.ReadAllTextAsync(path);
+        string json = await File.ReadAllTextAsync(path).ConfigureAwait(false);
         return JsonSerializer.Deserialize<BranchSnapshot>(json, Options)!;
     }
 }

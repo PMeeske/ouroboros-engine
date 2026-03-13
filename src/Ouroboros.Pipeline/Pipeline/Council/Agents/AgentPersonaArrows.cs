@@ -1,4 +1,4 @@
-// <copyright file="AgentPersonaArrows.cs" company="Ouroboros">
+﻿// <copyright file="AgentPersonaArrows.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -30,11 +30,11 @@ public static class AgentPersonaArrows
             try
             {
                 var prompt = promptBuilder(topic, systemPrompt);
-                var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
+                var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct).ConfigureAwait(false);
                 return Result<AgentContribution, string>.Success(new AgentContribution(agentName, response));
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<AgentContribution, string>.Failure($"[{agentName}] Proposal generation failed: {ex.Message}");
             }
@@ -60,11 +60,11 @@ public static class AgentPersonaArrows
             try
             {
                 var prompt = promptBuilder(input.topic, input.otherProposals, systemPrompt);
-                var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
+                var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct).ConfigureAwait(false);
                 return Result<AgentContribution, string>.Success(new AgentContribution(agentName, response));
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<AgentContribution, string>.Failure($"[{agentName}] Challenge generation failed: {ex.Message}");
             }
@@ -90,11 +90,11 @@ public static class AgentPersonaArrows
             try
             {
                 var prompt = promptBuilder(input.topic, input.challenges, input.ownProposal, systemPrompt);
-                var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
+                var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct).ConfigureAwait(false);
                 return Result<AgentContribution, string>.Success(new AgentContribution(agentName, response));
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<AgentContribution, string>.Failure($"[{agentName}] Refinement generation failed: {ex.Message}");
             }
@@ -124,12 +124,12 @@ public static class AgentPersonaArrows
             try
             {
                 var prompt = promptBuilder(input.topic, input.transcript, systemPrompt);
-                var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct);
+                var (response, _) = await llm.GenerateWithToolsAsync(prompt, ct).ConfigureAwait(false);
                 var vote = voteParser(agentName, response, expertiseWeight);
                 return Result<AgentVote, string>.Success(vote);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<AgentVote, string>.Failure($"[{agentName}] Vote generation failed: {ex.Message}");
             }

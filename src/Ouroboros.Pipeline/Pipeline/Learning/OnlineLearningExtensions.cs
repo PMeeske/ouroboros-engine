@@ -80,7 +80,7 @@ public static class OnlineLearningExtensions
     {
         return async input =>
         {
-            var output = await step(input);
+            var output = await step(input).ConfigureAwait(false);
 
             var score = scoreFunc(input, output);
             var feedback = Feedback.Explicit(

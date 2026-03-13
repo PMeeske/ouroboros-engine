@@ -1,4 +1,4 @@
-using LangChain.Databases;
+﻿using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Splitters.Text;
 
@@ -17,7 +17,7 @@ public static class InMemoryIngestion
         TLoader loader = new TLoader();
         List<Vector> vectors = [];
 
-        foreach (Document doc in await loader.LoadAsync(source, cancellationToken: ct))
+        foreach (Document doc in await loader.LoadAsync(source, cancellationToken: ct).ConfigureAwait(false))
         {
             string text = doc.PageContent;
             if (string.IsNullOrWhiteSpace(text)) continue;
@@ -26,7 +26,7 @@ public static class InMemoryIngestion
             int i = 0;
             foreach (string chunk in chunks)
             {
-                float[] resp = await embedding.CreateEmbeddingsAsync(chunk, ct);
+                float[] resp = await embedding.CreateEmbeddingsAsync(chunk, ct).ConfigureAwait(false);
                 Vector vec = new Vector()
                 {
                     Id = $"{(doc.Metadata != null && doc.Metadata.TryGetValue("path", out object? p) ? p?.ToString() : "doc")}#{i}",
@@ -43,7 +43,7 @@ public static class InMemoryIngestion
             }
         }
 
-        await store.AddAsync(vectors);
+        await store.AddAsync(vectors).ConfigureAwait(false);
         return vectors;
     }
 }

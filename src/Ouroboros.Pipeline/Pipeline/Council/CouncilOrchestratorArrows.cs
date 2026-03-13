@@ -1,4 +1,4 @@
-// <copyright file="CouncilOrchestratorArrows.cs" company="Ouroboros">
+﻿// <copyright file="CouncilOrchestratorArrows.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -37,7 +37,7 @@ public static class CouncilOrchestratorArrows
                     CouncilDecision.Failed("No agents registered in the council.")));
             }
 
-            var result = await ExecuteCouncilDebateAsync(llm, agents, topic, config);
+            var result = await ExecuteCouncilDebateAsync(llm, agents, topic, config).ConfigureAwait(false);
 
             return result.Match(
                 decision => branch.WithEvent(CouncilDecisionEvent.Create(topic, decision)),
@@ -94,7 +94,7 @@ public static class CouncilOrchestratorArrows
                     return Result<PipelineBranch, string>.Failure("No agents registered in the council.");
                 }
 
-                var result = await ExecuteCouncilDebateAsync(llm, agents, topic, config);
+                var result = await ExecuteCouncilDebateAsync(llm, agents, topic, config).ConfigureAwait(false);
 
                 return result.Match(
                     decision => Result<PipelineBranch, string>.Success(
@@ -102,7 +102,7 @@ public static class CouncilOrchestratorArrows
                     error => Result<PipelineBranch, string>.Failure(error));
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Council debate exception: {ex.Message}");
             }
@@ -124,7 +124,7 @@ public static class CouncilOrchestratorArrows
         => async branch =>
         {
             var topic = topicBuilder(branch);
-            return await ConveneCouncilArrow(llm, agents, topic, config)(branch);
+            return await ConveneCouncilArrow(llm, agents, topic, config)(branch).ConfigureAwait(false);
         };
 
     /// <summary>
@@ -165,7 +165,7 @@ public static class CouncilOrchestratorArrows
         try
         {
             // Phase 1: Proposal
-            var proposalRound = await ExecuteProposalPhaseAsync(llm, agents, topic, config, ct);
+            var proposalRound = await ExecuteProposalPhaseAsync(llm, agents, topic, config, ct).ConfigureAwait(false);
             if (proposalRound.IsFailure)
             {
                 return Result<CouncilDecision, string>.Failure(proposalRound.Error);
@@ -178,7 +178,7 @@ public static class CouncilOrchestratorArrows
             }
 
             // Phase 2: Challenge
-            var challengeRound = await ExecuteChallengePhaseAsync(llm, agents, topic, agentProposals, config, ct);
+            var challengeRound = await ExecuteChallengePhaseAsync(llm, agents, topic, agentProposals, config, ct).ConfigureAwait(false);
             if (challengeRound.IsFailure)
             {
                 return Result<CouncilDecision, string>.Failure(challengeRound.Error);
@@ -188,7 +188,7 @@ public static class CouncilOrchestratorArrows
 
             // Phase 3: Refinement
             var refinementRound = await ExecuteRefinementPhaseAsync(
-                llm, agents, topic, agentProposals, challengeRound.Value.Contributions, config, ct);
+                llm, agents, topic, agentProposals, challengeRound.Value.Contributions, config, ct).ConfigureAwait(false);
             if (refinementRound.IsFailure)
             {
                 return Result<CouncilDecision, string>.Failure(refinementRound.Error);
@@ -197,7 +197,7 @@ public static class CouncilOrchestratorArrows
             transcript.Add(refinementRound.Value);
 
             // Phase 4: Voting
-            var votingResult = await ExecuteVotingPhaseAsync(llm, agents, topic, transcript, config, ct);
+            var votingResult = await ExecuteVotingPhaseAsync(llm, agents, topic, transcript, config, ct).ConfigureAwait(false);
             if (votingResult.IsFailure)
             {
                 return Result<CouncilDecision, string>.Failure(votingResult.Error);
@@ -207,11 +207,11 @@ public static class CouncilOrchestratorArrows
             transcript.Add(votingRound);
 
             // Phase 5: Synthesis
-            var decision = await SynthesizeDecisionAsync(llm, topic, transcript, votes, config, ct);
+            var decision = await SynthesizeDecisionAsync(llm, topic, transcript, votes, config, ct).ConfigureAwait(false);
             return decision;
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<CouncilDecision, string>.Failure($"Council debate failed: {ex.Message}");
         }
@@ -230,12 +230,12 @@ public static class CouncilOrchestratorArrows
     {
         var tasks = agents.Select(async agent =>
         {
-            try { return await agent.GenerateProposalAsync(topic, llm, ct); }
+            try { return await agent.GenerateProposalAsync(topic, llm, ct).ConfigureAwait(false); }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { return Result<AgentContribution, string>.Failure(ex.Message); }
+            catch (Exception ex) when (ex is not OperationCanceledException) { return Result<AgentContribution, string>.Failure(ex.Message); }
         });
 
-        var results = await Task.WhenAll(tasks);
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
         var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
 
         if (contributions.Count == 0)
@@ -271,13 +271,13 @@ public static class CouncilOrchestratorArrows
                     .Select(p => p.Value)
                     .ToList();
 
-                return await agent.GenerateChallengeAsync(topic, otherProposals, llm, ct);
+                return await agent.GenerateChallengeAsync(topic, otherProposals, llm, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { return Result<AgentContribution, string>.Failure(ex.Message); }
+            catch (Exception ex) when (ex is not OperationCanceledException) { return Result<AgentContribution, string>.Failure(ex.Message); }
         });
 
-        var results = await Task.WhenAll(tasks);
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
         var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
 
         if (contributions.Count == 0)
@@ -312,13 +312,13 @@ public static class CouncilOrchestratorArrows
                 try
                 {
                     var ownProposal = proposals[agent.Name];
-                    return await agent.GenerateRefinementAsync(topic, challenges, ownProposal, llm, ct);
+                    return await agent.GenerateRefinementAsync(topic, challenges, ownProposal, llm, ct).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex) { return Result<AgentContribution, string>.Failure(ex.Message); }
+                catch (Exception ex) when (ex is not OperationCanceledException) { return Result<AgentContribution, string>.Failure(ex.Message); }
             });
 
-        var results = await Task.WhenAll(tasks);
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
         var contributions = results.Where(r => r.IsSuccess).Select(r => r.Value).ToList();
 
         if (contributions.Count == 0)
@@ -347,12 +347,12 @@ public static class CouncilOrchestratorArrows
     {
         var tasks = agents.Select(async agent =>
         {
-            try { return (agent.Name, Result: await agent.GenerateVoteAsync(topic, transcript, llm, ct)); }
+            try { return (agent.Name, Result: await agent.GenerateVoteAsync(topic, transcript, llm, ct).ConfigureAwait(false)); }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex) { return (agent.Name, Result: Result<AgentVote, string>.Failure(ex.Message)); }
+            catch (Exception ex) when (ex is not OperationCanceledException) { return (agent.Name, Result: Result<AgentVote, string>.Failure(ex.Message)); }
         });
 
-        var results = await Task.WhenAll(tasks);
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
         var votes = new Dictionary<string, AgentVote>();
         var contributions = new List<AgentContribution>();
@@ -433,7 +433,7 @@ public static class CouncilOrchestratorArrows
 
         // Generate synthesis using LLM
         var synthesisPrompt = BuildSynthesisPrompt(topic, transcript, votes, majorityPosition.Key, consensusReached);
-        var (conclusion, _) = await llm.GenerateWithToolsAsync(synthesisPrompt, ct);
+        var (conclusion, _) = await llm.GenerateWithToolsAsync(synthesisPrompt, ct).ConfigureAwait(false);
 
         var confidence = consensusReached ? majorityPosition.Value / totalWeight : 0.5;
 

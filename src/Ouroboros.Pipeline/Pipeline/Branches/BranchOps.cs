@@ -1,4 +1,4 @@
-using LangChain.Databases;
+﻿using LangChain.Databases;
 using LangChain.DocumentLoaders;
 
 namespace Ouroboros.Pipeline.Branches;
@@ -45,9 +45,9 @@ public static class BranchOps
                     Text = v.Text,
                     Metadata = v.Metadata,
                     Embedding = v.Embedding
-                }));
+                })).ConfigureAwait(false);
 
-                IReadOnlyCollection<Document> top = await temp.GetSimilarDocuments(embed, query, amount: topK);
+                IReadOnlyCollection<Document> top = await temp.GetSimilarDocuments(embed, query, amount: topK).ConfigureAwait(false);
                 Document? best = top.FirstOrDefault();
                 if (best is not null && best.Metadata.TryGetValue("id", out object? idObj) && idObj is string idStr)
                 {
@@ -59,7 +59,7 @@ public static class BranchOps
                 }
             }
 
-            await mergedStore.AddAsync(resolved);
+            await mergedStore.AddAsync(resolved).ConfigureAwait(false);
             return merged;
         };
 }

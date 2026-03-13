@@ -24,7 +24,7 @@ public static class HyperonReasoningExtensions
     {
         using var step = new HyperonReasoningStep(stepName);
         var arrow = step.CreateArrow(reasoningAction);
-        return await arrow(context);
+        return await arrow(context).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -48,13 +48,13 @@ public static class HyperonReasoningExtensions
             using var step = new HyperonReasoningStep(stepName);
 
             // Load knowledge base
-            await step.Engine.LoadMeTTaSourceAsync(knowledgeBase);
+            await step.Engine.LoadMeTTaSourceAsync(knowledgeBase).ConfigureAwait(false);
 
             // Execute queries and collect results
             var allResults = new List<string>();
             foreach (var query in queries)
             {
-                var results = await step.InferAsync(query);
+                var results = await step.InferAsync(query).ConfigureAwait(false);
                 allResults.AddRange(results);
             }
 
@@ -84,7 +84,7 @@ public static class HyperonReasoningExtensions
             using HyperonReasoningStep step = new(stepName);
 
             Result<string, string> result = await step.Engine.ExecuteQueryAsync(
-                $"(match &self {pattern} $result)");
+                $"(match &self {pattern} $result)").ConfigureAwait(false);
 
             if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Value) && !result.Value.Contains("Empty"))
             {

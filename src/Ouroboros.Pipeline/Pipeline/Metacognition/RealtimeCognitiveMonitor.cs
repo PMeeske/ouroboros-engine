@@ -1,4 +1,4 @@
-using Ouroboros.Abstractions;
+﻿using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.Metacognition;
 
@@ -70,7 +70,7 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Failed to record event: {ex.Message}");
         }
@@ -409,7 +409,7 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
                 {
                     subscriber(alert);
                 }
-                catch
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     // Ignore subscriber errors to prevent cascade
                 }

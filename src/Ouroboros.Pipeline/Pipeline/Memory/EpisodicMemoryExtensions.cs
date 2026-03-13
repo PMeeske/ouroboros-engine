@@ -1,4 +1,4 @@
-// <copyright file="EpisodicMemoryExtensions.cs" company="Ouroboros">
+﻿// <copyright file="EpisodicMemoryExtensions.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -40,13 +40,13 @@ public static class EpisodicMemoryExtensions
             var goal = extractGoal(branch);
 
             // Retrieve similar episodes (optional - doesn't fail the step if retrieval fails)
-            var retrievalResult = await memory.RetrieveSimilarEpisodesAsync(goal, topK);
+            var retrievalResult = await memory.RetrieveSimilarEpisodesAsync(goal, topK).ConfigureAwait(false);
             var relevantEpisodes = retrievalResult.IsSuccess
                 ? retrievalResult.Value
                 : ImmutableList<Episode>.Empty;
 
             // Execute the original step
-            var result = await step(branch);
+            var result = await step(branch).ConfigureAwait(false);
 
             // Store episode (best effort - don't fail if storage fails)
             var context = PipelineExecutionContext.WithGoal(goal);
@@ -62,7 +62,7 @@ public static class EpisodicMemoryExtensions
                 result,
                 context,
                 outcome,
-                metadata);
+                metadata).ConfigureAwait(false);
 
             if (!storeResult.IsSuccess)
             {
@@ -94,7 +94,7 @@ public static class EpisodicMemoryExtensions
 
         return async branch =>
         {
-            var result = await memory.RetrieveSimilarEpisodesAsync(query, topK, minSimilarity);
+            var result = await memory.RetrieveSimilarEpisodesAsync(query, topK, minSimilarity).ConfigureAwait(false);
 
             if (result.IsSuccess)
             {
@@ -123,7 +123,7 @@ public static class EpisodicMemoryExtensions
 
         return async branch =>
         {
-            var result = await memory.ConsolidateMemoriesAsync(olderThan, strategy);
+            var result = await memory.ConsolidateMemoriesAsync(olderThan, strategy).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {

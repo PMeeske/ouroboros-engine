@@ -1,4 +1,4 @@
-using Ouroboros.Abstractions;
+﻿using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.Learning;
 
@@ -82,7 +82,7 @@ public static class ExperienceReplayArrows
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Failed to add experience: {ex.Message}");
         }
@@ -106,7 +106,7 @@ public static class ExperienceReplayArrows
             return Result<IReadOnlyList<Experience>, string>.Success(samples);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IReadOnlyList<Experience>, string>.Failure($"Failed to sample experiences: {ex.Message}");
         }
@@ -133,7 +133,7 @@ public static class ExperienceReplayArrows
             return Result<IReadOnlyList<Experience>, string>.Success(samples);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IReadOnlyList<Experience>, string>.Failure($"Failed to sample prioritized experiences: {ex.Message}");
         }
@@ -151,7 +151,7 @@ public static class ExperienceReplayArrows
             return Result<Unit, string>.Failure($"Experience with ID {experienceId} not found.");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Failed to update priority: {ex.Message}");
         }
@@ -172,7 +172,7 @@ public static class ExperienceReplayArrows
             return Result<Experience, string>.Success(experience);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Experience, string>.Failure($"Failed to record experience: {ex.Message}");
         }

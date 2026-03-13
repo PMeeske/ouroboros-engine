@@ -1,4 +1,4 @@
-// <copyright file="AgentCoordinator.cs" company="Ouroboros">
+﻿// <copyright file="AgentCoordinator.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -135,7 +135,7 @@ public sealed class AgentCoordinator : IAgentCoordinator, IDisposable
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<CoordinationResult, string>.Failure($"Coordination failed: {ex.Message}");
         }
@@ -207,7 +207,7 @@ public sealed class AgentCoordinator : IAgentCoordinator, IDisposable
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<CoordinationResult, string>.Failure($"Parallel coordination failed: {ex.Message}");
         }
@@ -390,7 +390,7 @@ public sealed class AgentCoordinator : IAgentCoordinator, IDisposable
 
             throw;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Update team state to reflect failure
             lock (_teamLock)

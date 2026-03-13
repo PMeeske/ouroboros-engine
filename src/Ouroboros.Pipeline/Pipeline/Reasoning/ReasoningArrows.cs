@@ -1,4 +1,4 @@
-using LangChain.DocumentLoaders;
+﻿using LangChain.DocumentLoaders;
 using System.Reactive.Linq;
 
 namespace Ouroboros.Pipeline.Reasoning;
@@ -36,7 +36,7 @@ public static partial class ReasoningArrows
         ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
         => async branch =>
         {
-            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = Prompts.Thinking.Format(new()
@@ -46,7 +46,7 @@ public static partial class ReasoningArrows
                 ["tools_schemas"] = ToolSchemasOrEmpty(tools)
             });
 
-            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
             return branch.WithReasoning(new Thinking(text), prompt, toolCalls);
         };
 
@@ -59,7 +59,7 @@ public static partial class ReasoningArrows
         {
             try
             {
-                IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+                IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
                 string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
                 string prompt = Prompts.Thinking.Format(new()
@@ -69,12 +69,12 @@ public static partial class ReasoningArrows
                     ["tools_schemas"] = ToolSchemasOrEmpty(tools)
                 });
 
-                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
                 PipelineBranch result = branch.WithReasoning(new Thinking(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Thinking generation failed: {ex.Message}");
             }
@@ -87,7 +87,7 @@ public static partial class ReasoningArrows
         ToolAwareChatModel llm, ToolRegistry tools, IEmbeddingModel embed, string topic, string query, int k = 8)
         => async branch =>
         {
-            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = Prompts.Draft.Format(new()
@@ -97,7 +97,7 @@ public static partial class ReasoningArrows
                 ["tools_schemas"] = ToolSchemasOrEmpty(tools)
             });
 
-            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
             return branch.WithReasoning(new Draft(text), prompt, toolCalls);
         };
 
@@ -110,7 +110,7 @@ public static partial class ReasoningArrows
         {
             try
             {
-                IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+                IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
                 string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
                 string prompt = Prompts.Draft.Format(new()
@@ -120,12 +120,12 @@ public static partial class ReasoningArrows
                     ["tools_schemas"] = ToolSchemasOrEmpty(tools)
                 });
 
-                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
                 PipelineBranch result = branch.WithReasoning(new Draft(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Draft generation failed: {ex.Message}");
             }
@@ -142,7 +142,7 @@ public static partial class ReasoningArrows
             ReasoningState? currentState = GetMostRecentReasoningState(branch);
             if (currentState is null) return branch;
 
-            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = Prompts.Critique.Format(new()
@@ -153,7 +153,7 @@ public static partial class ReasoningArrows
                 ["tools_schemas"] = ToolSchemasOrEmpty(tools)
             });
 
-            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
             return branch.WithReasoning(new Critique(text), prompt, toolCalls);
         };
 
@@ -171,7 +171,7 @@ public static partial class ReasoningArrows
                 if (currentState is null)
                     return Result<PipelineBranch, string>.Failure("No draft or previous improvement found to critique");
 
-                IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+                IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
                 string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
                 string prompt = Prompts.Critique.Format(new()
@@ -182,12 +182,12 @@ public static partial class ReasoningArrows
                     ["tools_schemas"] = ToolSchemasOrEmpty(tools)
                 });
 
-                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
                 PipelineBranch result = branch.WithReasoning(new Critique(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Critique generation failed: {ex.Message}");
             }
@@ -205,7 +205,7 @@ public static partial class ReasoningArrows
             Critique? critique = branch.Events.OfType<ReasoningStep>().Select(e => e.State).OfType<Critique>().LastOrDefault();
             if (currentState is null || critique is null) return branch;
 
-            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = Prompts.Improve.Format(new()
@@ -217,7 +217,7 @@ public static partial class ReasoningArrows
                 ["tools_schemas"] = ToolSchemasOrEmpty(tools)
             });
 
-            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+            (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
             return branch.WithReasoning(new FinalSpec(text), prompt, toolCalls);
         };
 
@@ -239,7 +239,7 @@ public static partial class ReasoningArrows
                 if (critique is null)
                     return Result<PipelineBranch, string>.Failure("No critique found for improvement");
 
-                IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+                IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
                 string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
                 string prompt = Prompts.Improve.Format(new()
@@ -251,12 +251,12 @@ public static partial class ReasoningArrows
                     ["tools_schemas"] = ToolSchemasOrEmpty(tools)
                 });
 
-                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt);
+                (string text, List<ToolExecution> toolCalls) = await llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
                 PipelineBranch result = branch.WithReasoning(new FinalSpec(text), prompt, toolCalls);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Improvement generation failed: {ex.Message}");
             }

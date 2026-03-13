@@ -1,4 +1,4 @@
-// <copyright file="HyperonReasoningStep.cs" company="Ouroboros">
+﻿// <copyright file="HyperonReasoningStep.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -85,7 +85,7 @@ public class HyperonReasoningStep : IDisposable
 
             try
             {
-                var result = await reasoningLogic(_engine, context);
+                var result = await reasoningLogic(_engine, context).ConfigureAwait(false);
 
                 // Record step success
                 _engine.AddAtom(Atom.Expr(
@@ -126,7 +126,7 @@ public class HyperonReasoningStep : IDisposable
 
         foreach (var fact in facts)
         {
-            await _engine.AddFactAsync(fact, ct);
+            await _engine.AddFactAsync(fact, ct).ConfigureAwait(false);
         }
     }
 
@@ -140,7 +140,7 @@ public class HyperonReasoningStep : IDisposable
         string query,
         CancellationToken ct = default)
     {
-        Result<string, string> result = await _engine.ExecuteQueryAsync(query, ct);
+        Result<string, string> result = await _engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.Value) || result.Value.Contains("Empty"))
             return Array.Empty<string>();
@@ -170,7 +170,7 @@ public class HyperonReasoningStep : IDisposable
     /// <param name="ct">Cancellation token.</param>
     public async Task ApplyRuleAsync(string rule, CancellationToken ct = default)
     {
-        await _engine.ApplyRuleAsync(rule, ct);
+        await _engine.ApplyRuleAsync(rule, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -191,7 +191,7 @@ public class HyperonReasoningStep : IDisposable
     /// <param name="ct">Cancellation token.</param>
     public async Task ExecuteFlowAsync(string flowName, CancellationToken ct = default)
     {
-        await _flow.ExecuteFlowAsync($"{_stepName}-{flowName}", ct);
+        await _flow.ExecuteFlowAsync($"{_stepName}-{flowName}", ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -205,7 +205,7 @@ public class HyperonReasoningStep : IDisposable
         // Query step entries
         Result<string, string> entryResult = await _engine.ExecuteQueryAsync(
             $"(match &self (StepEntry {_stepName} $time) $time)",
-            ct);
+            ct).ConfigureAwait(false);
 
         if (entryResult.IsSuccess && !string.IsNullOrWhiteSpace(entryResult.Value) && !entryResult.Value.Contains("Empty"))
         {
@@ -220,7 +220,7 @@ public class HyperonReasoningStep : IDisposable
         // Query step successes
         Result<string, string> successResult = await _engine.ExecuteQueryAsync(
             $"(match &self (StepSuccess {_stepName} $time) $time)",
-            ct);
+            ct).ConfigureAwait(false);
 
         if (successResult.IsSuccess && !string.IsNullOrWhiteSpace(successResult.Value) && !successResult.Value.Contains("Empty"))
         {
@@ -235,7 +235,7 @@ public class HyperonReasoningStep : IDisposable
         // Query step failures
         Result<string, string> failureResult = await _engine.ExecuteQueryAsync(
             $"(match &self (StepFailure {_stepName} $msg) $msg)",
-            ct);
+            ct).ConfigureAwait(false);
 
         if (failureResult.IsSuccess && !string.IsNullOrWhiteSpace(failureResult.Value) && !failureResult.Value.Contains("Empty"))
         {

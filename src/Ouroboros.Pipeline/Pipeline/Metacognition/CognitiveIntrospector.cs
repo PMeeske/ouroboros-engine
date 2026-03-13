@@ -1,4 +1,4 @@
-using Ouroboros.Abstractions;
+﻿using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.Metacognition;
 
@@ -47,7 +47,7 @@ public sealed partial class CognitiveIntrospector : IIntrospector
                 return Result<InternalState, string>.Success(snapshot);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<InternalState, string>.Failure($"Failed to capture state: {ex.Message}");
             }
@@ -91,7 +91,7 @@ public sealed partial class CognitiveIntrospector : IIntrospector
             return Result<IntrospectionReport, string>.Success(report);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IntrospectionReport, string>.Failure($"Analysis failed: {ex.Message}");
         }
@@ -111,7 +111,7 @@ public sealed partial class CognitiveIntrospector : IIntrospector
             return Result<StateComparison, string>.Success(comparison);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<StateComparison, string>.Failure($"Comparison failed: {ex.Message}");
         }
@@ -193,7 +193,7 @@ public sealed partial class CognitiveIntrospector : IIntrospector
             return Result<ImmutableList<string>, string>.Success(patterns.ToImmutableList());
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<ImmutableList<string>, string>.Failure($"Pattern identification failed: {ex.Message}");
         }

@@ -14,7 +14,7 @@ public static class SelfAssessmentArrow
     /// <param name="assessor">The self-assessor to use.</param>
     /// <returns>A Kleisli arrow from Unit to SelfAssessmentResult.</returns>
     public static KleisliResult<Unit, SelfAssessmentResult, string> AssessArrow(ISelfAssessor assessor)
-        => async _ => await assessor.AssessAsync();
+        => async _ => await assessor.AssessAsync().ConfigureAwait(false);
 
     /// <summary>
     /// Creates a Kleisli arrow that assesses a specific dimension.
@@ -23,7 +23,7 @@ public static class SelfAssessmentArrow
     /// <returns>A Kleisli arrow from PerformanceDimension to DimensionScore.</returns>
     public static KleisliResult<PerformanceDimension, DimensionScore, string> AssessDimensionArrow(
         ISelfAssessor assessor)
-        => async dimension => await assessor.AssessDimensionAsync(dimension);
+        => async dimension => await assessor.AssessDimensionAsync(dimension).ConfigureAwait(false);
 
     /// <summary>
     /// Creates a Kleisli arrow that updates a capability belief with evidence.
@@ -62,7 +62,7 @@ public static class SelfAssessmentArrow
         Func<SelfAssessmentResult, IEnumerable<(string Capability, double Evidence)>> capabilityExtractor)
         => async _ =>
         {
-            var assessmentResult = await assessor.AssessAsync();
+            var assessmentResult = await assessor.AssessAsync().ConfigureAwait(false);
 
             if (assessmentResult.IsFailure)
             {
@@ -103,6 +103,6 @@ public static class SelfAssessmentArrow
             }
 
             // Then assess with calibrated confidence
-            return await assessor.AssessAsync();
+            return await assessor.AssessAsync().ConfigureAwait(false);
         };
 }

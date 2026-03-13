@@ -103,7 +103,7 @@ public static class AdaptiveAgentArrow
                 }
             }
 
-            await Task.CompletedTask; // Ensure async context
+            await Task.CompletedTask.ConfigureAwait(false); // Ensure async context
             return Result<(AgentPerformance Performance, AdaptationEvent? Adaptation), string>.Success(
                 (recordResult.Value, adaptation));
         };

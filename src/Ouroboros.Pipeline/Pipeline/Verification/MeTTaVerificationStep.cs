@@ -1,4 +1,4 @@
-// <copyright file="MeTTaVerificationStep.cs" company="Ouroboros">
+﻿// <copyright file="MeTTaVerificationStep.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -59,7 +59,7 @@ public sealed class MeTTaVerificationStep
             // Construct the MeTTa query to check if action is allowed
             string query = $"!(Allowed {atom} {contextAtom})";
 
-            Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct);
+            Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
             // Check the result
             bool isAllowed = result.Match(
@@ -129,7 +129,7 @@ public sealed class MeTTaVerificationStep
                 continue; // Skip empty lines and comments
             }
 
-            var result = await this._engine.AddFactAsync(rule, ct);
+            var result = await this._engine.AddFactAsync(rule, ct).ConfigureAwait(false);
             if (result.IsFailure)
             {
                 return Result<Unit, string>.Failure(result.Error);

@@ -1,4 +1,4 @@
-// <copyright file="GraphRetrievalArrow.cs" company="Ouroboros">
+﻿// <copyright file="GraphRetrievalArrow.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -25,7 +25,7 @@ public static class GraphRetrievalArrow
         => async branch =>
         {
             config ??= HybridSearchConfig.Default;
-            var result = await retriever.SearchAsync(query, config);
+            var result = await retriever.SearchAsync(query, config).ConfigureAwait(false);
 
             return result.Match(
                 searchResult => (branch, searchResult),
@@ -48,14 +48,14 @@ public static class GraphRetrievalArrow
             try
             {
                 config ??= HybridSearchConfig.Default;
-                var result = await retriever.SearchAsync(query, config);
+                var result = await retriever.SearchAsync(query, config).ConfigureAwait(false);
 
                 return result.Match(
                     searchResult => Result<(PipelineBranch, HybridSearchResult), string>.Success((branch, searchResult)),
                     error => Result<(PipelineBranch, HybridSearchResult), string>.Failure(error));
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<(PipelineBranch, HybridSearchResult), string>.Failure($"Graph retrieval failed: {ex.Message}");
             }
@@ -73,7 +73,7 @@ public static class GraphRetrievalArrow
         => async branch =>
         {
             var content = contentSelector(branch);
-            var result = await extractor.ExtractAsync(content);
+            var result = await extractor.ExtractAsync(content).ConfigureAwait(false);
 
             return result.Match(
                 graph => (branch, graph),
@@ -95,7 +95,7 @@ public static class GraphRetrievalArrow
         IEnumerable<string>? relationshipTypes = null)
         => async branch =>
         {
-            var result = await retriever.TraverseAsync(startEntityId, relationshipTypes, maxHops);
+            var result = await retriever.TraverseAsync(startEntityId, relationshipTypes, maxHops).ConfigureAwait(false);
 
             return result.Match(
                 subgraph => (branch, subgraph),
@@ -120,7 +120,7 @@ public static class GraphRetrievalArrow
             config ??= HybridSearchConfig.Default;
 
             // Decompose the query into a plan
-            var planResult = await decomposer.DecomposeAsync(query);
+            var planResult = await decomposer.DecomposeAsync(query).ConfigureAwait(false);
             if (planResult.IsFailure)
             {
                 return (branch, HybridSearchResult.Empty, QueryPlan.SingleHop(query));
@@ -129,7 +129,7 @@ public static class GraphRetrievalArrow
             var plan = planResult.Value;
 
             // Execute the plan
-            var searchResult = await retriever.ExecutePlanAsync(plan, config);
+            var searchResult = await retriever.ExecutePlanAsync(plan, config).ConfigureAwait(false);
 
             return searchResult.Match(
                 result => (branch, result, plan),

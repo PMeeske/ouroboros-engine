@@ -1,4 +1,4 @@
-using LangChain.Databases;
+﻿using LangChain.Databases;
 using LangChain.DocumentLoaders;
 using LangChain.Splitters.Text;
 
@@ -26,7 +26,7 @@ public static class IngestionArrows
         {
             splitter ??= new RecursiveCharacterTextSplitter(chunkSize: 2000, chunkOverlap: 200);
 
-            List<Vector> batch = await InMemoryIngestion.LoadToMemory<TLoader>(branch.Store, embed, branch.Source, splitter);
+            List<Vector> batch = await InMemoryIngestion.LoadToMemory<TLoader>(branch.Store, embed, branch.Source, splitter).ConfigureAwait(false);
 
             return branch.WithIngestEvent(string.IsNullOrEmpty(tag) ? typeof(TLoader).Name : tag, batch.Select(v => v.Id));
         };

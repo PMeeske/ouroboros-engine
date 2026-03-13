@@ -1,4 +1,4 @@
-// <copyright file="GrammarEvolutionStep.cs" company="Ouroboros">
+﻿// <copyright file="GrammarEvolutionStep.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -59,7 +59,7 @@ public sealed class GrammarEvolutionStep : IDisposable
                 var compiled = await _pipeline.EvolveGrammarAsync(
                     request.Description,
                     request.SampleInput,
-                    maxAttempts);
+                    maxAttempts).ConfigureAwait(false);
 
                 RecordEvent("GrammarEvolutionSucceeded", compiled.GrammarName);
                 return compiled;
@@ -91,7 +91,7 @@ public sealed class GrammarEvolutionStep : IDisposable
                 request.Description,
                 request.SampleInput,
                 request.MaxAttempts,
-                ct);
+                ct).ConfigureAwait(false);
 
             RecordEvent("GrammarEvolutionSucceeded", compiled.GrammarName);
             return compiled;

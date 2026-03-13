@@ -1,4 +1,4 @@
-// <copyright file="EpisodicMemoryEngine.Retrieval.cs" company="Ouroboros">
+﻿// <copyright file="EpisodicMemoryEngine.Retrieval.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -40,10 +40,10 @@ public sealed partial class EpisodicMemoryEngine
             }
 
             // Ensure collection exists
-            await EnsureCollectionInitializedAsync(ct);
+            await EnsureCollectionInitializedAsync(ct).ConfigureAwait(false);
 
             // Generate query embedding
-            var queryEmbedding = await _embeddingModel.CreateEmbeddingsAsync(query, ct);
+            var queryEmbedding = await _embeddingModel.CreateEmbeddingsAsync(query, ct).ConfigureAwait(false);
 
             // Search in Qdrant
             var searchResult = await _qdrantClient.SearchAsync(
@@ -51,7 +51,7 @@ public sealed partial class EpisodicMemoryEngine
                 queryEmbedding,
                 limit: (ulong)topK,
                 scoreThreshold: (float)minSimilarity,
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             // Convert results to Episode objects
             var episodes = searchResult
@@ -70,7 +70,7 @@ public sealed partial class EpisodicMemoryEngine
             return Result<ImmutableList<Episode>, string>.Success(episodes);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to retrieve similar episodes");
             return Result<ImmutableList<Episode>, string>.Failure($"Failed to retrieve episodes: {ex.Message}");
@@ -120,7 +120,7 @@ public sealed partial class EpisodicMemoryEngine
             return Result<Plan, string>.Success(plan);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to generate plan with experience");
             return Result<Plan, string>.Failure($"Failed to generate plan: {ex.Message}");
@@ -182,7 +182,7 @@ public sealed partial class EpisodicMemoryEngine
             return Option<Episode>.Some(episode);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogWarning(ex, "Failed to deserialize episode from point");
             return Option<Episode>.None();

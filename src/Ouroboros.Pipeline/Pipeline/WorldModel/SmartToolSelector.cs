@@ -1,4 +1,4 @@
-// <copyright file="SmartToolSelector.cs" company="Ouroboros">
+﻿// <copyright file="SmartToolSelector.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -195,7 +195,7 @@ public sealed partial class SmartToolSelector
         {
             ArgumentNullException.ThrowIfNull(branch);
 
-            Result<ToolSelection, string> selectionResult = await SelectForGoalAsync(goal);
+            Result<ToolSelection, string> selectionResult = await SelectForGoalAsync(goal).ConfigureAwait(false);
 
             if (selectionResult.IsFailure)
             {
@@ -240,7 +240,7 @@ public sealed partial class SmartToolSelector
                 return Result<PipelineBranch, string>.Failure("Could not extract goal from pipeline branch.");
             }
 
-            Result<ToolSelection, string> selectionResult = await SelectForGoalAsync(extractedGoal);
+            Result<ToolSelection, string> selectionResult = await SelectForGoalAsync(extractedGoal).ConfigureAwait(false);
 
             if (selectionResult.IsFailure)
             {

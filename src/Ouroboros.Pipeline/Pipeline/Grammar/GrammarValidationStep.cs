@@ -1,4 +1,4 @@
-// <copyright file="GrammarValidationStep.cs" company="Ouroboros">
+﻿// <copyright file="GrammarValidationStep.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -51,7 +51,7 @@ public sealed class GrammarValidationStep
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(grammarG4);
 
-        var result = await _validator.ValidateAsync(grammarG4, ct);
+        var result = await _validator.ValidateAsync(grammarG4, ct).ConfigureAwait(false);
 
         // Record in AtomSpace
         if (_engine != null)
@@ -90,13 +90,13 @@ public sealed class GrammarValidationStep
     /// <returns>The validated (and possibly corrected) grammar string.</returns>
     public async Task<string> ValidateAndCorrectAsync(string grammarG4, CancellationToken ct = default)
     {
-        var validation = await ValidateAsync(grammarG4, ct);
+        var validation = await ValidateAsync(grammarG4, ct).ConfigureAwait(false);
         if (validation.IsValid)
         {
             return grammarG4;
         }
 
-        var correction = await _validator.CorrectAsync(grammarG4, validation.Issues, ct);
+        var correction = await _validator.CorrectAsync(grammarG4, validation.Issues, ct).ConfigureAwait(false);
         if (correction.Success)
         {
             _logger?.LogInformation(

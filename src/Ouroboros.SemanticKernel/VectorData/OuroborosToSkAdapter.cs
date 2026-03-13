@@ -70,7 +70,7 @@ internal sealed class OuroborosToSkAdapter : SkVectorStore
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             yield break;
         }
@@ -98,7 +98,7 @@ internal sealed class OuroborosToSkAdapter : SkVectorStore
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return false;
         }
