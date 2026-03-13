@@ -21,7 +21,7 @@ public static class CollectiveMindFactory
         TryAddProvider(mind, "Groq", ChatEndpointType.Groq, "llama-3.1-70b-versatile", settings);
 
         // Always try local Ollama
-        mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, "llama3.2", settings: settings);
+        mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, "glm-5:cloud", settings: settings);
 
         mind.ThinkingMode = CollectiveThinkingMode.Adaptive;
         return mind;
@@ -66,7 +66,7 @@ public static class CollectiveMindFactory
 
         TryAddProvider(mind, "DeepSeek", ChatEndpointType.DeepSeek, "deepseek-chat", settings);
         TryAddProvider(mind, "Groq", ChatEndpointType.Groq, "llama-3.1-8b-instant", settings);
-        mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, "llama3.2", settings: settings);
+        mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, "glm-5:cloud", settings: settings);
 
         mind.ThinkingMode = CollectiveThinkingMode.Sequential;
         return mind;
