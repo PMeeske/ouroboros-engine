@@ -1,5 +1,5 @@
-// <copyright file="MetaLearningEngine.Strategies.Advanced.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="MetaLearningEngine.Strategies.Advanced.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Domain.MetaLearning;

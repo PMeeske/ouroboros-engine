@@ -1,5 +1,5 @@
-// <copyright file="CouncilOrchestratorArrows.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="CouncilOrchestratorArrows.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using Ouroboros.Pipeline.Council.Agents;

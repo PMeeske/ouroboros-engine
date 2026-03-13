@@ -1,5 +1,5 @@
-// <copyright file="FileWalPersistence.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="FileWalPersistence.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using System.Runtime.CompilerServices;

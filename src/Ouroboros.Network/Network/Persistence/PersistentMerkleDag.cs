@@ -1,5 +1,5 @@
-// <copyright file="PersistentMerkleDag.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="PersistentMerkleDag.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Network.Persistence;

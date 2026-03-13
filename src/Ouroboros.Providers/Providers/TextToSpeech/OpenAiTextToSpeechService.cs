@@ -1,5 +1,5 @@
-// <copyright file="OpenAiTextToSpeechService.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="OpenAiTextToSpeechService.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 using System.Net.Http.Headers;

@@ -16,16 +16,24 @@ public sealed partial class NeuralSymbolicBridge : INeuralSymbolicBridge
 {
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ISymbolicKnowledgeBase _knowledgeBase;
+    private readonly ConfidenceConfig _confidenceConfig;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NeuralSymbolicBridge"/> class.
     /// </summary>
     /// <param name="llm">The language model for neural reasoning.</param>
     /// <param name="knowledgeBase">The symbolic knowledge base.</param>
-    public NeuralSymbolicBridge(Ouroboros.Abstractions.Core.IChatCompletionModel llm, ISymbolicKnowledgeBase knowledgeBase)
+    /// <param name="confidenceConfig">
+    /// Optional confidence scoring configuration. When <c>null</c>, default heuristic values are used.
+    /// </param>
+    public NeuralSymbolicBridge(
+        Ouroboros.Abstractions.Core.IChatCompletionModel llm,
+        ISymbolicKnowledgeBase knowledgeBase,
+        ConfidenceConfig? confidenceConfig = null)
     {
         _llm = llm ?? throw new ArgumentNullException(nameof(llm));
         _knowledgeBase = knowledgeBase ?? throw new ArgumentNullException(nameof(knowledgeBase));
+        _confidenceConfig = confidenceConfig ?? new ConfidenceConfig();
     }
 
     /// <inheritdoc/>
@@ -165,7 +173,9 @@ Natural language explanation:";
                         // Try to verify symbolically
                         var verification = await TrySymbolicReasoning(query, ct);
                         symbolicSucceeded = verification.IsSuccess;
-                        confidence = symbolicSucceeded ? 0.9 : 0.6;
+                        confidence = symbolicSucceeded
+                            ? _confidenceConfig.SymbolicVerifiedNeural
+                            : _confidenceConfig.UnverifiedNeural;
                     }
                     break;
 
@@ -185,7 +195,7 @@ Natural language explanation:";
                     {
                         // Combine results
                         answer = $"Symbolic: {symbolicParallel.Value.answer}\nNeural: {neuralParallel.Value.answer}";
-                        confidence = 0.95;
+                        confidence = _confidenceConfig.ParallelAgreement;
                         steps.AddRange(symbolicParallel.Value.steps);
                         steps.AddRange(neuralParallel.Value.steps);
                     }
@@ -277,7 +287,7 @@ Natural language explanation:";
                 suggestions.Add("Add missing prerequisites to the knowledge base");
             }
 
-            var score = isConsistent ? 1.0 : Math.Max(0.0, 1.0 - (conflicts.Count * 0.2));
+            var score = isConsistent ? 1.0 : Math.Max(0.0, 1.0 - (conflicts.Count * _confidenceConfig.ConflictPenalty));
 
             var report = new ConsistencyReport(
                 isConsistent,
@@ -330,7 +340,7 @@ Relations: <rel1>, <rel2>, ...";
                 properties,
                 relations,
                 embedding,
-                0.8); // Base confidence
+                _confidenceConfig.BaseGrounding);
 
             return Result<GroundedConcept, string>.Success(concept);
         }

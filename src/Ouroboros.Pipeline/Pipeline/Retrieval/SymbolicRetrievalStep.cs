@@ -1,5 +1,5 @@
-// <copyright file="SymbolicRetrievalStep.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="SymbolicRetrievalStep.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Pipeline.Retrieval;

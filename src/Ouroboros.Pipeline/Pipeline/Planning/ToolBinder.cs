@@ -1,5 +1,5 @@
-// <copyright file="ToolBinder.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
+// <copyright file="ToolBinder.cs" company="Ouroboros">
+// Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
 namespace Ouroboros.Pipeline.Planning;
