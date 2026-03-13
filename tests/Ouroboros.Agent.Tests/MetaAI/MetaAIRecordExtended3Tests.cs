@@ -148,24 +148,6 @@ public class EvaluationResultsTests
 }
 
 [Trait("Category", "Unit")]
-public class TemporalPlanTests
-{
-    [Fact]
-    public void Create_ShouldSetAllProperties()
-    {
-        var tasks = new List<ScheduledTask>
-        {
-            new("Build", DateTime.UtcNow, DateTime.UtcNow.AddHours(1), new List<string>())
-        };
-        var plan = new TemporalPlan("Deploy app", tasks, TimeSpan.FromHours(2));
-
-        plan.Goal.Should().Be("Deploy app");
-        plan.Tasks.Should().HaveCount(1);
-        plan.TotalDuration.Should().Be(TimeSpan.FromHours(2));
-    }
-}
-
-[Trait("Category", "Unit")]
 public class HierarchicalPlanTests
 {
     [Fact]

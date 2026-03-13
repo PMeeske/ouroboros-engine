@@ -1,6 +1,8 @@
 namespace Ouroboros.Tests.Pipeline.Zip;
 
+using FluentAssertions;
 using Ouroboros.Pipeline.Ingestion.Zip;
+using Xunit;
 
 [Trait("Category", "Unit")]
 public class DeferredZipTextCacheTests
