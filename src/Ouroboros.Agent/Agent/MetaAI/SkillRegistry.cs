@@ -136,8 +136,8 @@ public sealed class SkillRegistry : ISkillRegistry
         try
         {
             ArgumentNullException.ThrowIfNull(skill);
-            
-            if (!_skills.ContainsKey(skill.Id))
+
+            if (!_skills.TryGetValue(skill.Id, out _))
                 return Task.FromResult(Result<Unit, string>.Failure($"Skill '{skill.Id}' not found"));
 
             _skills[skill.Id] = skill;
@@ -163,21 +163,24 @@ public sealed class SkillRegistry : ISkillRegistry
             if (string.IsNullOrWhiteSpace(skillId))
                 return Task.FromResult(Result<Unit, string>.Failure("Skill ID cannot be empty"));
 
-            if (!_skills.TryGetValue(skillId, out var existing))
+            if (!_skills.ContainsKey(skillId))
                 return Task.FromResult(Result<Unit, string>.Failure($"Skill '{skillId}' not found"));
 
-            int newCount = existing.UsageCount + 1;
-            double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
-            long newAvgTime = ((existing.AverageExecutionTime * existing.UsageCount) + executionTimeMs) / newCount;
+            _skills.AddOrUpdate(skillId,
+                addValueFactory: _ => throw new InvalidOperationException("Skill not found"),
+                updateValueFactory: (_, existing) =>
+                {
+                    int newCount = existing.UsageCount + 1;
+                    double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
+                    long newAvgTime = ((existing.AverageExecutionTime * existing.UsageCount) + executionTimeMs) / newCount;
+                    return existing with
+                    {
+                        UsageCount = newCount,
+                        SuccessRate = newSuccessRate,
+                        AverageExecutionTime = newAvgTime
+                    };
+                });
 
-            var updated = existing with
-            {
-                UsageCount = newCount,
-                SuccessRate = newSuccessRate,
-                AverageExecutionTime = newAvgTime
-            };
-
-            _skills[skillId] = updated;
             return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
         }
         catch (InvalidOperationException ex)
@@ -267,21 +270,23 @@ public sealed class SkillRegistry : ISkillRegistry
         if (string.IsNullOrWhiteSpace(skillId))
             return;
 
-        if (!_skills.TryGetValue(skillId, out var existing))
+        if (!_skills.ContainsKey(skillId))
             return;
 
-        int newCount = existing.UsageCount + 1;
-        double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
-        long newAvgTime = ((existing.AverageExecutionTime * existing.UsageCount) + executionTimeMs) / newCount;
-
-        var updated = existing with
-        {
-            UsageCount = newCount,
-            SuccessRate = newSuccessRate,
-            AverageExecutionTime = newAvgTime
-        };
-
-        _skills[skillId] = updated;
+        _skills.AddOrUpdate(skillId,
+            addValueFactory: _ => throw new InvalidOperationException("Skill not found"),
+            updateValueFactory: (_, existing) =>
+            {
+                int newCount = existing.UsageCount + 1;
+                double newSuccessRate = ((existing.SuccessRate * existing.UsageCount) + (success ? 1.0 : 0.0)) / newCount;
+                long newAvgTime = ((existing.AverageExecutionTime * existing.UsageCount) + executionTimeMs) / newCount;
+                return existing with
+                {
+                    UsageCount = newCount,
+                    SuccessRate = newSuccessRate,
+                    AverageExecutionTime = newAvgTime
+                };
+            });
     }
 
     /// <summary>
