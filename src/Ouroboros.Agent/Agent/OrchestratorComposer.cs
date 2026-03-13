@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Agent;
+namespace Ouroboros.Agent;
 
 /// <summary>
 /// Fluent builder for creating composite orchestrators.
@@ -114,14 +114,14 @@ public sealed class OrchestratorComposer
             "fallback_orchestrator",
             async (input, context) =>
             {
-                var primaryResult = await primary.ExecuteAsync(input, context);
+                var primaryResult = await primary.ExecuteAsync(input, context).ConfigureAwait(false);
                 if (primaryResult.Success)
                 {
                     return primaryResult.Output!;
                 }
 
                 // Try fallback
-                var fallbackResult = await fallback.ExecuteAsync(input, context);
+                var fallbackResult = await fallback.ExecuteAsync(input, context).ConfigureAwait(false);
                 if (!fallbackResult.Success)
                 {
                     throw new InvalidOperationException(
@@ -149,7 +149,7 @@ public sealed class OrchestratorComposer
             async (input, context) =>
             {
                 var selectedOrchestrator = condition(input) ? whenTrue : whenFalse;
-                var result = await selectedOrchestrator.ExecuteAsync(input, context);
+                var result = await selectedOrchestrator.ExecuteAsync(input, context).ConfigureAwait(false);
                 if (!result.Success)
                 {
                     throw new InvalidOperationException(result.ErrorMessage ?? "Conditional orchestration failed");
@@ -178,7 +178,7 @@ public sealed class OrchestratorComposer
                 while (true)
                 {
                     attempt++;
-                    var result = await orchestrator.ExecuteAsync(input, context);
+                    var result = await orchestrator.ExecuteAsync(input, context).ConfigureAwait(false);
                     
                     if (result.Success)
                     {
@@ -191,7 +191,7 @@ public sealed class OrchestratorComposer
                             $"Operation failed after {attempt} attempts: {result.ErrorMessage}");
                     }
 
-                    await Task.Delay(retryDelay, context.CancellationToken);
+                    await Task.Delay(retryDelay, context.CancellationToken).ConfigureAwait(false);
                 }
             });
     }

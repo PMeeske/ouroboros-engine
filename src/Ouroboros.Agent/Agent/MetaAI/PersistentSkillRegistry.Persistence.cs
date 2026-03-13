@@ -15,7 +15,7 @@ public sealed partial class PersistentSkillRegistry
     /// </summary>
     public async Task SaveSkillsAsync(CancellationToken ct = default)
     {
-        await _saveLock.WaitAsync(ct);
+        await _saveLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             if (!_isDirty) return;
@@ -31,7 +31,7 @@ public sealed partial class PersistentSkillRegistry
             }
 
             var tempPath = fullPath + ".tmp";
-            await File.WriteAllTextAsync(tempPath, json, ct);
+            await File.WriteAllTextAsync(tempPath, json, ct).ConfigureAwait(false);
             File.Move(tempPath, fullPath, overwrite: true);
             _isDirty = false;
         }
@@ -52,7 +52,7 @@ public sealed partial class PersistentSkillRegistry
 
         try
         {
-            string json = await File.ReadAllTextAsync(fullPath, ct);
+            string json = await File.ReadAllTextAsync(fullPath, ct).ConfigureAwait(false);
             var serializableSkills = JsonSerializer.Deserialize<List<SerializableSkill>>(json, JsonOptions);
 
             if (serializableSkills != null)
@@ -65,7 +65,7 @@ public sealed partial class PersistentSkillRegistry
                     // Add to vector store if available
                     if (_embedding != null && _vectorStore != null)
                     {
-                        await AddToVectorStoreAsync(skill, ct);
+                        await AddToVectorStoreAsync(skill, ct).ConfigureAwait(false);
                     }
                 }
             }
@@ -85,7 +85,7 @@ public sealed partial class PersistentSkillRegistry
         if (_skills.TryRemove(skillId, out _))
         {
             _isDirty = true;
-            await SaveSkillsAsync(ct);
+            await SaveSkillsAsync(ct).ConfigureAwait(false);
         }
     }
 
@@ -113,7 +113,7 @@ public sealed partial class PersistentSkillRegistry
         {
             // Create searchable text from skill
             string searchText = $"{skill.Name}: {skill.Description}. Category: {skill.Category}. Tags: {string.Join(", ", skill.Tags)}. Preconditions: {string.Join(", ", skill.Preconditions)}. Effects: {string.Join(", ", skill.Effects)}";
-            float[] embedding = await _embedding.CreateEmbeddingsAsync(searchText, ct);
+            float[] embedding = await _embedding.CreateEmbeddingsAsync(searchText, ct).ConfigureAwait(false);
 
             var metadata = new Dictionary<string, object>
             {
@@ -134,10 +134,10 @@ public sealed partial class PersistentSkillRegistry
                 Metadata = metadata!
             };
 
-            await _vectorStore.AddAsync(new[] { vector }, ct);
+            await _vectorStore.AddAsync(new[] { vector }, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) // Intentional: background vector store operation
+        catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: background vector store operation
         {
             Trace.TraceWarning("[WARN] Failed to add skill '{0}' to vector store: {1}", skill.Name, ex.Message);
         }
@@ -187,7 +187,7 @@ public sealed partial class PersistentSkillRegistry
     {
         if (_isDirty)
         {
-            await SaveSkillsAsync();
+            await SaveSkillsAsync().ConfigureAwait(false);
         }
         _saveLock.Dispose();
         _initLock.Dispose();

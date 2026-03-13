@@ -51,7 +51,7 @@ public sealed class NanoAtomChain
             _config,
             _config.UseGoalDecomposer ? _model : null);
 
-        ThoughtFragment[] fragments = await fragmenter.FragmentAsync(prompt, ct);
+        ThoughtFragment[] fragments = await fragmenter.FragmentAsync(prompt, ct).ConfigureAwait(false);
 
         if (fragments.Length == 0)
         {
@@ -77,7 +77,7 @@ public sealed class NanoAtomChain
             for (int i = 0; i < fragments.Length; i++)
             {
                 int streamIndex = i % streamCount;
-                await streams[streamIndex].WriteAsync(fragments[i], ct);
+                await streams[streamIndex].WriteAsync(fragments[i], ct).ConfigureAwait(false);
             }
 
             // Signal completion on all streams
@@ -89,7 +89,7 @@ public sealed class NanoAtomChain
             // Step 3: COLLECT — gather all digests from all streams
             var consolidator = new ThoughtConsolidator(_config, _model);
             var collectTasks = streams.Select(s => s.CollectDigestsAsync(ct)).ToArray();
-            var allDigests = await Task.WhenAll(collectTasks);
+            var allDigests = await Task.WhenAll(collectTasks).ConfigureAwait(false);
 
             foreach (var digestList in allDigests)
             {
@@ -103,14 +103,14 @@ public sealed class NanoAtomChain
             }
 
             // Step 4: CONSOLIDATE — merge digests into a single ConsolidatedAction
-            return await consolidator.ConsolidateAsync(streamCount, ct);
+            return await consolidator.ConsolidateAsync(streamCount, ct).ConfigureAwait(false);
         }
         finally
         {
             // Cleanup all streams
             foreach (var stream in streams)
             {
-                await stream.DisposeAsync();
+                await stream.DisposeAsync().ConfigureAwait(false);
             }
         }
     }

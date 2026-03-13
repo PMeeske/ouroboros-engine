@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Default console-based human feedback provider for testing.
@@ -24,7 +24,7 @@ public sealed class ConsoleFeedbackProvider : IHumanFeedbackProvider
         }
 
         Console.Write("Your response: ");
-        string response = await Task.Run(() => Console.ReadLine() ?? "", ct);
+        string response = await Task.Run(() => Console.ReadLine() ?? "", ct).ConfigureAwait(false);
 
         return new HumanFeedbackResponse(
             request.RequestId,
@@ -44,7 +44,7 @@ public sealed class ConsoleFeedbackProvider : IHumanFeedbackProvider
         Console.WriteLine($"Rationale: {request.Rationale}");
         Console.Write("Approve? (y/n): ");
 
-        string response = await Task.Run(() => Console.ReadLine() ?? "n", ct);
+        string response = await Task.Run(() => Console.ReadLine() ?? "n", ct).ConfigureAwait(false);
         bool approved = response.ToLowerInvariant() == "y";
 
         return new ApprovalResponse(

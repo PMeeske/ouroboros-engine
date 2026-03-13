@@ -58,12 +58,12 @@ public sealed partial class HypothesisEngine : IHypothesisEngine
                 maxResults: 10,
                 minSimilarity: 0.6);
 
-            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
             List<Experience> experiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
 
             // Build hypothesis generation prompt
             string prompt = BuildHypothesisPrompt(observation, experiences, context);
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Parse hypothesis from response
             Hypothesis hypothesis = ParseHypothesis(response, observation, context);
@@ -78,7 +78,7 @@ public sealed partial class HypothesisEngine : IHypothesisEngine
             return Result<Hypothesis, string>.Success(hypothesis);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Hypothesis, string>.Failure($"Hypothesis generation failed: {ex.Message}");
         }
@@ -119,7 +119,7 @@ STEP 2: ...
 
 CRITERIA: [how to measure success]";
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Parse experiment design
             List<PlanStep> steps = ParseExperimentSteps(response);
@@ -136,7 +136,7 @@ CRITERIA: [how to measure success]";
             return Result<Experiment, string>.Success(experiment);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Experiment, string>.Failure($"Experiment design failed: {ex.Message}");
         }
@@ -174,7 +174,7 @@ CRITERIA: [how to measure success]";
                 }
             };
 
-            var ethicsResult = await _ethics.EvaluateResearchAsync(researchDescription, context, ct);
+            var ethicsResult = await _ethics.EvaluateResearchAsync(researchDescription, context, ct).ConfigureAwait(false);
 
             if (ethicsResult.IsFailure)
             {
@@ -202,7 +202,7 @@ CRITERIA: [how to measure success]";
                 DateTime.UtcNow);
 
             // Execute experiment
-            Result<PlanExecutionResult, string> execResult = await _orchestrator.ExecuteAsync(plan, ct);
+            Result<PlanExecutionResult, string> execResult = await _orchestrator.ExecuteAsync(plan, ct).ConfigureAwait(false);
 
             if (!execResult.IsSuccess)
             {
@@ -264,7 +264,7 @@ CRITERIA: [how to measure success]";
             return Result<HypothesisTestResult, string>.Success(result);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<HypothesisTestResult, string>.Failure($"Hypothesis testing failed: {ex.Message}");
         }
@@ -300,7 +300,7 @@ DOMAIN: [domain]
 EVIDENCE: [supporting points]
 ALTERNATIVES: [other possibilities]";
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Parse the best explanation
             Hypothesis hypothesis = ParseHypothesis(response, string.Join("; ", observations), null);
@@ -315,7 +315,7 @@ ALTERNATIVES: [other possibilities]";
             return Result<Hypothesis, string>.Success(hypothesis);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Hypothesis, string>.Failure($"Abductive reasoning failed: {ex.Message}");
         }

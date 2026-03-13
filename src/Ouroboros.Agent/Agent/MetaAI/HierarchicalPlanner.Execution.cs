@@ -28,15 +28,15 @@ public sealed partial class HierarchicalPlanner
 
             return strategy switch
             {
-                RepairStrategy.Replan => await ReplanStrategyAsync(brokenPlan, trace, ct),
-                RepairStrategy.Patch => await PatchStrategyAsync(brokenPlan, trace, ct),
-                RepairStrategy.CaseBased => await CaseBasedStrategyAsync(brokenPlan, trace, ct),
-                RepairStrategy.Backtrack => await BacktrackStrategyAsync(brokenPlan, trace, ct),
+                RepairStrategy.Replan => await ReplanStrategyAsync(brokenPlan, trace, ct).ConfigureAwait(false),
+                RepairStrategy.Patch => await PatchStrategyAsync(brokenPlan, trace, ct).ConfigureAwait(false),
+                RepairStrategy.CaseBased => await CaseBasedStrategyAsync(brokenPlan, trace, ct).ConfigureAwait(false),
+                RepairStrategy.Backtrack => await BacktrackStrategyAsync(brokenPlan, trace, ct).ConfigureAwait(false),
                 _ => Result<Plan, string>.Failure($"Unknown repair strategy: {strategy}")
             };
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Plan, string>.Failure($"Plan repair failed: {ex.Message}");
         }
@@ -56,7 +56,7 @@ public sealed partial class HierarchicalPlanner
                 : "unknown"
         };
 
-        var replanResult = await _orchestrator.PlanAsync(brokenPlan.Goal, context, ct);
+        var replanResult = await _orchestrator.PlanAsync(brokenPlan.Goal, context, ct).ConfigureAwait(false);
 
         if (!replanResult.IsSuccess)
         {
@@ -114,11 +114,11 @@ public sealed partial class HierarchicalPlanner
 
         if (hasRecentFailure)
         {
-            return await ReplanStrategyAsync(brokenPlan, trace, ct);
+            return await ReplanStrategyAsync(brokenPlan, trace, ct).ConfigureAwait(false);
         }
         else
         {
-            return await PatchStrategyAsync(brokenPlan, trace, ct);
+            return await PatchStrategyAsync(brokenPlan, trace, ct).ConfigureAwait(false);
         }
     }
 
@@ -143,7 +143,7 @@ public sealed partial class HierarchicalPlanner
             ["previous_failure"] = trace.FailureReason
         };
 
-        var alternativeResult = await _orchestrator.PlanAsync(remainingGoal, context, ct);
+        var alternativeResult = await _orchestrator.PlanAsync(remainingGoal, context, ct).ConfigureAwait(false);
 
         if (alternativeResult.IsSuccess)
         {
@@ -182,17 +182,17 @@ public sealed partial class HierarchicalPlanner
 
             var explanation = level switch
             {
-                ExplanationLevel.Brief => await GenerateBriefExplanationAsync(plan, ct),
-                ExplanationLevel.Detailed => await GenerateDetailedExplanationAsync(plan, ct),
-                ExplanationLevel.Causal => await GenerateCausalExplanationAsync(plan, ct),
-                ExplanationLevel.Counterfactual => await GenerateCounterfactualExplanationAsync(plan, ct),
+                ExplanationLevel.Brief => await GenerateBriefExplanationAsync(plan, ct).ConfigureAwait(false),
+                ExplanationLevel.Detailed => await GenerateDetailedExplanationAsync(plan, ct).ConfigureAwait(false),
+                ExplanationLevel.Causal => await GenerateCausalExplanationAsync(plan, ct).ConfigureAwait(false),
+                ExplanationLevel.Counterfactual => await GenerateCounterfactualExplanationAsync(plan, ct).ConfigureAwait(false),
                 _ => $"Unknown explanation level: {level}"
             };
 
             return Result<string, string>.Success(explanation);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<string, string>.Failure($"Plan explanation failed: {ex.Message}");
         }

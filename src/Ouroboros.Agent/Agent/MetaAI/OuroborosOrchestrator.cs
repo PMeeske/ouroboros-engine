@@ -139,14 +139,14 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
 
             if (affect != null && dominantUrge != null)
             {
-                await ProjectAffectiveStateToMeTTaAsync(affect, dominantUrge, context.CancellationToken);
+                await ProjectAffectiveStateToMeTTaAsync(affect, dominantUrge, context.CancellationToken).ConfigureAwait(false);
             }
 
             _atom.SetGoal(goal);
-            await TranslateToMeTTaAsync(context.CancellationToken);
+            await TranslateToMeTTaAsync(context.CancellationToken).ConfigureAwait(false);
 
             // Phase 1: PLAN
-            PhaseResult planResult = await ExecutePlanPhaseAsync(goal, context.CancellationToken);
+            PhaseResult planResult = await ExecutePlanPhaseAsync(goal, context.CancellationToken).ConfigureAwait(false);
             phaseResults.Add(planResult);
             _atom.AdvancePhase();
 
@@ -157,7 +157,7 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
             }
 
             // Phase 2: EXECUTE
-            PhaseResult executeResult = await ExecuteExecutePhaseAsync(planResult.Output, context.CancellationToken);
+            PhaseResult executeResult = await ExecuteExecutePhaseAsync(planResult.Output, context.CancellationToken).ConfigureAwait(false);
             phaseResults.Add(executeResult);
             _atom.AdvancePhase();
 
@@ -174,7 +174,7 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
             }
 
             // Phase 3: VERIFY
-            PhaseResult verifyResult = await ExecuteVerifyPhaseAsync(goal, executeResult.Output, context.CancellationToken);
+            PhaseResult verifyResult = await ExecuteVerifyPhaseAsync(goal, executeResult.Output, context.CancellationToken).ConfigureAwait(false);
             phaseResults.Add(verifyResult);
             _atom.AdvancePhase();
 
@@ -191,7 +191,7 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
             }
 
             // Phase 4: LEARN
-            PhaseResult learnResult = await ExecuteLearnPhaseAsync(goal, phaseResults, context.CancellationToken);
+            PhaseResult learnResult = await ExecuteLearnPhaseAsync(goal, phaseResults, context.CancellationToken).ConfigureAwait(false);
             phaseResults.Add(learnResult);
             _atom.AdvancePhase();
 
@@ -230,7 +230,7 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
             totalStopwatch.Stop();
             throw;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             totalStopwatch.Stop();
             return CreateResult(goal, phaseResults, ex.Message, false, totalStopwatch.Elapsed);
@@ -243,7 +243,7 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
     private async Task TranslateToMeTTaAsync(CancellationToken ct)
     {
         string metta = _atom.ToMeTTa();
-        await _mettaEngine.AddFactAsync(metta, ct);
+        await _mettaEngine.AddFactAsync(metta, ct).ConfigureAwait(false);
     }
 
     private OuroborosResult CreateResult(string goal, List<PhaseResult> phases, string? output, bool success, TimeSpan duration)
@@ -280,7 +280,7 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
     /// <inheritdoc/>
     protected override async Task<Dictionary<string, object>> GetCustomHealthAsync(CancellationToken ct)
     {
-        Dictionary<string, object> health = await base.GetCustomHealthAsync(ct);
+        Dictionary<string, object> health = await base.GetCustomHealthAsync(ct).ConfigureAwait(false);
 
         health["ouroboros_atom_id"] = _atom.InstanceId;
         health["current_phase"] = _atom.CurrentPhase.ToString();

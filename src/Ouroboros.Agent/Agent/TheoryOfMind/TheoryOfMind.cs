@@ -65,7 +65,7 @@ public sealed class TheoryOfMind : ITheoryOfMind
                 .Replace("{{$observations}}", observationsText)
                 .Replace("{{$existingBeliefs}}", existingBeliefs);
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Parse the LLM response
             BeliefState beliefs = ParseBeliefStateFromLLM(agentId, response, existingModel.Beliefs);
@@ -73,7 +73,7 @@ public sealed class TheoryOfMind : ITheoryOfMind
             return Result<BeliefState, string>.Success(beliefs);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<BeliefState, string>.Failure($"Belief inference failed: {ex.Message}");
         }
@@ -116,14 +116,14 @@ public sealed class TheoryOfMind : ITheoryOfMind
                 .Replace("{{$knownGoals}}", string.Join(", ", model.InferredGoals.DefaultIfEmpty("None")))
                 .Replace("{{$capabilities}}", string.Join(", ", model.InferredCapabilities.DefaultIfEmpty("Unknown")));
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             IntentionPrediction prediction = ParseIntentionFromLLM(agentId, response);
 
             return Result<IntentionPrediction, string>.Success(prediction);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IntentionPrediction, string>.Failure($"Intention prediction failed: {ex.Message}");
         }
@@ -168,14 +168,14 @@ public sealed class TheoryOfMind : ITheoryOfMind
                 .Replace("{{$inferredGoals}}", string.Join(", ", model.InferredGoals.Take(2).DefaultIfEmpty("Unknown")))
                 .Replace("{{$availableActions}}", actionsText);
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             ActionPrediction prediction = ParseActionFromLLM(agentId, response, availableActions);
 
             return Result<ActionPrediction, string>.Success(prediction);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<ActionPrediction, string>.Failure($"Action prediction failed: {ex.Message}");
         }
@@ -208,7 +208,7 @@ public sealed class TheoryOfMind : ITheoryOfMind
             Result<BeliefState, string> beliefsResult = await InferBeliefsAsync(
                 agentId,
                 recentObs,
-                ct);
+                ct).ConfigureAwait(false);
 
             if (beliefsResult.IsSuccess)
             {
@@ -216,11 +216,11 @@ public sealed class TheoryOfMind : ITheoryOfMind
                 _agentModels[agentId] = model;
             }
 
-            await Task.CompletedTask;
+            await Task.CompletedTask.ConfigureAwait(false);
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Model update failed: {ex.Message}");
         }
@@ -242,7 +242,7 @@ public sealed class TheoryOfMind : ITheoryOfMind
     /// </summary>
     public async Task<double> GetModelConfidenceAsync(string agentId, CancellationToken ct = default)
     {
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
 
         AgentModel? model = GetAgentModel(agentId);
         if (model == null)
@@ -300,8 +300,7 @@ public sealed class TheoryOfMind : ITheoryOfMind
 
             return new BeliefState(agentId, beliefs, confidence, DateTime.UtcNow);
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Fallback: return existing beliefs with slightly reduced confidence
             return existingBeliefs.WithConfidence(existingBeliefs.Confidence * 0.9);
         }
@@ -331,8 +330,7 @@ public sealed class TheoryOfMind : ITheoryOfMind
 
             return IntentionPrediction.Create(agentId, goal, confidence, evidence, alternatives);
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return IntentionPrediction.Unknown(agentId);
         }
     }
@@ -367,8 +365,7 @@ public sealed class TheoryOfMind : ITheoryOfMind
 
             return ActionPrediction.Create(agentId, action, confidence, reasoning);
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return ActionPrediction.NoOp(agentId, "Failed to parse LLM response");
         }
     }
@@ -411,7 +408,7 @@ public sealed class TheoryOfMind : ITheoryOfMind
                 $"Observation {i + 1} (from abstraction layer)"))
             .ToList();
 
-        var result = await InferBeliefsAsync(agentId, typedObservations, ct);
+        var result = await InferBeliefsAsync(agentId, typedObservations, ct).ConfigureAwait(false);
         return result.Map(_ => new Ouroboros.Abstractions.Domain.BeliefState());
     }
 
@@ -426,7 +423,7 @@ public sealed class TheoryOfMind : ITheoryOfMind
         AgentModel? existingModel = GetAgentModel(agentId);
         BeliefState typedBeliefs = existingModel?.Beliefs ?? BeliefState.Empty(agentId);
 
-        var result = await PredictIntentionAsync(agentId, typedBeliefs, ct);
+        var result = await PredictIntentionAsync(agentId, typedBeliefs, ct).ConfigureAwait(false);
         return result.Map(_ => new Ouroboros.Abstractions.Domain.IntentionPrediction());
     }
 
@@ -446,7 +443,7 @@ public sealed class TheoryOfMind : ITheoryOfMind
             .Select((_, i) => EmbodiedAction.NoOp())
             .ToList();
 
-        var result = await PredictNextActionAsync(agentId, typedBeliefs, typedActions, ct);
+        var result = await PredictNextActionAsync(agentId, typedBeliefs, typedActions, ct).ConfigureAwait(false);
         return result.Map(_ => new Ouroboros.Abstractions.Domain.ActionPrediction());
     }
 
@@ -461,7 +458,7 @@ public sealed class TheoryOfMind : ITheoryOfMind
             agentId,
             "Observation from abstraction layer");
 
-        return await UpdateAgentModelAsync(agentId, typedObservation, ct);
+        return await UpdateAgentModelAsync(agentId, typedObservation, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

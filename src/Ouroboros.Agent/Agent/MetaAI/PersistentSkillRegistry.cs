@@ -52,12 +52,12 @@ public sealed partial class PersistentSkillRegistry : ISkillRegistry, IAsyncDisp
     {
         if (_isInitialized) return;
 
-        await _initLock.WaitAsync(ct);
+        await _initLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             if (_isInitialized) return;
 
-            await LoadSkillsAsync(ct);
+            await LoadSkillsAsync(ct).ConfigureAwait(false);
             _isInitialized = true;
         }
         finally { _initLock.Release(); }
@@ -74,11 +74,11 @@ public sealed partial class PersistentSkillRegistry : ISkillRegistry, IAsyncDisp
             _skills[skill.Id] = skill;
             _isDirty = true;
 
-            await SaveSkillsAsync(ct);
+            await SaveSkillsAsync(ct).ConfigureAwait(false);
 
             if (_embedding != null && _vectorStore != null)
             {
-                await AddToVectorStoreAsync(skill, ct);
+                await AddToVectorStoreAsync(skill, ct).ConfigureAwait(false);
             }
 
             return Result<Unit, string>.Success(Unit.Value);
@@ -131,12 +131,12 @@ public sealed partial class PersistentSkillRegistry : ISkillRegistry, IAsyncDisp
 
             _skills[skill.Id] = skill;
             _isDirty = true;
-            await SaveSkillsAsync(ct);
+            await SaveSkillsAsync(ct).ConfigureAwait(false);
 
             // Update in vector store if available
             if (_embedding != null && _vectorStore != null)
             {
-                await AddToVectorStoreAsync(skill, ct);
+                await AddToVectorStoreAsync(skill, ct).ConfigureAwait(false);
             }
 
             return Result<Unit, string>.Success(Unit.Value);
@@ -181,7 +181,7 @@ public sealed partial class PersistentSkillRegistry : ISkillRegistry, IAsyncDisp
             
             if (_config.AutoSave)
             {
-                await SaveSkillsAsync(ct);
+                await SaveSkillsAsync(ct).ConfigureAwait(false);
             }
 
             return Result<Unit, string>.Success(Unit.Value);
@@ -206,7 +206,7 @@ public sealed partial class PersistentSkillRegistry : ISkillRegistry, IAsyncDisp
             if (_skills.TryRemove(skillId, out _))
             {
                 _isDirty = true;
-                await SaveSkillsAsync(ct);
+                await SaveSkillsAsync(ct).ConfigureAwait(false);
                 return Result<Unit, string>.Success(Unit.Value);
             }
 

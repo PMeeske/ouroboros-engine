@@ -62,7 +62,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                     });
 
                 // Check if adaptation is needed before execution
-                AdaptationAction? adaptationAction = await EvaluateAdaptationAsync(context, ct);
+                AdaptationAction? adaptationAction = await EvaluateAdaptationAsync(context, ct).ConfigureAwait(false);
 
                 if (adaptationAction != null)
                 {
@@ -102,18 +102,18 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                 }
 
                 // Execute step with retry logic
-                StepResult stepResult = await ExecuteStepWithRetryAsync(step, config.MaxRetries, ct);
+                StepResult stepResult = await ExecuteStepWithRetryAsync(step, config.MaxRetries, ct).ConfigureAwait(false);
                 allStepResults.Add(stepResult);
 
                 // Check if we need to adapt after execution
                 PlanExecutionContext postContext = context with { CompletedSteps = allStepResults };
-                AdaptationAction? postAdaptation = await EvaluateAdaptationAsync(postContext, ct);
+                AdaptationAction? postAdaptation = await EvaluateAdaptationAsync(postContext, ct).ConfigureAwait(false);
 
                 if (postAdaptation?.Strategy == AdaptationStrategy.Replan && config.EnableAutoReplan)
                 {
                     // Generate new plan for remaining steps
                     string remainingGoal = $"Continue from step {i + 1}: {plan.Goal}";
-                    Result<Plan, string> replanResult = await _orchestrator.PlanAsync(remainingGoal, null, ct);
+                    Result<Plan, string> replanResult = await _orchestrator.PlanAsync(remainingGoal, null, ct).ConfigureAwait(false);
 
                     if (replanResult.IsSuccess)
                     {
@@ -145,7 +145,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
             return Result<PlanExecutionResult, string>.Success(execution);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<PlanExecutionResult, string>.Failure($"Adaptive execution failed: {ex.Message}");
         }
@@ -171,7 +171,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
         foreach (AdaptationTrigger trigger in _triggers.Where(trigger => trigger.Condition(context)))
         {
             // Trigger matched - determine adaptation action
-            AdaptationAction? action = await CreateAdaptationActionAsync(trigger, context, ct);
+            AdaptationAction? action = await CreateAdaptationActionAsync(trigger, context, ct).ConfigureAwait(false);
             if (action != null)
             {
                 return action;
@@ -208,7 +208,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                     Provide the result of executing this task.
                     """;
 
-                string output = await _llm.GenerateTextAsync(prompt, ct);
+                string output = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
                 sw.Stop();
 
@@ -232,7 +232,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                     break;
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 sw.Stop();
                 lastResult = new StepResult(
@@ -273,7 +273,7 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
                         ["completed_steps"] = context.CompletedSteps.Count,
                         ["context"] = "replanning_due_to_issues"
                     },
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 if (replanResult.IsSuccess)
                 {
@@ -289,7 +289,7 @@ Expected: {context.CurrentStep.ExpectedOutcome}
 
 Suggest an alternative approach to achieve the same outcome.";
 
-                string suggestion = await _llm.GenerateTextAsync(prompt, ct);
+                string suggestion = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
                 // Parse suggestion into a new step (simplified)
                 PlanStep replacementStep = new PlanStep(

@@ -71,7 +71,7 @@ public sealed class OrchestrationExperiment : IOrchestrationExperiment
                     $"variant_{i}",
                     variants[i],
                     testPrompts,
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 variantResults.Add(variantResult);
             }
@@ -92,7 +92,7 @@ public sealed class OrchestrationExperiment : IOrchestrationExperiment
             return Result<ExperimentResult, string>.Success(result);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var failedResult = new ExperimentResult(
                 ExperimentId: experimentId,
@@ -146,7 +146,7 @@ public sealed class OrchestrationExperiment : IOrchestrationExperiment
             ct.ThrowIfCancellationRequested();
 
             var sw = Stopwatch.StartNew();
-            var result = await orchestrator.SelectModelAsync(prompt, ct: ct);
+            var result = await orchestrator.SelectModelAsync(prompt, ct: ct).ConfigureAwait(false);
             sw.Stop();
 
             var latencyMs = sw.Elapsed.TotalMilliseconds;

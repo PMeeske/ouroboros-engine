@@ -140,11 +140,11 @@ public sealed partial class MeTTaRepresentation
             _stateAtoms[plan.Goal] = planId;
 
             // Add all facts to MeTTa
-            var factResult = await _engine.AddFactAsync(sb.ToString(), ct);
+            var factResult = await _engine.AddFactAsync(sb.ToString(), ct).ConfigureAwait(false);
             return factResult.Map(_ => Unit.Value).MapError(_ => "Failed to add plan facts to MeTTa");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Plan translation error: {ex.Message}");
         }
@@ -186,11 +186,11 @@ public sealed partial class MeTTaRepresentation
                 }
             }
 
-            var result = await _engine.AddFactAsync(sb.ToString(), ct);
+            var result = await _engine.AddFactAsync(sb.ToString(), ct).ConfigureAwait(false);
             return result.Map(_ => Unit.Value).MapError(_ => "Failed to add execution state to MeTTa");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Execution state translation error: {ex.Message}");
         }
@@ -228,11 +228,11 @@ public sealed partial class MeTTaRepresentation
                 }
             }
 
-            var result = await _engine.AddFactAsync(sb.ToString(), ct);
+            var result = await _engine.AddFactAsync(sb.ToString(), ct).ConfigureAwait(false);
             return result.Map(_ => Unit.Value).MapError(_ => "Failed to add tool facts to MeTTa");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Tool translation error: {ex.Message}");
         }
@@ -257,7 +257,7 @@ public sealed partial class MeTTaRepresentation
                 )
                 (cons $next-step $next-action))";
 
-            Result<string, string> queryResult = await _engine.ExecuteQueryAsync(query, ct);
+            Result<string, string> queryResult = await _engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
             return queryResult.Match(
                 success => ParseNextNodeCandidates(success),
@@ -265,7 +265,7 @@ public sealed partial class MeTTaRepresentation
             );
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<List<NextNodeCandidate>, string>.Failure($"Query error: {ex.Message}");
         }
@@ -278,7 +278,7 @@ public sealed partial class MeTTaRepresentation
         string constraint,
         CancellationToken ct = default)
     {
-        var result = await _engine.AddFactAsync(constraint, ct);
+        var result = await _engine.AddFactAsync(constraint, ct).ConfigureAwait(false);
         return result.Match(
             _ => Result<Unit, string>.Success(Unit.Value),
             error => Result<Unit, string>.Failure($"Failed to add constraint: {constraint} - {error}")
@@ -299,7 +299,7 @@ public sealed partial class MeTTaRepresentation
             )
             $tool)";
 
-        Result<string, string> result = await _engine.ExecuteQueryAsync(query, ct);
+        Result<string, string> result = await _engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
         return result.Match(
             success => Result<List<string>, string>.Success(ParseToolList(success)),

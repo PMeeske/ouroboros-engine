@@ -72,7 +72,7 @@ public sealed partial class PersistentMemoryStore
             // Update in vector store if available
             if (_embedding != null && _vectorStore != null)
             {
-                await StoreInVectorStoreAsync(experience, MemoryType.Semantic, ct);
+                await StoreInVectorStoreAsync(experience, MemoryType.Semantic, ct).ConfigureAwait(false);
             }
         }
     }
@@ -96,7 +96,7 @@ public sealed partial class PersistentMemoryStore
             _experiences.TryRemove(experience.Id, out _);
         }
 
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     /// <summary>
@@ -116,7 +116,7 @@ public sealed partial class PersistentMemoryStore
                    $"Success: {experience.Success}\n" +
                    $"Tags: {string.Join(", ", experience.Tags)}";
 
-        float[] embedding = await _embedding.CreateEmbeddingsAsync(text, ct);
+        float[] embedding = await _embedding.CreateEmbeddingsAsync(text, ct).ConfigureAwait(false);
 
         Vector vector = new Vector
         {
@@ -134,7 +134,7 @@ public sealed partial class PersistentMemoryStore
             }
         };
 
-        await _vectorStore.AddAsync(new[] { vector }, ct);
+        await _vectorStore.AddAsync(new[] { vector }, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -152,7 +152,7 @@ public sealed partial class PersistentMemoryStore
             IReadOnlyCollection<LangChain.DocumentLoaders.Document> searchResults = await _vectorStore.GetSimilarDocuments(
                 _embedding,
                 query.ContextSimilarity,
-                amount: query.MaxResults);
+                amount: query.MaxResults).ConfigureAwait(false);
 
             List<Experience> experiences = new List<Experience>();
             foreach (LangChain.DocumentLoaders.Document doc in searchResults)
@@ -220,7 +220,7 @@ public sealed partial class PersistentMemoryStore
             string json = JsonSerializer.Serialize(data, JsonDefaults.Indented);
 
             var tempPath = _persistencePath + ".tmp";
-            await File.WriteAllTextAsync(tempPath, json, ct);
+            await File.WriteAllTextAsync(tempPath, json, ct).ConfigureAwait(false);
             File.Move(tempPath, _persistencePath, overwrite: true);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -239,7 +239,7 @@ public sealed partial class PersistentMemoryStore
 
         try
         {
-            string json = await File.ReadAllTextAsync(_persistencePath);
+            string json = await File.ReadAllTextAsync(_persistencePath).ConfigureAwait(false);
             var data = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(json);
 
             if (data != null)

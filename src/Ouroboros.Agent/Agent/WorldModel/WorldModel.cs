@@ -153,7 +153,7 @@ public sealed partial class WorldModel : IWorldModel
             return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to update world model from experience");
             return Task.FromResult(Result<Unit, string>.Failure($"Update failed: {ex.Message}"));
@@ -193,7 +193,7 @@ public sealed partial class WorldModel : IWorldModel
         try
         {
             // Beam search with greedy action selection
-            var plan = await BeamSearchAsync(current, goal, horizon, ct);
+            var plan = await BeamSearchAsync(current, goal, horizon, ct).ConfigureAwait(false);
 
             _logger?.LogInformation(
                 "Generated plan with {Count} actions for goal: {Goal}",
@@ -206,7 +206,7 @@ public sealed partial class WorldModel : IWorldModel
         {
             throw;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Planning failed for goal: {Goal}", goal);
             return Result<List<EmbodiedAction>, string>.Failure($"Planning failed: {ex.Message}");
@@ -280,7 +280,7 @@ public sealed partial class WorldModel : IWorldModel
             {
                 ct.ThrowIfCancellationRequested();
 
-                var predictionResult = await PredictAsync(currentState, action, ct);
+                var predictionResult = await PredictAsync(currentState, action, ct).ConfigureAwait(false);
 
                 if (predictionResult.IsFailure)
                 {
@@ -309,7 +309,7 @@ public sealed partial class WorldModel : IWorldModel
         {
             throw;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Trajectory simulation failed");
             return Result<List<PredictedState>, string>.Failure($"Simulation failed: {ex.Message}");

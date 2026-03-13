@@ -21,7 +21,7 @@ public sealed partial class ConsolidatedMind
 
         if (!_specialists.TryGetValue(SpecializedRole.Planner, out var planner))
         {
-            return await ProcessAsync(prompt, ct);
+            return await ProcessAsync(prompt, ct).ConfigureAwait(false);
         }
 
         usedRoles.Add(SpecializedRole.Planner);
@@ -33,7 +33,7 @@ Task: {prompt}
 
 Sub-tasks:";
 
-        string plan = await planner.Model.GenerateTextAsync(planPrompt, ct);
+        string plan = await planner.Model.GenerateTextAsync(planPrompt, ct).ConfigureAwait(false);
 
         var subTasks = plan.Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Where(line => !string.IsNullOrWhiteSpace(line))
@@ -43,24 +43,24 @@ Sub-tasks:";
 
         if (subTasks.Count == 0)
         {
-            return await ProcessAsync(prompt, ct);
+            return await ProcessAsync(prompt, ct).ConfigureAwait(false);
         }
 
         var subResults = new List<(string Task, string Result, SpecializedRole Role)>();
 
         if (_config.EnableParallelExecution && subTasks.Count > 1)
         {
-            var semaphore = new SemaphoreSlim(_config.MaxParallelism);
+            using var semaphore = new SemaphoreSlim(_config.MaxParallelism);
             var tasks = subTasks.Select(async subTask =>
             {
-                await semaphore.WaitAsync(ct);
+                await semaphore.WaitAsync(ct).ConfigureAwait(false);
                 try
                 {
                     var subAnalysis = TaskAnalyzer.Analyze(subTask);
                     var specialist = _specialists.GetValueOrDefault(subAnalysis.PrimaryRole)
                         ?? _specialists.Values.First();
 
-                    var result = await specialist.Model.GenerateTextAsync(subTask, ct);
+                    var result = await specialist.Model.GenerateTextAsync(subTask, ct).ConfigureAwait(false);
                     return (subTask, result, specialist.Role);
                 }
                 finally
@@ -69,7 +69,7 @@ Sub-tasks:";
                 }
             });
 
-            var results = await Task.WhenAll(tasks);
+            var results = await Task.WhenAll(tasks).ConfigureAwait(false);
             subResults.AddRange(results);
         }
         else
@@ -80,7 +80,7 @@ Sub-tasks:";
                 var specialist = _specialists.GetValueOrDefault(subAnalysis.PrimaryRole)
                     ?? _specialists.Values.First();
 
-                var result = await specialist.Model.GenerateTextAsync(subTask, ct);
+                var result = await specialist.Model.GenerateTextAsync(subTask, ct).ConfigureAwait(false);
                 subResults.Add((subTask, result, specialist.Role));
                 usedRoles.Add(specialist.Role);
             }
@@ -101,7 +101,7 @@ Sub-task results:
 
 Synthesized response:";
 
-            var finalResponse = await synthesizer.Model.GenerateTextAsync(synthesisPrompt, ct);
+            var finalResponse = await synthesizer.Model.GenerateTextAsync(synthesisPrompt, ct).ConfigureAwait(false);
 
             return new MindResponse(
                 finalResponse,
@@ -143,7 +143,7 @@ VALID: [reason]
 or
 INVALID: [specific issues and suggestions]";
 
-        var verificationResult = await verifier.Model.GenerateTextAsync(verifyPrompt, ct);
+        var verificationResult = await verifier.Model.GenerateTextAsync(verifyPrompt, ct).ConfigureAwait(false);
 
         bool isValid = verificationResult.StartsWith("VALID", StringComparison.OrdinalIgnoreCase);
         return (isValid, verificationResult);
@@ -172,7 +172,7 @@ Feedback: {feedback}
 
 Improved response:";
 
-        return await refiner.Model.GenerateTextAsync(refinePrompt, ct);
+        return await refiner.Model.GenerateTextAsync(refinePrompt, ct).ConfigureAwait(false);
     }
 
     private SpecializedModel? GetFallbackSpecialist(SpecializedRole failedRole)

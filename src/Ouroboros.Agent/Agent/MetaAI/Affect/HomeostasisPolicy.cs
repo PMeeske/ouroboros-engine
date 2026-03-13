@@ -191,7 +191,7 @@ public sealed class HomeostasisPolicy : IHomeostasisPolicy
                 for (int i = 0; i < 5; i++)
                 {
                     monitor.RecordSignal("homeostasis_throttle", 0.0, violation.Signal);
-                    await Task.Delay(10, ct);
+                    await Task.Delay(10, ct).ConfigureAwait(false);
                 }
                 var throttledState = monitor.GetCurrentState();
                 double valueAfterThrottle = GetSignalValue(throttledState, violation.Signal);
@@ -210,7 +210,7 @@ public sealed class HomeostasisPolicy : IHomeostasisPolicy
                 for (int i = 0; i < 5; i++)
                 {
                     monitor.RecordSignal("homeostasis_boost", 0.2, violation.Signal);
-                    await Task.Delay(10, ct);
+                    await Task.Delay(10, ct).ConfigureAwait(false);
                 }
                 var boostedState = monitor.GetCurrentState();
                 double valueAfterBoost = GetSignalValue(boostedState, violation.Signal);
@@ -253,7 +253,7 @@ public sealed class HomeostasisPolicy : IHomeostasisPolicy
                 if (_rules.TryGetValue(violation.RuleId, out var rule) &&
                     _customHandlers.TryGetValue(rule.Name, out var handler))
                 {
-                    result = await handler(violation, monitor);
+                    result = await handler(violation, monitor).ConfigureAwait(false);
                 }
                 else
                 {

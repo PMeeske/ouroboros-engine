@@ -56,11 +56,11 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
         bool shouldProceed = confidenceLevel >= _minConfidenceThreshold;
         
         // Get fallback strategy
-        FallbackStrategy strategy = await GetFallbackStrategyAsync(confidenceLevel, 0, ct);
+        FallbackStrategy strategy = await GetFallbackStrategyAsync(confidenceLevel, 0, ct).ConfigureAwait(false);
         
         // Determine if human oversight is needed
         double riskLevel = CalculateRiskLevel(context, proposedAction);
-        bool requiresOversight = await RequiresHumanOversightAsync(context, riskLevel, confidenceLevel, ct);
+        bool requiresOversight = await RequiresHumanOversightAsync(context, riskLevel, confidenceLevel, ct).ConfigureAwait(false);
 
         // Generate alternative actions if confidence is low
         List<string> alternatives = new();
@@ -118,7 +118,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
         if (isCritical && confidenceLevel < 0.9)
             return true;
 
-        return await Task.FromResult(false);
+        return await Task.FromResult(false).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -152,7 +152,7 @@ public sealed class UncertaintyRouter : IUncertaintyRouter
         }
 
         // High confidence - conservative approach as safety net
-        return await Task.FromResult(FallbackStrategy.UseConservativeApproach);
+        return await Task.FromResult(FallbackStrategy.UseConservativeApproach).ConfigureAwait(false);
     }
 
     private static double CalculateRiskLevel(string context, string proposedAction)

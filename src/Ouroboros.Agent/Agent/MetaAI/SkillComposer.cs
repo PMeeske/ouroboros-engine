@@ -87,10 +87,10 @@ public sealed class SkillComposer : ISkillComposer
             // Register the composite skill
             _skills.RegisterSkill(compositeSkill.ToAgentSkill());
 
-            return await Task.FromResult(Result<Skill, string>.Success(compositeSkill));
+            return await Task.FromResult(Result<Skill, string>.Success(compositeSkill)).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Skill, string>.Failure($"Skill composition failed: {ex.Message}");
         }
@@ -114,7 +114,7 @@ public sealed class SkillComposer : ISkillComposer
                 MaxResults: 100,
                 MinSimilarity: 0.0);
 
-            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
             List<Experience> experiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
 
             // Analyze which skills are used together
@@ -144,8 +144,7 @@ public sealed class SkillComposer : ISkillComposer
                 suggestions.Add((skills, score));
             }
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Return empty suggestions on error
         }
 

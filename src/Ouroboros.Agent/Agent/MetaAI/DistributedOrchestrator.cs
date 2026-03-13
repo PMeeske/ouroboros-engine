@@ -86,7 +86,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
                 try
                 {
                     // Simulate step execution (in real implementation, would delegate to actual agent)
-                    StepResult result = await ExecuteStepOnAgentAsync(assignment, ct);
+                    StepResult result = await ExecuteStepOnAgentAsync(assignment, ct).ConfigureAwait(false);
 
                     // Update assignment status
                     _assignments[assignment.TaskId] = assignment with
@@ -103,7 +103,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
                 }
             });
 
-            stepResults.AddRange(await Task.WhenAll(tasks));
+            stepResults.AddRange(await Task.WhenAll(tasks).ConfigureAwait(false));
 
             overallSuccess = stepResults.All(r => r.Success);
             sw.Stop();
@@ -125,7 +125,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
             return Result<PlanExecutionResult, string>.Success(execution);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<PlanExecutionResult, string>.Failure($"Distributed execution failed: {ex.Message}");
         }
@@ -217,7 +217,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
 
             // In real implementation, this would delegate to the actual agent
             // For now, simulate execution
-            await Task.Delay(100, ct); // Simulate work
+            await Task.Delay(100, ct).ConfigureAwait(false); // Simulate work
 
             sw.Stop();
 
@@ -234,7 +234,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
                 });
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
             return new StepResult(

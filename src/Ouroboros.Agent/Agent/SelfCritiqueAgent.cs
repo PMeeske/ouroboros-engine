@@ -72,7 +72,7 @@ public sealed class SelfCritiqueAgent
             Result<PipelineBranch, string> draftResult = await ExecuteWithTimeoutAsync(
                 () => ReasoningArrows.SafeDraftArrow(_llm, _tools, _embed, topic, query, k)(branch),
                 _iterationTimeout,
-                ct);
+                ct).ConfigureAwait(false);
 
             if (!draftResult.IsSuccess)
             {
@@ -100,7 +100,7 @@ public sealed class SelfCritiqueAgent
                 Result<PipelineBranch, string> critiqueResult = await ExecuteWithTimeoutAsync(
                     () => ReasoningArrows.SafeCritiqueArrow(_llm, _tools, _embed, topic, query, k)(currentBranch),
                     _iterationTimeout,
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 if (!critiqueResult.IsSuccess)
                 {
@@ -124,7 +124,7 @@ public sealed class SelfCritiqueAgent
                 Result<PipelineBranch, string> improveResult = await ExecuteWithTimeoutAsync(
                     () => ReasoningArrows.SafeImproveArrow(_llm, _tools, _embed, topic, query, k)(currentBranch),
                     _iterationTimeout,
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 if (!improveResult.IsSuccess)
                 {
@@ -159,7 +159,7 @@ public sealed class SelfCritiqueAgent
             return Result<SelfCritiqueResult, string>.Success(result);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<SelfCritiqueResult, string>.Failure($"Self-critique failed: {ex.Message}");
         }

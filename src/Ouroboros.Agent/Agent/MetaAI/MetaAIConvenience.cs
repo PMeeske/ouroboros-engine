@@ -28,7 +28,7 @@ public static class MetaAIConvenience
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IMetaAIPlannerOrchestrator, string>.Failure($"Failed to create simple orchestrator: {ex.Message}");
         }
@@ -59,7 +59,7 @@ public static class MetaAIConvenience
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IMetaAIPlannerOrchestrator, string>.Failure($"Failed to create standard orchestrator: {ex.Message}");
         }
@@ -88,7 +88,7 @@ public static class MetaAIConvenience
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IMetaAIPlannerOrchestrator, string>.Failure($"Failed to create advanced orchestrator: {ex.Message}");
         }
@@ -104,12 +104,12 @@ public static class MetaAIConvenience
         Dictionary<string, object>? context = null)
     {
         // Plan
-        Result<Plan, string> planResult = await orchestrator.PlanAsync(question, context);
+        Result<Plan, string> planResult = await orchestrator.PlanAsync(question, context).ConfigureAwait(false);
         if (!planResult.IsSuccess)
             return Result<string, string>.Failure(planResult.Error);
 
         // Execute
-        Result<PlanExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value);
+        Result<PlanExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value).ConfigureAwait(false);
         if (!execResult.IsSuccess)
             return Result<string, string>.Failure(execResult.Error);
 
@@ -128,17 +128,17 @@ public static class MetaAIConvenience
         Dictionary<string, object> context = new Dictionary<string, object> { ["text"] = text };
 
         // Plan
-        Result<Plan, string> planResult = await orchestrator.PlanAsync(analysisGoal, context);
+        Result<Plan, string> planResult = await orchestrator.PlanAsync(analysisGoal, context).ConfigureAwait(false);
         if (!planResult.IsSuccess)
             return Result<(string, double), string>.Failure(planResult.Error);
 
         // Execute
-        Result<PlanExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value);
+        Result<PlanExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value).ConfigureAwait(false);
         if (!execResult.IsSuccess)
             return Result<(string, double), string>.Failure(execResult.Error);
 
         // Verify
-        Result<PlanVerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execResult.Value);
+        Result<PlanVerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execResult.Value).ConfigureAwait(false);
         if (!verifyResult.IsSuccess)
             return Result<(string, double), string>.Failure(verifyResult.Error);
 
@@ -163,7 +163,7 @@ public static class MetaAIConvenience
             ["description"] = description
         };
 
-        return await orchestrator.AskQuestion(goal, context);
+        return await orchestrator.AskQuestion(goal, context).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -176,17 +176,17 @@ public static class MetaAIConvenience
         bool autoLearn = true)
     {
         // Plan
-        Result<Plan, string> planResult = await orchestrator.PlanAsync(goal, context);
+        Result<Plan, string> planResult = await orchestrator.PlanAsync(goal, context).ConfigureAwait(false);
         if (!planResult.IsSuccess)
             return Result<PlanVerificationResult, string>.Failure(planResult.Error);
 
         // Execute
-        Result<PlanExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value);
+        Result<PlanExecutionResult, string> execResult = await orchestrator.ExecuteAsync(planResult.Value).ConfigureAwait(false);
         if (!execResult.IsSuccess)
             return Result<PlanVerificationResult, string>.Failure(execResult.Error);
 
         // Verify
-        Result<PlanVerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execResult.Value);
+        Result<PlanVerificationResult, string> verifyResult = await orchestrator.VerifyAsync(execResult.Value).ConfigureAwait(false);
         if (!verifyResult.IsSuccess)
             return Result<PlanVerificationResult, string>.Failure(verifyResult.Error);
 
@@ -211,7 +211,7 @@ public static class MetaAIConvenience
 
         foreach (string task in tasks)
         {
-            Result<string, string> result = await orchestrator.AskQuestion(task, sharedContext);
+            Result<string, string> result = await orchestrator.AskQuestion(task, sharedContext).ConfigureAwait(false);
             results.Add(result);
         }
 
@@ -239,7 +239,7 @@ public static class MetaAIConvenience
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IMetaAIPlannerOrchestrator, string>.Failure($"Failed to create research assistant: {ex.Message}");
         }
@@ -264,7 +264,7 @@ public static class MetaAIConvenience
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IMetaAIPlannerOrchestrator, string>.Failure($"Failed to create code assistant: {ex.Message}");
         }
@@ -290,7 +290,7 @@ public static class MetaAIConvenience
             return Result<IMetaAIPlannerOrchestrator, string>.Success(orchestrator);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IMetaAIPlannerOrchestrator, string>.Failure($"Failed to create chat assistant: {ex.Message}");
         }

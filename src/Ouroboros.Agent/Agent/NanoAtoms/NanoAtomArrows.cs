@@ -38,7 +38,7 @@ public static class NanoAtomArrows
             }
 
             var chain = new NanoAtomChain(nanoModel, config);
-            var result = await chain.ExecuteAsync(prompt);
+            var result = await chain.ExecuteAsync(prompt).ConfigureAwait(false);
 
             if (result.IsSuccess)
             {
@@ -64,7 +64,7 @@ public static class NanoAtomArrows
         return async fragment =>
         {
             using var atom = new NanoOuroborosAtom(nanoModel, config);
-            var result = await atom.ProcessAsync(fragment);
+            var result = await atom.ProcessAsync(fragment).ConfigureAwait(false);
 
             if (result.IsSuccess)
             {
@@ -98,7 +98,7 @@ public static class NanoAtomArrows
             var consolidator = new ThoughtConsolidator(config, nanoModel);
             consolidator.AddDigests(digests);
 
-            var result = await consolidator.ConsolidateAsync(streamCount: 1);
+            var result = await consolidator.ConsolidateAsync(streamCount: 1).ConfigureAwait(false);
 
             if (result.IsSuccess)
             {
@@ -133,11 +133,11 @@ public static class NanoAtomArrows
         {
             try
             {
-                var result = await NanoReasoningArrow(nanoModel, config)(branch);
+                var result = await NanoReasoningArrow(nanoModel, config)(branch).ConfigureAwait(false);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Nano reasoning failed: {ex.Message}");
             }

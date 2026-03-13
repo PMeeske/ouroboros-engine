@@ -158,9 +158,18 @@ public sealed class MetaAIBuilder
         IUncertaintyRouter router;
         if (_router == null)
         {
-            // Create a basic orchestrator for routing
-            SmartModelOrchestrator basicOrchestrator = new SmartModelOrchestrator(tools, "default");
-            router = new UncertaintyRouter(basicOrchestrator, _confidenceThreshold);
+            // Create a basic orchestrator for routing — ownership transfers to router
+            SmartModelOrchestrator? basicOrchestrator = null;
+            try
+            {
+                basicOrchestrator = new SmartModelOrchestrator(tools, "default");
+                router = new UncertaintyRouter(basicOrchestrator, _confidenceThreshold);
+                basicOrchestrator = null; // Ownership transferred
+            }
+            finally
+            {
+                basicOrchestrator?.Dispose();
+            }
         }
         else
         {

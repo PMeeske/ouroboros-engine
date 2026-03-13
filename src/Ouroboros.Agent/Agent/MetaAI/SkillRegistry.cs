@@ -94,12 +94,12 @@ public sealed class SkillRegistry : ISkillRegistry
             if (_embedding != null && (tags?.Count > 0 || !string.IsNullOrWhiteSpace(category)))
             {
                 string query = category ?? string.Join(" ", tags ?? Array.Empty<string>());
-                float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct);
+                float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct).ConfigureAwait(false);
 
                 var skillScores = new List<(AgentSkill skill, double score)>();
                 foreach (var skill in filtered)
                 {
-                    float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description, ct);
+                    float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description, ct).ConfigureAwait(false);
                     double similarity = CosineSimilarity(queryEmbedding, skillEmbedding);
                     skillScores.Add((skill, similarity));
                 }
@@ -122,7 +122,7 @@ public sealed class SkillRegistry : ISkillRegistry
             return Result<IReadOnlyList<AgentSkill>, string>.Success(filtered);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) // Intentional: embedding operations across providers
+        catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: embedding operations across providers
         {
             return Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to find skills: {ex.Message}");
         }
@@ -302,15 +302,14 @@ public sealed class SkillRegistry : ISkillRegistry
             // Extract tags from goal
             var tags = ExtractTagsFromGoal(goal);
             
-            var result = await FindSkillsAsync(null, tags, ct);
+            var result = await FindSkillsAsync(null, tags, ct).ConfigureAwait(false);
             if (!result.IsSuccess)
                 return new List<Skill>();
 
                         // Convert AgentSkill to Skill using extension method
             return result.Value.Select(s => s.ToSkill()).ToList();
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return new List<Skill>();
         }
     }

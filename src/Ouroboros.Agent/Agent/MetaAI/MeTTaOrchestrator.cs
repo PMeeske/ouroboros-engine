@@ -128,24 +128,24 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
                         // Get past experiences and skills
             MemoryQuery query = MemoryQueryExtensions.ForGoal(goal, context, maxResults: 5, minSimilarity: 0.7);
-            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
             List<Experience> pastExperiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
-            List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context);
+            List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context).ConfigureAwait(false);
 
             // Generate initial plan using LLM
             string planPrompt = BuildPlanPrompt(goal, context, pastExperiences, matchingSkills);
-            string planText = await _llm.GenerateTextAsync(planPrompt, ct);
+            string planText = await _llm.GenerateTextAsync(planPrompt, ct).ConfigureAwait(false);
             Plan plan = ParsePlan(planText, goal);
 
             // Translate plan to MeTTa representation
-            Result<Unit, string> translationResult = await _representation.TranslatePlanAsync(plan, ct);
+            Result<Unit, string> translationResult = await _representation.TranslatePlanAsync(plan, ct).ConfigureAwait(false);
             if (translationResult.IsFailure)
             {
                 Trace.TraceWarning("Failed to translate plan to MeTTa: {0}", translationResult.Error);
             }
 
             // Translate tools to MeTTa
-            Result<Unit, string> toolTranslation = await _representation.TranslateToolsAsync(_tools, ct);
+            Result<Unit, string> toolTranslation = await _representation.TranslateToolsAsync(_tools, ct).ConfigureAwait(false);
             if (toolTranslation.IsFailure)
             {
                 Trace.TraceWarning("Failed to translate tools to MeTTa: {0}", toolTranslation.Error);
@@ -170,7 +170,7 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             return Result<Plan, string>.Success(plan);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             RecordMetric("planner", 1.0, false);
             return Result<Plan, string>.Failure($"Planning failed: {ex.Message}");
@@ -210,7 +210,7 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                         $"step_{i - 1}",
                         context,
                         ct
-                    );
+                    ).ConfigureAwait(false);
 
                     if (nextNodes.IsSuccess)
                     {
@@ -220,7 +220,7 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 }
 
                 // Execute the step
-                StepResult stepResult = await ExecuteStepAsync(step, ct);
+                StepResult stepResult = await ExecuteStepAsync(step, ct).ConfigureAwait(false);
                 stepResults.Add(stepResult);
 
                 // Update MeTTa with execution results
@@ -233,7 +233,7 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                     sw.Elapsed
                 );
 
-                await _representation.TranslateExecutionStateAsync(execResult, ct);
+                await _representation.TranslateExecutionStateAsync(execResult, ct).ConfigureAwait(false);
 
                 if (!stepResult.Success && !string.IsNullOrEmpty(stepResult.Error))
                 {
@@ -251,7 +251,7 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
                 new PlanExecutionResult(plan, stepResults, true, finalOutput, metadata, sw.Elapsed));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             RecordMetric("executor", sw.ElapsedMilliseconds, false);
             return Result<PlanExecutionResult, string>.Failure($"Execution failed: {ex.Message}");
@@ -271,14 +271,14 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
 
             // Build verification prompt
             string verifyPrompt = BuildVerificationPrompt(execution);
-            string verificationText = await _llm.GenerateTextAsync(verifyPrompt, ct);
+            string verificationText = await _llm.GenerateTextAsync(verifyPrompt, ct).ConfigureAwait(false);
 
             // Parse verification result
             PlanVerificationResult verification = ParseVerification(execution, verificationText);
 
             // Use MeTTa for symbolic plan verification if available
             string planMetta = FormatPlanForMeTTa(execution.Plan);
-            Result<bool, string> mettaVerification = await _mettaEngine.VerifyPlanAsync(planMetta, ct);
+            Result<bool, string> mettaVerification = await _mettaEngine.VerifyPlanAsync(planMetta, ct).ConfigureAwait(false);
 
             if (mettaVerification.IsSuccess)
             {
@@ -296,7 +296,7 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
             return Result<PlanVerificationResult, string>.Success(verification);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             RecordMetric("verifier", 1.0, false);
             return Result<PlanVerificationResult, string>.Failure($"Verification failed: {ex.Message}");

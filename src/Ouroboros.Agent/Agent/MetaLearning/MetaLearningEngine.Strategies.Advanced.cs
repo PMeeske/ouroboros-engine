@@ -37,7 +37,7 @@ public partial class MetaLearningEngine
 
                 foreach (var example in task.TrainingExamples)
                 {
-                    var embedding = await _embeddingModel.CreateEmbeddingsAsync(example.Input, ct);
+                    var embedding = await _embeddingModel.CreateEmbeddingsAsync(example.Input, ct).ConfigureAwait(false);
                     var label = example.Output;
 
                     if (!prototypes.ContainsKey(label))
@@ -62,7 +62,7 @@ public partial class MetaLearningEngine
                     }
                 }
 
-                var queryGradients = await baseModel.ComputeGradientsAsync(task.ValidationExamples, ct);
+                var queryGradients = await baseModel.ComputeGradientsAsync(task.ValidationExamples, ct).ConfigureAwait(false);
 
                 foreach (var (key, value) in queryGradients)
                 {
@@ -85,10 +85,10 @@ public partial class MetaLearningEngine
             }
 
             AverageGradients(metaGradients, config.TaskBatchSize);
-            await baseModel.UpdateParametersAsync(metaGradients, config.OuterLearningRate, ct);
+            await baseModel.UpdateParametersAsync(metaGradients, config.OuterLearningRate, ct).ConfigureAwait(false);
         }
 
-        var finalParams = await baseModel.GetParametersAsync(ct);
+        var finalParams = await baseModel.GetParametersAsync(ct).ConfigureAwait(false);
         finalParams["algorithm"] = "ProtoNet";
         return MetaModel.Create(baseModel, config, finalParams);
     }
@@ -104,7 +104,7 @@ public partial class MetaLearningEngine
         MetaLearningConfig config,
         CancellationToken ct)
     {
-        var metaParameters = await baseModel.GetParametersAsync(ct);
+        var metaParameters = await baseModel.GetParametersAsync(ct).ConfigureAwait(false);
 
         var learningRates = new Dictionary<string, object>();
         foreach (var (key, value) in metaParameters)
@@ -130,11 +130,11 @@ public partial class MetaLearningEngine
 
             foreach (var task in taskBatch)
             {
-                var taskModel = await baseModel.CloneAsync(ct);
+                var taskModel = await baseModel.CloneAsync(ct).ConfigureAwait(false);
 
                 for (var innerStep = 0; innerStep < config.InnerSteps; innerStep++)
                 {
-                    var gradients = await taskModel.ComputeGradientsAsync(task.TrainingExamples, ct);
+                    var gradients = await taskModel.ComputeGradientsAsync(task.TrainingExamples, ct).ConfigureAwait(false);
 
                     var scaledGradients = new Dictionary<string, object>();
                     foreach (var (key, grad) in gradients)
@@ -160,10 +160,10 @@ public partial class MetaLearningEngine
                         }
                     }
 
-                    await taskModel.UpdateParametersAsync(scaledGradients, 1.0, ct);
+                    await taskModel.UpdateParametersAsync(scaledGradients, 1.0, ct).ConfigureAwait(false);
                 }
 
-                var metaGrad = await taskModel.ComputeGradientsAsync(task.ValidationExamples, ct);
+                var metaGrad = await taskModel.ComputeGradientsAsync(task.ValidationExamples, ct).ConfigureAwait(false);
 
                 foreach (var (key, value) in metaGrad)
                 {
@@ -186,7 +186,7 @@ public partial class MetaLearningEngine
             }
 
             AverageGradients(metaGradients, config.TaskBatchSize);
-            await baseModel.UpdateParametersAsync(metaGradients, config.OuterLearningRate, ct);
+            await baseModel.UpdateParametersAsync(metaGradients, config.OuterLearningRate, ct).ConfigureAwait(false);
 
             foreach (var (key, grad) in metaGradients)
             {
@@ -209,7 +209,7 @@ public partial class MetaLearningEngine
             }
         }
 
-        var finalParams = await baseModel.GetParametersAsync(ct);
+        var finalParams = await baseModel.GetParametersAsync(ct).ConfigureAwait(false);
         foreach (var (key, value) in learningRates)
         {
             finalParams[key] = value;
@@ -231,7 +231,7 @@ public partial class MetaLearningEngine
         MetaLearningConfig config,
         CancellationToken ct)
     {
-        var modelParams = await baseModel.GetParametersAsync(ct);
+        var modelParams = await baseModel.GetParametersAsync(ct).ConfigureAwait(false);
 
         int latentDim = 16;
         var encoderWeights = InitializeLatentWeights(modelParams, latentDim);
@@ -251,9 +251,9 @@ public partial class MetaLearningEngine
                 for (var innerStep = 0; innerStep < config.InnerSteps; innerStep++)
                 {
                     var decodedParams = DecodeFromLatent(latentCode, decoderWeights, modelParams);
-                    await baseModel.SetParametersAsync(decodedParams, ct);
+                    await baseModel.SetParametersAsync(decodedParams, ct).ConfigureAwait(false);
 
-                    var paramGradients = await baseModel.ComputeGradientsAsync(task.TrainingExamples, ct);
+                    var paramGradients = await baseModel.ComputeGradientsAsync(task.TrainingExamples, ct).ConfigureAwait(false);
                     var latentGradients = ProjectToLatent(paramGradients, encoderWeights, latentDim);
 
                     for (var i = 0; i < latentCode.Length; i++)
@@ -263,9 +263,9 @@ public partial class MetaLearningEngine
                 }
 
                 var adaptedParams = DecodeFromLatent(latentCode, decoderWeights, modelParams);
-                await baseModel.SetParametersAsync(adaptedParams, ct);
+                await baseModel.SetParametersAsync(adaptedParams, ct).ConfigureAwait(false);
 
-                var metaGrad = await baseModel.ComputeGradientsAsync(task.ValidationExamples, ct);
+                var metaGrad = await baseModel.ComputeGradientsAsync(task.ValidationExamples, ct).ConfigureAwait(false);
 
                 foreach (var (key, value) in metaGrad)
                 {
@@ -288,12 +288,12 @@ public partial class MetaLearningEngine
             }
 
             AverageGradients(metaGradients, config.TaskBatchSize);
-            await baseModel.UpdateParametersAsync(metaGradients, config.OuterLearningRate, ct);
-            modelParams = await baseModel.GetParametersAsync(ct);
+            await baseModel.UpdateParametersAsync(metaGradients, config.OuterLearningRate, ct).ConfigureAwait(false);
+            modelParams = await baseModel.GetParametersAsync(ct).ConfigureAwait(false);
             UpdateLatentWeights(encoderWeights, metaGradients, config.OuterLearningRate * 0.1, latentDim);
         }
 
-        var finalParams = await baseModel.GetParametersAsync(ct);
+        var finalParams = await baseModel.GetParametersAsync(ct).ConfigureAwait(false);
         finalParams["algorithm"] = "LEO";
         finalParams["latent_dim"] = latentDim;
         return MetaModel.Create(baseModel, config, finalParams);

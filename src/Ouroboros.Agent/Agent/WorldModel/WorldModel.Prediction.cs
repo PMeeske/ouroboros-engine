@@ -177,7 +177,7 @@ public sealed partial class WorldModel
 
             foreach (var action in candidateActions.Take(beamWidth))
             {
-                var predictResult = await PredictAsync(currentState, action, ct);
+                var predictResult = await PredictAsync(currentState, action, ct).ConfigureAwait(false);
 
                 if (predictResult.IsSuccess)
                 {

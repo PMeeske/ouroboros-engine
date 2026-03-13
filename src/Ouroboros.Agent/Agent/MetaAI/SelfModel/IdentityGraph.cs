@@ -41,7 +41,7 @@ public sealed class IdentityGraph : IIdentityGraph
 
     public async Task<AgentIdentityState> GetStateAsync(CancellationToken ct = default)
     {
-        List<AgentCapability> capabilities = await _capabilityRegistry.GetCapabilitiesAsync(ct);
+        List<AgentCapability> capabilities = await _capabilityRegistry.GetCapabilitiesAsync(ct).ConfigureAwait(false);
         List<AgentResource> resources = _resources.Values.ToList();
         List<AgentCommitment> commitments = _commitments.Values.OrderByDescending(c => c.Priority).ToList();
         AgentPerformance performance = GetPerformanceSummary(TimeSpan.FromDays(30));
@@ -188,7 +188,7 @@ public sealed class IdentityGraph : IIdentityGraph
         if (string.IsNullOrWhiteSpace(_persistencePath))
             return;
 
-        AgentIdentityState state = await GetStateAsync(ct);
+        AgentIdentityState state = await GetStateAsync(ct).ConfigureAwait(false);
         string json = JsonSerializer.Serialize(state, JsonDefaults.Indented);
         
         string directory = Path.GetDirectoryName(_persistencePath)!;
@@ -197,7 +197,7 @@ public sealed class IdentityGraph : IIdentityGraph
             Directory.CreateDirectory(directory);
         }
         
-        await File.WriteAllTextAsync(_persistencePath, json, ct);
+        await File.WriteAllTextAsync(_persistencePath, json, ct).ConfigureAwait(false);
     }
 
     public async Task LoadStateAsync(CancellationToken ct = default)
@@ -205,7 +205,7 @@ public sealed class IdentityGraph : IIdentityGraph
         if (string.IsNullOrWhiteSpace(_persistencePath) || !File.Exists(_persistencePath))
             return;
 
-        string json = await File.ReadAllTextAsync(_persistencePath, ct);
+        string json = await File.ReadAllTextAsync(_persistencePath, ct).ConfigureAwait(false);
         AgentIdentityState? state = JsonSerializer.Deserialize<AgentIdentityState>(json);
 
         if (state == null)

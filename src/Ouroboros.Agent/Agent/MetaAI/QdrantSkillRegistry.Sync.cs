@@ -18,7 +18,7 @@ public sealed partial class QdrantSkillRegistry
     {
         try
         {
-            var collectionExists = await _client.CollectionExistsAsync(_config.CollectionName, ct);
+            var collectionExists = await _client.CollectionExistsAsync(_config.CollectionName, ct).ConfigureAwait(false);
             if (!collectionExists)
             {
                 // Detect vector size from embedding model if available
@@ -27,13 +27,12 @@ public sealed partial class QdrantSkillRegistry
                 {
                     try
                     {
-                        var sampleEmbedding = await _embedding.CreateEmbeddingsAsync("sample text for dimension detection", ct);
+                        var sampleEmbedding = await _embedding.CreateEmbeddingsAsync("sample text for dimension detection", ct).ConfigureAwait(false);
                         vectorSize = sampleEmbedding.Length;
                         _detectedVectorSize = vectorSize;
                         Trace.TraceInformation("[qdrant] Detected embedding dimension: {0}", vectorSize);
                     }
-                    catch
-                    {
+                    catch (Exception ex) when (ex is not OperationCanceledException) {
                         // Use default if detection fails
                     }
                 }
@@ -45,13 +44,13 @@ public sealed partial class QdrantSkillRegistry
                         Size = (ulong)vectorSize,
                         Distance = Distance.Cosine
                     },
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
 
                 Trace.TraceInformation("[qdrant] Created skills collection: {0}", _config.CollectionName);
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Trace.TraceWarning("[WARN] Failed to ensure Qdrant collection: {0}", ex.Message);
         }
@@ -59,7 +58,7 @@ public sealed partial class QdrantSkillRegistry
 
     private async Task SaveSkillToQdrantAsync(AgentSkill skill, CancellationToken ct = default)
     {
-        await _syncLock.WaitAsync(ct);
+        await _syncLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             // Create searchable text from skill
@@ -69,7 +68,7 @@ public sealed partial class QdrantSkillRegistry
             float[] embedding;
             if (_embedding != null)
             {
-                embedding = await _embedding.CreateEmbeddingsAsync(searchText, ct);
+                embedding = await _embedding.CreateEmbeddingsAsync(searchText, ct).ConfigureAwait(false);
             }
             else
             {
@@ -110,10 +109,10 @@ public sealed partial class QdrantSkillRegistry
                 }
             };
 
-            await _client.UpsertAsync(_config.CollectionName, new[] { point }, cancellationToken: ct);
+            await _client.UpsertAsync(_config.CollectionName, new[] { point }, cancellationToken: ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Trace.TraceWarning("[WARN] Failed to save skill '{0}' to Qdrant: {1}", skill.Name, ex.Message);
         }
@@ -127,7 +126,7 @@ public sealed partial class QdrantSkillRegistry
     {
         try
         {
-            var collectionExists = await _client.CollectionExistsAsync(_config.CollectionName, ct);
+            var collectionExists = await _client.CollectionExistsAsync(_config.CollectionName, ct).ConfigureAwait(false);
             if (!collectionExists)
             {
                 return;
@@ -138,7 +137,7 @@ public sealed partial class QdrantSkillRegistry
                 _config.CollectionName,
                 payloadSelector: true,
                 limit: 1000,
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             foreach (var point in scrollResult.Result)
             {
@@ -204,7 +203,7 @@ public sealed partial class QdrantSkillRegistry
                     }
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     Trace.TraceWarning("[WARN] Failed to deserialize skill from Qdrant: {0}", ex.Message);
                 }
@@ -216,7 +215,7 @@ public sealed partial class QdrantSkillRegistry
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Trace.TraceWarning("[WARN] Failed to load skills from Qdrant: {0}", ex.Message);
         }

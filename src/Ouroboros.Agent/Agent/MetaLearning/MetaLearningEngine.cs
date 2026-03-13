@@ -47,18 +47,18 @@ public partial class MetaLearningEngine : IMetaLearningEngine
 
             MetaModel? metaModel = config.Algorithm switch
             {
-                MetaAlgorithm.MAML => await MetaTrainMAMLAsync(baseModel, taskFamilies, config, ct),
-                MetaAlgorithm.Reptile => await MetaTrainReptileAsync(baseModel, taskFamilies, config, ct),
-                MetaAlgorithm.ProtoNet => await MetaTrainProtoNetAsync(baseModel, taskFamilies, config, ct),
-                MetaAlgorithm.MetaSGD => await MetaTrainMetaSGDAsync(baseModel, taskFamilies, config, ct),
-                MetaAlgorithm.LEO => await MetaTrainLEOAsync(baseModel, taskFamilies, config, ct),
+                MetaAlgorithm.MAML => await MetaTrainMAMLAsync(baseModel, taskFamilies, config, ct).ConfigureAwait(false),
+                MetaAlgorithm.Reptile => await MetaTrainReptileAsync(baseModel, taskFamilies, config, ct).ConfigureAwait(false),
+                MetaAlgorithm.ProtoNet => await MetaTrainProtoNetAsync(baseModel, taskFamilies, config, ct).ConfigureAwait(false),
+                MetaAlgorithm.MetaSGD => await MetaTrainMetaSGDAsync(baseModel, taskFamilies, config, ct).ConfigureAwait(false),
+                MetaAlgorithm.LEO => await MetaTrainLEOAsync(baseModel, taskFamilies, config, ct).ConfigureAwait(false),
                 _ => throw new ArgumentException($"Unknown meta-learning algorithm: {config.Algorithm}"),
             };
 
             return Result<MetaModel, string>.Success(metaModel);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<MetaModel, string>.Failure($"Meta-training failed: {ex.Message}");
         }
@@ -84,17 +84,17 @@ public partial class MetaLearningEngine : IMetaLearningEngine
             }
 
             var startTime = DateTime.UtcNow;
-            var adaptedModel = await metaModel.InnerModel.CloneAsync(ct);
+            var adaptedModel = await metaModel.InnerModel.CloneAsync(ct).ConfigureAwait(false);
 
             for (var step = 0; step < adaptationSteps; step++)
             {
                 ct.ThrowIfCancellationRequested();
-                var gradients = await adaptedModel.ComputeGradientsAsync(fewShotExamples, ct);
-                await adaptedModel.UpdateParametersAsync(gradients, metaModel.Config.InnerLearningRate, ct);
+                var gradients = await adaptedModel.ComputeGradientsAsync(fewShotExamples, ct).ConfigureAwait(false);
+                await adaptedModel.UpdateParametersAsync(gradients, metaModel.Config.InnerLearningRate, ct).ConfigureAwait(false);
             }
 
             var adaptationTime = DateTime.UtcNow - startTime;
-            var validationPerformance = await EvaluateModelAsync(adaptedModel, fewShotExamples, ct);
+            var validationPerformance = await EvaluateModelAsync(adaptedModel, fewShotExamples, ct).ConfigureAwait(false);
 
             var result = AdaptedModel.Create(
                 adaptedModel,
@@ -105,7 +105,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
             return Result<AdaptedModel, string>.Success(result);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<AdaptedModel, string>.Failure($"Adaptation failed: {ex.Message}");
         }
@@ -120,8 +120,8 @@ public partial class MetaLearningEngine : IMetaLearningEngine
     {
         try
         {
-            var embeddingA = await EmbedTaskAsync(taskA, metaModel, ct);
-            var embeddingB = await EmbedTaskAsync(taskB, metaModel, ct);
+            var embeddingA = await EmbedTaskAsync(taskA, metaModel, ct).ConfigureAwait(false);
+            var embeddingB = await EmbedTaskAsync(taskB, metaModel, ct).ConfigureAwait(false);
 
             if (embeddingA.IsFailure || embeddingB.IsFailure)
             {
@@ -132,7 +132,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
             return Result<double, string>.Success(similarity);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<double, string>.Failure($"Task similarity computation failed: {ex.Message}");
         }
@@ -147,7 +147,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
         try
         {
             var taskDescription = $"{task.Name} ({task.Domain}): {task.Description ?? "No description"}";
-            var embeddingVector = await _embeddingModel.CreateEmbeddingsAsync(taskDescription, ct);
+            var embeddingVector = await _embeddingModel.CreateEmbeddingsAsync(taskDescription, ct).ConfigureAwait(false);
 
             var characteristics = new Dictionary<string, double>
             {
@@ -162,7 +162,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
             return Result<TaskEmbedding, string>.Success(embedding);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<TaskEmbedding, string>.Failure($"Task embedding failed: {ex.Message}");
         }
@@ -281,7 +281,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
         var correctCount = 0;
         foreach (var example in examples)
         {
-            var prediction = await model.PredictAsync(example.Input, ct);
+            var prediction = await model.PredictAsync(example.Input, ct).ConfigureAwait(false);
 
             if (prediction == example.Output)
             {

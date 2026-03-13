@@ -82,12 +82,12 @@ public sealed partial class SafetyGuard : ISafetyGuard
             }
         }
 
-        double riskScore = await AssessRiskAsync(actionName, parameters, ct);
+        double riskScore = await AssessRiskAsync(actionName, parameters, ct).ConfigureAwait(false);
 
         // Step 2: Query MeTTa symbolic reasoning if engine is available
         if (_mettaEngine != null)
         {
-            Form mettaResult = await QueryMeTTaSafetyAsync(actionName, ct);
+            Form mettaResult = await QueryMeTTaSafetyAsync(actionName, ct).ConfigureAwait(false);
 
             // Map Form results to safety decisions
             return mettaResult.Match(
@@ -144,7 +144,7 @@ public sealed partial class SafetyGuard : ISafetyGuard
             ["requiredLevel"] = permissionLevel
         };
 
-        return await CheckActionSafetyAsync(action, parameters, null, ct);
+        return await CheckActionSafetyAsync(action, parameters, null, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -190,7 +190,7 @@ public sealed partial class SafetyGuard : ISafetyGuard
             return Task.FromResult(new SandboxResult(true, sandboxedStep, restrictions, null));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Task.FromResult(new SandboxResult(false, null, Array.Empty<string>(), ex.Message));
         }
@@ -293,7 +293,7 @@ public sealed partial class SafetyGuard : ISafetyGuard
 
         IReadOnlyDictionary<string, object> readOnlyParams = parameters;
         SafetyCheckResult result = Task.Run(async () =>
-            await CheckActionSafetyAsync(operation, readOnlyParams, null, CancellationToken.None))
+            await CheckActionSafetyAsync(operation, readOnlyParams, null, CancellationToken.None).ConfigureAwait(false))
             .GetAwaiter()
             .GetResult();
 

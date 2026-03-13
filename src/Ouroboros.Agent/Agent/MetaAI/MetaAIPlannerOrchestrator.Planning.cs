@@ -23,15 +23,15 @@ public sealed partial class MetaAIPlannerOrchestrator
         {
                         // Check if we have relevant past experiences
             MemoryQuery query = MemoryQueryExtensions.ForGoal(goal, context, maxResults: 5, minSimilarity: 0.7);
-            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
             List<Experience> pastExperiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
 
             // Find matching skills
-            List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context);
+            List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context).ConfigureAwait(false);
 
             // Generate plan using LLM with past experience and skills
             string planPrompt = BuildPlanPrompt(goal, context, pastExperiences, matchingSkills);
-            string planText = await _llm.GenerateTextAsync(planPrompt, ct);
+            string planText = await _llm.GenerateTextAsync(planPrompt, ct).ConfigureAwait(false);
 
             // Parse plan from LLM response
             Plan plan = ParsePlan(planText, goal);
@@ -66,7 +66,7 @@ public sealed partial class MetaAIPlannerOrchestrator
                 }
             };
 
-            var ethicsResult = await _ethics.EvaluatePlanAsync(planContext, ct);
+            var ethicsResult = await _ethics.EvaluatePlanAsync(planContext, ct).ConfigureAwait(false);
 
             if (ethicsResult.IsFailure)
             {
@@ -96,7 +96,7 @@ public sealed partial class MetaAIPlannerOrchestrator
                     }
                 };
 
-                var approvalResponse = await _approvalProvider.RequestApprovalAsync(approvalRequest, ct);
+                var approvalResponse = await _approvalProvider.RequestApprovalAsync(approvalRequest, ct).ConfigureAwait(false);
 
                 if (approvalResponse.Decision != HumanApprovalDecision.Approved)
                 {
@@ -125,7 +125,7 @@ public sealed partial class MetaAIPlannerOrchestrator
             return Result<Plan, string>.Success(plan);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             RecordMetric("planner", 1.0, false);
             return Result<Plan, string>.Failure($"Planning failed: {ex.Message}");
@@ -211,8 +211,7 @@ public sealed partial class MetaAIPlannerOrchestrator
                 {
                     currentParams = JsonSerializer.Deserialize<Dictionary<string, object>>(paramsJson) ?? new();
                 }
-                catch
-                {
+                catch (Exception ex) when (ex is not OperationCanceledException) {
                     currentParams = new Dictionary<string, object> { ["raw"] = paramsJson };
                 }
             }

@@ -43,7 +43,7 @@ public sealed class CompositeOrchestrator<TInput, TOutput> : OrchestratorBase<TI
             orchestrator.Configuration,
             async (input, context) =>
             {
-                var result = await orchestrator.ExecuteAsync(input, context);
+                var result = await orchestrator.ExecuteAsync(input, context).ConfigureAwait(false);
                 if (!result.Success)
                 {
                     throw new InvalidOperationException(result.ErrorMessage ?? "Orchestration failed");
@@ -77,8 +77,8 @@ public sealed class CompositeOrchestrator<TInput, TOutput> : OrchestratorBase<TI
             Configuration,
             async (input, context) =>
             {
-                var intermediateResult = await _executeFunc(input, context);
-                var finalResult = await next.ExecuteAsync(intermediateResult, context);
+                var intermediateResult = await _executeFunc(input, context).ConfigureAwait(false);
+                var finalResult = await next.ExecuteAsync(intermediateResult, context).ConfigureAwait(false);
                 if (!finalResult.Success)
                 {
                     throw new InvalidOperationException(finalResult.ErrorMessage ?? "Chained orchestration failed");
@@ -98,7 +98,7 @@ public sealed class CompositeOrchestrator<TInput, TOutput> : OrchestratorBase<TI
             Configuration,
             async (input, context) =>
             {
-                var intermediateResult = await _executeFunc(input, context);
+                var intermediateResult = await _executeFunc(input, context).ConfigureAwait(false);
                 return mapper(intermediateResult);
             });
     }
@@ -114,7 +114,7 @@ public sealed class CompositeOrchestrator<TInput, TOutput> : OrchestratorBase<TI
             Configuration,
             async (input, context) =>
             {
-                var result = await _executeFunc(input, context);
+                var result = await _executeFunc(input, context).ConfigureAwait(false);
                 sideEffect(result);
                 return result;
             });
@@ -123,6 +123,6 @@ public sealed class CompositeOrchestrator<TInput, TOutput> : OrchestratorBase<TI
     /// <inheritdoc/>
     protected override async Task<TOutput> ExecuteCoreAsync(TInput input, OrchestratorContext context)
     {
-        return await _executeFunc(input, context);
+        return await _executeFunc(input, context).ConfigureAwait(false);
     }
 }

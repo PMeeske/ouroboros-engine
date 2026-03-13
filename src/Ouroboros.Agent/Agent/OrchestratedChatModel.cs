@@ -35,13 +35,13 @@ public sealed class OrchestratedChatModel : Ouroboros.Abstractions.Core.IChatCom
         try
         {
             // Get orchestrator decision
-            Result<OrchestratorDecision, string> decision = await _orchestrator.SelectModelAsync(prompt, ct: ct);
+            Result<OrchestratorDecision, string> decision = await _orchestrator.SelectModelAsync(prompt, ct: ct).ConfigureAwait(false);
 
             return await decision.Match(
                 async selected =>
                 {
                     // Execute with selected model
-                    string result = await selected.SelectedModel.GenerateTextAsync(prompt, ct);
+                    string result = await selected.SelectedModel.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
                     // Track metrics
                     if (_trackMetrics)
@@ -55,10 +55,10 @@ public sealed class OrchestratedChatModel : Ouroboros.Abstractions.Core.IChatCom
 
                     return result;
                 },
-                error => Task.FromResult($"[orchestrator-error] {error}"));
+                error => Task.FromResult($"[orchestrator-error] {error}")).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             if (_trackMetrics)
             {
@@ -80,7 +80,7 @@ public sealed class OrchestratedChatModel : Ouroboros.Abstractions.Core.IChatCom
         try
         {
             // Get orchestrator decision
-            Result<OrchestratorDecision, string> decisionResult = await _orchestrator.SelectModelAsync(prompt, ct: ct);
+            Result<OrchestratorDecision, string> decisionResult = await _orchestrator.SelectModelAsync(prompt, ct: ct).ConfigureAwait(false);
 
             return await decisionResult.Match(
                 async decision =>
@@ -91,7 +91,7 @@ public sealed class OrchestratedChatModel : Ouroboros.Abstractions.Core.IChatCom
                         (ToolRegistry)decision.RecommendedTools);
 
                     // Execute with tools
-                    (string text, List<ToolExecution> tools) = await toolAwareModel.GenerateWithToolsAsync(prompt, ct);
+                    (string text, List<ToolExecution> tools) = await toolAwareModel.GenerateWithToolsAsync(prompt, ct).ConfigureAwait(false);
 
                     // Track metrics
                     if (_trackMetrics)
@@ -115,10 +115,10 @@ public sealed class OrchestratedChatModel : Ouroboros.Abstractions.Core.IChatCom
                     return (text, tools, (OrchestratorDecision?)decision);
                 },
                 error => Task.FromResult<(string, List<ToolExecution>, OrchestratorDecision?)>(
-                    ($"[orchestrator-error] {error}", new List<ToolExecution>(), null)));
+                    ($"[orchestrator-error] {error}", new List<ToolExecution>(), null))).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             if (_trackMetrics)
             {

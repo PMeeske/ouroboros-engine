@@ -34,19 +34,19 @@ public sealed class CachingModelOrchestrator : IModelOrchestrator
         var hash = InMemoryOrchestrationCache.GeneratePromptHash(prompt, context);
 
         // Check cache first
-        var cached = await _cache.GetCachedDecisionAsync(hash);
+        var cached = await _cache.GetCachedDecisionAsync(hash).ConfigureAwait(false);
         if (cached.HasValue)
         {
             return Result<OrchestratorDecision, string>.Success(cached.Value!);
         }
 
         // Cache miss - call inner orchestrator
-        var result = await _inner.SelectModelAsync(prompt, context, ct);
+        var result = await _inner.SelectModelAsync(prompt, context, ct).ConfigureAwait(false);
 
         // Cache successful results
         if (result.IsSuccess)
         {
-            await _cache.CacheDecisionAsync(hash, result.Value, _ttl);
+            await _cache.CacheDecisionAsync(hash, result.Value, _ttl).ConfigureAwait(false);
         }
 
         return result;

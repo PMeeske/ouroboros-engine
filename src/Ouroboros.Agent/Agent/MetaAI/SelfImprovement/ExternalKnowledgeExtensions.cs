@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Extension methods to integrate external knowledge into the emergence pipeline.
@@ -15,14 +15,14 @@ public static class ExternalKnowledgeExtensions
         CancellationToken ct = default)
     {
         // Fetch papers on the topic
-        var papersResult = await knowledgeSource.SearchPapersAsync(researchTopic, maxResults: 5, ct);
+        var papersResult = await knowledgeSource.SearchPapersAsync(researchTopic, maxResults: 5, ct).ConfigureAwait(false);
         if (!papersResult.IsSuccess)
         {
             return Result<Hypothesis, string>.Failure($"Failed to fetch research: {papersResult.Error}");
         }
 
         // Extract observations from papers
-        List<string> observations = await knowledgeSource.ExtractObservationsAsync(papersResult.Value, ct);
+        List<string> observations = await knowledgeSource.ExtractObservationsAsync(papersResult.Value, ct).ConfigureAwait(false);
 
         if (observations.Count == 0)
         {
@@ -30,7 +30,7 @@ public static class ExternalKnowledgeExtensions
         }
 
         // Use abductive reasoning to generate hypothesis
-        return await hypothesisEngine.AbductiveReasoningAsync(observations, ct);
+        return await hypothesisEngine.AbductiveReasoningAsync(observations, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -43,10 +43,10 @@ public static class ExternalKnowledgeExtensions
         CancellationToken ct = default)
     {
         // Get research-based opportunities
-        var researchOpportunities = await knowledgeSource.IdentifyResearchOpportunitiesAsync(domain, 5, ct);
+        var researchOpportunities = await knowledgeSource.IdentifyResearchOpportunitiesAsync(domain, 5, ct).ConfigureAwait(false);
 
         // Get existing curiosity-based opportunities
-        var curiosityOpportunities = await curiosityEngine.IdentifyExplorationOpportunitiesAsync(5, ct);
+        var curiosityOpportunities = await curiosityEngine.IdentifyExplorationOpportunitiesAsync(5, ct).ConfigureAwait(false);
 
         // Merge and deduplicate
         var allOpportunities = researchOpportunities

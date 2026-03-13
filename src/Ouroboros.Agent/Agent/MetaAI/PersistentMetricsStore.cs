@@ -52,7 +52,7 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
             _autoSaveTimer = new Timer(
                 async _ =>
                 {
-                    try { await SaveIfDirtyAsync(); }
+                    try { await SaveIfDirtyAsync().ConfigureAwait(false); }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
                         System.Diagnostics.Trace.TraceWarning($"Auto-save failed: {ex.Message}");
@@ -78,7 +78,7 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
         // Immediate save if auto-save disabled
         if (!_config.AutoSave)
         {
-            await SaveMetricsAsync(ct);
+            await SaveMetricsAsync(ct).ConfigureAwait(false);
         }
     }
 
@@ -114,7 +114,7 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
 
             if (!_config.AutoSave)
             {
-                await SaveMetricsAsync(ct);
+                await SaveMetricsAsync(ct).ConfigureAwait(false);
             }
 
             return true;
@@ -133,7 +133,7 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
         _metrics.Clear();
         _isDirty = true;
 
-        await SaveMetricsAsync(ct);
+        await SaveMetricsAsync(ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -172,7 +172,7 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
     {
         ThrowIfDisposed();
 
-        await _saveLock.WaitAsync(ct);
+        await _saveLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             var snapshot = new Dictionary<string, PerformanceMetrics>(_metrics);
@@ -183,7 +183,7 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
 
             string json = JsonSerializer.Serialize(wrapper, JsonOptions);
             var tempPath = _filePath + ".tmp";
-            await File.WriteAllTextAsync(tempPath, json, ct);
+            await File.WriteAllTextAsync(tempPath, json, ct).ConfigureAwait(false);
             File.Move(tempPath, _filePath, overwrite: true);
 
             _isDirty = false;
@@ -206,10 +206,10 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
             return;
         }
 
-        await _saveLock.WaitAsync(ct);
+        await _saveLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            string json = await File.ReadAllTextAsync(_filePath, ct);
+            string json = await File.ReadAllTextAsync(_filePath, ct).ConfigureAwait(false);
             var wrapper = JsonSerializer.Deserialize<MetricsFileWrapper>(json, JsonOptions);
 
             if (wrapper?.Metrics != null)
@@ -299,7 +299,7 @@ public sealed class PersistentMetricsStore : IMetricsStore, IDisposable
     {
         if (_isDirty && !_disposed)
         {
-            await SaveMetricsAsync();
+            await SaveMetricsAsync().ConfigureAwait(false);
         }
     }
 

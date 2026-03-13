@@ -185,7 +185,7 @@ public sealed partial class NetworkStateTracker : IDisposable, IAsyncDisposable
             reificationResult = result.Value;
         }
 
-        await OnBranchUpdatedAsync(branch, reificationResult.NodesCreated, ct);
+        await OnBranchUpdatedAsync(branch, reificationResult.NodesCreated, ct).ConfigureAwait(false);
         return Result<ReificationResult>.Success(reificationResult);
     }
 
@@ -272,7 +272,7 @@ public sealed partial class NetworkStateTracker : IDisposable, IAsyncDisposable
 
         if (nodesCreated > 0)
         {
-            await OnBranchUpdatedAsync(branch, nodesCreated, ct);
+            await OnBranchUpdatedAsync(branch, nodesCreated, ct).ConfigureAwait(false);
         }
 
         return Result<int>.Success(nodesCreated);
@@ -287,18 +287,17 @@ public sealed partial class NetworkStateTracker : IDisposable, IAsyncDisposable
         {
             if (_autoPersist && _qdrantStore != null)
             {
-                await PersistToQdrantAsync(ct);
+                await PersistToQdrantAsync(ct).ConfigureAwait(false);
             }
 
             if (_autoExportMeTTa && _mettaEngine != null)
             {
-                await ExportToMeTTaAsync(branch, ct);
+                await ExportToMeTTaAsync(branch, ct).ConfigureAwait(false);
             }
 
             BranchReified?.Invoke(this, new BranchReifiedEventArgs(branch.Name, nodesCreated));
         }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogWarning(ex, "Post-update error");
         }
@@ -316,7 +315,7 @@ public sealed partial class NetworkStateTracker : IDisposable, IAsyncDisposable
             return Result<DagSaveResult>.Failure("Qdrant store not configured. Call ConfigureQdrantPersistence first.");
         }
 
-        return await _qdrantStore.SaveDagAsync(_dag, ct);
+        return await _qdrantStore.SaveDagAsync(_dag, ct).ConfigureAwait(false);
     }
 
 }

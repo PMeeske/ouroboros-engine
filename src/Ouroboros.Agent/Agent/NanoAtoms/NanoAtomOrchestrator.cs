@@ -54,7 +54,7 @@ public sealed class NanoAtomOrchestrator
         OrchestratorContext context)
     {
         var chain = new NanoAtomChain(_model, _config);
-        var result = await chain.ExecuteAsync(input, context.CancellationToken);
+        var result = await chain.ExecuteAsync(input, context.CancellationToken).ConfigureAwait(false);
 
         if (result.IsSuccess)
         {
@@ -85,13 +85,13 @@ public sealed class NanoAtomOrchestrator
             $"NanoAtomOrchestrator_then_{next.Configuration.GetSetting<string>("name", "next")}",
             async (input, context) =>
             {
-                var myResult = await ExecuteAsync(input, context);
+                var myResult = await ExecuteAsync(input, context).ConfigureAwait(false);
                 if (!myResult.Success)
                 {
                     throw new InvalidOperationException(myResult.ErrorMessage ?? "NanoAtom orchestration failed");
                 }
 
-                var nextResult = await next.ExecuteAsync(myResult.Output!, context);
+                var nextResult = await next.ExecuteAsync(myResult.Output!, context).ConfigureAwait(false);
                 if (!nextResult.Success)
                 {
                     throw new InvalidOperationException(nextResult.ErrorMessage ?? "Chained orchestration failed");
@@ -112,7 +112,7 @@ public sealed class NanoAtomOrchestrator
             "NanoAtomOrchestrator_mapped",
             async (input, context) =>
             {
-                var result = await ExecuteAsync(input, context);
+                var result = await ExecuteAsync(input, context).ConfigureAwait(false);
                 if (!result.Success)
                 {
                     throw new InvalidOperationException(result.ErrorMessage ?? "NanoAtom orchestration failed");
@@ -133,7 +133,7 @@ public sealed class NanoAtomOrchestrator
             "NanoAtomOrchestrator_tapped",
             async (input, context) =>
             {
-                var result = await ExecuteAsync(input, context);
+                var result = await ExecuteAsync(input, context).ConfigureAwait(false);
                 if (!result.Success)
                 {
                     throw new InvalidOperationException(result.ErrorMessage ?? "NanoAtom orchestration failed");

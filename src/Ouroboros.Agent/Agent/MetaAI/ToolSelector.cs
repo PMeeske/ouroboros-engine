@@ -55,13 +55,13 @@ public sealed class ToolSelector
         try
         {
             // Call LLM for tool selection
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Parse the LLM response
             return ParseToolSelectionResponse(response);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // If LLM call fails, return null to allow fallback
             return null;

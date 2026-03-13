@@ -18,8 +18,8 @@ public sealed partial class PersistentNetworkStateProjector
     {
         try
         {
-            await EnsureCollectionWithDimensionAsync(_snapshotCollectionName, ct);
-            await EnsureCollectionWithDimensionAsync(_learningsCollectionName, ct);
+            await EnsureCollectionWithDimensionAsync(_snapshotCollectionName, ct).ConfigureAwait(false);
+            await EnsureCollectionWithDimensionAsync(_learningsCollectionName, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (Grpc.Core.RpcException ex)
@@ -32,20 +32,20 @@ public sealed partial class PersistentNetworkStateProjector
     {
         var vectorParams = new VectorParams { Size = (ulong)_detectedVectorDimension, Distance = Distance.Cosine };
 
-        if (await _qdrantClient.CollectionExistsAsync(collectionName, ct))
+        if (await _qdrantClient.CollectionExistsAsync(collectionName, ct).ConfigureAwait(false))
         {
-            var info = await _qdrantClient.GetCollectionInfoAsync(collectionName, ct);
+            var info = await _qdrantClient.GetCollectionInfoAsync(collectionName, ct).ConfigureAwait(false);
             var currentDim = info.Config?.Params?.VectorsConfig?.Params?.Size;
             if (currentDim.HasValue && currentDim.Value != (ulong)_detectedVectorDimension)
             {
                 _logger.LogInformation("Dimension mismatch in {CollectionName} ({CurrentDim} vs {ExpectedDim}), recreating...", collectionName, currentDim, _detectedVectorDimension);
-                await _qdrantClient.DeleteCollectionAsync(collectionName, cancellationToken: ct);
-                await _qdrantClient.CreateCollectionAsync(collectionName, vectorParams, cancellationToken: ct);
+                await _qdrantClient.DeleteCollectionAsync(collectionName, cancellationToken: ct).ConfigureAwait(false);
+                await _qdrantClient.CreateCollectionAsync(collectionName, vectorParams, cancellationToken: ct).ConfigureAwait(false);
             }
         }
         else
         {
-            await _qdrantClient.CreateCollectionAsync(collectionName, vectorParams, cancellationToken: ct);
+            await _qdrantClient.CreateCollectionAsync(collectionName, vectorParams, cancellationToken: ct).ConfigureAwait(false);
         }
     }
 
@@ -64,7 +64,7 @@ public sealed partial class PersistentNetworkStateProjector
                     _snapshotCollectionName,
                     limit: DefaultScrollLimit,
                     offset: snapshotOffset,
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
 
                 foreach (var point in scrollResult.Result)
                 {
@@ -104,7 +104,7 @@ public sealed partial class PersistentNetworkStateProjector
                     _learningsCollectionName,
                     limit: DefaultScrollLimit,
                     offset: learningsOffset,
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
 
                 foreach (var point in learningsResult.Result)
                 {
@@ -146,7 +146,7 @@ public sealed partial class PersistentNetworkStateProjector
         try
         {
             var json = JsonSerializer.Serialize(state);
-            var embedding = await _embeddingFunc($"network state epoch {state.Epoch} nodes {state.TotalNodes} transitions {state.TotalTransitions}", ct);
+            var embedding = await _embeddingFunc($"network state epoch {state.Epoch} nodes {state.TotalNodes} transitions {state.TotalTransitions}", ct).ConfigureAwait(false);
 
             var point = new PointStruct
             {
@@ -162,7 +162,7 @@ public sealed partial class PersistentNetworkStateProjector
                 },
             };
 
-            await _qdrantClient.UpsertAsync(_snapshotCollectionName, new[] { point }, cancellationToken: ct);
+            await _qdrantClient.UpsertAsync(_snapshotCollectionName, new[] { point }, cancellationToken: ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (Grpc.Core.RpcException ex)
@@ -176,7 +176,7 @@ public sealed partial class PersistentNetworkStateProjector
         try
         {
             var json = JsonSerializer.Serialize(learning);
-            var embedding = await _embeddingFunc($"{learning.Category}: {learning.Content}", ct);
+            var embedding = await _embeddingFunc($"{learning.Category}: {learning.Content}", ct).ConfigureAwait(false);
 
             var point = new PointStruct
             {
@@ -194,7 +194,7 @@ public sealed partial class PersistentNetworkStateProjector
                 },
             };
 
-            await _qdrantClient.UpsertAsync(_learningsCollectionName, new[] { point }, cancellationToken: ct);
+            await _qdrantClient.UpsertAsync(_learningsCollectionName, new[] { point }, cancellationToken: ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
         catch (Grpc.Core.RpcException ex)
@@ -206,7 +206,7 @@ public sealed partial class PersistentNetworkStateProjector
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        await _initLock.WaitAsync();
+        await _initLock.WaitAsync().ConfigureAwait(false);
         try
         {
             if (_initialized && _dag.NodeCount > 0)
@@ -214,7 +214,7 @@ public sealed partial class PersistentNetworkStateProjector
                 try
                 {
                     await ProjectAndPersistAsync(
-                        ImmutableDictionary<string, string>.Empty.Add("event", "shutdown"));
+                        ImmutableDictionary<string, string>.Empty.Add("event", "shutdown")).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {

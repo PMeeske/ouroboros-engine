@@ -40,14 +40,14 @@ public sealed partial class MetaLearner
                     g => g.Count(e => e.Successful) / (double)g.Count());
 
             // Identify bottlenecks
-            List<string> bottlenecks = await IdentifyBottlenecksAsync(recentEpisodes, ct);
+            List<string> bottlenecks = await IdentifyBottlenecksAsync(recentEpisodes, ct).ConfigureAwait(false);
 
             // Generate recommendations
             List<string> recommendations = await GenerateRecommendationsAsync(
                 recentEpisodes,
                 successRate,
                 learningSpeedTrend,
-                ct);
+                ct).ConfigureAwait(false);
 
             LearningEfficiencyReport report = new LearningEfficiencyReport(
                 AverageIterationsToLearn: avgIterations,
@@ -114,7 +114,7 @@ APPLICABLE_TO: [task types, comma-separated]";
 
                 try
                 {
-                    string response = await _llm.GenerateTextAsync(prompt, ct);
+                    string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
                     List<MetaKnowledge> insights = ParseMetaKnowledgeResponse(
                         response,
                         taskGroup.Key,
@@ -122,8 +122,7 @@ APPLICABLE_TO: [task types, comma-separated]";
 
                     metaKnowledge.AddRange(insights);
                 }
-                catch
-                {
+                catch (Exception ex) when (ex is not OperationCanceledException) {
                     // Continue with other task types
                 }
             }

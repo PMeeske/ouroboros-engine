@@ -39,7 +39,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
         {
             // Step 1: Open PR
             Result<PullRequest, string> prResult = await _reviewSystem.OpenPullRequestAsync(
-                title, description, draftSpec, requiredReviewers, ct);
+                title, description, draftSpec, requiredReviewers, ct).ConfigureAwait(false);
 
             if (!prResult.IsSuccess)
                 return Result<StakeholderReviewResult, string>.Failure(
@@ -49,14 +49,14 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
 
             // Step 2: Request reviewers
             Result<bool, string> requestResult = await _reviewSystem.RequestReviewersAsync(
-                pr.Id, requiredReviewers, ct);
+                pr.Id, requiredReviewers, ct).ConfigureAwait(false);
 
             if (!requestResult.IsSuccess)
                 return Result<StakeholderReviewResult, string>.Failure(
                     $"Failed to request reviewers: {requestResult.Error}");
 
             // Step 3: Monitor review progress
-            Result<ReviewState, string> monitorResult = await MonitorReviewProgressAsync(pr.Id, config, ct);
+            Result<ReviewState, string> monitorResult = await MonitorReviewProgressAsync(pr.Id, config, ct).ConfigureAwait(false);
 
             if (!monitorResult.IsSuccess)
                 return Result<StakeholderReviewResult, string>.Failure(
@@ -78,7 +78,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
 
             if (openComments.Any())
             {
-                Result<int, string> resolveResult = await ResolveCommentsAsync(pr.Id, openComments, ct);
+                Result<int, string> resolveResult = await ResolveCommentsAsync(pr.Id, openComments, ct).ConfigureAwait(false);
                 if (!resolveResult.IsSuccess && !config.AutoResolveNonBlockingComments)
                     return Result<StakeholderReviewResult, string>.Failure(
                         $"Comment resolution failed: {resolveResult.Error}");
@@ -88,7 +88,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
             Result<bool, string> mergeResult = await _reviewSystem.MergePullRequestAsync(
                 pr.Id,
                 $"Merge approved by all reviewers: {string.Join(", ", requiredReviewers)}",
-                ct);
+                ct).ConfigureAwait(false);
 
             if (!mergeResult.IsSuccess)
                 return Result<StakeholderReviewResult, string>.Failure(
@@ -109,7 +109,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
             return Result<StakeholderReviewResult, string>.Success(result);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<StakeholderReviewResult, string>.Failure(
                 $"Review loop execution failed: {ex.Message}");
@@ -144,7 +144,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
                     return Result<ReviewState, string>.Failure("Review timeout exceeded");
 
                 // Get current review decisions
-                Result<List<ReviewDecision>, string> reviewsResult = await _reviewSystem.GetReviewDecisionsAsync(prId, ct);
+                Result<List<ReviewDecision>, string> reviewsResult = await _reviewSystem.GetReviewDecisionsAsync(prId, ct).ConfigureAwait(false);
                 if (!reviewsResult.IsSuccess)
                     return Result<ReviewState, string>.Failure(
                         $"Failed to get reviews: {reviewsResult.Error}");
@@ -152,7 +152,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
                 List<ReviewDecision> reviews = reviewsResult.Value;
 
                 // Get all comments
-                Result<List<ReviewComment>, string> commentsResult = await _reviewSystem.GetCommentsAsync(prId, ct);
+                Result<List<ReviewComment>, string> commentsResult = await _reviewSystem.GetCommentsAsync(prId, ct).ConfigureAwait(false);
                 if (!commentsResult.IsSuccess)
                     return Result<ReviewState, string>.Failure(
                         $"Failed to get comments: {commentsResult.Error}");
@@ -173,13 +173,13 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
                     return Result<ReviewState, string>.Success(reviewState);
 
                 // Wait before next poll
-                await Task.Delay(pollingInterval, ct);
+                await Task.Delay(pollingInterval, ct).ConfigureAwait(false);
             }
 
             return Result<ReviewState, string>.Failure("Monitoring cancelled");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<ReviewState, string>.Failure(
                 $"Review monitoring failed: {ex.Message}");
@@ -207,7 +207,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
                 string resolution = GenerateResolution(comment.Content);
 
                 Result<bool, string> resolveResult = await _reviewSystem.ResolveCommentAsync(
-                    prId, comment.CommentId, resolution, ct);
+                    prId, comment.CommentId, resolution, ct).ConfigureAwait(false);
 
                 if (resolveResult.IsSuccess)
                     resolvedCount++;
@@ -216,7 +216,7 @@ public sealed class StakeholderReviewLoop : IStakeholderReviewLoop
             return Result<int, string>.Success(resolvedCount);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<int, string>.Failure(
                 $"Comment resolution failed: {ex.Message}");

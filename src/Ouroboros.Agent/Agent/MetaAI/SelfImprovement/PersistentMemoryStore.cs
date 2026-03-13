@@ -64,31 +64,31 @@ public sealed partial class PersistentMemoryStore : IMemoryStore
             // Store in vector database if available
             if (_embedding != null && _vectorStore != null)
             {
-                await StoreInVectorStoreAsync(experience, MemoryType.Episodic, ct);
+                await StoreInVectorStoreAsync(experience, MemoryType.Episodic, ct).ConfigureAwait(false);
             }
 
             // Persist to disk if configured
             if (!string.IsNullOrEmpty(_persistencePath))
             {
-                await SaveToDiskAsync(ct);
+                await SaveToDiskAsync(ct).ConfigureAwait(false);
             }
 
             // Check if consolidation is needed
             if (ShouldConsolidate())
             {
-                await ConsolidateMemoriesAsync(ct);
+                await ConsolidateMemoriesAsync(ct).ConfigureAwait(false);
             }
 
             // Check if forgetting is needed
             if (_config.EnableForgetting && _experiences.Count > _config.LongTermCapacity)
             {
-                await ForgetLowImportanceMemoriesAsync();
+                await ForgetLowImportanceMemoriesAsync().ConfigureAwait(false);
             }
 
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Failed to store experience: {ex.Message}");
         }
@@ -108,7 +108,7 @@ public sealed partial class PersistentMemoryStore : IMemoryStore
             // If vector store available and context similarity specified, use semantic search
             if (_embedding != null && _vectorStore != null && !string.IsNullOrEmpty(query.ContextSimilarity))
             {
-                return await RetrieveViaSimilarityAsync(query, ct);
+                return await RetrieveViaSimilarityAsync(query, ct).ConfigureAwait(false);
             }
 
             // Fallback to filtering based on query parameters
@@ -147,7 +147,7 @@ public sealed partial class PersistentMemoryStore : IMemoryStore
             return Result<IReadOnlyList<Experience>, string>.Success(experiences);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IReadOnlyList<Experience>, string>.Failure($"Failed to query experiences: {ex.Message}");
         }
@@ -184,7 +184,7 @@ public sealed partial class PersistentMemoryStore : IMemoryStore
             return Task.FromResult(Result<MemoryStatistics, string>.Success(stats));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Task.FromResult(Result<MemoryStatistics, string>.Failure($"Failed to get statistics: {ex.Message}"));
         }
@@ -203,7 +203,7 @@ public sealed partial class PersistentMemoryStore : IMemoryStore
             {
                 // Note: TrackedVectorStore doesn't have a Clear method
                 // In a real implementation with Qdrant, we would clear the collection
-                await Task.CompletedTask;
+                await Task.CompletedTask.ConfigureAwait(false);
             }
 
             // Clear persisted data if configured
@@ -215,7 +215,7 @@ public sealed partial class PersistentMemoryStore : IMemoryStore
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Failed to clear memory: {ex.Message}");
         }
@@ -242,7 +242,7 @@ public sealed partial class PersistentMemoryStore : IMemoryStore
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Task.FromResult(Result<Experience, string>.Failure($"Failed to get experience: {ex.Message}"));
         }
@@ -267,13 +267,13 @@ public sealed partial class PersistentMemoryStore : IMemoryStore
             // Persist changes if configured
             if (!string.IsNullOrEmpty(_persistencePath))
             {
-                await SaveToDiskAsync(ct);
+                await SaveToDiskAsync(ct).ConfigureAwait(false);
             }
 
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Failed to delete experience: {ex.Message}");
         }
@@ -293,7 +293,7 @@ public sealed partial class PersistentMemoryStore : IMemoryStore
     /// </summary>
     public async Task<MemoryStatistics> GetStatsAsync(CancellationToken ct = default)
     {
-        var result = await GetStatisticsAsync(ct);
+        var result = await GetStatisticsAsync(ct).ConfigureAwait(false);
         return result.IsSuccess
             ? result.Value
             : new MemoryStatistics(0, 0, 0, 0, 0);

@@ -31,15 +31,15 @@ public static class WalCompactor
             return Result<Unit, string>.Failure($"WAL file not found: {walPath}");
         }
 
+        FileWalPersistence? sourcePersistence = null;
         try
         {
             // Step 1: Restore the DAG from the existing WAL
-            var sourcePersistence = new FileWalPersistence(walPath);
+            sourcePersistence = new FileWalPersistence(walPath);
             var restoreResult = await PersistentMerkleDag.RestoreAsync(sourcePersistence, ct).ConfigureAwait(false);
 
             if (restoreResult.IsFailure)
             {
-                await sourcePersistence.DisposeAsync().ConfigureAwait(false);
                 return Result<Unit, string>.Failure($"Failed to restore DAG for compaction: {restoreResult.Error}");
             }
 
@@ -47,15 +47,15 @@ public static class WalCompactor
 
             // Step 2: Create a temporary WAL for the compacted data
             var tempWalPath = walPath + ".compact.tmp";
+            FileWalPersistence? targetPersistence = null;
             try
             {
-                var targetPersistence = new FileWalPersistence(tempWalPath);
+                targetPersistence = new FileWalPersistence(tempWalPath);
 
                 // Step 3: Write all nodes in topological order
                 var sortResult = restoredDag.TopologicalSort();
                 if (sortResult.IsFailure)
                 {
-                    await targetPersistence.DisposeAsync().ConfigureAwait(false);
                     await restoredDag.DisposeAsync().ConfigureAwait(false);
                     return Result<Unit, string>.Failure($"Topological sort failed: {sortResult.Error}");
                 }
@@ -73,8 +73,9 @@ public static class WalCompactor
 
                 await targetPersistence.FlushAsync(ct).ConfigureAwait(false);
 
-                // Step 5: Dispose both persistence layers before file operations
+                // Step 5: Dispose target persistence before file operations
                 await targetPersistence.DisposeAsync().ConfigureAwait(false);
+                targetPersistence = null;
                 await restoredDag.DisposeAsync().ConfigureAwait(false);
 
                 // Step 6: Replace the original WAL with the compacted version
@@ -95,8 +96,7 @@ public static class WalCompactor
 
                 return Result<Unit, string>.Success(Unit.Value);
             }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // Clean up temp file if it exists
                 if (File.Exists(tempWalPath))
@@ -113,11 +113,24 @@ public static class WalCompactor
 
                 return Result<Unit, string>.Failure($"Compaction failed: {ex.Message}");
             }
+            finally
+            {
+                if (targetPersistence != null)
+                {
+                    await targetPersistence.DisposeAsync().ConfigureAwait(false);
+                }
+            }
         }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Compaction failed: {ex.Message}");
+        }
+        finally
+        {
+            if (sourcePersistence != null)
+            {
+                await sourcePersistence.DisposeAsync().ConfigureAwait(false);
+            }
         }
     }
 }

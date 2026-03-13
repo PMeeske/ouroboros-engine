@@ -45,7 +45,7 @@ public sealed class ResearchSkillExtractor
         try
         {
             // Fetch papers from the domain
-            var papersResult = await _researchSource.SearchPapersAsync(researchDomain, maxPapers);
+            var papersResult = await _researchSource.SearchPapersAsync(researchDomain, maxPapers).ConfigureAwait(false);
             if (!papersResult.IsSuccess)
             {
                 return Result<List<Skill>, string>.Failure(papersResult.Error);
@@ -55,12 +55,12 @@ public sealed class ResearchSkillExtractor
             List<Skill> extractedSkills = new();
 
             // Group papers by methodology patterns
-            var methodologyGroups = await GroupByMethodologyAsync(papers);
+            var methodologyGroups = await GroupByMethodologyAsync(papers).ConfigureAwait(false);
 
             foreach (var (methodology, relatedPapers) in methodologyGroups)
             {
                 // Extract skill from methodology pattern
-                Skill? skill = await ExtractSkillFromMethodologyAsync(methodology, relatedPapers);
+                Skill? skill = await ExtractSkillFromMethodologyAsync(methodology, relatedPapers).ConfigureAwait(false);
                 if (skill != null)
                 {
                     _skillRegistry.RegisterSkill(skill.ToAgentSkill());
@@ -71,7 +71,7 @@ public sealed class ResearchSkillExtractor
             // Extract cross-paper synthesis skills
             if (papers.Count >= 3)
             {
-                Skill? synthesisSkill = await ExtractSynthesisSkillAsync(papers, researchDomain);
+                Skill? synthesisSkill = await ExtractSynthesisSkillAsync(papers, researchDomain).ConfigureAwait(false);
                 if (synthesisSkill != null)
                 {
                     _skillRegistry.RegisterSkill(synthesisSkill.ToAgentSkill());
@@ -82,7 +82,7 @@ public sealed class ResearchSkillExtractor
             return Result<List<Skill>, string>.Success(extractedSkills);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<List<Skill>, string>.Failure($"Failed to extract skills: {ex.Message}");
         }
@@ -198,7 +198,7 @@ Papers:
 Return a JSON object mapping methodology names to paper indices.
 Example: {{""experimental"": [0, 2], ""theoretical"": [1, 3], ""survey"": [4]}}";
 
-        _ = await _model.GenerateTextAsync(prompt);
+        _ = await _model.GenerateTextAsync(prompt).ConfigureAwait(false);
 
         // Parse and group
         // Simplified: just use category as methodology proxy
@@ -243,7 +243,7 @@ Steps:
 2. [step2]
 ...";
 
-        _ = await _model.GenerateTextAsync(prompt);
+        _ = await _model.GenerateTextAsync(prompt).ConfigureAwait(false);
 
         // Parse response into skill
         string skillName = $"{SanitizeName(methodology)}Analysis";
@@ -278,7 +278,7 @@ Papers:
 
 What unique synthesis approach would be valuable for this domain?";
 
-        _ = await _model.GenerateTextAsync(prompt);
+        _ = await _model.GenerateTextAsync(prompt).ConfigureAwait(false);
 
         return new Skill(
             Name: $"{sanitizedDomain}Synthesis",

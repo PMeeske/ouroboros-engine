@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Agent.ConsolidatedMind;
+namespace Ouroboros.Agent.ConsolidatedMind;
 
 /// <summary>
 /// Fluent builder for constructing ConsolidatedMind pipelines.
@@ -74,7 +74,7 @@ public sealed class MindPipelineBuilder
             var current = branch;
             foreach (var step in _steps)
             {
-                current = await step(current);
+                current = await step(current).ConfigureAwait(false);
             }
             return current;
         };

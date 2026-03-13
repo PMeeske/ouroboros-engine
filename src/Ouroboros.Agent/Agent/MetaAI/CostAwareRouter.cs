@@ -52,7 +52,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
                 contextStr,
                 task,
                 estimatedConfidence,
-                ct);
+                ct).ConfigureAwait(false);
 
             if (!decision.ShouldProceed)
             {
@@ -107,7 +107,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
             return Result<CostBenefitAnalysis, string>.Success(analysis);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<CostBenefitAnalysis, string>.Failure($"Cost-aware routing failed: {ex.Message}");
         }
@@ -131,7 +131,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
             totalCost += costInfo.CostPerToken * estimatedTokens;
         }
 
-        return await Task.FromResult(totalCost);
+        return await Task.FromResult(totalCost).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -144,7 +144,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
     {
         try
         {
-            double currentCost = await EstimatePlanCostAsync(plan, ct);
+            double currentCost = await EstimatePlanCostAsync(plan, ct).ConfigureAwait(false);
 
             if (currentCost <= config.MaxCostPerPlan)
             {
@@ -184,7 +184,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
                 plan.ConfidenceScores,
                 DateTime.UtcNow);
 
-            double newCost = await EstimatePlanCostAsync(optimizedPlan, ct);
+            double newCost = await EstimatePlanCostAsync(optimizedPlan, ct).ConfigureAwait(false);
 
             if (newCost > config.MaxCostPerPlan)
             {
@@ -195,7 +195,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
             return Result<Plan, string>.Success(optimizedPlan);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Plan, string>.Failure($"Plan optimization failed: {ex.Message}");
         }

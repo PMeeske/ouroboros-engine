@@ -38,7 +38,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         try
         {
             // Select experiences for training
-            List<Experience> experiences = await SelectTrainingExperiencesAsync(config, ct);
+            List<Experience> experiences = await SelectTrainingExperiencesAsync(config, ct).ConfigureAwait(false);
 
             if (experiences.Count == 0)
             {
@@ -47,7 +47,7 @@ public sealed class ExperienceReplay : IExperienceReplay
             }
 
             // Analyze patterns
-            List<string> patterns = await AnalyzeExperiencePatternsAsync(experiences, ct);
+            List<string> patterns = await AnalyzeExperiencePatternsAsync(experiences, ct).ConfigureAwait(false);
 
             // Extract skills from high-quality experiences
             int skillsExtracted = 0;
@@ -57,7 +57,7 @@ public sealed class ExperienceReplay : IExperienceReplay
                 Result<Skill, string> skillResult = await _skills.ExtractSkillAsync(
                     exp.Execution,
                     skillName,
-                    $"Learned from goal: {exp.Goal}");
+                    $"Learned from goal: {exp.Goal}").ConfigureAwait(false);
 
                 if (skillResult.IsSuccess)
                 {
@@ -82,7 +82,7 @@ public sealed class ExperienceReplay : IExperienceReplay
             return Result<TrainingResult, string>.Success(result);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<TrainingResult, string>.Failure($"Training failed: {ex.Message}");
         }
@@ -123,15 +123,14 @@ public sealed class ExperienceReplay : IExperienceReplay
             if (patterns.Any())
             {
                 string patternPrompt = BuildPatternAnalysisPrompt(experiences);
-                string analysis = await _llm.GenerateTextAsync(patternPrompt, ct);
+                string analysis = await _llm.GenerateTextAsync(patternPrompt, ct).ConfigureAwait(false);
 
                 // Extract insights from LLM analysis
                 List<string> insights = ExtractInsights(analysis);
                 patterns.AddRange(insights);
             }
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Fallback to simple pattern detection
         }
 
@@ -145,7 +144,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         ExperienceReplayConfig config,
         CancellationToken ct = default)
     {
-                _ = await _memory.GetStatisticsAsync();
+                _ = await _memory.GetStatisticsAsync().ConfigureAwait(false);
 
         // Get all experiences and filter
         MemoryQuery query = new MemoryQuery(
@@ -154,7 +153,7 @@ public sealed class ExperienceReplay : IExperienceReplay
             MaxResults: config.MaxExperiences,
             MinSimilarity: 0.0);
 
-        var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+        var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
         List<Experience> allExperiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
 
         // Filter by quality

@@ -34,7 +34,7 @@ public sealed class MeTTaMemoryBridge
     {
         try
         {
-            var statsResult = await _memory.GetStatisticsAsync();
+            var statsResult = await _memory.GetStatisticsAsync().ConfigureAwait(false);
             MetaAIMemoryStatistics stats = statsResult.IsSuccess 
                 ? new MetaAIMemoryStatistics(statsResult.Value.TotalExperiences, statsResult.Value.SuccessfulExperiences, statsResult.Value.FailedExperiences, statsResult.Value.UniqueContexts, statsResult.Value.UniqueTags, AverageQualityScore: statsResult.Value.AverageQualityScore)
                 : new MetaAIMemoryStatistics(0, 0, 0, 0, 0, AverageQualityScore: 0.0);
@@ -46,7 +46,7 @@ public sealed class MeTTaMemoryBridge
 
             // For now, sync memory statistics as facts
             string statsFact = $"(memory-stats (total {stats.TotalExperiences}) (avg-quality {stats.AverageQualityScore}))";
-            var addResult = await _engine.AddFactAsync(statsFact, ct);
+            var addResult = await _engine.AddFactAsync(statsFact, ct).ConfigureAwait(false);
             Result<Unit, string> result = addResult.Map(_ => Unit.Value);
 
             if (result.IsFailure)
@@ -59,7 +59,7 @@ public sealed class MeTTaMemoryBridge
             return Result<int, string>.Success(factCount);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<int, string>.Failure($"Memory sync failed: {ex.Message}");
         }
@@ -87,9 +87,9 @@ public sealed class MeTTaMemoryBridge
 
             var results = new[]
             {
-                (await _engine.AddFactAsync(goalFact, ct)).Map(_ => Unit.Value),
-                (await _engine.AddFactAsync(qualityFact, ct)).Map(_ => Unit.Value),
-                (await _engine.AddFactAsync(successFact, ct)).Map(_ => Unit.Value)
+                (await _engine.AddFactAsync(goalFact, ct).ConfigureAwait(false)).Map(_ => Unit.Value),
+                (await _engine.AddFactAsync(qualityFact, ct).ConfigureAwait(false)).Map(_ => Unit.Value),
+                (await _engine.AddFactAsync(successFact, ct).ConfigureAwait(false)).Map(_ => Unit.Value)
             };
 
             List<Result<Unit, string>> failures = results.Where(r => r.IsFailure).ToList();
@@ -101,7 +101,7 @@ public sealed class MeTTaMemoryBridge
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Failed to add experience: {ex.Message}");
         }
@@ -115,7 +115,7 @@ public sealed class MeTTaMemoryBridge
     /// <returns>Query results as a string.</returns>
     public async Task<Result<string, string>> QueryExperiencesAsync(string query, CancellationToken ct = default)
     {
-        return await _engine.ExecuteQueryAsync(query, ct);
+        return await _engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -126,7 +126,7 @@ public sealed class MeTTaMemoryBridge
     /// <returns>A Result indicating success or failure.</returns>
     public async Task<Result<string, string>> AddVerificationRuleAsync(string rule, CancellationToken ct = default)
     {
-        return await _engine.ApplyRuleAsync(rule, ct);
+        return await _engine.ApplyRuleAsync(rule, ct).ConfigureAwait(false);
     }
 
     private static string EscapeString(string input)

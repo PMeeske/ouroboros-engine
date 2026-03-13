@@ -36,7 +36,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
     /// </summary>
     public async Task<List<AgentCapability>> GetCapabilitiesAsync(CancellationToken ct = default)
     {
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
         return _capabilities.Values
             .OrderByDescending(c => c.SuccessRate)
             .ThenByDescending(c => c.UsageCount)
@@ -55,7 +55,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
             return false;
 
         // Check against known capabilities
-        List<AgentCapability> relevantCapabilities = await FindRelevantCapabilitiesAsync(task, ct);
+        List<AgentCapability> relevantCapabilities = await FindRelevantCapabilitiesAsync(task, ct).ConfigureAwait(false);
 
         if (relevantCapabilities.Any())
         {
@@ -69,7 +69,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         }
 
         // Check if we have the required tools
-        List<string> requiredTools = await AnalyzeRequiredToolsAsync(task, ct);
+        List<string> requiredTools = await AnalyzeRequiredToolsAsync(task, ct).ConfigureAwait(false);
         HashSet<string> availableTools = _tools.All.Select(t => t.Name).ToHashSet();
 
         return requiredTools.All(t => availableTools.Contains(t));
@@ -92,7 +92,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         PlanExecutionResult result,
         CancellationToken ct = default)
     {
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
 
         if (!_capabilities.TryGetValue(name, out AgentCapability? existing))
             return;
@@ -133,7 +133,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         List<string> gaps = new List<string>();
 
         // Analyze what the task requires
-        List<string> requiredTools = await AnalyzeRequiredToolsAsync(task, ct);
+        List<string> requiredTools = await AnalyzeRequiredToolsAsync(task, ct).ConfigureAwait(false);
         HashSet<string> availableTools = _tools.All.Select(t => t.Name).ToHashSet();
 
         // Identify missing tools
@@ -144,7 +144,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         }
 
         // Check if task complexity exceeds current capabilities
-        List<AgentCapability> relevantCapabilities = await FindRelevantCapabilitiesAsync(task, ct);
+        List<AgentCapability> relevantCapabilities = await FindRelevantCapabilitiesAsync(task, ct).ConfigureAwait(false);
         if (!relevantCapabilities.Any())
         {
             gaps.Add("No experience with similar tasks");
@@ -174,7 +174,7 @@ public sealed class CapabilityRegistry : ICapabilityRegistry
         List<string> suggestions = new List<string>();
 
         // Identify what's missing
-        List<string> gaps = await IdentifyCapabilityGapsAsync(task, ct);
+        List<string> gaps = await IdentifyCapabilityGapsAsync(task, ct).ConfigureAwait(false);
 
         if (gaps.Any())
         {
@@ -190,7 +190,7 @@ Available capabilities:
 Suggest 3-5 alternative approaches to accomplish this task or similar outcomes with available capabilities.
 Format each suggestion on a new line starting with '- '";
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Parse suggestions
             List<string> lines = response.Split('\n')
@@ -221,7 +221,7 @@ Format each suggestion on a new line starting with '- '";
                 c.Description.Contains(k, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
         return relevant;
     }
 
@@ -243,7 +243,7 @@ List only the tool names that are required, one per line.";
 
         try
         {
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             List<string> toolNames = response.Split('\n', StringSplitOptions.RemoveEmptyEntries)
                 .Select(l => l.Trim())
                 .Where(l => !string.IsNullOrWhiteSpace(l) && !l.StartsWith('#'))
@@ -251,8 +251,7 @@ List only the tool names that are required, one per line.";
 
             return toolNames;
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Fallback: return empty list
             return new List<string>();
         }

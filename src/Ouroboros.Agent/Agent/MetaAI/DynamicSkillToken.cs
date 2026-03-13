@@ -39,7 +39,7 @@ Expected output: {planStep.ExpectedOutcome}
 
 Perform this step and return the result.";
 
-            string stepResult = await _model.GenerateTextAsync(stepPrompt);
+            string stepResult = await _model.GenerateTextAsync(stepPrompt).ConfigureAwait(false);
             currentOutput = stepResult;
         }
 

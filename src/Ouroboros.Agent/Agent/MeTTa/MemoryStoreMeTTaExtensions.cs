@@ -1,4 +1,4 @@
-﻿using Ouroboros.Agent.MetaAI;
+using Ouroboros.Agent.MetaAI;
 
 namespace Ouroboros.Tools.MeTTa;
 
@@ -31,6 +31,6 @@ public static class MemoryStoreMeTTaExtensions
         CancellationToken ct = default)
     {
         MeTTaMemoryBridge bridge = memory.CreateMeTTaBridge(engine);
-        return await bridge.SyncAllExperiencesAsync(ct);
+        return await bridge.SyncAllExperiencesAsync(ct).ConfigureAwait(false);
     }
 }

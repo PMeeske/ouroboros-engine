@@ -22,7 +22,7 @@ namespace Ouroboros.Agent.NanoAtoms;
 /// <code>
 /// // Use as a standalone model
 /// IChatCompletionModel model = new NanoAtomModel(tinyOllamaModel);
-/// string response = await model.GenerateTextAsync("Explain quantum computing");
+/// string response = await model.GenerateTextAsync("Explain quantum computing").ConfigureAwait(false);
 ///
 /// // Register as a specialist in ConsolidatedMind
 /// var mind = new ConsolidatedMind();
@@ -89,7 +89,7 @@ public sealed class NanoAtomModel : Ouroboros.Abstractions.Core.IChatCompletionM
         try
         {
             var chain = new NanoAtomChain(_innerModel, _config);
-            Result<ConsolidatedAction, string> result = await chain.ExecuteAsync(prompt, ct);
+            Result<ConsolidatedAction, string> result = await chain.ExecuteAsync(prompt, ct).ConfigureAwait(false);
 
             stopwatch.Stop();
             Interlocked.Add(ref _totalLatencyMs, stopwatch.ElapsedMilliseconds);
@@ -102,20 +102,20 @@ public sealed class NanoAtomModel : Ouroboros.Abstractions.Core.IChatCompletionM
 
             // Pipeline failed — fall back to direct model call
             Interlocked.Increment(ref _failedRequests);
-            return await _innerModel.GenerateTextAsync(prompt, ct);
+            return await _innerModel.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
             throw;
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             stopwatch.Stop();
             Interlocked.Add(ref _totalLatencyMs, stopwatch.ElapsedMilliseconds);
             Interlocked.Increment(ref _failedRequests);
 
             // Graceful degradation: fall back to direct model call
-            return await _innerModel.GenerateTextAsync(prompt, ct);
+            return await _innerModel.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
         }
     }
 
@@ -138,7 +138,7 @@ public sealed class NanoAtomModel : Ouroboros.Abstractions.Core.IChatCompletionM
         }
 
         var chain = new NanoAtomChain(_innerModel, _config);
-        var result = await chain.ExecuteAsync(prompt, ct);
+        var result = await chain.ExecuteAsync(prompt, ct).ConfigureAwait(false);
 
         if (result.IsSuccess)
         {

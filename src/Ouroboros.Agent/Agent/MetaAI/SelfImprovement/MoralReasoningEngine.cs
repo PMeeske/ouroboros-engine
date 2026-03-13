@@ -148,7 +148,7 @@ public sealed class MoralReasoningEngine
     {
         ArgumentNullException.ThrowIfNull(dilemma);
 
-        var judgment = await EvaluateAsync(dilemma, dilemma, ["self", "others", "society"], ct);
+        var judgment = await EvaluateAsync(dilemma, dilemma, ["self", "others", "society"], ct).ConfigureAwait(false);
 
         double sophistication = CalculateSophistication(judgment);
         _totalDeliberations++;

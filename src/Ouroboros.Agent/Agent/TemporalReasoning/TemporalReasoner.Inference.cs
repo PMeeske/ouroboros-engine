@@ -31,7 +31,7 @@ public sealed partial class TemporalReasoner
         {
             // Build prompt for LLM
             var prompt = BuildCausalInferencePrompt(events);
-            var response = await this.llm.GenerateTextAsync(prompt, ct);
+            var response = await this.llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Parse causal relations from response
             IReadOnlyList<CausalRelation> causalRelations = ParseCausalRelations(response, events);
@@ -39,7 +39,7 @@ public sealed partial class TemporalReasoner
             return Result<IReadOnlyList<CausalRelation>, string>.Success(causalRelations);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IReadOnlyList<CausalRelation>, string>.Failure($"Causal inference failed: {ex.Message}");
         }
@@ -67,7 +67,7 @@ public sealed partial class TemporalReasoner
         {
             if (this.llm != null)
             {
-                return await this.PredictWithLLMAsync(history, horizon, ct);
+                return await this.PredictWithLLMAsync(history, horizon, ct).ConfigureAwait(false);
             }
 
             // Fallback to pattern-based prediction
@@ -75,7 +75,7 @@ public sealed partial class TemporalReasoner
             return Result<IReadOnlyList<PredictedEvent>, string>.Success(predictions);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IReadOnlyList<PredictedEvent>, string>.Failure($"Prediction failed: {ex.Message}");
         }
@@ -121,7 +121,7 @@ public sealed partial class TemporalReasoner
             return Task.FromResult(Result<bool, string>.Success(satisfiable));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Task.FromResult(Result<bool, string>.Failure($"Constraint checking failed: {ex.Message}"));
         }
@@ -275,7 +275,7 @@ Provide multiple causal relationships if they exist.";
         CancellationToken ct)
     {
         var prompt = BuildPredictionPrompt(history, horizon);
-        var response = await this.llm!.GenerateTextAsync(prompt, ct);
+        var response = await this.llm!.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
         IReadOnlyList<PredictedEvent> predictions = ParsePredictions(response, history);
         return Result<IReadOnlyList<PredictedEvent>, string>.Success(predictions);
     }

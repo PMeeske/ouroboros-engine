@@ -42,7 +42,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
         try
         {
             // Add the rule to MeTTa engine
-            var addResult = await _mettaEngine.AddFactAsync(rule.MeTTaRepresentation, ct);
+            var addResult = await _mettaEngine.AddFactAsync(rule.MeTTaRepresentation, ct).ConfigureAwait(false);
             if (addResult.IsFailure)
                 return Result<Unit, string>.Failure(addResult.Error);
 
@@ -52,7 +52,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Failed to add rule: {ex.Message}");
         }
@@ -76,7 +76,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
             return Result<List<SymbolicRule>, string>.Success(matchingRules);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<List<SymbolicRule>, string>.Failure($"Failed to query rules: {ex.Message}");
         }
@@ -90,11 +90,11 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
 
         try
         {
-            var result = await _mettaEngine.ExecuteQueryAsync(query, ct);
+            var result = await _mettaEngine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
             return result;
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<string, string>.Failure($"Failed to execute MeTTa query: {ex.Message}");
         }
@@ -124,7 +124,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
                     continue;
 
                 // Query MeTTa for applicable rules
-                var queryResult = await _mettaEngine.ExecuteQueryAsync($"(match &self {currentFact} $x)", ct);
+                var queryResult = await _mettaEngine.ExecuteQueryAsync($"(match &self {currentFact} $x)", ct).ConfigureAwait(false);
                 if (queryResult.IsSuccess && !string.IsNullOrWhiteSpace(queryResult.Value))
                 {
                     // Parse results and add to inferred list
@@ -140,7 +140,7 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
             return Result<List<string>, string>.Success(inferred);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<List<string>, string>.Failure($"Failed to perform inference: {ex.Message}");
         }

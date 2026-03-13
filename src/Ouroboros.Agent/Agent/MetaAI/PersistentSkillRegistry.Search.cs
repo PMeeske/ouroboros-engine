@@ -41,8 +41,8 @@ public sealed partial class PersistentSkillRegistry
                 try
                 {
                     string query = category ?? string.Join(" ", tags ?? Array.Empty<string>());
-                    float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct);
-                    var similarDocs = await _vectorStore.GetSimilarDocumentsAsync(queryEmbedding, Math.Min(10, filtered.Count));
+                    float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct).ConfigureAwait(false);
+                    var similarDocs = await _vectorStore.GetSimilarDocumentsAsync(queryEmbedding, Math.Min(10, filtered.Count)).ConfigureAwait(false);
 
                     var matchedSkills = new List<AgentSkill>();
                     foreach (var doc in similarDocs)
@@ -60,7 +60,7 @@ public sealed partial class PersistentSkillRegistry
                         var scoredSkills = new List<(AgentSkill skill, double score)>();
                         foreach (var skill in matchedSkills)
                         {
-                            float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description, ct);
+                            float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description, ct).ConfigureAwait(false);
                             double similarity = CosineSimilarity(queryEmbedding, skillEmbedding);
                             if (similarity >= MinimumSimilarityThreshold)
                             {
@@ -77,8 +77,7 @@ public sealed partial class PersistentSkillRegistry
                         }
                     }
                 }
-                catch
-                {
+                catch (Exception ex) when (ex is not OperationCanceledException) {
                     // Fall back to simple filtering
                 }
             }
@@ -89,12 +88,12 @@ public sealed partial class PersistentSkillRegistry
                 try
                 {
                     string query = category ?? string.Join(" ", tags ?? Array.Empty<string>());
-                    float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct);
+                    float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct).ConfigureAwait(false);
 
                     var skillScores = new List<(AgentSkill skill, double score)>();
                     foreach (var skill in filtered)
                     {
-                        float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description, ct);
+                        float[] skillEmbedding = await _embedding.CreateEmbeddingsAsync(skill.Description, ct).ConfigureAwait(false);
                         double similarity = CosineSimilarity(queryEmbedding, skillEmbedding);
                         skillScores.Add((skill, similarity));
                     }
@@ -105,8 +104,7 @@ public sealed partial class PersistentSkillRegistry
                         .Select(x => x.skill)
                         .ToList();
                 }
-                catch
-                {
+                catch (Exception ex) when (ex is not OperationCanceledException) {
                     // Fall back to simple ordering
                 }
             }
@@ -123,7 +121,7 @@ public sealed partial class PersistentSkillRegistry
             return Result<IReadOnlyList<AgentSkill>, string>.Success(filtered);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) // Intentional: embedding + vector store operations across providers
+        catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: embedding + vector store operations across providers
         {
             return Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to find skills: {ex.Message}");
         }
@@ -140,7 +138,7 @@ public sealed partial class PersistentSkillRegistry
         try
         {
             var tags = ExtractTagsFromGoal(goal);
-            var result = await FindSkillsAsync(null, tags, ct);
+            var result = await FindSkillsAsync(null, tags, ct).ConfigureAwait(false);
             if (!result.IsSuccess)
                 return new List<Skill>();
 
@@ -149,8 +147,7 @@ public sealed partial class PersistentSkillRegistry
                 s.Effects.Select(e => new PlanStep(e, new Dictionary<string, object>(), e, s.SuccessRate)).ToList(),
                 s.SuccessRate, s.UsageCount, DateTime.UtcNow.AddDays(-s.UsageCount), DateTime.UtcNow)).ToList();
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return new List<Skill>();
         }
     }

@@ -53,7 +53,7 @@ public sealed partial class TransferLearner : ITransferLearner
         try
         {
             // Estimate transferability first
-            double transferability = await EstimateTransferabilityAsync(sourceSkill, targetDomain, ct);
+            double transferability = await EstimateTransferabilityAsync(sourceSkill, targetDomain, ct).ConfigureAwait(false);
 
             if (transferability < config.MinTransferabilityThreshold)
             {
@@ -63,11 +63,11 @@ public sealed partial class TransferLearner : ITransferLearner
 
             // Find analogies to guide adaptation
             string sourceDomain = InferDomainFromSkill(sourceSkill);
-            List<(string source, string target, double confidence)> analogies = await FindAnalogiesAsync(sourceDomain, targetDomain, ct);
+            List<(string source, string target, double confidence)> analogies = await FindAnalogiesAsync(sourceDomain, targetDomain, ct).ConfigureAwait(false);
 
             // Adapt the skill using LLM
             string adaptationPrompt = BuildAdaptationPrompt(sourceSkill, targetDomain, analogies);
-            string adaptationResponse = await _llm.GenerateTextAsync(adaptationPrompt, ct);
+            string adaptationResponse = await _llm.GenerateTextAsync(adaptationPrompt, ct).ConfigureAwait(false);
 
             // Parse the adapted skill
             List<PlanStep> adaptedSteps = ParseAdaptedSteps(adaptationResponse, sourceSkill.Steps);
@@ -108,7 +108,7 @@ public sealed partial class TransferLearner : ITransferLearner
             return Result<TransferResult, string>.Success(result);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<TransferResult, string>.Failure($"Transfer learning failed: {ex.Message}");
         }
@@ -147,7 +147,7 @@ Consider:
 Provide a transferability score from 0.0 (cannot transfer) to 1.0 (perfect transfer).
 Respond with just the number.";
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Extract numeric score
             Match scoreMatch = TransferScoreRegex().Match(response);
@@ -172,8 +172,7 @@ Respond with just the number.";
             // Default conservative estimate
             return 0.5;
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return 0.5; // Conservative default
         }
     }
@@ -210,7 +209,7 @@ Example:
 database_query -> library_search (confidence: 0.8)
 ";
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             string[] lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
             foreach (string line in lines)
@@ -227,8 +226,7 @@ database_query -> library_search (confidence: 0.8)
                 }
             }
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Return empty list on error
         }
 

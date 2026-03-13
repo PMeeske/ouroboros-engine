@@ -121,7 +121,7 @@ public static partial class StructuredLlmParser
                 OuroborosError.From(ErrorCodes.LlmParseFailure,
                     "Both JSON and fallback parsing failed to produce a result."));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<T, OuroborosError>.Failure(new OuroborosError
             {

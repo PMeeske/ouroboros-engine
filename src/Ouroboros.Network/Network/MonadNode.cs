@@ -125,7 +125,7 @@ public sealed record MonadNode
             var result = JsonSerializer.Deserialize<T>(this.PayloadJson);
             return result is not null ? Option<T>.Some(result) : Option<T>.None();
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Option<T>.None();
         }

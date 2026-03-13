@@ -70,7 +70,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
     {
         if (_metricsStore == null) return;
 
-        var persistedMetrics = await _metricsStore.GetAllMetricsAsync();
+        var persistedMetrics = await _metricsStore.GetAllMetricsAsync().ConfigureAwait(false);
         foreach (var kvp in persistedMetrics)
         {
             _metrics[kvp.Key] = kvp.Value;
@@ -136,7 +136,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
         UseCase useCase = ClassifyUseCase(prompt);
 
         // Find best matching model
-        Result<OrchestratorDecision, string> modelResult = await SelectBestModelAsync(useCase, context, ct);
+        Result<OrchestratorDecision, string> modelResult = await SelectBestModelAsync(useCase, context, ct).ConfigureAwait(false);
 
         return modelResult.Match(
             decision =>
@@ -293,7 +293,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
             ConfidenceScore: best.Score);
 
         return await Task.FromResult(
-            Result<OrchestratorDecision, string>.Success(decision));
+            Result<OrchestratorDecision, string>.Success(decision)).ConfigureAwait(false);
     }
 
     /// <summary>

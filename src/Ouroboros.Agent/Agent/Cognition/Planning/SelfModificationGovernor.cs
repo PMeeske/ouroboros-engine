@@ -62,10 +62,10 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
                 },
                 context: null, ct);
 
-            await Task.WhenAll(ethicsTask, safetyTask);
+            await Task.WhenAll(ethicsTask, safetyTask).ConfigureAwait(false);
 
-            var ethicsResult = await ethicsTask;
-            var safetyResult = await safetyTask;
+            var ethicsResult = await ethicsTask.ConfigureAwait(false);
+            var safetyResult = await safetyTask.ConfigureAwait(false);
 
             if (ethicsResult.IsFailure)
                 return Result<GovernanceDecision, string>.Failure(
@@ -94,14 +94,14 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
 
             // Emit proposed event
             await _eventStore.AppendEventsAsync(streamId,
-                [new ModificationProposedEvent(Guid.NewGuid(), DateTime.UtcNow, proposal)]);
+                [new ModificationProposedEvent(Guid.NewGuid(), DateTime.UtcNow, proposal)]).ConfigureAwait(false);
 
             // Hard deny: ethics denied
             if (clearance.Level == EthicalClearanceLevel.Denied)
             {
                 var denied = BuildDecision(proposal, GovernanceOutcome.DeniedByEthics,
                     clearance.Reasoning);
-                await EmitDecidedEvent(streamId, denied);
+                await EmitDecidedEvent(streamId, denied).ConfigureAwait(false);
                 return Result<GovernanceDecision, string>.Success(denied);
             }
 
@@ -110,7 +110,7 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
             {
                 var denied = BuildDecision(proposal, GovernanceOutcome.DeniedBySafety,
                     safetyResult.Reason);
-                await EmitDecidedEvent(streamId, denied);
+                await EmitDecidedEvent(streamId, denied).ConfigureAwait(false);
                 return Result<GovernanceDecision, string>.Success(denied);
             }
 
@@ -131,7 +131,7 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
                     }
                 };
 
-                var approvalResponse = await _approval.RequestApprovalAsync(approvalRequest, ct);
+                var approvalResponse = await _approval.RequestApprovalAsync(approvalRequest, ct).ConfigureAwait(false);
 
                 var outcome = approvalResponse.Decision switch
                 {
@@ -143,18 +143,18 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
 
                 var decision = BuildDecision(proposal, outcome,
                     approvalResponse.ReviewerComments ?? outcome.ToString(), approvalResponse);
-                await EmitDecidedEvent(streamId, decision);
+                await EmitDecidedEvent(streamId, decision).ConfigureAwait(false);
                 return Result<GovernanceDecision, string>.Success(decision);
             }
 
             // Auto-approved: low risk, reversible, ethics permitted
             var autoApproved = BuildDecision(proposal, GovernanceOutcome.Approved,
                 "Auto-approved: low risk, reversible, ethics compliant");
-            await EmitDecidedEvent(streamId, autoApproved);
+            await EmitDecidedEvent(streamId, autoApproved).ConfigureAwait(false);
             return Result<GovernanceDecision, string>.Success(autoApproved);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<GovernanceDecision, string>.Failure(
                 $"Governance pipeline failed: {ex.Message}");
@@ -178,7 +178,7 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
         try
         {
             // Capture pre-modification snapshot
-            var version = await _eventStore.GetVersionAsync(streamId, ct);
+            var version = await _eventStore.GetVersionAsync(streamId, ct).ConfigureAwait(false);
             var snapshot = new ModificationSnapshot
             {
                 ProposalId = decision.ProposalId,
@@ -195,13 +195,13 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
             };
 
             // Execute the modification
-            var result = await modificationAction(ct);
+            var result = await modificationAction(ct).ConfigureAwait(false);
 
             if (result.IsFailure)
             {
                 await _eventStore.AppendEventsAsync(streamId,
                     [new ModificationFailedEvent(
-                        Guid.NewGuid(), DateTime.UtcNow, decision.ProposalId, result.Error)]);
+                        Guid.NewGuid(), DateTime.UtcNow, decision.ProposalId, result.Error)]).ConfigureAwait(false);
                 return Result<ModificationSnapshot, string>.Failure(
                     $"Modification execution failed: {result.Error}");
             }
@@ -209,16 +209,16 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
             // Record successful execution
             await _eventStore.AppendEventsAsync(streamId,
                 [new ModificationExecutedEvent(
-                    Guid.NewGuid(), DateTime.UtcNow, decision.ProposalId, snapshot)]);
+                    Guid.NewGuid(), DateTime.UtcNow, decision.ProposalId, snapshot)]).ConfigureAwait(false);
 
             return Result<ModificationSnapshot, string>.Success(snapshot);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             await _eventStore.AppendEventsAsync(streamId,
                 [new ModificationFailedEvent(
-                    Guid.NewGuid(), DateTime.UtcNow, decision.ProposalId, ex.Message)]);
+                    Guid.NewGuid(), DateTime.UtcNow, decision.ProposalId, ex.Message)]).ConfigureAwait(false);
             return Result<ModificationSnapshot, string>.Failure(
                 $"Modification execution failed: {ex.Message}");
         }
@@ -235,12 +235,12 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
                 [new ModificationRolledBackEvent(
                     Guid.NewGuid(), DateTime.UtcNow,
                     snapshot.ProposalId, snapshot.SnapshotId,
-                    $"Rollback to version {snapshot.EventStoreVersion}")]);
+                    $"Rollback to version {snapshot.EventStoreVersion}")]).ConfigureAwait(false);
 
             return Result<bool, string>.Success(true);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<bool, string>.Failure($"Rollback failed: {ex.Message}");
         }
@@ -250,7 +250,7 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
         Guid proposalId, CancellationToken ct = default)
     {
         var streamId = StreamPrefix + proposalId;
-        return await _eventStore.GetEventsAsync(streamId, cancellationToken: ct);
+        return await _eventStore.GetEventsAsync(streamId, cancellationToken: ct).ConfigureAwait(false);
     }
 
     private static double ComputeCompositeRisk(
@@ -283,7 +283,7 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
     private async Task EmitDecidedEvent(string streamId, GovernanceDecision decision)
     {
         await _eventStore.AppendEventsAsync(streamId,
-            [new ModificationDecidedEvent(Guid.NewGuid(), DateTime.UtcNow, decision)]);
+            [new ModificationDecidedEvent(Guid.NewGuid(), DateTime.UtcNow, decision)]).ConfigureAwait(false);
     }
 
     private static string FormatApprovalDescription(

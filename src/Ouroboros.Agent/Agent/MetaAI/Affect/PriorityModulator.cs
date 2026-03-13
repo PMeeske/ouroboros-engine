@@ -91,7 +91,7 @@ public sealed class PriorityModulator : IPriorityModulator
         double relevanceScore = task.BasePriority * (1.0 + state.Curiosity * 0.3);
 
         // Build rationale using LLM if available
-        string rationale = await BuildRationaleAsync(task, state, threatLevel, opportunityScore, ct);
+        string rationale = await BuildRationaleAsync(task, state, threatLevel, opportunityScore, ct).ConfigureAwait(false);
 
         var appraisal = new TaskAppraisal(
             threatLevel,
@@ -348,7 +348,7 @@ public sealed class PriorityModulator : IPriorityModulator
                 Agent Confidence: {state.Confidence:P0}
                 """;
 
-            string? response = await _llm.GenerateTextAsync(prompt, ct);
+            string? response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Handle null or empty LLM response with fallback
             if (string.IsNullOrWhiteSpace(response))
@@ -358,8 +358,7 @@ public sealed class PriorityModulator : IPriorityModulator
 
             return response;
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return $"Threat: {threatLevel:P0}, Opportunity: {opportunityScore:P0}";
         }
     }

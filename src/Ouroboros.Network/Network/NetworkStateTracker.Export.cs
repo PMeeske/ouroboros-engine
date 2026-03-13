@@ -42,7 +42,7 @@ public sealed partial class NetworkStateTracker
                 _mettaFacts.Add(fact);
             }
 
-            var result = await _mettaEngine.AddFactAsync(fact, ct);
+            var result = await _mettaEngine.AddFactAsync(fact, ct).ConfigureAwait(false);
             if (result.IsSuccess)
             {
                 addedCount++;
@@ -74,7 +74,7 @@ public sealed partial class NetworkStateTracker
                 continue;
             }
 
-            var result = await _mettaEngine.AddFactAsync(rule, ct);
+            var result = await _mettaEngine.AddFactAsync(rule, ct).ConfigureAwait(false);
             if (result.IsSuccess)
             {
                 totalAdded++;
@@ -101,7 +101,7 @@ public sealed partial class NetworkStateTracker
             return Result<bool>.Failure("MeTTa engine not configured. Call ConfigureMeTTaExport first.");
         }
 
-        var verifyResult = await _mettaEngine.VerifyDagConstraintAsync(branchName, constraint, ct);
+        var verifyResult = await _mettaEngine.VerifyDagConstraintAsync(branchName, constraint, ct).ConfigureAwait(false);
         return verifyResult.Match(
             isValid => Result<bool>.Success(isValid),
             error => Result<bool>.Failure(error));
@@ -223,7 +223,7 @@ public sealed partial class NetworkStateTracker
 
             if (_qdrantStore != null)
             {
-                await _qdrantStore.DisposeAsync();
+                await _qdrantStore.DisposeAsync().ConfigureAwait(false);
             }
 
             _disposed = true;

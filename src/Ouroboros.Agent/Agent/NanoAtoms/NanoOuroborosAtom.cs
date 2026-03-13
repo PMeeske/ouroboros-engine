@@ -87,11 +87,11 @@ public sealed class NanoOuroborosAtom : IDisposable
                 try
                 {
                     string prompt = string.Format(_config.ProcessPrompt, input);
-                    rawOutput = await _model.GenerateTextAsync(prompt, ct);
+                    rawOutput = await _model.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
                     ResetCircuitBreaker();
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception) when (_config.EnableCircuitBreaker)
+                catch (Exception ex) when (ex is not OperationCanceledException && _config.EnableCircuitBreaker)
                 {
                     RecordFailure();
                     rawOutput = SymbolicProcess(input);
@@ -117,7 +117,7 @@ public sealed class NanoOuroborosAtom : IDisposable
                         _config.DigestPrompt,
                         _config.DigestTargetTokens,
                         rawOutput);
-                    digestContent = await _model.GenerateTextAsync(digestPrompt, ct);
+                    digestContent = await _model.GenerateTextAsync(digestPrompt, ct).ConfigureAwait(false);
                     ResetCircuitBreaker();
 
                     // Confidence from mini self-critique (if enabled)
@@ -126,7 +126,7 @@ public sealed class NanoOuroborosAtom : IDisposable
                         : 0.7; // Default medium confidence
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception) when (_config.EnableCircuitBreaker)
+                catch (Exception ex) when (ex is not OperationCanceledException && _config.EnableCircuitBreaker)
                 {
                     RecordFailure();
                     digestContent = SymbolicDigest(rawOutput);
@@ -158,7 +158,7 @@ public sealed class NanoOuroborosAtom : IDisposable
             return Result<DigestFragment, string>.Success(digest);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             CurrentPhase = NanoAtomPhase.Idle;
             return Result<DigestFragment, string>.Failure($"NanoAtom processing failed: {ex.Message}");

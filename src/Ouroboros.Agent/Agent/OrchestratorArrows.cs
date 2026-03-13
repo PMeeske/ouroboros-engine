@@ -59,7 +59,7 @@ public static class OrchestratorArrows
     {
         // Lift simple arrow to context-aware arrow
         Step<(TInput input, OrchestratorContext context), TOutput> contextArrow =
-            async tuple => await executionArrow(tuple.input);
+            async tuple => await executionArrow(tuple.input).ConfigureAwait(false);
 
         return FromArrow(name, contextArrow, config, safetyGuard);
     }
@@ -92,7 +92,7 @@ public static class OrchestratorArrows
 
         Step<(TInput input, OrchestratorContext context), TOutput> composedArrow = async tuple =>
         {
-            var firstResult = await first.ExecuteAsync(tuple.input, tuple.context);
+            var firstResult = await first.ExecuteAsync(tuple.input, tuple.context).ConfigureAwait(false);
             if (!firstResult.Success)
             {
                 throw new InvalidOperationException(firstResult.ErrorMessage ?? "First orchestrator failed");
@@ -103,7 +103,7 @@ public static class OrchestratorArrows
                 throw new InvalidOperationException("First orchestrator returned null output despite reporting success");
             }
 
-            var secondResult = await second.ExecuteAsync(firstResult.Output, tuple.context);
+            var secondResult = await second.ExecuteAsync(firstResult.Output, tuple.context).ConfigureAwait(false);
             if (!secondResult.Success)
             {
                 throw new InvalidOperationException(secondResult.ErrorMessage ?? "Second orchestrator failed");
@@ -142,10 +142,10 @@ public static class OrchestratorArrows
                 attempt++;
                 try
                 {
-                    return await arrow(input);
+                    return await arrow(input).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     lastException = ex;
                     if (attempt >= retryConfig.MaxRetries)
@@ -155,7 +155,7 @@ public static class OrchestratorArrows
 
                     // Add jitter to prevent thundering herd
                     var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, (int)(delay.TotalMilliseconds * 0.1)));
-                    await Task.Delay(delay + jitter);
+                    await Task.Delay(delay + jitter).ConfigureAwait(false);
                     delay = TimeSpan.FromMilliseconds(
                         Math.Min(delay.TotalMilliseconds * retryConfig.BackoffMultiplier,
                                  retryConfig.MaxDelay.TotalMilliseconds));
@@ -185,7 +185,7 @@ public static class OrchestratorArrows
             using var cts = new CancellationTokenSource(timeout);
             try
             {
-                return await arrow(input);
+                return await arrow(input).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

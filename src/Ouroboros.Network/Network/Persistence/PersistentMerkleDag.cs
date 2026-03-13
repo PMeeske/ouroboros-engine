@@ -102,8 +102,7 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
                 }
             }
         }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<PersistentMerkleDag, string>.Failure($"Replay failed: {ex.Message}");
         }
@@ -121,7 +120,21 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
             return Result<PersistentMerkleDag, string>.Failure($"Integrity check failed: {integrityResult.Error}");
         }
 
-        return Result<PersistentMerkleDag, string>.Success(new PersistentMerkleDag(dag, persistence));
+        PersistentMerkleDag? persistentDag = null;
+        try
+        {
+            persistentDag = new PersistentMerkleDag(dag, persistence);
+            var returnValue = Result<PersistentMerkleDag, string>.Success(persistentDag);
+            persistentDag = null; // Ownership transferred to caller via Result
+            return returnValue;
+        }
+        finally
+        {
+            if (persistentDag != null)
+            {
+                await persistentDag.DisposeAsync().ConfigureAwait(false);
+            }
+        }
     }
 
     /// <summary>
@@ -169,8 +182,7 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
         {
             await _persistence.AppendNodeAsync(ToAbstractionsNode(node), ct).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Note: The node is already in memory - in production, consider rollback or compensation
             return Result<MonadNode>.Failure($"Failed to persist node: {ex.Message}");
@@ -209,8 +221,7 @@ public sealed class PersistentMerkleDag : IAsyncDisposable
         {
             await _persistence.AppendEdgeAsync(ToAbstractionsEdge(edge), ct).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Note: The edge is already in memory - in production, consider rollback or compensation
             return Result<TransitionEdge>.Failure($"Failed to persist edge: {ex.Message}");

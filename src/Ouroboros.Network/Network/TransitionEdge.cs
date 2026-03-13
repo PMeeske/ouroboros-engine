@@ -168,7 +168,7 @@ public sealed record TransitionEdge
             var result = JsonSerializer.Deserialize<T>(this.OperationSpecJson);
             return result is not null ? Option<T>.Some(result) : Option<T>.None();
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Option<T>.None();
         }

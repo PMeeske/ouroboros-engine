@@ -177,7 +177,7 @@ public sealed partial class ConsolidatedMind : Ouroboros.Abstractions.Core.IChat
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
-        var response = await ProcessAsync(prompt, ct);
+        var response = await ProcessAsync(prompt, ct).ConfigureAwait(false);
         return response.Response;
     }
 
@@ -213,25 +213,25 @@ public sealed partial class ConsolidatedMind : Ouroboros.Abstractions.Core.IChat
             if (_config.EnableThinking && analysis.RequiresThinking &&
                 primarySpecialist.Model is IThinkingChatModel thinkingModel)
             {
-                var thinkingResponse = await thinkingModel.GenerateWithThinkingAsync(prompt, ct);
+                var thinkingResponse = await thinkingModel.GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
                 response = thinkingResponse.Content;
                 thinkingContent = thinkingResponse.Thinking;
             }
             else
             {
-                response = await primarySpecialist.Model.GenerateTextAsync(prompt, ct);
+                response = await primarySpecialist.Model.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             }
 
             // Verify if needed
             bool wasVerified = false;
             if (_config.EnableVerification && analysis.RequiresVerification)
             {
-                var verificationResult = await VerifyResponseAsync(prompt, response, ct);
+                var verificationResult = await VerifyResponseAsync(prompt, response, ct).ConfigureAwait(false);
                 wasVerified = true;
                 if (!verificationResult.IsValid && _config.FallbackOnError)
                 {
                     // Try to improve the response
-                    response = await RefineResponseAsync(prompt, response, verificationResult.Feedback, ct);
+                    response = await RefineResponseAsync(prompt, response, verificationResult.Feedback, ct).ConfigureAwait(false);
                 }
                 usedRoles.Add(SpecializedRole.Verifier);
             }
@@ -258,7 +258,7 @@ public sealed partial class ConsolidatedMind : Ouroboros.Abstractions.Core.IChat
             {
                 try
                 {
-                    response = await fallback.Model.GenerateTextAsync(prompt, ct);
+                    response = await fallback.Model.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
                     usedRoles.Add(fallback.Role);
 
                     return new MindResponse(
@@ -279,7 +279,7 @@ public sealed partial class ConsolidatedMind : Ouroboros.Abstractions.Core.IChat
                     {
                         try
                         {
-                            response = await secondaryFallback.Model.GenerateTextAsync(prompt, ct);
+                            response = await secondaryFallback.Model.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
                             usedRoles.Add(secondaryFallback.Role);
 
                             return new MindResponse(
@@ -308,7 +308,7 @@ public sealed partial class ConsolidatedMind : Ouroboros.Abstractions.Core.IChat
     /// <returns>A step that can be composed into pipelines.</returns>
     public Step<string, MindResponse> ToStep()
     {
-        return async prompt => await ProcessAsync(prompt);
+        return async prompt => await ProcessAsync(prompt).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -324,7 +324,7 @@ public sealed partial class ConsolidatedMind : Ouroboros.Abstractions.Core.IChat
         return async branch =>
         {
             string prompt = promptBuilder(branch);
-            var response = await ProcessAsync(prompt);
+            var response = await ProcessAsync(prompt).ConfigureAwait(false);
             return responseHandler(branch, response);
         };
     }

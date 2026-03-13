@@ -55,7 +55,7 @@ public sealed class SkillBasedDslExtension
     /// </summary>
     public async Task<List<SkillSuggestion>> SuggestSkillsForGoalAsync(string goal, int maxSuggestions = 5)
     {
-        List<Skill> matchingSkills = await _skillRegistry.FindMatchingSkillsAsync(goal);
+        List<Skill> matchingSkills = await _skillRegistry.FindMatchingSkillsAsync(goal).ConfigureAwait(false);
 
         return matchingSkills
             .Take(maxSuggestions)

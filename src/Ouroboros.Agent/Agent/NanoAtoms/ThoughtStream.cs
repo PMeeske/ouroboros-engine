@@ -76,7 +76,7 @@ public sealed class ThoughtStream : IAsyncDisposable
     public async ValueTask WriteAsync(ThoughtFragment fragment, CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        await _inputChannel.Writer.WriteAsync(fragment, ct);
+        await _inputChannel.Writer.WriteAsync(fragment, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -106,7 +106,7 @@ public sealed class ThoughtStream : IAsyncDisposable
     {
         if (_processingTask != null)
         {
-            await _processingTask.WaitAsync(ct);
+            await _processingTask.WaitAsync(ct).ConfigureAwait(false);
         }
     }
 
@@ -118,7 +118,7 @@ public sealed class ThoughtStream : IAsyncDisposable
     public async Task<List<DigestFragment>> CollectDigestsAsync(CancellationToken ct = default)
     {
         List<DigestFragment> digests = [];
-        await foreach (DigestFragment digest in ReadAllAsync(ct))
+await foreach (DigestFragment digest in ReadAllAsync(ct).ConfigureAwait(false))
         {
             digests.Add(digest);
         }
@@ -130,13 +130,13 @@ public sealed class ThoughtStream : IAsyncDisposable
     {
         try
         {
-            await foreach (ThoughtFragment fragment in _inputChannel.Reader.ReadAllAsync(ct))
+await foreach (ThoughtFragment fragment in _inputChannel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
             {
-                Result<DigestFragment, string> result = await _atom.ProcessAsync(fragment, ct);
+                Result<DigestFragment, string> result = await _atom.ProcessAsync(fragment, ct).ConfigureAwait(false);
 
                 if (result.IsSuccess)
                 {
-                    await _outputChannel.Writer.WriteAsync(result.Value, ct);
+                    await _outputChannel.Writer.WriteAsync(result.Value, ct).ConfigureAwait(false);
                     DigestsProduced++;
                 }
 
@@ -164,14 +164,14 @@ public sealed class ThoughtStream : IAsyncDisposable
 
         _disposed = true;
 
-        await _cts.CancelAsync();
+        await _cts.CancelAsync().ConfigureAwait(false);
         _inputChannel.Writer.TryComplete();
 
         if (_processingTask != null)
         {
             try
             {
-                await _processingTask;
+                await _processingTask.ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

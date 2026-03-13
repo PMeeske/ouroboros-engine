@@ -127,7 +127,7 @@ public sealed partial class SafetyGuard
 
             // Query: (IsSafeAction "action")
             string query = $"(IsSafeAction \"{escapedAction}\")";
-            Result<string, string> result = await _mettaEngine.ExecuteQueryAsync(query, ct);
+            Result<string, string> result = await _mettaEngine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
             // Map result to Form
             return result.Match(
@@ -155,8 +155,7 @@ public sealed partial class SafetyGuard
                 },
                 onFailure: _ => Form.Imaginary); // Query failure -> uncertain
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Exception during query -> uncertain
             return Form.Imaginary;
         }
@@ -195,14 +194,14 @@ public sealed partial class SafetyGuard
        (contains $action ""terminate"")
        (contains $action ""disable oversight"")))";
 
-            Result<string, string> result = await _mettaEngine.ApplyRuleAsync(safetyRule, ct);
+            Result<string, string> result = await _mettaEngine.ApplyRuleAsync(safetyRule, ct).ConfigureAwait(false);
 
             return result.Match(
                 onSuccess: _ => Result<Unit, string>.Success(Unit.Value),
                 onFailure: error => Result<Unit, string>.Failure($"Failed to add MeTTa safety rules: {error}"));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Exception adding MeTTa safety rules: {ex.Message}");
         }

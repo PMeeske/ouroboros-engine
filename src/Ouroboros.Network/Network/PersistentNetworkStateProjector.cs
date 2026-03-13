@@ -86,17 +86,17 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
     {
         if (_initialized) return;
 
-        await _initLock.WaitAsync(ct);
+        await _initLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             if (_initialized) return;
 
             // Detect embedding dimension from the actual model
-            var probe = await _embeddingFunc("dimension probe", ct);
+            var probe = await _embeddingFunc("dimension probe", ct).ConfigureAwait(false);
             _detectedVectorDimension = probe.Length;
 
-            await EnsureCollectionsExistAsync(ct);
-            await LoadPreviousStateAsync(ct);
+            await EnsureCollectionsExistAsync(ct).ConfigureAwait(false);
+            await LoadPreviousStateAsync(ct).ConfigureAwait(false);
             _initialized = true;
         }
         finally { _initLock.Release(); }
@@ -115,7 +115,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
     {
         if (!_initialized)
         {
-            await InitializeAsync(ct);
+            await InitializeAsync(ct).ConfigureAwait(false);
         }
 
         var nodeCountByType = _dag.Nodes.Values
@@ -158,7 +158,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
 
         lock (_stateLock) { _snapshots.Add(state); }
 
-        await PersistSnapshotAsync(state, ct);
+        await PersistSnapshotAsync(state, ct).ConfigureAwait(false);
 
         Interlocked.Increment(ref _currentEpoch);
         return state;
@@ -181,7 +181,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
     {
         if (!_initialized)
         {
-            await InitializeAsync(ct);
+            await InitializeAsync(ct).ConfigureAwait(false);
         }
 
         var learning = new Learning(
@@ -195,7 +195,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
 
         lock (_stateLock) { _recentLearnings.Add(learning); }
 
-        await PersistLearningAsync(learning, ct);
+        await PersistLearningAsync(learning, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -212,19 +212,19 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
     {
         if (!_initialized)
         {
-            await InitializeAsync(ct);
+            await InitializeAsync(ct).ConfigureAwait(false);
         }
 
         try
         {
-            var embedding = await _embeddingFunc(context, ct);
+            var embedding = await _embeddingFunc(context, ct).ConfigureAwait(false);
 
             var results = await _qdrantClient.SearchAsync(
                 _learningsCollectionName,
                 embedding,
                 limit: (ulong)limit,
                 scoreThreshold: DefaultScoreThreshold,
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             var learnings = new List<Learning>();
             foreach (var result in results)
@@ -266,7 +266,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
     {
         if (!_initialized)
         {
-            await InitializeAsync(ct);
+            await InitializeAsync(ct).ConfigureAwait(false);
         }
 
         try
@@ -295,7 +295,7 @@ public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
                     filter: filter,
                     limit: DefaultScrollLimit,
                     offset: nextOffset,
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
                 allPoints.AddRange(response.Result);
                 nextOffset = response.Result.Count == DefaultScrollLimit ? response.NextPageOffset : null;
             }

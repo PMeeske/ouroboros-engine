@@ -58,16 +58,16 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
             {
                 IEnumerable<Task> tasks = subIssueNumbers.Select(async subIssueNumber =>
                 {
-                    await AssignSubIssueAsync(epicNumber, subIssueNumber, null, ct);
+                    await AssignSubIssueAsync(epicNumber, subIssueNumber, null, ct).ConfigureAwait(false);
                 });
 
-                await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks).ConfigureAwait(false);
             }
 
             return Result<Epic, string>.Success(epic);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Epic, string>.Failure($"Failed to register epic: {ex.Message}");
         }
@@ -130,11 +130,11 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
             string key = GetAssignmentKey(epicNumber, subIssueNumber);
             _assignments[key] = assignment;
 
-            await Task.CompletedTask; // For async compliance
+            await Task.CompletedTask.ConfigureAwait(false); // For async compliance
             return Result<SubIssueAssignment, string>.Success(assignment);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<SubIssueAssignment, string>.Failure($"Failed to assign sub-issue: {ex.Message}");
         }
@@ -185,7 +185,7 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
             return Result<SubIssueAssignment, string>.Success(updatedAssignment);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<SubIssueAssignment, string>.Failure($"Failed to update status: {ex.Message}");
         }
@@ -218,7 +218,7 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
             _distributor.UpdateHeartbeat(assignment.AssignedAgentId);
 
             // Execute work function
-            Result<SubIssueAssignment, string> result = await workFunc(assignment);
+            Result<SubIssueAssignment, string> result = await workFunc(assignment).ConfigureAwait(false);
 
             if (result.IsSuccess)
             {
@@ -234,7 +234,7 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             UpdateSubIssueStatus(epicNumber, subIssueNumber, SubIssueStatus.Failed, ex.Message);
             return Result<SubIssueAssignment, string>.Failure($"Execution failed: {ex.Message}");

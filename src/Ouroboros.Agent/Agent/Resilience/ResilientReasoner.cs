@@ -107,7 +107,7 @@ public sealed class ResilientReasoner : IReasoner
         // Perform reasoning with the effective mode
         try
         {
-            var result = await ExecuteWithCircuitBreaker(query, effectiveMode, ct);
+            var result = await ExecuteWithCircuitBreaker(query, effectiveMode, ct).ConfigureAwait(false);
             
             if (result.IsSuccess)
             {
@@ -135,7 +135,7 @@ public sealed class ResilientReasoner : IReasoner
                 {
                     _logger?.LogWarning("Neural reasoning failed with error: {Error}, falling back to symbolic-only mode", result.Error);
                     
-                    var fallbackResult = await ReasonWithMode(query, Core.Resilience.ReasoningMode.SymbolicOnly, ct);
+                    var fallbackResult = await ReasonWithMode(query, Core.Resilience.ReasoningMode.SymbolicOnly, ct).ConfigureAwait(false);
                     if (fallbackResult.IsSuccess)
                     {
                         return Result<string, string>.Success(fallbackResult.Value.Answer);
@@ -156,19 +156,19 @@ public sealed class ResilientReasoner : IReasoner
             
             try
             {
-                var fallbackResult = await ReasonWithMode(query, Core.Resilience.ReasoningMode.SymbolicOnly, ct);
+                var fallbackResult = await ReasonWithMode(query, Core.Resilience.ReasoningMode.SymbolicOnly, ct).ConfigureAwait(false);
                 return fallbackResult.IsSuccess
                     ? Result<string, string>.Success(fallbackResult.Value.Answer)
                     : Result<string, string>.Failure($"Neural reasoning unavailable (circuit open), symbolic fallback failed: {fallbackResult.Error}");
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception fallbackEx)
+            catch (Exception fallbackEx) when (fallbackEx is not OperationCanceledException)
             {
                 return Result<string, string>.Failure($"Neural reasoning unavailable (circuit open), symbolic fallback exception: {fallbackEx.Message}");
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Exception thrown - record failure for neural modes
             if (effectiveMode == Core.Resilience.ReasoningMode.NeuralOnly || 
@@ -186,13 +186,13 @@ public sealed class ResilientReasoner : IReasoner
                 
                 try
                 {
-                    var fallbackResult = await ReasonWithMode(query, Core.Resilience.ReasoningMode.SymbolicOnly, ct);
+                    var fallbackResult = await ReasonWithMode(query, Core.Resilience.ReasoningMode.SymbolicOnly, ct).ConfigureAwait(false);
                     return fallbackResult.IsSuccess
                         ? Result<string, string>.Success(fallbackResult.Value.Answer)
                         : Result<string, string>.Failure($"Both neural and symbolic reasoning failed. Neural error: {ex.Message}, Symbolic error: {fallbackResult.Error}");
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception fallbackEx)
+                catch (Exception fallbackEx) when (fallbackEx is not OperationCanceledException)
                 {
                     return Result<string, string>.Failure($"Both neural and symbolic reasoning failed. Neural error: {ex.Message}, Symbolic error: {fallbackEx.Message}");
                 }
@@ -248,24 +248,24 @@ public sealed class ResilientReasoner : IReasoner
         // Only use circuit breaker for modes that involve neural reasoning
         if (mode == Core.Resilience.ReasoningMode.SymbolicOnly)
         {
-            return await ReasonWithMode(query, mode, ct);
+            return await ReasonWithMode(query, mode, ct).ConfigureAwait(false);
         }
 
         // Execute with circuit breaker for neural modes
         return await _circuitBreakerPolicy.ExecuteAsync(async () =>
         {
-            var result = await ReasonWithMode(query, mode, ct);
+            var result = await ReasonWithMode(query, mode, ct).ConfigureAwait(false);
             
             // Add timeout for half-open state
             if (GetCircuitState() == "HalfOpen" && UsesNeuralReasoning(mode))
             {
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 cts.CancelAfter(_config.HalfOpenTimeout);
-                return await ReasonWithMode(query, mode, cts.Token);
+                return await ReasonWithMode(query, mode, cts.Token).ConfigureAwait(false);
             }
             
             return result;
-        });
+        }).ConfigureAwait(false);
     }
 
     private async Task<Result<ReasoningResult, string>> ReasonWithMode(
@@ -278,7 +278,7 @@ public sealed class ResilientReasoner : IReasoner
         // A unit test in ResilientReasonerTests verifies enum alignment.
         var bridgeMode = (NeuralSymbolic.ReasoningMode)(int)mode;
         
-        return await _bridge.HybridReasonAsync(query, bridgeMode, ct);
+        return await _bridge.HybridReasonAsync(query, bridgeMode, ct).ConfigureAwait(false);
     }
 
     private string GetCircuitState()
@@ -295,8 +295,7 @@ public sealed class ResilientReasoner : IReasoner
                 _ => "Unknown"
             };
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return "Unknown";
         }
     }

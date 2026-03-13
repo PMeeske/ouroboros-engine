@@ -234,11 +234,20 @@ public sealed class MeTTaOrchestratorBuilder
         SafetyGuard safety = new SafetyGuard();
         SubprocessMeTTaEngine mettaEngine = new SubprocessMeTTaEngine();
 
-        // Create a simple orchestrator with default tools
+        // Create a simple orchestrator with default tools — ownership transfers to router
         ToolRegistry defaultTools = ToolRegistry.CreateDefault();
-        SmartModelOrchestrator orchestrator = new SmartModelOrchestrator(defaultTools);
-
-        UncertaintyRouter router = new UncertaintyRouter(orchestrator);
+        SmartModelOrchestrator? orchestrator = null;
+        UncertaintyRouter router;
+        try
+        {
+            orchestrator = new SmartModelOrchestrator(defaultTools);
+            router = new UncertaintyRouter(orchestrator);
+            orchestrator = null; // Ownership transferred
+        }
+        finally
+        {
+            orchestrator?.Dispose();
+        }
 
         return new MeTTaOrchestratorBuilder()
             .WithMemory(memory)

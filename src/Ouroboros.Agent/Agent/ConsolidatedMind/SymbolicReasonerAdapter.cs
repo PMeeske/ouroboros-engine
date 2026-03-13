@@ -56,7 +56,7 @@ public sealed partial class SymbolicReasonerAdapter : Ouroboros.Abstractions.Cor
             // Strategy 1: Use bridge with SymbolicOnly mode if available
             if (_bridge != null)
             {
-                var result = await _bridge.HybridReasonAsync(prompt, ReasoningMode.SymbolicOnly, ct);
+                var result = await _bridge.HybridReasonAsync(prompt, ReasoningMode.SymbolicOnly, ct).ConfigureAwait(false);
 
                 if (result.IsSuccess)
                 {
@@ -71,7 +71,7 @@ public sealed partial class SymbolicReasonerAdapter : Ouroboros.Abstractions.Cor
             if (_engine != null)
             {
                 var query = ExtractQueryFromPrompt(prompt);
-                var result = await _engine.ExecuteQueryAsync(query, ct);
+                var result = await _engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
 
                 if (result.IsSuccess)
                 {
@@ -86,7 +86,7 @@ public sealed partial class SymbolicReasonerAdapter : Ouroboros.Abstractions.Cor
             return FormatLimitedResponse(prompt, "No symbolic reasoning engine configured");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // As the ultimate fallback, we NEVER throw - always return something
             return FormatLimitedResponse(prompt, $"Symbolic reasoning encountered an error: {ex.Message}");

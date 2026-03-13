@@ -34,7 +34,7 @@ public sealed partial class OuroborosOrchestrator
             string selfReflection = _atom.SelfReflect();
             string prompt = BuildPlanPrompt(goal, selfReflection, confidence);
 
-            string planText = await _llm.GenerateTextAsync(prompt, ct);
+            string planText = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             sw.Stop();
             RecordPhaseMetric("plan", sw.ElapsedMilliseconds, true);
@@ -52,7 +52,7 @@ public sealed partial class OuroborosOrchestrator
                 });
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
             RecordPhaseMetric("plan", sw.ElapsedMilliseconds, false);
@@ -132,19 +132,19 @@ Provide {planningGuidance}. {stepGuidance}. Each step should be actionable and s
             $"(Stress {affect.Stress:F2}) " +
             $"(Arousal {affect.Arousal:F2}) " +
             $"(Confidence {affect.Confidence:F2}) " +
-            $"(Curiosity {affect.Curiosity:F2}))", ct);
+            $"(Curiosity {affect.Curiosity:F2}))", ct).ConfigureAwait(false);
 
         if (dominantUrge != null)
         {
             await _mettaEngine.AddFactAsync(
                 $"(DominantUrge (OuroborosInstance \"{id}\") " +
-                $"(Urge \"{dominantUrge.Name}\" {dominantUrge.Intensity:F2}))", ct);
+                $"(Urge \"{dominantUrge.Name}\" {dominantUrge.Intensity:F2}))", ct).ConfigureAwait(false);
         }
 
         if (_urgeSystem != null)
         {
             string urgesMeTTa = _urgeSystem.ToMeTTa(id);
-            await _mettaEngine.AddFactAsync(urgesMeTTa, ct);
+            await _mettaEngine.AddFactAsync(urgesMeTTa, ct).ConfigureAwait(false);
         }
 
         if (_spreading != null)
@@ -152,7 +152,7 @@ Provide {planningGuidance}. {stepGuidance}. Each step should be actionable and s
             foreach (var (atomKey, activation) in _spreading.GetActivatedAtoms().Take(10))
             {
                 await _mettaEngine.AddFactAsync(
-                    $"(Primed (OuroborosInstance \"{id}\") (Concept \"{EscapeMeTTa(atomKey)}\" {activation:F2}))", ct);
+                    $"(Primed (OuroborosInstance \"{id}\") (Concept \"{EscapeMeTTa(atomKey)}\" {activation:F2}))", ct).ConfigureAwait(false);
             }
         }
     }

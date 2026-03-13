@@ -258,7 +258,7 @@ public sealed class FileWalPersistence : IGraphPersistence
     {
         // Convert from Network.Persistence.WalEntry to Abstractions.Network.WalEntry
         long sequenceNumber = 0;
-        await foreach (var entry in ReplayAsync(ct))
+        await foreach (var entry in ReplayAsync(ct).ConfigureAwait(false))
         {
             yield return new Ouroboros.Abstractions.Network.WalEntry(
                 Guid.NewGuid(),

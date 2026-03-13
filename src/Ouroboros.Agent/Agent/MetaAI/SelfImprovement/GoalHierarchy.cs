@@ -90,7 +90,7 @@ public sealed partial class GoalHierarchy : IGoalHierarchy
                 }
             };
 
-            var ethicsResult = await _ethics.EvaluateGoalAsync(goalForEthics, context, ct);
+            var ethicsResult = await _ethics.EvaluateGoalAsync(goalForEthics, context, ct).ConfigureAwait(false);
 
             if (ethicsResult.IsFailure)
             {
@@ -127,7 +127,7 @@ public sealed partial class GoalHierarchy : IGoalHierarchy
                     ImpactLevel = goal.Priority
                 };
 
-                var govResult = await _governor.ProposeAsync(modRequest, ct);
+                var govResult = await _governor.ProposeAsync(modRequest, ct).ConfigureAwait(false);
                 if (govResult.IsFailure)
                     return Result<Goal, string>.Failure(govResult.Error);
                 if (!govResult.Value.IsApproved)
@@ -147,7 +147,7 @@ public sealed partial class GoalHierarchy : IGoalHierarchy
             return Result<Goal, string>.Success(goal);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Goal, string>.Failure($"Goal addition failed: {ex.Message}");
         }
@@ -195,7 +195,7 @@ public sealed partial class GoalHierarchy : IGoalHierarchy
             if (_goalSplitter is not null)
             {
                 var hypergridContext = HypergridContext.Default;
-                var splitResult = await _goalSplitter.SplitAsync(goal, hypergridContext, ct);
+                var splitResult = await _goalSplitter.SplitAsync(goal, hypergridContext, ct).ConfigureAwait(false);
                 if (splitResult.IsSuccess)
                 {
                     subgoals = splitResult.Value.Steps
@@ -205,12 +205,12 @@ public sealed partial class GoalHierarchy : IGoalHierarchy
                 else
                 {
                     // Fallback to raw LLM decomposition if splitter fails
-                    subgoals = await DecomposeViaLlmAsync(goal, ct);
+                    subgoals = await DecomposeViaLlmAsync(goal, ct).ConfigureAwait(false);
                 }
             }
             else
             {
-                subgoals = await DecomposeViaLlmAsync(goal, ct);
+                subgoals = await DecomposeViaLlmAsync(goal, ct).ConfigureAwait(false);
             }
 
             // Recursively decompose subgoals if needed
@@ -219,7 +219,7 @@ public sealed partial class GoalHierarchy : IGoalHierarchy
             {
                 if (IsComplexGoal(subgoal) && maxDepth > 1)
                 {
-                    Result<Goal, string> decomposed = await DecomposeGoalAsync(subgoal, maxDepth - 1, ct);
+                    Result<Goal, string> decomposed = await DecomposeGoalAsync(subgoal, maxDepth - 1, ct).ConfigureAwait(false);
                     decomposedSubgoals.Add(decomposed.IsSuccess ? decomposed.Value : subgoal);
                 }
                 else
@@ -234,7 +234,7 @@ public sealed partial class GoalHierarchy : IGoalHierarchy
             return Result<Goal, string>.Success(updatedGoal);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Goal, string>.Failure($"Goal decomposition failed: {ex.Message}");
         }
@@ -261,7 +261,7 @@ PRIORITY: [0-1]
 
 SUBGOAL 2: ...";
 
-        string response = await _llm.GenerateTextAsync(prompt, ct);
+        string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
         return ParseSubgoals(response, goal);
     }
 
@@ -304,7 +304,7 @@ SUBGOAL 2: ...";
                 }
 
                 // Use LLM for semantic conflict detection
-                GoalConflict? semanticConflict = await DetectSemanticConflictAsync(goal1, goal2, ct);
+                GoalConflict? semanticConflict = await DetectSemanticConflictAsync(goal1, goal2, ct).ConfigureAwait(false);
                 if (semanticConflict != null)
                 {
                     conflicts.Add(semanticConflict);
@@ -328,7 +328,7 @@ SUBGOAL 2: ...";
         // Check safety constraints
         foreach (string constraint in _config.SafetyConstraints)
         {
-            bool violates = await CheckConstraintViolationAsync(goal, constraint, ct);
+            bool violates = await CheckConstraintViolationAsync(goal, constraint, ct).ConfigureAwait(false);
             if (violates)
             {
                 return Result<bool, string>.Failure(
@@ -350,7 +350,7 @@ SAFETY CONSTRAINTS:
 Does this goal align with the values and respect the constraints?
 Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
 
-        string response = await _llm.GenerateTextAsync(prompt, ct);
+        string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
         bool aligned = response.Contains("ALIGNED", StringComparison.OrdinalIgnoreCase) &&
                      !response.Contains("MISALIGNED", StringComparison.OrdinalIgnoreCase);
 
@@ -445,7 +445,7 @@ Answer with 'ALIGNED' or 'MISALIGNED' followed by explanation.";
             Visit(otherGoal);
         }
 
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
         return prioritized;
     }
 

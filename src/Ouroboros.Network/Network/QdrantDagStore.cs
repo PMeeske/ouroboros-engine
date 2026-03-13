@@ -62,21 +62,21 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
         try
         {
             // Create nodes collection
-            if (!await _client.CollectionExistsAsync(_config.NodesCollection, ct))
+            if (!await _client.CollectionExistsAsync(_config.NodesCollection, ct).ConfigureAwait(false))
             {
                 await _client.CreateCollectionAsync(
                     _config.NodesCollection,
                     new VectorParams { Size = (ulong)_config.VectorSize, Distance = Distance.Cosine },
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
             }
 
             // Create edges collection (smaller vectors for edge metadata)
-            if (!await _client.CollectionExistsAsync(_config.EdgesCollection, ct))
+            if (!await _client.CollectionExistsAsync(_config.EdgesCollection, ct).ConfigureAwait(false))
             {
                 await _client.CreateCollectionAsync(
                     _config.EdgesCollection,
                     new VectorParams { Size = (ulong)_config.VectorSize, Distance = Distance.Cosine },
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
             }
 
             _initialized = true;
@@ -101,12 +101,12 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
             return Result<MonadNode>.Failure("Node cannot be null");
         }
 
-        await EnsureInitializedAsync(ct);
+        await EnsureInitializedAsync(ct).ConfigureAwait(false);
 
         try
         {
             // Generate embedding if function available
-            var embedding = await GenerateNodeEmbeddingAsync(node);
+            var embedding = await GenerateNodeEmbeddingAsync(node).ConfigureAwait(false);
 
             var payload = new Dictionary<string, Value>
             {
@@ -125,7 +125,7 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
                 Payload = { payload },
             };
 
-            await _client.UpsertAsync(_config.NodesCollection, new[] { point }, cancellationToken: ct);
+            await _client.UpsertAsync(_config.NodesCollection, new[] { point }, cancellationToken: ct).ConfigureAwait(false);
             return Result<MonadNode>.Success(node);
         }
         catch (OperationCanceledException) { throw; }
@@ -148,12 +148,12 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
             return Result<TransitionEdge>.Failure("Edge cannot be null");
         }
 
-        await EnsureInitializedAsync(ct);
+        await EnsureInitializedAsync(ct).ConfigureAwait(false);
 
         try
         {
             // Generate embedding for the edge
-            var embedding = await GenerateEdgeEmbeddingAsync(edge);
+            var embedding = await GenerateEdgeEmbeddingAsync(edge).ConfigureAwait(false);
 
             var payload = new Dictionary<string, Value>
             {
@@ -183,7 +183,7 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
                 Payload = { payload },
             };
 
-            await _client.UpsertAsync(_config.EdgesCollection, new[] { point }, cancellationToken: ct);
+            await _client.UpsertAsync(_config.EdgesCollection, new[] { point }, cancellationToken: ct).ConfigureAwait(false);
             return Result<TransitionEdge>.Success(edge);
         }
         catch (OperationCanceledException) { throw; }
@@ -206,7 +206,7 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
             return Result<DagSaveResult>.Failure("DAG cannot be null");
         }
 
-        await EnsureInitializedAsync(ct);
+        await EnsureInitializedAsync(ct).ConfigureAwait(false);
 
         var nodesSaved = 0;
         var edgesSaved = 0;
@@ -215,7 +215,7 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
         // Save all nodes
         foreach (var node in dag.Nodes.Values)
         {
-            var result = await SaveNodeAsync(node, ct);
+            var result = await SaveNodeAsync(node, ct).ConfigureAwait(false);
             if (result.IsSuccess)
             {
                 nodesSaved++;
@@ -229,7 +229,7 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
         // Save all edges
         foreach (var edge in dag.Edges.Values)
         {
-            var result = await SaveEdgeAsync(edge, ct);
+            var result = await SaveEdgeAsync(edge, ct).ConfigureAwait(false);
             if (result.IsSuccess)
             {
                 edgesSaved++;
@@ -250,14 +250,14 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
     /// <returns>A Result containing the loaded DAG.</returns>
     public async Task<Result<MerkleDag>> LoadDagAsync(CancellationToken ct = default)
     {
-        await EnsureInitializedAsync(ct);
+        await EnsureInitializedAsync(ct).ConfigureAwait(false);
 
         try
         {
             var dag = new MerkleDag();
 
             // Load all nodes
-            var nodesResult = await LoadAllNodesAsync(ct);
+            var nodesResult = await LoadAllNodesAsync(ct).ConfigureAwait(false);
             if (!nodesResult.IsSuccess)
             {
                 return Result<MerkleDag>.Failure($"Failed to load nodes: {nodesResult.Error}");
@@ -273,7 +273,7 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
             }
 
             // Load and add all edges
-            var edgesResult = await LoadAllEdgesAsync(ct);
+            var edgesResult = await LoadAllEdgesAsync(ct).ConfigureAwait(false);
             if (!edgesResult.IsSuccess)
             {
                 return Result<MerkleDag>.Failure($"Failed to load edges: {edgesResult.Error}");

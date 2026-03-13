@@ -24,17 +24,17 @@ public sealed partial class QdrantDagStore
             return Result<IReadOnlyList<ScoredNode>>.Failure("Semantic search requires an embedding function");
         }
 
-        await EnsureInitializedAsync(ct);
+        await EnsureInitializedAsync(ct).ConfigureAwait(false);
 
         try
         {
-            var embedding = await _embeddingFunc!(query);
+            var embedding = await _embeddingFunc!(query).ConfigureAwait(false);
 
             var results = await _client.SearchAsync(
                 _config.NodesCollection,
                 embedding,
                 limit: (ulong)limit,
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             var scoredNodes = new List<ScoredNode>();
             foreach (var result in results)
@@ -63,7 +63,7 @@ public sealed partial class QdrantDagStore
         int limit = 100,
         CancellationToken ct = default)
     {
-        await EnsureInitializedAsync(ct);
+        await EnsureInitializedAsync(ct).ConfigureAwait(false);
 
         try
         {
@@ -86,7 +86,7 @@ public sealed partial class QdrantDagStore
                 _config.NodesCollection,
                 filter: filter,
                 limit: (uint)limit,
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             var nodes = scrollResponse.Result
                 .Select(r => DeserializeNode(r.Payload))
@@ -108,7 +108,7 @@ public sealed partial class QdrantDagStore
     /// </summary>
     public async Task<Option<MonadNode>> GetNodeByIdAsync(Guid nodeId, CancellationToken ct = default)
     {
-        await EnsureInitializedAsync(ct);
+        await EnsureInitializedAsync(ct).ConfigureAwait(false);
 
         try
         {
@@ -116,7 +116,7 @@ public sealed partial class QdrantDagStore
                 _config.NodesCollection,
                 new[] { new PointId { Uuid = nodeId.ToString() } },
                 withPayload: true,
-                cancellationToken: ct);
+                cancellationToken: ct).ConfigureAwait(false);
 
             var point = results.FirstOrDefault();
             if (point == null)
@@ -140,14 +140,14 @@ public sealed partial class QdrantDagStore
     {
         try
         {
-            if (await _client.CollectionExistsAsync(_config.NodesCollection))
+            if (await _client.CollectionExistsAsync(_config.NodesCollection).ConfigureAwait(false))
             {
-                await _client.DeleteCollectionAsync(_config.NodesCollection);
+                await _client.DeleteCollectionAsync(_config.NodesCollection).ConfigureAwait(false);
             }
 
-            if (await _client.CollectionExistsAsync(_config.EdgesCollection))
+            if (await _client.CollectionExistsAsync(_config.EdgesCollection).ConfigureAwait(false))
             {
-                await _client.DeleteCollectionAsync(_config.EdgesCollection);
+                await _client.DeleteCollectionAsync(_config.EdgesCollection).ConfigureAwait(false);
             }
 
             _initialized = false;

@@ -121,7 +121,7 @@ Do they conflict? Answer 'YES' or 'NO' and explain why.";
 
         try
         {
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             if (response.Contains("YES", StringComparison.OrdinalIgnoreCase))
             {
@@ -133,8 +133,7 @@ Do they conflict? Answer 'YES' or 'NO' and explain why.";
                     new List<string> { "Reframe goals", "Adjust priorities", "Create intermediate goals" });
             }
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Ignore LLM errors in conflict detection
         }
 
@@ -155,11 +154,10 @@ Answer with 'VIOLATES' or 'SAFE'.";
 
         try
         {
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             return response.Contains("VIOLATES", StringComparison.OrdinalIgnoreCase);
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // On error, assume safe to not block execution
             return false;
         }

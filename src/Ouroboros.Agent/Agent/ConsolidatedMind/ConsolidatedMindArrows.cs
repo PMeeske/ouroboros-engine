@@ -31,7 +31,7 @@ public static class ConsolidatedMindArrows
         return async branch =>
         {
             // Retrieve context
-            var docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            var docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             // Build prompt with context
@@ -43,7 +43,7 @@ Topic: {topic}
 Please provide a comprehensive response addressing the topic based on the context provided.";
 
             // Process through the consolidated mind
-            var response = await mind.ProcessAsync(prompt);
+            var response = await mind.ProcessAsync(prompt).ConfigureAwait(false);
 
             // Create appropriate reasoning state based on the response
             ReasoningState state = response.ThinkingContent != null
@@ -74,11 +74,11 @@ Please provide a comprehensive response addressing the topic based on the contex
         {
             try
             {
-                var result = await IntelligentReasoningArrow(mind, embed, topic, query, k)(branch);
+                var result = await IntelligentReasoningArrow(mind, embed, topic, query, k)(branch).ConfigureAwait(false);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Intelligent reasoning failed: {ex.Message}");
             }
@@ -103,7 +103,7 @@ Please provide a comprehensive response addressing the topic based on the contex
     {
         return async branch =>
         {
-            var docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            var docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = $@"Based on the following context, draft a comprehensive response about: {topic}
@@ -113,7 +113,7 @@ Context:
 
 Draft:";
 
-            var response = await mind.ProcessAsync(prompt);
+            var response = await mind.ProcessAsync(prompt).ConfigureAwait(false);
             return branch.WithReasoning(new Draft(response.Response), prompt, null);
         };
     }
@@ -148,7 +148,7 @@ Draft:";
                 return branch; // No draft to critique
             }
 
-            var docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            var docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = $@"Critically analyze the following draft about {topic}.
@@ -167,7 +167,7 @@ Provide a thorough critique covering:
 
 Critique:";
 
-            var response = await mind.ProcessAsync(prompt);
+            var response = await mind.ProcessAsync(prompt).ConfigureAwait(false);
             return branch.WithReasoning(new Critique(response.Response), prompt, null);
         };
     }
@@ -188,7 +188,7 @@ Critique:";
     {
         return async branch =>
         {
-            var docs = await branch.Store.GetSimilarDocuments(embed, task, amount: k);
+            var docs = await branch.Store.GetSimilarDocuments(embed, task, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = $@"Context:
@@ -196,7 +196,7 @@ Critique:";
 
 Complex Task: {task}";
 
-            var response = await mind.ProcessComplexAsync(prompt);
+            var response = await mind.ProcessComplexAsync(prompt).ConfigureAwait(false);
 
             // Record thinking if available
             if (response.ThinkingContent != null)
@@ -234,7 +234,7 @@ Content to verify:
 
 Verification result (state if VALID or INVALID with reasoning):";
 
-            var response = await mind.ProcessAsync(verifyPrompt);
+            var response = await mind.ProcessAsync(verifyPrompt).ConfigureAwait(false);
 
             // Add verification as a critique-type event
             return branch.WithReasoning(new Critique($"[VERIFICATION]\n{response.Response}"), verifyPrompt, null);
@@ -262,13 +262,13 @@ Verification result (state if VALID or INVALID with reasoning):";
         return async branch =>
         {
             // Step 1: Initial reasoning with thinking
-            branch = await IntelligentReasoningArrow(mind, embed, topic, query, k)(branch);
+            branch = await IntelligentReasoningArrow(mind, embed, topic, query, k)(branch).ConfigureAwait(false);
 
             // Step 2: Generate a draft
-            branch = await SmartDraftArrow(mind, embed, topic, query, k)(branch);
+            branch = await SmartDraftArrow(mind, embed, topic, query, k)(branch).ConfigureAwait(false);
 
             // Step 3: Critique the draft
-            branch = await SmartCritiqueArrow(mind, embed, topic, query, k)(branch);
+            branch = await SmartCritiqueArrow(mind, embed, topic, query, k)(branch).ConfigureAwait(false);
 
             // Step 4: Generate final refined response
             var critique = branch.Events
@@ -295,12 +295,12 @@ Critique:
 
 Final Response:";
 
-                var finalResponse = await mind.ProcessAsync(finalPrompt);
+                var finalResponse = await mind.ProcessAsync(finalPrompt).ConfigureAwait(false);
                 branch = branch.WithReasoning(new FinalSpec(finalResponse.Response), finalPrompt, null);
             }
 
             // Step 5: Optional verification
-            branch = await VerificationArrow(mind)(branch);
+            branch = await VerificationArrow(mind)(branch).ConfigureAwait(false);
 
             return branch;
         };

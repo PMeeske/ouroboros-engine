@@ -30,10 +30,27 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
         {
             CacheExpiration = TimeSpan.FromHours(1)
         };
-        _httpClient = httpClient ?? new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) })
+        if (httpClient != null)
         {
-            Timeout = TimeSpan.FromSeconds(_config.RequestTimeoutSeconds)
-        };
+            _httpClient = httpClient;
+        }
+        else
+        {
+            SocketsHttpHandler? handler = null;
+            try
+            {
+                handler = new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) };
+                _httpClient = new HttpClient(handler, disposeHandler: true)
+                {
+                    Timeout = TimeSpan.FromSeconds(_config.RequestTimeoutSeconds)
+                };
+                handler = null; // Ownership transferred to HttpClient
+            }
+            finally
+            {
+                handler?.Dispose();
+            }
+        }
     }
 
     /// <summary>
@@ -60,10 +77,10 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
             string encodedQuery = Uri.EscapeDataString(query);
             string url = $"{_config.ArxivBaseUrl}?search_query=all:{encodedQuery}&start=0&max_results={maxResults}&sortBy=relevance&sortOrder=descending";
 
-            HttpResponseMessage response = await _httpClient.GetAsync(url, ct);
+            HttpResponseMessage response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            string xmlContent = await response.Content.ReadAsStringAsync(ct);
+            string xmlContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             List<ResearchPaper> papers = ParseArxivResponse(xmlContent);
 
             AddToCache(cacheKey, papers);
@@ -78,7 +95,7 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
             return Result<List<ResearchPaper>, string>.Failure("Request timed out");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<List<ResearchPaper>, string>.Failure($"Unexpected error: {ex.Message}");
         }
@@ -110,14 +127,14 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
             _httpClient.DefaultRequestHeaders.Clear();
             _httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
 
-            HttpResponseMessage response = await _httpClient.GetAsync(url, ct);
+            HttpResponseMessage response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
                 return Result<CitationMetadata, string>.Failure($"Semantic Scholar returned {response.StatusCode}");
             }
 
-            string json = await response.Content.ReadAsStringAsync(ct);
+            string json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             CitationMetadata metadata = ParseSemanticScholarResponse(paperId, json);
 
             AddToCache(cacheKey, metadata);
@@ -128,7 +145,7 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
             return Result<CitationMetadata, string>.Failure($"Semantic Scholar API error: {ex.Message}");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<CitationMetadata, string>.Failure($"Error fetching citations: {ex.Message}");
         }
@@ -179,8 +196,7 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
                 observations.Add("Papers show convergence toward transformer-based architectures");
                 observations.Add("Self-supervised learning appears as a common pretraining strategy");
             }
-            catch
-            {
+            catch (Exception ex) when (ex is not OperationCanceledException) {
                 // Fallback to basic observations
             }
         }
@@ -200,7 +216,7 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
         List<ExplorationOpportunity> opportunities = new();
 
         // Search for recent papers in the domain
-        var papersResult = await SearchPapersAsync(domain, maxResults: 10, ct);
+        var papersResult = await SearchPapersAsync(domain, maxResults: 10, ct).ConfigureAwait(false);
         if (!papersResult.IsSuccess)
         {
             return opportunities;
@@ -352,8 +368,7 @@ public sealed class ResearchKnowledgeSource : IExternalKnowledgeSource, IDisposa
                     PublishedDate: published));
             }
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Return empty list on parse error
         }
 

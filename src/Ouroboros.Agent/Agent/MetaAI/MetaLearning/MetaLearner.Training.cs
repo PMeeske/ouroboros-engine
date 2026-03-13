@@ -77,7 +77,7 @@ TASKS: [task types]
 EFFICIENCY: [percentage]
 OPTIMIZATIONS: [bullet points]";
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             LearningStrategy strategy = ParseStrategyResponse(response, successful);
 
             return Result<LearningStrategy, string>.Success(strategy);
@@ -141,7 +141,7 @@ STEPS:
 PREREQUISITES: [list]
 ESTIMATED_PERFORMANCE: [0-1]";
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Parse response and create adapted skill
             AdaptedModel model = ParseAdaptationResponse(

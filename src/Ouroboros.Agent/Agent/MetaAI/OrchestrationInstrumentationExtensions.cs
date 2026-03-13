@@ -23,7 +23,7 @@ public static class OrchestrationInstrumentationExtensions
 
         try
         {
-            var result = await operation;
+            var result = await operation.ConfigureAwait(false);
             stopwatch.Stop();
 
             result.Match(
@@ -45,7 +45,7 @@ public static class OrchestrationInstrumentationExtensions
             return result;
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             stopwatch.Stop();
             OrchestrationTracing.RecordError(activity, operationName, ex);

@@ -33,7 +33,7 @@ public sealed class EvaluationHarness
         try
         {
             // Plan
-            Result<Plan, string> planResult = await _orchestrator.PlanAsync(testCase.Goal, testCase.Context, ct);
+            Result<Plan, string> planResult = await _orchestrator.PlanAsync(testCase.Goal, testCase.Context, ct).ConfigureAwait(false);
 
             Plan? plan = null;
             planResult.Match(
@@ -44,7 +44,7 @@ public sealed class EvaluationHarness
                 throw new Exception("Plan is null");
 
             // Execute
-            Result<PlanExecutionResult, string> execResult = await _orchestrator.ExecuteAsync(plan, ct);
+            Result<PlanExecutionResult, string> execResult = await _orchestrator.ExecuteAsync(plan, ct).ConfigureAwait(false);
 
             PlanExecutionResult? execution = null;
             execResult.Match(
@@ -55,7 +55,7 @@ public sealed class EvaluationHarness
                 throw new Exception("Execution is null");
 
             // Verify
-            Result<PlanVerificationResult, string> verifyResult = await _orchestrator.VerifyAsync(execution, ct);
+            Result<PlanVerificationResult, string> verifyResult = await _orchestrator.VerifyAsync(execution, ct).ConfigureAwait(false);
 
             PlanVerificationResult? verification = null;
             verifyResult.Match(
@@ -95,7 +95,7 @@ public sealed class EvaluationHarness
             return metrics;
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             stopwatch.Stop();
 
@@ -134,7 +134,7 @@ public sealed class EvaluationHarness
             if (ct.IsCancellationRequested)
                 break;
 
-            EvaluationMetrics result = await EvaluateTestCaseAsync(testCase, ct);
+            EvaluationMetrics result = await EvaluateTestCaseAsync(testCase, ct).ConfigureAwait(false);
             batchResults.Add(result);
         }
 
@@ -179,7 +179,7 @@ public sealed class EvaluationHarness
                 result => true) // Success is handling the error gracefully
         };
 
-        return await EvaluateBatchAsync(benchmarkCases, ct);
+        return await EvaluateBatchAsync(benchmarkCases, ct).ConfigureAwait(false);
     }
 
     /// <summary>

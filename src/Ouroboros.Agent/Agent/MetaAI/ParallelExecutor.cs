@@ -48,7 +48,7 @@ public sealed class ParallelExecutor
             {
                 PlanStep step = plan.Steps[stepIndex];
                 PlanStep sandboxedStep = _safety.SandboxStep(step);
-                StepResult result = await _executeStep(sandboxedStep, ct);
+                StepResult result = await _executeStep(sandboxedStep, ct).ConfigureAwait(false);
 
                 allResults[stepIndex] = result;
 
@@ -62,7 +62,7 @@ public sealed class ParallelExecutor
                 return result;
             });
 
-            await Task.WhenAll(groupTasks);
+            await Task.WhenAll(groupTasks).ConfigureAwait(false);
         }
 
         // Order results by step index

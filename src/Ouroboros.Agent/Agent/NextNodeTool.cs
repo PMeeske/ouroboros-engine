@@ -81,7 +81,7 @@ public sealed class NextNodeTool : ITool
             {
                 foreach (string constraint in req.Constraints)
                 {
-                    await _representation.AddConstraintAsync(constraint, ct);
+                    await _representation.AddConstraintAsync(constraint, ct).ConfigureAwait(false);
                 }
             }
 
@@ -90,13 +90,13 @@ public sealed class NextNodeTool : ITool
                 req.CurrentStepId,
                 req.Context ?? new Dictionary<string, object>(),
                 ct
-            );
+            ).ConfigureAwait(false);
 
             if (nextNodes.IsFailure)
                 return Result<string, string>.Failure(nextNodes.Error);
 
             // Query for recommended tools
-            Result<List<string>, string> toolsResult = await _representation.QueryToolsForGoalAsync(req.PlanGoal, ct);
+            Result<List<string>, string> toolsResult = await _representation.QueryToolsForGoalAsync(req.PlanGoal, ct).ConfigureAwait(false);
             List<string> recommendedTools = toolsResult.GetValueOrDefault(new List<string>());
 
             // Build response
@@ -110,7 +110,7 @@ public sealed class NextNodeTool : ITool
             return Result<string, string>.Success(JsonSerializer.Serialize(response, JsonDefaults.Indented));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<string, string>.Failure($"NextNode tool error: {ex.Message}");
         }
@@ -161,7 +161,7 @@ public sealed class NextNodeTool : ITool
             );
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<NextNodeRequest, string>.Failure(
                 $"Failed to parse input: {ex.Message}"

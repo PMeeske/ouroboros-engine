@@ -56,7 +56,7 @@ public sealed partial class HierarchicalPlanner : IHierarchicalPlanner
 
         try
         {
-            Result<Plan, string> topLevelResult = await _orchestrator.PlanAsync(goal, safeContext, ct);
+            Result<Plan, string> topLevelResult = await _orchestrator.PlanAsync(goal, safeContext, ct).ConfigureAwait(false);
 
             if (!topLevelResult.IsSuccess)
             {
@@ -76,7 +76,7 @@ public sealed partial class HierarchicalPlanner : IHierarchicalPlanner
                     safeContext,
                     config,
                     currentDepth: 1,
-                    ct);
+                    ct).ConfigureAwait(false);
             }
 
             HierarchicalPlan hierarchicalPlan = new HierarchicalPlan(
@@ -93,7 +93,7 @@ public sealed partial class HierarchicalPlanner : IHierarchicalPlanner
             return Result<HierarchicalPlan, string>.Success(hierarchicalPlan);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             stopwatch.Stop();
             OrchestrationTracing.CompletePlanCreation(activity, 0, 0, stopwatch.Elapsed, success: false);
@@ -118,8 +118,8 @@ public sealed partial class HierarchicalPlanner : IHierarchicalPlanner
         {
             ct.ThrowIfCancellationRequested();
 
-            Plan expandedPlan = await ExpandPlanAsync(plan, ct);
-            Result<PlanExecutionResult, string> executionResult = await _orchestrator.ExecuteAsync(expandedPlan, ct);
+            Plan expandedPlan = await ExpandPlanAsync(plan, ct).ConfigureAwait(false);
+            Result<PlanExecutionResult, string> executionResult = await _orchestrator.ExecuteAsync(expandedPlan, ct).ConfigureAwait(false);
 
             stopwatch.Stop();
             executionResult.Match(
@@ -137,7 +137,7 @@ public sealed partial class HierarchicalPlanner : IHierarchicalPlanner
             return executionResult;
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             stopwatch.Stop();
             OrchestrationTracing.CompletePlanExecution(activity, 0, 0, stopwatch.Elapsed, success: false);
@@ -168,7 +168,7 @@ public sealed partial class HierarchicalPlanner : IHierarchicalPlanner
                 string subGoal = $"Execute: {step.Action} with {JsonSerializer.Serialize(step.Parameters)}";
 
                 Result<Plan, string> subPlanResult = await _orchestrator.PlanAsync(
-                    subGoal, context ?? new Dictionary<string, object>(), ct);
+                    subGoal, context ?? new Dictionary<string, object>(), ct).ConfigureAwait(false);
 
                 if (subPlanResult.IsSuccess)
                 {
@@ -183,7 +183,7 @@ public sealed partial class HierarchicalPlanner : IHierarchicalPlanner
                             context,
                             config,
                             currentDepth + 1,
-                            ct);
+                            ct).ConfigureAwait(false);
                     }
                 }
             }

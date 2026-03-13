@@ -27,7 +27,7 @@ public sealed partial class OuroborosOrchestrator
                 .DefaultIfEmpty(0.5)
                 .Average();
 
-            List<string> insights = await ExtractInsightsAsync(goal, phaseResults, ct);
+            List<string> insights = await ExtractInsightsAsync(goal, phaseResults, ct).ConfigureAwait(false);
 
             TimeSpan cycleDuration = phaseResults.Aggregate(TimeSpan.Zero, (sum, p) => sum + p.Duration);
             OuroborosExperience experience = new OuroborosExperience(
@@ -41,8 +41,8 @@ public sealed partial class OuroborosOrchestrator
 
             _atom.RecordExperience(experience);
 
-            await StoreExperienceInMemoryAsync(experience, ct);
-            await UpdateMeTTaKnowledgeAsync(experience, ct);
+            await StoreExperienceInMemoryAsync(experience, ct).ConfigureAwait(false);
+            await UpdateMeTTaKnowledgeAsync(experience, ct).ConfigureAwait(false);
 
             if (overallSuccess && averageQuality > QualityThresholdForCapabilityUpdate)
             {
@@ -62,7 +62,7 @@ public sealed partial class OuroborosOrchestrator
                 }
             }
 
-            await TryEvolveStrategiesAsync(ct);
+            await TryEvolveStrategiesAsync(ct).ConfigureAwait(false);
 
             sw.Stop();
             RecordPhaseMetric("learn", sw.ElapsedMilliseconds, true);
@@ -81,7 +81,7 @@ public sealed partial class OuroborosOrchestrator
                 });
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
             RecordPhaseMetric("learn", sw.ElapsedMilliseconds, false);
@@ -119,7 +119,7 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
 - What could be improved
 - Patterns to remember";
 
-        string response = await _llm.GenerateTextAsync(prompt, ct);
+        string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
         List<string> insights = response.Split('\n')
             .Where(l => l.TrimStart().StartsWith('-'))
@@ -169,7 +169,7 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
             Execution: execution,
             Verification: verification);
 
-        var result = await _memory.StoreExperienceAsync(experience, ct);
+        var result = await _memory.StoreExperienceAsync(experience, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             // Log error but don't fail the execution
@@ -191,7 +191,7 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
             metta.AppendLine($"(Insight \"{experience.Id}\" \"{EscapeMeTTa(insight)}\")");
         }
 
-        await _mettaEngine.AddFactAsync(metta.ToString(), ct);
+        await _mettaEngine.AddFactAsync(metta.ToString(), ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -217,7 +217,7 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
             };
 
             Result<Genetic.Abstractions.IChromosome<Evolution.PlanStrategyGene>, string> evolutionResult =
-                await _strategyEvolver.EvolveAsync(initialPopulation, generations: 3, cancellationToken: ct);
+                await _strategyEvolver.EvolveAsync(initialPopulation, generations: 3, cancellationToken: ct).ConfigureAwait(false);
 
             if (evolutionResult.IsSuccess)
             {
@@ -241,7 +241,7 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Trace.TraceWarning("[GA] Strategy evolution failed (non-fatal): {0}", ex.Message);
         }

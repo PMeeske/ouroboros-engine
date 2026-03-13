@@ -43,7 +43,7 @@ public sealed class MemoryStore : IMemoryStore
             if (_embedding != null && _vectorStore != null)
             {
                 string text = $"Context: {experience.Context}\nAction: {experience.Action}\nOutcome: {experience.Outcome}\nSuccess: {experience.Success}";
-                float[] embedding = await _embedding.CreateEmbeddingsAsync(text, ct);
+                float[] embedding = await _embedding.CreateEmbeddingsAsync(text, ct).ConfigureAwait(false);
 
                 Vector vector = new Vector
                 {
@@ -59,13 +59,13 @@ public sealed class MemoryStore : IMemoryStore
                     }
                 };
 
-                await _vectorStore.AddAsync(new[] { vector }, ct);
+                await _vectorStore.AddAsync(new[] { vector }, ct).ConfigureAwait(false);
             }
 
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Failed to store experience: {ex.Message}");
         }
@@ -88,7 +88,7 @@ public sealed class MemoryStore : IMemoryStore
                 IReadOnlyCollection<LangChain.DocumentLoaders.Document> similarDocs = await _vectorStore.GetSimilarDocuments(
                     _embedding,
                     query.ContextSimilarity,
-                    amount: query.MaxResults);
+                    amount: query.MaxResults).ConfigureAwait(false);
 
                 List<Experience> experiences = new List<Experience>();
                 foreach (LangChain.DocumentLoaders.Document doc in similarDocs)
@@ -149,7 +149,7 @@ public sealed class MemoryStore : IMemoryStore
             return Result<IReadOnlyList<Experience>, string>.Success(matches);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IReadOnlyList<Experience>, string>.Failure($"Failed to query experiences: {ex.Message}");
         }
@@ -186,7 +186,7 @@ public sealed class MemoryStore : IMemoryStore
             return Task.FromResult(Result<MemoryStatistics, string>.Success(stats));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Task.FromResult(Result<MemoryStatistics, string>.Failure($"Failed to get statistics: {ex.Message}"));
         }
@@ -203,13 +203,13 @@ public sealed class MemoryStore : IMemoryStore
 
             if (_vectorStore != null)
             {
-                await _vectorStore.ClearAsync(ct);
+                await _vectorStore.ClearAsync(ct).ConfigureAwait(false);
             }
 
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Unit, string>.Failure($"Failed to clear memory: {ex.Message}");
         }
@@ -236,7 +236,7 @@ public sealed class MemoryStore : IMemoryStore
             }
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Task.FromResult(Result<Experience, string>.Failure($"Failed to get experience: {ex.Message}"));
         }
@@ -261,7 +261,7 @@ public sealed class MemoryStore : IMemoryStore
             return Task.FromResult(Result<Unit, string>.Success(Unit.Value));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Task.FromResult(Result<Unit, string>.Failure($"Failed to delete experience: {ex.Message}"));
         }
@@ -283,7 +283,7 @@ public sealed class MemoryStore : IMemoryStore
     /// </summary>
     public async Task<MemoryStatistics> GetStatsAsync(CancellationToken ct = default)
     {
-        var result = await GetStatisticsAsync(ct);
+        var result = await GetStatisticsAsync(ct).ConfigureAwait(false);
         return result.IsSuccess
             ? result.Value
             : new MemoryStatistics(0, 0, 0, 0, 0);

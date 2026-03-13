@@ -79,7 +79,7 @@ public sealed partial class SmartModelOrchestrator
         // Persist to store if available
         if (_metricsStore != null)
         {
-            await _metricsStore.StoreMetricsAsync(updatedMetrics, ct);
+            await _metricsStore.StoreMetricsAsync(updatedMetrics, ct).ConfigureAwait(false);
         }
     }
 
@@ -93,5 +93,5 @@ public sealed partial class SmartModelOrchestrator
     /// Gets the metrics store statistics if a persistent store is configured.
     /// </summary>
     public async Task<MetricsStoreStatistics?> GetMetricsStoreStatisticsAsync()
-        => _metricsStore != null ? await _metricsStore.GetStatisticsAsync() : null;
+        => _metricsStore != null ? await _metricsStore.GetStatisticsAsync().ConfigureAwait(false) : null;
 }

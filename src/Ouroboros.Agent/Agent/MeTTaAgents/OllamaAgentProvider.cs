@@ -51,7 +51,7 @@ public sealed class OllamaAgentProvider : IAgentProviderFactory
                 Result<Ouroboros.Abstractions.Core.IChatCompletionModel, string>.Success(adapter));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Task.FromResult(
                 Result<Ouroboros.Abstractions.Core.IChatCompletionModel, string>.Failure(
@@ -66,15 +66,15 @@ public sealed class OllamaAgentProvider : IAgentProviderFactory
         var sw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5), BaseAddress = new Uri(_defaultEndpoint) };
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(5), BaseAddress = new Uri(_defaultEndpoint) };
             using var client = new OllamaApiClient(http);
-            await client.ListLocalModelsAsync(ct);
+            await client.ListLocalModelsAsync(ct).ConfigureAwait(false);
             sw.Stop();
             return Result<ProviderHealthStatus, string>.Success(
                 new ProviderHealthStatus("Ollama", true, sw.ElapsedMilliseconds));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
             return Result<ProviderHealthStatus, string>.Success(

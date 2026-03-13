@@ -15,7 +15,7 @@ public sealed partial class QdrantDagStore
     {
         if (!_initialized)
         {
-            await InitializeAsync(ct);
+            await InitializeAsync(ct).ConfigureAwait(false);
         }
     }
 
@@ -29,7 +29,7 @@ public sealed partial class QdrantDagStore
 
         // Generate semantic text for embedding
         var semanticText = $"{node.TypeName}: {node.PayloadJson}";
-        return await _embeddingFunc(semanticText);
+        return await _embeddingFunc(semanticText).ConfigureAwait(false);
     }
 
     private async Task<float[]> GenerateEdgeEmbeddingAsync(TransitionEdge edge)
@@ -40,7 +40,7 @@ public sealed partial class QdrantDagStore
         }
 
         var semanticText = $"{edge.OperationName}: {edge.OperationSpecJson}";
-        return await _embeddingFunc(semanticText);
+        return await _embeddingFunc(semanticText).ConfigureAwait(false);
     }
 
     private async Task<Result<IReadOnlyList<MonadNode>>> LoadAllNodesAsync(CancellationToken ct)
@@ -56,7 +56,7 @@ public sealed partial class QdrantDagStore
                     _config.NodesCollection,
                     limit: 100,
                     offset: offset,
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
 
                 foreach (var point in scrollResponse.Result)
                 {
@@ -93,7 +93,7 @@ public sealed partial class QdrantDagStore
                     _config.EdgesCollection,
                     limit: 100,
                     offset: offset,
-                    cancellationToken: ct);
+                    cancellationToken: ct).ConfigureAwait(false);
 
                 foreach (var point in scrollResponse.Result)
                 {

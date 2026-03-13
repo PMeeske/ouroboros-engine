@@ -72,14 +72,14 @@ public sealed partial class HierarchicalPlanner
                 }
             }
 
-            var refinements = await GenerateRefinementsAsync(goal, abstractTasks, taskNetwork, ct);
+            var refinements = await GenerateRefinementsAsync(goal, abstractTasks, taskNetwork, ct).ConfigureAwait(false);
 
             var htnPlan = new HtnHierarchicalPlan(goal, abstractTasks, refinements);
 
             return Result<HtnHierarchicalPlan, string>.Success(htnPlan);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<HtnHierarchicalPlan, string>.Failure($"HTN planning failed: {ex.Message}");
         }
@@ -104,7 +104,7 @@ public sealed partial class HierarchicalPlanner
                     selectedDecomposition,
                     abstractTasks,
                     taskNetwork,
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 var concretePlan = new ConcretePlan(abstractTask.Name, concreteSteps);
                 refinements.Add(concretePlan);
@@ -160,7 +160,7 @@ public sealed partial class HierarchicalPlanner
         {
             ct.ThrowIfCancellationRequested();
 
-            var planResult = await _orchestrator.PlanAsync(goal, context: null, ct);
+            var planResult = await _orchestrator.PlanAsync(goal, context: null, ct).ConfigureAwait(false);
 
             if (!planResult.IsSuccess)
             {
@@ -169,7 +169,7 @@ public sealed partial class HierarchicalPlanner
 
             var plan = planResult.Value;
             var taskDependencies = BuildDependencyGraph(plan.Steps, constraints);
-            var scheduledTasks = await ScheduleTasksAsync(plan.Steps, constraints, taskDependencies, ct);
+            var scheduledTasks = await ScheduleTasksAsync(plan.Steps, constraints, taskDependencies, ct).ConfigureAwait(false);
 
             if (scheduledTasks.Count == 0)
             {
@@ -184,7 +184,7 @@ public sealed partial class HierarchicalPlanner
             return Result<TemporalPlan, string>.Success(temporalPlan);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<TemporalPlan, string>.Failure($"Temporal planning failed: {ex.Message}");
         }

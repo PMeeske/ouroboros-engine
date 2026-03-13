@@ -64,7 +64,7 @@ public sealed partial class CuriosityEngine : ICuriosityEngine
                 ToDate: null,
                 MaxResults: 20);
 
-            var experiencesResult = await _memory.QueryExperiencesAsync(query, ct);
+            var experiencesResult = await _memory.QueryExperiencesAsync(query, ct).ConfigureAwait(false);
 
             if (!experiencesResult.IsSuccess)
                 return 0.5; // Default moderate novelty on query failure
@@ -88,8 +88,7 @@ public sealed partial class CuriosityEngine : ICuriosityEngine
 
             return Math.Clamp(novelty, 0.0, 1.0);
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return 0.5; // Default moderate novelty
         }
     }
@@ -103,7 +102,7 @@ public sealed partial class CuriosityEngine : ICuriosityEngine
         try
         {
             // Identify unexplored areas
-            List<ExplorationOpportunity> opportunities = await IdentifyExplorationOpportunitiesAsync(5, ct);
+            List<ExplorationOpportunity> opportunities = await IdentifyExplorationOpportunitiesAsync(5, ct).ConfigureAwait(false);
 
             if (!opportunities.Any())
             {
@@ -134,7 +133,7 @@ CONFIDENCE: [0-1]
 
 STEP 2: ...";
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Parse plan
             List<PlanStep> steps = ParseExploratorySteps(response);
@@ -183,7 +182,7 @@ STEP 2: ...";
                 }
             };
 
-            var ethicsResult = await _ethics.EvaluateResearchAsync(researchDescription, context, ct);
+            var ethicsResult = await _ethics.EvaluateResearchAsync(researchDescription, context, ct).ConfigureAwait(false);
 
             if (ethicsResult.IsFailure)
             {
@@ -206,7 +205,7 @@ STEP 2: ...";
             return Result<Plan, string>.Success(plan);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Plan, string>.Failure($"Exploratory plan generation failed: {ex.Message}");
         }
@@ -240,7 +239,7 @@ STEP 2: ...";
         if (!string.IsNullOrWhiteSpace(currentGoal))
         {
             Plan goalPlan = new Plan(currentGoal, new List<PlanStep>(), new Dictionary<string, double>(), DateTime.UtcNow);
-            double novelty = await ComputeNoveltyAsync(goalPlan, ct);
+            double novelty = await ComputeNoveltyAsync(goalPlan, ct).ConfigureAwait(false);
 
             if (novelty > _config.ExplorationThreshold)
             {
@@ -273,7 +272,7 @@ STEP 2: ...";
                 ToDate: null,
                 MaxResults: 10);
 
-            var experiencesResult = await _memory.QueryExperiencesAsync(query, ct);
+            var experiencesResult = await _memory.QueryExperiencesAsync(query, ct).ConfigureAwait(false);
 
             if (!experiencesResult.IsSuccess)
                 return 0.5; // Default moderate potential on query failure
@@ -289,8 +288,7 @@ STEP 2: ...";
 
             return Math.Clamp(informationGain, 0.1, 1.0);
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return 0.5; // Default moderate gain
         }
     }

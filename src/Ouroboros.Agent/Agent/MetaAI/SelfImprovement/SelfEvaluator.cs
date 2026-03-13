@@ -51,7 +51,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
         try
         {
             // Get all capabilities
-            List<AgentCapability> capabilities = await _capabilities.GetCapabilitiesAsync(ct);
+            List<AgentCapability> capabilities = await _capabilities.GetCapabilitiesAsync(ct).ConfigureAwait(false);
             IReadOnlyList<Skill> skills = _skills.GetAllSkills().ToSkills();
             // Calculate capability scores
             Dictionary<string, double> capabilityScores = capabilities.ToDictionary(
@@ -64,7 +64,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
                 : 0.0;
 
             // Calculate confidence calibration
-            double calibration = await GetConfidenceCalibrationAsync(ct);
+            double calibration = await GetConfidenceCalibrationAsync(ct).ConfigureAwait(false);
 
             // Calculate skill acquisition rate
             double skillAcquisitionRate = CalculateSkillAcquisitionRate(skills);
@@ -87,7 +87,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
                 skillAcquisitionRate,
                 strengths,
                 weaknesses,
-                ct);
+                ct).ConfigureAwait(false);
 
             SelfAssessment assessment = new SelfAssessment(
                 overallPerformance,
@@ -102,7 +102,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
             return Result<SelfAssessment, string>.Success(assessment);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<SelfAssessment, string>.Failure($"Performance evaluation failed: {ex.Message}");
         }
@@ -125,7 +125,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
                 _config.InsightGenerationBatchSize,
                 0.0);
 
-            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct);
+            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
             List<Experience> experiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
 
             // Pattern detection: success/failure patterns
@@ -137,7 +137,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
                 string successPattern = await AnalyzePatternAsync(
                     successfulExperiences,
                     "success",
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 if (!string.IsNullOrWhiteSpace(successPattern))
                 {
@@ -155,7 +155,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
                 string failurePattern = await AnalyzePatternAsync(
                     failedExperiences,
                     "failure",
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 if (!string.IsNullOrWhiteSpace(failurePattern))
                 {
@@ -169,7 +169,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
             }
 
             // Capability insights
-            List<AgentCapability> capabilities = await _capabilities.GetCapabilitiesAsync(ct);
+            List<AgentCapability> capabilities = await _capabilities.GetCapabilitiesAsync(ct).ConfigureAwait(false);
             List<AgentCapability> improvingCaps = capabilities
                 .Where(c => c.UsageCount >= 10 && c.SuccessRate >= 0.7)
                 .OrderByDescending(c => c.SuccessRate)
@@ -187,7 +187,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
             }
 
             // Calibration insights
-            double calibration = await GetConfidenceCalibrationAsync(ct);
+            double calibration = await GetConfidenceCalibrationAsync(ct).ConfigureAwait(false);
             if (calibration < 0.7)
             {
                 insights.Add(new Insight(
@@ -198,8 +198,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
                     DateTime.UtcNow));
             }
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Return partial insights on error
         }
 
@@ -214,12 +213,12 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
     {
         try
         {
-            Result<SelfAssessment, string> assessment = await EvaluatePerformanceAsync(ct);
+            Result<SelfAssessment, string> assessment = await EvaluatePerformanceAsync(ct).ConfigureAwait(false);
             if (!assessment.IsSuccess)
                 return Result<ImprovementPlan, string>.Failure(assessment.Error);
 
             SelfAssessment selfAssessment = assessment.Value;
-            List<Insight> insights = await GenerateInsightsAsync(ct);
+            List<Insight> insights = await GenerateInsightsAsync(ct).ConfigureAwait(false);
 
             // Use LLM to generate improvement plan
             string prompt = $@"Based on this self-assessment, create an improvement plan:
@@ -252,13 +251,13 @@ EXPECTED IMPROVEMENTS:
 - [metric]: [improvement %]
 DURATION: [days/weeks]";
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             ImprovementPlan plan = ParseImprovementPlan(response);
 
             return Result<ImprovementPlan, string>.Success(plan);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<ImprovementPlan, string>.Failure($"Improvement planning failed: {ex.Message}");
         }
@@ -269,7 +268,7 @@ DURATION: [days/weeks]";
     /// </summary>
     public async Task<double> GetConfidenceCalibrationAsync(CancellationToken ct = default)
     {
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
 
         List<CalibrationRecord> records = _calibrationRecords
             .Where(r => r.RecordedAt > DateTime.UtcNow.AddDays(-30))
@@ -314,7 +313,7 @@ DURATION: [days/weeks]";
         TimeSpan timeWindow,
         CancellationToken ct = default)
     {
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
 
         List<(DateTime, double)> trends = new List<(DateTime, double)>();
         DateTime startTime = DateTime.UtcNow - timeWindow;
@@ -391,10 +390,9 @@ Provide a 2-3 sentence summary of current state and trajectory.";
 
         try
         {
-            return await _llm.GenerateTextAsync(prompt, ct);
+            return await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return $"Performance at {overallPerformance:P0} with {strengths.Count} strengths and {weaknesses.Count} areas for improvement.";
         }
     }
@@ -415,10 +413,9 @@ What patterns do you observe? Provide one concise insight.";
 
         try
         {
-            return await _llm.GenerateTextAsync(prompt, ct);
+            return await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return "";
         }
     }

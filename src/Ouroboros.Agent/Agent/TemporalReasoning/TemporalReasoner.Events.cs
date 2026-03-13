@@ -42,7 +42,7 @@ public sealed partial class TemporalReasoner
             return Task.FromResult(Result<TemporalRelation, string>.Success(MapToTemporalRelation(relationType)));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Task.FromResult(Result<TemporalRelation, string>.Failure($"Failed to compute relation: {ex.Message}"));
         }
@@ -111,7 +111,7 @@ public sealed partial class TemporalReasoner
             return Task.FromResult(Result<IReadOnlyList<TemporalEvent>, string>.Success(results));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Task.FromResult(Result<IReadOnlyList<TemporalEvent>, string>.Failure($"Query failed: {ex.Message}"));
         }

@@ -39,7 +39,7 @@ public sealed partial class MeTTaOrchestrator
 
             ITool tool = toolOption.Value!;
             string toolInput = JsonSerializer.Serialize(step.Parameters);
-            Result<string, string> result = await tool.InvokeAsync(toolInput, ct);
+            Result<string, string> result = await tool.InvokeAsync(toolInput, ct).ConfigureAwait(false);
 
             return result.Match(
                 output => new StepResult(step, true, output, null, sw.Elapsed, observedState),
@@ -47,7 +47,7 @@ public sealed partial class MeTTaOrchestrator
             );
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new StepResult(step, false, string.Empty, ex.Message, sw.Elapsed, observedState);
         }
@@ -138,8 +138,7 @@ CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ourobor
                 }
             }
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Fallback: create simple plan
             steps.Add(new PlanStep(
                 "llm_direct",
@@ -206,8 +205,7 @@ CORRECT parameters: {""url"": ""https://example.com/page"", ""query"": ""Ourobor
 
             return new PlanVerificationResult(execution, verified, qualityScore, issues, improvements, null);
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return new PlanVerificationResult(
                 execution,
                 execution.Success,

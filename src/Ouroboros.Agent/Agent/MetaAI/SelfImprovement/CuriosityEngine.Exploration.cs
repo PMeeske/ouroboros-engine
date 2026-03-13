@@ -26,7 +26,7 @@ public sealed partial class CuriosityEngine
         {
             // Analyze what hasn't been explored
             IReadOnlyList<Skill> allSkills = _skills.GetAllSkills().ToSkills();
-            List<Experience> experiences = await GetAllExperiences(ct);
+            List<Experience> experiences = await GetAllExperiences(ct).ConfigureAwait(false);
 
             string prompt = $@"Identify unexplored areas for learning:
 
@@ -48,7 +48,7 @@ NOVELTY: [0-1]
 INFO_GAIN: [0-1]
 ";
 
-            string response = await _llm.GenerateTextAsync(prompt, ct);
+            string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Parse opportunities
             string[] lines = response.Split('\n');
@@ -100,8 +100,7 @@ INFO_GAIN: [0-1]
                     DateTime.UtcNow));
             }
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Return empty list on error
         }
 
@@ -134,7 +133,7 @@ INFO_GAIN: [0-1]
             ToDate: null,
             MaxResults: 100);
 
-        var result = await _memory.QueryExperiencesAsync(query, ct);
+        var result = await _memory.QueryExperiencesAsync(query, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

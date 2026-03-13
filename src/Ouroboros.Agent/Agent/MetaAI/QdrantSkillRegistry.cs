@@ -82,8 +82,8 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
     {
         if (_isInitialized) return;
 
-        await EnsureCollectionExistsAsync(ct);
-        await LoadSkillsFromQdrantAsync(ct);
+        await EnsureCollectionExistsAsync(ct).ConfigureAwait(false);
+        await LoadSkillsFromQdrantAsync(ct).ConfigureAwait(false);
         _isInitialized = true;
     }
 
@@ -96,11 +96,11 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
         {
             ArgumentNullException.ThrowIfNull(skill);
             _skillsCache[skill.Id] = skill;
-            await SaveSkillToQdrantAsync(skill, ct);
+            await SaveSkillToQdrantAsync(skill, ct).ConfigureAwait(false);
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) // Intentional: Qdrant gRPC + embedding operations
+        catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: Qdrant gRPC + embedding operations
         {
             return Result<Unit, string>.Failure($"Failed to register skill: {ex.Message}");
         }
@@ -148,12 +148,12 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
                 return Result<Unit, string>.Failure($"Skill '{skill.Id}' not found");
 
             _skillsCache[skill.Id] = skill;
-            await SaveSkillToQdrantAsync(skill, ct);
+            await SaveSkillToQdrantAsync(skill, ct).ConfigureAwait(false);
 
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) // Intentional: Qdrant gRPC + embedding operations
+        catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: Qdrant gRPC + embedding operations
         {
             return Result<Unit, string>.Failure($"Failed to update skill: {ex.Message}");
         }
@@ -191,13 +191,13 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
             
             if (_config.AutoSave)
             {
-                await SaveSkillToQdrantAsync(updated, ct);
+                await SaveSkillToQdrantAsync(updated, ct).ConfigureAwait(false);
             }
 
             return Result<Unit, string>.Success(Unit.Value);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex) // Intentional: Qdrant gRPC save operations
+        catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: Qdrant gRPC save operations
         {
             return Result<Unit, string>.Failure($"Failed to record execution: {ex.Message}");
         }
@@ -219,7 +219,7 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
             // Remove from Qdrant
             try
             {
-                var collectionExists = await _client.CollectionExistsAsync(_config.CollectionName, ct);
+                var collectionExists = await _client.CollectionExistsAsync(_config.CollectionName, ct).ConfigureAwait(false);
                 if (collectionExists)
                 {
                     await _client.DeleteAsync(
@@ -238,11 +238,11 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
                                 }
                             }
                         },
-                        cancellationToken: ct);
+                        cancellationToken: ct).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex) // Intentional: Qdrant delete best-effort
+            catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: Qdrant delete best-effort
             {
                 Trace.TraceWarning("[WARN] Failed to delete skill '{0}' from Qdrant: {1}", skillId, ex.Message);
             }

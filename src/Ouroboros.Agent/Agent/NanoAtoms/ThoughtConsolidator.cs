@@ -93,7 +93,7 @@ public sealed class ThoughtConsolidator
 
             if (_synthesisModel != null)
             {
-                (content, actionType) = await TrySynthesizeAsync(ct);
+                (content, actionType) = await TrySynthesizeAsync(ct).ConfigureAwait(false);
             }
             else
             {
@@ -113,7 +113,7 @@ public sealed class ThoughtConsolidator
                 Timestamp: DateTime.UtcNow));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<ConsolidatedAction, string>.Failure($"Consolidation failed: {ex.Message}");
         }
@@ -141,11 +141,10 @@ public sealed class ThoughtConsolidator
             string synthesisPrompt =
                 $"Synthesize these thought fragments into a single coherent response:\n\n{combinedDigests}";
 
-            string content = await _synthesisModel!.GenerateTextAsync(synthesisPrompt, ct);
+            string content = await _synthesisModel!.GenerateTextAsync(synthesisPrompt, ct).ConfigureAwait(false);
             return (content, InferActionType(content));
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return RuleBasedMerge();
         }
     }

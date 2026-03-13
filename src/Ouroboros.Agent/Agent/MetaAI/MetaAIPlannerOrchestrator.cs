@@ -83,12 +83,12 @@ public sealed partial class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrat
             {
                 try
                 {
-                    bool shouldExtract = await _skillExtractor.ShouldExtractSkillAsync(verification);
+                    bool shouldExtract = await _skillExtractor.ShouldExtractSkillAsync(verification).ConfigureAwait(false);
                     if (shouldExtract)
                     {
                         Result<Skill, string> skillResult = await _skillExtractor.ExtractSkillAsync(
                             verification.Execution,
-                            verification);
+                            verification).ConfigureAwait(false);
 
                         skillResult.Match(
                             skill =>
@@ -104,7 +104,7 @@ public sealed partial class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrat
                     }
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     RecordMetric("skill_extraction_error", 1.0, false);
                     Trace.TraceWarning("Skill extraction error: {0}", ex.Message);

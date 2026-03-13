@@ -58,7 +58,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                 // Check if step requires approval
                 if (config.RequireApprovalForCriticalSteps && IsCriticalStep(step, config))
                 {
-                    ApprovalResponse approval = await RequestStepApprovalAsync(step, i, ct);
+                    ApprovalResponse approval = await RequestStepApprovalAsync(step, i, ct).ConfigureAwait(false);
 
                     if (!approval.Approved)
                     {
@@ -86,7 +86,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                 // Execute step
                 Result<PlanExecutionResult, string> executionResult = await _orchestrator.ExecuteAsync(
                     new Plan(plan.Goal, new List<PlanStep> { step }, plan.ConfidenceScores, DateTime.UtcNow),
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 if (executionResult.IsSuccess)
                 {
@@ -124,7 +124,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
             return Result<PlanExecutionResult, string>.Success(execution);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<PlanExecutionResult, string>.Failure($"Human oversight execution failed: {ex.Message}");
         }
@@ -155,7 +155,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                 DateTime.UtcNow,
                 TimeSpan.FromMinutes(5));
 
-            HumanFeedbackResponse feedback = await _feedbackProvider.RequestFeedbackAsync(feedbackRequest, ct);
+            HumanFeedbackResponse feedback = await _feedbackProvider.RequestFeedbackAsync(feedbackRequest, ct).ConfigureAwait(false);
 
             string response = feedback.Response.ToLowerInvariant();
 
@@ -166,7 +166,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
             else if (response.Contains("replan"))
             {
                 // Request replanning
-                Result<Plan, string> replanResult = await _orchestrator.PlanAsync(plan.Goal, null, ct);
+                Result<Plan, string> replanResult = await _orchestrator.PlanAsync(plan.Goal, null, ct).ConfigureAwait(false);
                 return replanResult;
             }
             else if (response.Contains("add"))
@@ -180,7 +180,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
                     DateTime.UtcNow,
                     TimeSpan.FromMinutes(5));
 
-                HumanFeedbackResponse stepFeedback = await _feedbackProvider.RequestFeedbackAsync(stepRequest, ct);
+                HumanFeedbackResponse stepFeedback = await _feedbackProvider.RequestFeedbackAsync(stepRequest, ct).ConfigureAwait(false);
                 PlanStep newStep = ParseStepFromFeedback(stepFeedback.Response);
 
                 plan.Steps.Add(newStep);
@@ -196,7 +196,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
             return Result<Plan, string>.Success(plan);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Plan, string>.Failure($"Interactive refinement failed: {ex.Message}");
         }
@@ -222,7 +222,7 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
             $"Step {stepIndex + 1}: {step.ExpectedOutcome}",
             DateTime.UtcNow);
 
-        return await _feedbackProvider.RequestApprovalAsync(request, ct);
+        return await _feedbackProvider.RequestApprovalAsync(request, ct).ConfigureAwait(false);
     }
 
     private PlanStep ApplyModifications(PlanStep step, Dictionary<string, object> modifications)

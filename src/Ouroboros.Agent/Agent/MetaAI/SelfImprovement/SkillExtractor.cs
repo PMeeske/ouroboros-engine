@@ -49,7 +49,7 @@ public sealed partial class SkillExtractor : ISkillExtractor
         if (!verification.Execution.Success)
             return false;
 
-        return await Task.FromResult(true);
+        return await Task.FromResult(true).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -73,20 +73,20 @@ public sealed partial class SkillExtractor : ISkillExtractor
                 return Result<Skill, string>.Failure("Verification cannot be null");
 
             // Check if skill should be extracted
-            if (!await ShouldExtractSkillAsync(verification, config))
+            if (!await ShouldExtractSkillAsync(verification, config).ConfigureAwait(false))
                 return Result<Skill, string>.Failure(
                     $"Execution does not meet extraction criteria (Quality: {verification.QualityScore:P0}, Steps: {execution.StepResults.Count})");
 
             // Generate skill name and description using LLM
-            string skillName = await GenerateSkillNameAsync(execution, ct);
-            string description = await GenerateSkillDescriptionAsync(execution, ct);
+            string skillName = await GenerateSkillNameAsync(execution, ct).ConfigureAwait(false);
+            string description = await GenerateSkillDescriptionAsync(execution, ct).ConfigureAwait(false);
 
             // Check if similar skill already exists
             Skill? existingSkill = _skillRegistry.GetSkill(skillName)?.ToSkill();
             if (existingSkill != null)
             {
                 // Update existing skill with new execution data
-                return await UpdateExistingSkillAsync(existingSkill, execution, verification, config);
+                return await UpdateExistingSkillAsync(existingSkill, execution, verification, config).ConfigureAwait(false);
             }
 
             // Extract prerequisites from successful steps
@@ -152,7 +152,7 @@ public sealed partial class SkillExtractor : ISkillExtractor
                 HistoricalSuccessRate = initialSuccessRate
             };
 
-            var ethicsResult = await _ethics.EvaluateSkillAsync(skillContext, ct);
+            var ethicsResult = await _ethics.EvaluateSkillAsync(skillContext, ct).ConfigureAwait(false);
 
             if (ethicsResult.IsFailure)
             {
@@ -178,7 +178,7 @@ public sealed partial class SkillExtractor : ISkillExtractor
             return Result<Skill, string>.Success(skill);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Skill, string>.Failure($"Skill extraction failed: {ex.Message}");
         }
@@ -206,7 +206,7 @@ Requirements:
 
 Skill name:";
 
-            string skillName = await _llm.GenerateTextAsync(prompt, ct);
+            string skillName = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             skillName = skillName?.Trim() ?? "extracted_skill";
 
             // Sanitize the name
@@ -214,8 +214,7 @@ Skill name:";
 
             return skillName;
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Fallback to automatic name generation
             return GenerateFallbackSkillName(execution);
         }
@@ -241,13 +240,12 @@ Results:
 
 Write a 1-2 sentence description of this skill's capability:";
 
-            string description = await _llm.GenerateTextAsync(prompt, ct);
+            string description = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             description = description?.Trim() ?? $"Skill for: {execution.Plan.Goal}";
 
             return description;
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // Fallback to simple description
             return $"Reusable skill for: {execution.Plan.Goal}";
         }
@@ -337,10 +335,10 @@ Write a 1-2 sentence description of this skill's capability:";
             // Update in registry
             _skillRegistry.RegisterSkill(updatedSkill.ToAgentSkill());
 
-            return await Task.FromResult(Result<Skill, string>.Success(updatedSkill));
+            return await Task.FromResult(Result<Skill, string>.Success(updatedSkill)).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Skill, string>.Failure($"Failed to update existing skill: {ex.Message}");
         }

@@ -23,7 +23,7 @@ public static class MerkleDagExtensions
         QdrantDagStore store,
         CancellationToken ct = default)
     {
-        return await store.SaveDagAsync(dag, ct);
+        return await store.SaveDagAsync(dag, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -36,7 +36,7 @@ public static class MerkleDagExtensions
         this QdrantDagStore store,
         CancellationToken ct = default)
     {
-        return await store.LoadDagAsync(ct);
+        return await store.LoadDagAsync(ct).ConfigureAwait(false);
     }
 
 
@@ -144,8 +144,7 @@ public static class MerkleDagExtensions
 
             return Result<MerkleDag>.Success(dag);
         }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<MerkleDag>.Failure($"Failed to deserialize DAG: {ex.Message}");
         }

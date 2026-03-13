@@ -55,7 +55,7 @@ public sealed partial class WorldModelEngine : IWorldModelEngine
 
             // Create predictors based on architecture
             var (statePredictor, rewardPredictor, terminalPredictor) =
-                await CreatePredictorsAsync(transitions, embeddingSize, architecture, ct);
+                await CreatePredictorsAsync(transitions, embeddingSize, architecture, ct).ConfigureAwait(false);
 
             var hyperparameters = new Dictionary<string, object>
             {
@@ -78,7 +78,7 @@ public sealed partial class WorldModelEngine : IWorldModelEngine
             return Result<WorldModel, string>.Success(model);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<WorldModel, string>.Failure($"Failed to learn model: {ex.Message}");
         }
@@ -108,11 +108,11 @@ public sealed partial class WorldModelEngine : IWorldModelEngine
                 return Result<State, string>.Failure("Model cannot be null");
             }
 
-            var nextState = await model.TransitionModel.PredictAsync(currentState, action, ct);
+            var nextState = await model.TransitionModel.PredictAsync(currentState, action, ct).ConfigureAwait(false);
             return Result<State, string>.Success(nextState);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<State, string>.Failure($"Failed to predict next state: {ex.Message}");
         }
@@ -149,11 +149,11 @@ public sealed partial class WorldModelEngine : IWorldModelEngine
             }
 
             // Simple greedy planning - in practice would use MCTS or similar
-            var plan = await GreedyPlanningAsync(initialState, goal, model, lookaheadDepth, ct);
+            var plan = await GreedyPlanningAsync(initialState, goal, model, lookaheadDepth, ct).ConfigureAwait(false);
             return Result<Plan, string>.Success(plan);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<Plan, string>.Failure($"Failed to plan in imagination: {ex.Message}");
         }
@@ -187,7 +187,7 @@ public sealed partial class WorldModelEngine : IWorldModelEngine
                 var predictedState = await model.TransitionModel.PredictAsync(
                     transition.PreviousState,
                     transition.ActionTaken,
-                    ct);
+                    ct).ConfigureAwait(false);
                 totalPredictionError += ComputeStateDistance(predictedState, transition.NextState);
 
                 // Evaluate reward prediction
@@ -195,11 +195,11 @@ public sealed partial class WorldModelEngine : IWorldModelEngine
                     transition.PreviousState,
                     transition.ActionTaken,
                     transition.NextState,
-                    ct);
+                    ct).ConfigureAwait(false);
                 totalRewardError += Math.Abs(predictedReward - transition.Reward);
 
                 // Evaluate terminal prediction
-                var predictedTerminal = await model.TerminalModel.PredictAsync(transition.NextState, ct);
+                var predictedTerminal = await model.TerminalModel.PredictAsync(transition.NextState, ct).ConfigureAwait(false);
                 if (predictedTerminal == transition.Terminal)
                 {
                     correctTerminal++;
@@ -225,7 +225,7 @@ public sealed partial class WorldModelEngine : IWorldModelEngine
             return Result<ModelQuality, string>.Success(quality);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<ModelQuality, string>.Failure($"Failed to evaluate model: {ex.Message}");
         }
@@ -264,13 +264,13 @@ public sealed partial class WorldModelEngine : IWorldModelEngine
                 var action = SampleRandomAction();
 
                 // Predict next state using model
-                var nextState = await model.TransitionModel.PredictAsync(currentState, action, ct);
+                var nextState = await model.TransitionModel.PredictAsync(currentState, action, ct).ConfigureAwait(false);
 
                 // Predict reward
-                var reward = await model.RewardModel.PredictAsync(currentState, action, nextState, ct);
+                var reward = await model.RewardModel.PredictAsync(currentState, action, nextState, ct).ConfigureAwait(false);
 
                 // Predict terminal
-                var terminal = await model.TerminalModel.PredictAsync(nextState, ct);
+                var terminal = await model.TerminalModel.PredictAsync(nextState, ct).ConfigureAwait(false);
 
                 var transition = new Transition(
                     PreviousState: currentState,
@@ -292,7 +292,7 @@ public sealed partial class WorldModelEngine : IWorldModelEngine
             return Result<List<Transition>, string>.Success(transitions);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<List<Transition>, string>.Failure($"Failed to generate synthetic experience: {ex.Message}");
         }

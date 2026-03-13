@@ -102,7 +102,7 @@ public sealed class ValenceMonitor : IValenceMonitor
 
         // Perform Fourier Transform for spectral analysis
         var (frequency, amplitude, spectralPeaks) = await Task.Run(() =>
-            PerformSpectralAnalysis(stressSignals), ct);
+            PerformSpectralAnalysis(stressSignals), ct).ConfigureAwait(false);
 
         // Detect anomalies based on spectral peaks
         bool isAnomalous = spectralPeaks.Any(p => p > _config.StressThreshold);

@@ -26,19 +26,30 @@ public static class ConsolidatedMindArrowsExtensions
         ToolRegistry? tools = null)
     {
         // Create mind instance with explicit dependencies
-        var mind = new ConsolidatedMind(config, tools);
-        mind.RegisterSpecialists(specialists);
-
-        return prompt => async branch =>
+        // Ownership of mind transfers to the returned delegate.
+        ConsolidatedMind? mind = null;
+        try
         {
-            var response = await mind.ProcessAsync(prompt);
+            mind = new ConsolidatedMind(config, tools);
+            mind.RegisterSpecialists(specialists);
 
-            ReasoningState state = response.ThinkingContent != null
-                ? new Thinking(response.ThinkingContent)
-                : new Draft(response.Response);
+            var captured = mind;
+            mind = null; // Prevent disposal - ownership transferred to closure
+            return prompt => async branch =>
+            {
+                var response = await captured.ProcessAsync(prompt).ConfigureAwait(false);
 
-            return branch.WithReasoning(state, prompt, null);
-        };
+                ReasoningState state = response.ThinkingContent != null
+                    ? new Thinking(response.ThinkingContent)
+                    : new Draft(response.Response);
+
+                return branch.WithReasoning(state, prompt, null);
+            };
+        }
+        finally
+        {
+            mind?.Dispose();
+        }
     }
 
     /// <summary>
@@ -68,7 +79,7 @@ public static class ConsolidatedMindArrowsExtensions
             mind.RegisterSpecialists(specialists);
 
             // Retrieve context
-            var docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k);
+            var docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             // Build prompt with context
@@ -80,7 +91,7 @@ Topic: {topic}
 Please provide a comprehensive response addressing the topic based on the context provided.";
 
             // Process through the consolidated mind
-            var response = await mind.ProcessAsync(prompt);
+            var response = await mind.ProcessAsync(prompt).ConfigureAwait(false);
 
             // Create appropriate reasoning state based on the response
             ReasoningState state = response.ThinkingContent != null
@@ -114,11 +125,11 @@ Please provide a comprehensive response addressing the topic based on the contex
             try
             {
                 var result = await ReasoningArrowWithExplicitConfig(
-                    specialists, config, embed, topic, query, k)(branch);
+                    specialists, config, embed, topic, query, k)(branch).ConfigureAwait(false);
                 return Result<PipelineBranch, string>.Success(result);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<PipelineBranch, string>.Failure($"Reasoning failed: {ex.Message}");
             }
@@ -147,7 +158,7 @@ Please provide a comprehensive response addressing the topic based on the contex
             var mind = new ConsolidatedMind(config, null);
             mind.RegisterSpecialists(specialists);
 
-            var docs = await branch.Store.GetSimilarDocuments(embed, task, amount: k);
+            var docs = await branch.Store.GetSimilarDocuments(embed, task, amount: k).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = $@"Context:
@@ -155,7 +166,7 @@ Please provide a comprehensive response addressing the topic based on the contex
 
 Complex Task: {task}";
 
-            var response = await mind.ProcessComplexAsync(prompt);
+            var response = await mind.ProcessComplexAsync(prompt).ConfigureAwait(false);
 
             // Record thinking if available
             if (response.ThinkingContent != null)

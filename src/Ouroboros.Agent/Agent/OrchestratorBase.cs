@@ -100,18 +100,18 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
             {
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
                 cts.CancelAfter(Configuration.ExecutionTimeout.Value);
-                output = await ExecuteCoreAsync(input, context with { CancellationToken = cts.Token });
+                output = await ExecuteCoreAsync(input, context with { CancellationToken = cts.Token }).ConfigureAwait(false);
             }
             else
             {
-                output = await ExecuteCoreAsync(input, context);
+                output = await ExecuteCoreAsync(input, context).ConfigureAwait(false);
             }
 
             stopwatch.Stop();
             return HandleSuccess(output, stopwatch.Elapsed, metadata, activity);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             stopwatch.Stop();
             return HandleFailure(
@@ -155,7 +155,7 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
         };
 
         // Allow derived classes to add health info
-        var customHealth = await GetCustomHealthAsync(ct);
+        var customHealth = await GetCustomHealthAsync(ct).ConfigureAwait(false);
         foreach (var kvp in customHealth)
         {
             health[kvp.Key] = kvp.Value;
@@ -264,20 +264,20 @@ public abstract class OrchestratorBase<TInput, TOutput> : IOrchestrator<TInput, 
             attempt++;
             try
             {
-                var result = await operation();
+                var result = await operation().ConfigureAwait(false);
                 return Result<T, string>.Success(result);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception) when (attempt < retryConfig.MaxRetries && !ct.IsCancellationRequested)
+            catch (Exception ex) when (ex is not OperationCanceledException && attempt < retryConfig.MaxRetries && !ct.IsCancellationRequested)
             {
                 // Add jitter to prevent thundering herd
                 var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, (int)(delay.TotalMilliseconds * 0.1)));
-                await Task.Delay(delay + jitter, ct);
+                await Task.Delay(delay + jitter, ct).ConfigureAwait(false);
                 delay = TimeSpan.FromMilliseconds(
                     Math.Min(delay.TotalMilliseconds * retryConfig.BackoffMultiplier,
                              retryConfig.MaxDelay.TotalMilliseconds));
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<T, string>.Failure($"Operation failed after {attempt} attempts: {ex.Message}");
             }

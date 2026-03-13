@@ -33,7 +33,7 @@ public sealed partial class MetaAIPlannerOrchestrator
             // Use parallel execution if speedup is significant
             if (estimatedSpeedup > 1.5)
             {
-                (stepResults, overallSuccess, finalOutput) = await parallelExecutor.ExecuteParallelAsync(plan, ct);
+                (stepResults, overallSuccess, finalOutput) = await parallelExecutor.ExecuteParallelAsync(plan, ct).ConfigureAwait(false);
             }
             else
             {
@@ -51,7 +51,7 @@ public sealed partial class MetaAIPlannerOrchestrator
                     PlanStep sandboxedStep = _safety.SandboxStep(step);
 
                     // Execute step
-                    StepResult stepResult = await ExecuteStepAsync(sandboxedStep, ct);
+                    StepResult stepResult = await ExecuteStepAsync(sandboxedStep, ct).ConfigureAwait(false);
                     stepResults.Add(stepResult);
 
                     if (!stepResult.Success)
@@ -86,7 +86,7 @@ public sealed partial class MetaAIPlannerOrchestrator
             return Result<PlanExecutionResult, string>.Success(execution);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             stopwatch.Stop();
             RecordMetric("executor", stopwatch.Elapsed.TotalMilliseconds, false);
@@ -108,7 +108,7 @@ public sealed partial class MetaAIPlannerOrchestrator
         {
             // Build verification prompt
             string verifyPrompt = BuildVerificationPrompt(execution);
-            string verificationText = await _llm.GenerateTextAsync(verifyPrompt, ct);
+            string verificationText = await _llm.GenerateTextAsync(verifyPrompt, ct).ConfigureAwait(false);
 
             // Parse verification result
             PlanVerificationResult verification = ParseVerification(execution, verificationText);
@@ -117,7 +117,7 @@ public sealed partial class MetaAIPlannerOrchestrator
             return Result<PlanVerificationResult, string>.Success(verification);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             RecordMetric("verifier", 1.0, false);
             return Result<PlanVerificationResult, string>.Failure($"Verification failed: {ex.Message}");
@@ -148,7 +148,7 @@ public sealed partial class MetaAIPlannerOrchestrator
             if (tool != null)
             {
                 string args = JsonSerializer.Serialize(step.Parameters);
-                Result<string, string> toolResult = await tool.InvokeAsync(args);
+                Result<string, string> toolResult = await tool.InvokeAsync(args).ConfigureAwait(false);
 
                 stopwatch.Stop();
 
@@ -179,7 +179,7 @@ public sealed partial class MetaAIPlannerOrchestrator
 
             // If not a tool, try to execute as LLM task
             string prompt = $"Execute the following task: {step.Action}\nParameters: {JsonSerializer.Serialize(step.Parameters)}";
-            string output = await _llm.GenerateTextAsync(prompt, ct);
+            string output = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             stopwatch.Stop();
 
@@ -195,7 +195,7 @@ public sealed partial class MetaAIPlannerOrchestrator
                 });
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             stopwatch.Stop();
             return new StepResult(

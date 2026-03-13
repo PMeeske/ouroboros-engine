@@ -67,8 +67,7 @@ EFFECTS: <effect1>, <effect2>, ...
                         RuleSource.ExtractedFromSkill));
                 }
             }
-            catch
-            {
+            catch (Exception ex) when (ex is not OperationCanceledException) {
                 // Skip malformed rule blocks
                 continue;
             }
@@ -120,7 +119,7 @@ EFFECTS: <effect1>, <effect2>, ...
     {
         try
         {
-            var result = await _knowledgeBase.ExecuteMeTTaQueryAsync(query, ct);
+            var result = await _knowledgeBase.ExecuteMeTTaQueryAsync(query, ct).ConfigureAwait(false);
             if (result.IsFailure)
                 return Result<(string, List<ReasoningStep>, double), string>.Failure(result.Error);
 
@@ -144,7 +143,7 @@ EFFECTS: <effect1>, <effect2>, ...
         try
         {
             var prompt = $"Answer the following question using your knowledge:\n\n{query}\n\nAnswer:";
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            var response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             var steps = new List<ReasoningStep>
             {

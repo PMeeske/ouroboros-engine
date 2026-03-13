@@ -45,7 +45,7 @@ public sealed class CollectiveMindGoalIntegration
 
         try
         {
-            return await _mind.GenerateWithThinkingAsync(description, ct);
+            return await _mind.GenerateWithThinkingAsync(description, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -64,7 +64,7 @@ public sealed class CollectiveMindGoalIntegration
         ArgumentNullException.ThrowIfNull(goal);
 
         // Execute with CollectiveMind (it handles pathway selection internally)
-        return await _mind.GenerateWithThinkingAsync(goal.Description, ct);
+        return await _mind.GenerateWithThinkingAsync(goal.Description, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -84,16 +84,16 @@ public sealed class CollectiveMindGoalIntegration
 
             foreach (var subgoal in goal.Subgoals)
             {
-                var result = await ExecuteAgentGoalAsync(subgoal, ct);
+                var result = await ExecuteAgentGoalAsync(subgoal, ct).ConfigureAwait(false);
                 results.Add(result);
             }
 
             // Synthesize results
-            return await SynthesizeAgentGoalResultsAsync(goal, results, ct);
+            return await SynthesizeAgentGoalResultsAsync(goal, results, ct).ConfigureAwait(false);
         }
 
         // Atomic goal - execute directly
-        return await _mind.GenerateWithThinkingAsync(goal.Description, ct);
+        return await _mind.GenerateWithThinkingAsync(goal.Description, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -113,7 +113,7 @@ public sealed class CollectiveMindGoalIntegration
         if (rootGoal.SubGoals.Count == 0)
         {
             // Atomic goal - execute directly
-            var response = await ExecutePipelineGoalAsync(rootGoal, ct);
+            var response = await ExecutePipelineGoalAsync(rootGoal, ct).ConfigureAwait(false);
             results[rootGoal.Id] = response;
             return results;
         }
@@ -121,7 +121,7 @@ public sealed class CollectiveMindGoalIntegration
         // Execute sub-goals
         foreach (var subGoal in rootGoal.SubGoals)
         {
-            var subResults = await ExecuteHierarchicalPipelineGoalAsync(subGoal, ct);
+            var subResults = await ExecuteHierarchicalPipelineGoalAsync(subGoal, ct).ConfigureAwait(false);
             foreach (var kvp in subResults)
             {
                 results[kvp.Key] = kvp.Value;
@@ -129,7 +129,7 @@ public sealed class CollectiveMindGoalIntegration
         }
 
         // Synthesize results for the parent goal
-        var synthesis = await SynthesizePipelineResultsAsync(rootGoal, results, ct);
+        var synthesis = await SynthesizePipelineResultsAsync(rootGoal, results, ct).ConfigureAwait(false);
         results[rootGoal.Id] = synthesis;
 
         return results;
@@ -158,19 +158,19 @@ public sealed class CollectiveMindGoalIntegration
                 var sw = Stopwatch.StartNew();
                 try
                 {
-                    var response = await _mind.GenerateWithThinkingAsync(sg.Description, ct);
+                    var response = await _mind.GenerateWithThinkingAsync(sg.Description, ct).ConfigureAwait(false);
                     sw.Stop();
                     return new SubGoalResult(sg.Id, "collective", response, sw.Elapsed, true);
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     sw.Stop();
                     return new SubGoalResult(sg.Id, "collective", new ThinkingResponse(null, ""), sw.Elapsed, false, ex.Message);
                 }
             });
 
-            var taskResults = await Task.WhenAll(tasks);
+            var taskResults = await Task.WhenAll(tasks).ConfigureAwait(false);
             foreach (var result in taskResults)
             {
                 results[result.GoalId] = result;
@@ -183,12 +183,12 @@ public sealed class CollectiveMindGoalIntegration
                 var sw = Stopwatch.StartNew();
                 try
                 {
-                    var response = await _mind.GenerateWithThinkingAsync(sg.Description, ct);
+                    var response = await _mind.GenerateWithThinkingAsync(sg.Description, ct).ConfigureAwait(false);
                     sw.Stop();
                     results[sg.Id] = new SubGoalResult(sg.Id, "collective", response, sw.Elapsed, true);
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     sw.Stop();
                     results[sg.Id] = new SubGoalResult(sg.Id, "collective", new ThinkingResponse(null, ""), sw.Elapsed, false, ex.Message);
@@ -217,7 +217,7 @@ public sealed class CollectiveMindGoalIntegration
             Synthesize these results into a comprehensive response.
             """;
 
-        return await _mind.GenerateWithThinkingAsync(synthesisPrompt, ct);
+        return await _mind.GenerateWithThinkingAsync(synthesisPrompt, ct).ConfigureAwait(false);
     }
 
     private async Task<ThinkingResponse> SynthesizePipelineResultsAsync(
@@ -239,6 +239,6 @@ public sealed class CollectiveMindGoalIntegration
             Synthesize these results into a comprehensive response.
             """;
 
-        return await _mind.GenerateWithThinkingAsync(synthesisPrompt, ct);
+        return await _mind.GenerateWithThinkingAsync(synthesisPrompt, ct).ConfigureAwait(false);
     }
 }

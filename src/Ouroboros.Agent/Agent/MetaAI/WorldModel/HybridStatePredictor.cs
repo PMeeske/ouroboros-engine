@@ -35,7 +35,7 @@ public sealed class HybridStatePredictor : IStatePredictor
         Task<State> transformerTask = _transformer.PredictAsync(current, action, ct);
         Task<State> gnnTask = _gnn.PredictAsync(current, action, ct);
 
-        await Task.WhenAll(transformerTask, gnnTask);
+        await Task.WhenAll(transformerTask, gnnTask).ConfigureAwait(false);
 
         State transformerState = transformerTask.Result;
         State gnnState = gnnTask.Result;

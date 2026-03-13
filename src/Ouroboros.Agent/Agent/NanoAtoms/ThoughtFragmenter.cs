@@ -54,7 +54,7 @@ public sealed class ThoughtFragmenter
         // Try GoalDecomposer-based splitting if configured and model available
         if (_config.UseGoalDecomposer && _decompositionModel != null)
         {
-            var goalFragments = await TryGoalDecomposerAsync(prompt, ct);
+            var goalFragments = await TryGoalDecomposerAsync(prompt, ct).ConfigureAwait(false);
             if (goalFragments != null && goalFragments.Length > 0)
             {
                 return goalFragments;
@@ -76,7 +76,7 @@ public sealed class ThoughtFragmenter
             string decompositionPrompt =
                 $"Decompose this into 2-4 focused sub-tasks. Return ONLY a JSON array of strings:\n\n{prompt}";
 
-            string response = await _decompositionModel!.GenerateTextAsync(decompositionPrompt, ct);
+            string response = await _decompositionModel!.GenerateTextAsync(decompositionPrompt, ct).ConfigureAwait(false);
 
             // Parse JSON array from response
             string[] subGoalTexts = ParseJsonArray(response);
@@ -89,8 +89,7 @@ public sealed class ThoughtFragmenter
                 .Select((text, i) => ThoughtFragment.FromSubGoal(SubGoal.FromDescription(text, i)))
                 .ToArray();
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             // GoalDecomposer failed — caller will fall back to naive chunking
             return null;
         }
@@ -177,8 +176,7 @@ public sealed class ThoughtFragmenter
             string[]? result = System.Text.Json.JsonSerializer.Deserialize<string[]>(json);
             return result?.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray() ?? [];
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return [];
         }
     }

@@ -50,7 +50,7 @@ public sealed partial class NeuralSymbolicBridge : INeuralSymbolicBridge
         {
             // Build prompt for rule extraction
             var prompt = BuildRuleExtractionPrompt(skill);
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            var response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Parse rules from response
             var rules = ParseExtractedRules(response, skill);
@@ -81,7 +81,7 @@ Natural language: {naturalLanguage}
 
 MeTTa expression:";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            var response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             var expression = ParseMeTTaExpression(response);
 
             return Result<MeTTaExpression, string>.Success(expression);
@@ -109,7 +109,7 @@ MeTTa: {expression.RawExpression}
 
 Natural language explanation:";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            var response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             var explanation = response.Trim();
 
             return Result<string, string>.Success(explanation);
@@ -143,7 +143,7 @@ Natural language explanation:";
             {
                 case ReasoningMode.SymbolicFirst:
                     // Try symbolic reasoning first
-                    var symbolicResult = await TrySymbolicReasoning(query, ct);
+                    var symbolicResult = await TrySymbolicReasoning(query, ct).ConfigureAwait(false);
                     if (symbolicResult.IsSuccess)
                     {
                         symbolicSucceeded = true;
@@ -154,7 +154,7 @@ Natural language explanation:";
                     else
                     {
                         // Fall back to neural
-                        var neuralResult = await TryNeuralReasoning(query, ct);
+                        var neuralResult = await TryNeuralReasoning(query, ct).ConfigureAwait(false);
                         neuralSucceeded = neuralResult.IsSuccess;
                         answer = neuralResult.IsSuccess ? neuralResult.Value.answer : query;
                         confidence = neuralResult.IsSuccess ? neuralResult.Value.confidence : 0.0;
@@ -165,7 +165,7 @@ Natural language explanation:";
 
                 case ReasoningMode.NeuralFirst:
                     // Try neural first, verify with symbolic
-                    var neuralFirst = await TryNeuralReasoning(query, ct);
+                    var neuralFirst = await TryNeuralReasoning(query, ct).ConfigureAwait(false);
                     neuralSucceeded = neuralFirst.IsSuccess;
                     if (neuralFirst.IsSuccess)
                     {
@@ -173,7 +173,7 @@ Natural language explanation:";
                         steps.AddRange(neuralFirst.Value.steps);
                         
                         // Try to verify symbolically
-                        var verification = await TrySymbolicReasoning(query, ct);
+                        var verification = await TrySymbolicReasoning(query, ct).ConfigureAwait(false);
                         symbolicSucceeded = verification.IsSuccess;
                         confidence = symbolicSucceeded
                             ? _confidenceConfig.SymbolicVerifiedNeural
@@ -185,10 +185,10 @@ Natural language explanation:";
                     // Run both in parallel
                     var symbolicTask = TrySymbolicReasoning(query, ct);
                     var neuralTask = TryNeuralReasoning(query, ct);
-                    await Task.WhenAll(symbolicTask, neuralTask);
+                    await Task.WhenAll(symbolicTask, neuralTask).ConfigureAwait(false);
                     
-                    var symbolicParallel = await symbolicTask;
-                    var neuralParallel = await neuralTask;
+                    var symbolicParallel = await symbolicTask.ConfigureAwait(false);
+                    var neuralParallel = await neuralTask.ConfigureAwait(false);
                     
                     symbolicSucceeded = symbolicParallel.IsSuccess;
                     neuralSucceeded = neuralParallel.IsSuccess;
@@ -216,7 +216,7 @@ Natural language explanation:";
                     break;
 
                 case ReasoningMode.SymbolicOnly:
-                    var symbolicOnly = await TrySymbolicReasoning(query, ct);
+                    var symbolicOnly = await TrySymbolicReasoning(query, ct).ConfigureAwait(false);
                     symbolicSucceeded = symbolicOnly.IsSuccess;
                     if (symbolicOnly.IsSuccess)
                     {
@@ -227,7 +227,7 @@ Natural language explanation:";
                     break;
 
                 case ReasoningMode.NeuralOnly:
-                    var neuralOnly = await TryNeuralReasoning(query, ct);
+                    var neuralOnly = await TryNeuralReasoning(query, ct).ConfigureAwait(false);
                     neuralSucceeded = neuralOnly.IsSuccess;
                     if (neuralOnly.IsSuccess)
                     {
@@ -276,7 +276,7 @@ Natural language explanation:";
 
             // Build prompt for consistency checking
             var prompt = BuildConsistencyCheckPrompt(hypothesis, knowledgeBase);
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            var response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
             // Parse consistency analysis
             var (isConsistent, parsedConflicts, parsedMissing) = ParseConsistencyAnalysis(response, knowledgeBase);
@@ -333,7 +333,7 @@ Type: <type>
 Properties: <prop1>, <prop2>, ...
 Relations: <rel1>, <rel2>, ...";
 
-            var response = await _llm.GenerateTextAsync(prompt, ct);
+            var response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             var (mettaType, properties, relations) = ParseGroundingResponse(response);
 
             var concept = new GroundedConcept(

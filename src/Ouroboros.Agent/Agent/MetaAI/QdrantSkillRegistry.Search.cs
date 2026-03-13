@@ -40,9 +40,9 @@ public sealed partial class QdrantSkillRegistry
                 try
                 {
                     string query = category ?? string.Join(" ", tags ?? Array.Empty<string>());
-                    float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct);
+                    float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct).ConfigureAwait(false);
 
-                    var collectionExists = await _client.CollectionExistsAsync(_config.CollectionName, ct);
+                    var collectionExists = await _client.CollectionExistsAsync(_config.CollectionName, ct).ConfigureAwait(false);
                     if (collectionExists)
                     {
                         var searchResults = await _client.SearchAsync(
@@ -50,7 +50,7 @@ public sealed partial class QdrantSkillRegistry
                             queryEmbedding,
                             limit: 10,
                             scoreThreshold: MinimumSimilarityThreshold,
-                            cancellationToken: ct);
+                            cancellationToken: ct).ConfigureAwait(false);
 
                         var matchedSkills = new List<AgentSkill>();
                         foreach (var result in searchResults)
@@ -69,7 +69,7 @@ public sealed partial class QdrantSkillRegistry
                     }
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     Trace.TraceWarning("[WARN] Qdrant semantic search failed: {0}", ex.Message);
                     // Fall back to simple filtering
@@ -88,7 +88,7 @@ public sealed partial class QdrantSkillRegistry
             return Result<IReadOnlyList<AgentSkill>, string>.Success(filtered);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IReadOnlyList<AgentSkill>, string>.Failure($"Failed to find skills: {ex.Message}");
         }
@@ -105,7 +105,7 @@ public sealed partial class QdrantSkillRegistry
         try
         {
             var tags = ExtractTagsFromGoal(goal);
-            var result = await FindSkillsAsync(null, tags, ct);
+            var result = await FindSkillsAsync(null, tags, ct).ConfigureAwait(false);
             if (!result.IsSuccess)
                 return new List<Skill>();
 
@@ -114,8 +114,7 @@ public sealed partial class QdrantSkillRegistry
                 s.Effects.Select(e => new PlanStep(e, new Dictionary<string, object>(), e, s.SuccessRate)).ToList(),
                 s.SuccessRate, s.UsageCount, DateTime.UtcNow.AddDays(-s.UsageCount), DateTime.UtcNow)).ToList();
         }
-        catch
-        {
+        catch (Exception ex) when (ex is not OperationCanceledException) {
             return new List<Skill>();
         }
     }
@@ -155,7 +154,7 @@ public sealed partial class QdrantSkillRegistry
             return Task.FromResult(Result<Skill, string>.Success(skill));
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Task.FromResult(Result<Skill, string>.Failure($"Failed to extract skill: {ex.Message}"));
         }

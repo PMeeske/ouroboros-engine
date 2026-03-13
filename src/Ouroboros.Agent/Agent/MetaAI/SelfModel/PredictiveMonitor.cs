@@ -233,15 +233,14 @@ Format each cause on a new line starting with '- '";
 
             try
             {
-                string response = await _llm.GenerateTextAsync(prompt, ct);
+                string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
                 possibleCauses = response.Split('\n')
                     .Select(l => l.Trim())
                     .Where(l => l.StartsWith("- "))
                     .Select(l => l.Substring(2).Trim())
                     .ToList();
             }
-            catch
-            {
+            catch (Exception ex) when (ex is not OperationCanceledException) {
                 // Fallback to generic causes
                 possibleCauses.Add("Statistical variation");
                 possibleCauses.Add("Change in system behavior");
@@ -324,7 +323,7 @@ Format each cause on a new line starting with '- '";
             confidence,
             DateTime.UtcNow + horizon);
 
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
         return Result<Forecast, string>.Success(forecast);
     }
 

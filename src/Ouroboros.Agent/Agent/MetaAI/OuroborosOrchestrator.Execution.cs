@@ -28,7 +28,7 @@ public sealed partial class OuroborosOrchestrator
 
             foreach (string step in steps)
             {
-                Result<string, string> stepResult = await ExecuteStepAsync(step, ct);
+                Result<string, string> stepResult = await ExecuteStepAsync(step, ct).ConfigureAwait(false);
 
                 stepResult.Match(
                     success =>
@@ -64,7 +64,7 @@ public sealed partial class OuroborosOrchestrator
                 });
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
             RecordPhaseMetric("execute", sw.ElapsedMilliseconds, false);
@@ -90,14 +90,14 @@ public sealed partial class OuroborosOrchestrator
             double qualityThreshold = BaseQualityThreshold + (verificationStrictness * QualityThresholdRange);
 
             string prompt = BuildVerificationPrompt(goal, output);
-            string verificationText = await _llm.GenerateTextAsync(prompt, ct);
+            string verificationText = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
 
-            (bool verified, double qualityScore) = await ParsePlanVerificationResult(verificationText, goal, output, ct);
+            (bool verified, double qualityScore) = await ParsePlanVerificationResult(verificationText, goal, output, ct).ConfigureAwait(false);
 
             bool meetsQualityThreshold = qualityScore >= qualityThreshold;
 
             string planMetta = $"(plan (goal \"{EscapeMeTTa(goal)}\") (output \"{EscapeMeTTa(output.Substring(0, Math.Min(MeTTaOutputTruncationLength, output.Length)))}\"))";
-            Result<bool, string> mettaResult = await _mettaEngine.VerifyPlanAsync(planMetta, ct);
+            Result<bool, string> mettaResult = await _mettaEngine.VerifyPlanAsync(planMetta, ct).ConfigureAwait(false);
 
             bool mettaVerified = mettaResult.Match(
                 v => v,
@@ -139,7 +139,7 @@ public sealed partial class OuroborosOrchestrator
                 });
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
             RecordPhaseMetric("verify", sw.ElapsedMilliseconds, false);
@@ -184,7 +184,7 @@ Provide verification in JSON format:
                 jsonEx,
                 "[VERIFY] Failed to parse verification result (JSON error), attempting retry. ExceptionMessage: {ExceptionMessage}",
                 jsonEx.Message);
-            return await RetryVerificationParsingAsync(goal, output, ct);
+            return await RetryVerificationParsingAsync(goal, output, ct).ConfigureAwait(false);
         }
         catch (KeyNotFoundException keyEx)
         {
@@ -192,7 +192,7 @@ Provide verification in JSON format:
                 keyEx,
                 "[VERIFY] Missing required property in verification result. ExceptionMessage: {ExceptionMessage}",
                 keyEx.Message);
-            return await RetryVerificationParsingAsync(goal, output, ct);
+            return await RetryVerificationParsingAsync(goal, output, ct).ConfigureAwait(false);
         }
         catch (InvalidOperationException invalidOpEx)
         {
@@ -200,7 +200,7 @@ Provide verification in JSON format:
                 invalidOpEx,
                 "[VERIFY] Invalid property type in verification result. ExceptionMessage: {ExceptionMessage}",
                 invalidOpEx.Message);
-            return await RetryVerificationParsingAsync(goal, output, ct);
+            return await RetryVerificationParsingAsync(goal, output, ct).ConfigureAwait(false);
         }
     }
 
@@ -208,7 +208,7 @@ Provide verification in JSON format:
     {
         try
         {
-            string retryResponse = await RequestStructuredVerificationAsync(goal, output, ct);
+            string retryResponse = await RequestStructuredVerificationAsync(goal, output, ct).ConfigureAwait(false);
             using JsonDocument retryDoc = JsonDocument.Parse(retryResponse);
             bool verified = retryDoc.RootElement.GetProperty("verified").GetBoolean();
             double qualityScore = retryDoc.RootElement.GetProperty("quality_score").GetDouble();
@@ -250,7 +250,7 @@ Provide verification in JSON format:
         string prompt = $"Verify if the output achieves the goal. " +
                         $"Respond ONLY with JSON: {{\"verified\": true/false, \"quality_score\": 0.0-1.0}}\n" +
                         $"Goal: {truncatedGoal}\nOutput: {truncatedOutput}";
-        return await _llm.GenerateTextAsync(prompt, ct);
+        return await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -264,17 +264,17 @@ Provide verification in JSON format:
         {
             try
             {
-                string llmResponse = await _llm.GenerateTextAsync($"Process this step: {step}", ct);
+                string llmResponse = await _llm.GenerateTextAsync($"Process this step: {step}", ct).ConfigureAwait(false);
                 return Result<string, string>.Success(llmResponse);
             }
             catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<string, string>.Failure($"LLM processing failed: {ex.Message}");
             }
         }
 
-        ToolSelection? selection = await _toolSelector.SelectToolAsync(step, ct);
+        ToolSelection? selection = await _toolSelector.SelectToolAsync(step, ct).ConfigureAwait(false);
 
         if (selection != null)
         {
@@ -286,14 +286,14 @@ Provide verification in JSON format:
                     tool.Name,
                     new Dictionary<string, object> { ["step"] = step, ["arguments"] = selection.ArgumentsJson },
                     context: null,
-                    ct);
+                    ct).ConfigureAwait(false);
 
                 if (!safetyCheck.IsAllowed)
                 {
                     return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
                 }
 
-                return await tool.InvokeAsync(selection.ArgumentsJson, ct);
+                return await tool.InvokeAsync(selection.ArgumentsJson, ct).ConfigureAwait(false);
             }
         }
 
@@ -309,17 +309,17 @@ Provide verification in JSON format:
                 tool.Name,
                 new Dictionary<string, object> { ["step"] = step },
                 context: null,
-                ct);
+                ct).ConfigureAwait(false);
 
             if (!safetyCheck.IsAllowed)
             {
                 return Result<string, string>.Failure($"Safety violation: {safetyCheck.Reason}");
             }
 
-            return await tool.InvokeAsync(step, ct);
+            return await tool.InvokeAsync(step, ct).ConfigureAwait(false);
         }
 
-        string response = await _llm.GenerateTextAsync($"Process this step: {step}", ct);
+        string response = await _llm.GenerateTextAsync($"Process this step: {step}", ct).ConfigureAwait(false);
         return Result<string, string>.Success(response);
     }
 }

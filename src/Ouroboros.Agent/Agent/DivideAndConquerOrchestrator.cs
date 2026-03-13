@@ -61,9 +61,9 @@ public sealed class DivideAndConquerOrchestrator
                 parallelOptions,
                 async (item, token) =>
                 {
-                    ChunkResult result = await ProcessChunkAsync(task, item.Chunk, item.Index, token);
+                    ChunkResult result = await ProcessChunkAsync(task, item.Chunk, item.Index, token).ConfigureAwait(false);
                     results.Add(result);
-                });
+                }).ConfigureAwait(false);
 
             totalTimer.Stop();
 
@@ -90,7 +90,7 @@ public sealed class DivideAndConquerOrchestrator
             return Result<string, string>.Success(mergedResult);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             totalTimer.Stop();
             RecordMetric("divide_and_conquer_orchestrator", totalTimer.Elapsed.TotalMilliseconds, false);
@@ -175,7 +175,7 @@ public sealed class DivideAndConquerOrchestrator
             string prompt = $"{task}\n\nContent:\n{chunk}";
             
             // Execute with model
-            string output = await _model.GenerateTextAsync(prompt, ct);
+            string output = await _model.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             
             sw.Stop();
 
@@ -190,7 +190,7 @@ public sealed class DivideAndConquerOrchestrator
                 Success: true);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             sw.Stop();
             RecordMetric($"chunk_{index}", sw.Elapsed.TotalMilliseconds, false);

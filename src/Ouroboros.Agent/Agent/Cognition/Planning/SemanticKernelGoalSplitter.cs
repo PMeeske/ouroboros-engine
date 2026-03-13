@@ -40,7 +40,7 @@ public sealed class SemanticKernelGoalSplitter : IGoalSplitter
         try
         {
             // Phase 1: PLAN — Use LLM to decompose into raw steps
-            var rawSteps = await PlanAsync(goal, context, ct);
+            var rawSteps = await PlanAsync(goal, context, ct).ConfigureAwait(false);
             if (rawSteps.Count == 0)
                 return Result<GoalDecomposition, string>.Failure("Planner produced no steps");
 
@@ -70,7 +70,7 @@ public sealed class SemanticKernelGoalSplitter : IGoalSplitter
                         }
                     };
 
-                    var result = await _ethics.EvaluateGoalAsync(ethicsGoal, ethicsContext, ct);
+                    var result = await _ethics.EvaluateGoalAsync(ethicsGoal, ethicsContext, ct).ConfigureAwait(false);
                     if (result.IsSuccess && !result.Value.IsPermitted)
                     {
                         return Result<GoalDecomposition, string>.Failure(
@@ -83,7 +83,7 @@ public sealed class SemanticKernelGoalSplitter : IGoalSplitter
             return Result<GoalDecomposition, string>.Success(decomposition);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<GoalDecomposition, string>.Failure(
                 $"Goal splitting failed: {ex.Message}");
@@ -124,7 +124,7 @@ public sealed class SemanticKernelGoalSplitter : IGoalSplitter
             ]
             """;
 
-        string response = await _llm.GenerateTextAsync(prompt, ct);
+        string response = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
         return ParseSteps(response);
     }
 

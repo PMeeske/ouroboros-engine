@@ -85,13 +85,13 @@ public sealed partial class MeTTaAgentTool : ITool
 
             return operation switch
             {
-                "define" => await HandleDefineAsync(root, ct),
-                "spawn" => await HandleSpawnAsync(root, ct),
-                "task" => await HandleTaskAsync(root, ct),
-                "route" => await HandleRouteAsync(root, ct),
-                "pipeline" => await HandlePipelineAsync(root, ct),
+                "define" => await HandleDefineAsync(root, ct).ConfigureAwait(false),
+                "spawn" => await HandleSpawnAsync(root, ct).ConfigureAwait(false),
+                "task" => await HandleTaskAsync(root, ct).ConfigureAwait(false),
+                "route" => await HandleRouteAsync(root, ct).ConfigureAwait(false),
+                "pipeline" => await HandlePipelineAsync(root, ct).ConfigureAwait(false),
                 "status" => HandleStatus(),
-                "terminate" => await HandleTerminateAsync(root, ct),
+                "terminate" => await HandleTerminateAsync(root, ct).ConfigureAwait(false),
                 "list" => HandleList(),
                 _ => Result<string, string>.Failure($"Unknown operation: {operation}")
             };
@@ -101,7 +101,7 @@ public sealed partial class MeTTaAgentTool : ITool
             return Result<string, string>.Failure($"Invalid JSON input: {ex.Message}");
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<string, string>.Failure($"Agent tool error: {ex.Message}");
         }
@@ -142,7 +142,7 @@ public sealed partial class MeTTaAgentTool : ITool
             maxTokens, temperature,
             Capabilities: capabilities);
 
-        return await _runtime.DefineAgentAsync(def, autoSpawn: false, ct);
+        return await _runtime.DefineAgentAsync(def, autoSpawn: false, ct).ConfigureAwait(false);
     }
 
     private async Task<Result<string, string>> HandleSpawnAsync(JsonElement root, CancellationToken ct)
@@ -152,7 +152,7 @@ public sealed partial class MeTTaAgentTool : ITool
         if (string.IsNullOrEmpty(agentId))
         {
             // Spawn all defined agents
-            var result = await _runtime.SpawnAllAsync(ct);
+            var result = await _runtime.SpawnAllAsync(ct).ConfigureAwait(false);
             return result.IsSuccess
                 ? Result<string, string>.Success($"Spawned {result.Value} agents")
                 : Result<string, string>.Failure(result.Error);
@@ -168,7 +168,7 @@ public sealed partial class MeTTaAgentTool : ITool
             string escapedAgentId = MeTTaParsingHelpers.EscapeMeTTaString(agentId);
             var queryResult = await _engine.ExecuteQueryAsync(
                 $"!(match &self (AgentDef \"{escapedAgentId}\" $prov $model $role $prompt $tokens $temp) " +
-                $"(AgentDef \"{escapedAgentId}\" $prov $model $role $prompt $tokens $temp))", ct);
+                $"(AgentDef \"{escapedAgentId}\" $prov $model $role $prompt $tokens $temp))", ct).ConfigureAwait(false);
 
             if (queryResult.IsFailure || string.IsNullOrWhiteSpace(queryResult.Value))
             {
@@ -184,7 +184,7 @@ public sealed partial class MeTTaAgentTool : ITool
                     $"Failed to parse AgentDef for '{agentId}' from MeTTa.");
             }
 
-            var spawnResult = await _runtime.SpawnAgentAsync(defs[0], ct);
+            var spawnResult = await _runtime.SpawnAgentAsync(defs[0], ct).ConfigureAwait(false);
             return spawnResult.IsSuccess
                 ? Result<string, string>.Success($"Agent '{agentId}' spawned from definition")
                 : Result<string, string>.Failure(spawnResult.Error);
@@ -213,7 +213,7 @@ public sealed partial class MeTTaAgentTool : ITool
             systemPrompt, maxTokens, temperature,
             Capabilities: capabilities);
 
-        var adhocSpawnResult = await _runtime.SpawnAgentAsync(def, ct);
+        var adhocSpawnResult = await _runtime.SpawnAgentAsync(def, ct).ConfigureAwait(false);
         return adhocSpawnResult.IsSuccess
             ? Result<string, string>.Success($"Agent '{agentId}' spawned successfully")
             : Result<string, string>.Failure(adhocSpawnResult.Error);
@@ -229,7 +229,7 @@ public sealed partial class MeTTaAgentTool : ITool
         if (string.IsNullOrEmpty(agentId) || string.IsNullOrEmpty(prompt))
             return Result<string, string>.Failure("Task requires: agent_id, prompt");
 
-        return await _runtime.ExecuteTaskAsync(agentId, taskId, prompt, ct);
+        return await _runtime.ExecuteTaskAsync(agentId, taskId, prompt, ct).ConfigureAwait(false);
     }
 
     private async Task<Result<string, string>> HandleRouteAsync(JsonElement root, CancellationToken ct)
@@ -242,7 +242,7 @@ public sealed partial class MeTTaAgentTool : ITool
         if (string.IsNullOrEmpty(capability) || string.IsNullOrEmpty(prompt))
             return Result<string, string>.Failure("Route requires: capability, prompt");
 
-        return await _runtime.RouteTaskAsync(taskId, capability, prompt, ct);
+        return await _runtime.RouteTaskAsync(taskId, capability, prompt, ct).ConfigureAwait(false);
     }
 
     private async Task<Result<string, string>> HandlePipelineAsync(JsonElement root, CancellationToken ct)
@@ -269,7 +269,7 @@ public sealed partial class MeTTaAgentTool : ITool
             // Try to get pipeline from MeTTa (escape prompt to prevent injection)
             string escapedPrompt = MeTTaParsingHelpers.EscapeMeTTaString(prompt);
             var pipelineResult = await _engine.ExecuteQueryAsync(
-                $"!(code-pipeline \"{escapedPrompt}\")", ct);
+                $"!(code-pipeline \"{escapedPrompt}\")", ct).ConfigureAwait(false);
 
             if (pipelineResult.IsSuccess && !string.IsNullOrWhiteSpace(pipelineResult.Value))
             {
@@ -281,7 +281,7 @@ public sealed partial class MeTTaAgentTool : ITool
                     "Pipeline requires agent_ids or a matching MeTTa pipeline rule");
         }
 
-        return await _runtime.ExecutePipelineAsync(taskId, agentIds, prompt, ct);
+        return await _runtime.ExecutePipelineAsync(taskId, agentIds, prompt, ct).ConfigureAwait(false);
     }
 
     private Result<string, string> HandleStatus()
@@ -300,7 +300,7 @@ public sealed partial class MeTTaAgentTool : ITool
         if (string.IsNullOrEmpty(agentId))
             return Result<string, string>.Failure("Terminate requires: agent_id");
 
-        return await _runtime.TerminateAgentAsync(agentId, ct);
+        return await _runtime.TerminateAgentAsync(agentId, ct).ConfigureAwait(false);
     }
 
     private Result<string, string> HandleList()

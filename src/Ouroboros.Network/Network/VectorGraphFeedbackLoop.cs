@@ -97,7 +97,7 @@ public sealed partial class VectorGraphFeedbackLoop
         try
         {
             // Step 1: Build embedding cache from Qdrant
-            await BuildEmbeddingCacheAsync(dag, ct);
+            await BuildEmbeddingCacheAsync(dag, ct).ConfigureAwait(false);
 
             // Step 2: Compute vector field properties
             var divergenceMap = VectorFieldOperations.ComputeAllDivergences(dag, GetCachedEmbedding);
@@ -107,10 +107,10 @@ public sealed partial class VectorGraphFeedbackLoop
             var classification = ClassifyNodes(divergenceMap, rotationMap);
 
             // Step 4: Feed analysis results to MeTTa
-            await FeedAnalysisToMeTTaAsync(classification, ct);
+            await FeedAnalysisToMeTTaAsync(classification, ct).ConfigureAwait(false);
 
             // Step 5: Query MeTTa for suggested modifications
-            var modificationsResult = await QueryMeTTaForModificationsAsync(ct);
+            var modificationsResult = await QueryMeTTaForModificationsAsync(ct).ConfigureAwait(false);
             if (modificationsResult.IsFailure)
             {
                 return Result<FeedbackResult, string>.Failure(
@@ -120,12 +120,12 @@ public sealed partial class VectorGraphFeedbackLoop
             // Step 6: Apply modifications to DAG
             var modifications = ParseModifications(modificationsResult.Value);
             var modifiedNodes = new HashSet<Guid>();
-            await ApplyModificationsAsync(dag, modifications, modifiedNodes, ct);
+            await ApplyModificationsAsync(dag, modifications, modifiedNodes, ct).ConfigureAwait(false);
 
             // Step 7: Re-embed and persist modified nodes
             if (_config.AutoPersist && modifiedNodes.Count > 0)
             {
-                await ReEmbedAndPersistAsync(dag, modifiedNodes, ct);
+                await ReEmbedAndPersistAsync(dag, modifiedNodes, ct).ConfigureAwait(false);
             }
 
             // Step 8: Build and return result
@@ -140,8 +140,7 @@ public sealed partial class VectorGraphFeedbackLoop
 
             return Result<FeedbackResult, string>.Success(result);
         }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<FeedbackResult, string>.Failure($"Feedback cycle failed: {ex.Message}");
         }
@@ -158,11 +157,10 @@ public sealed partial class VectorGraphFeedbackLoop
             {
                 // Generate embedding for the node
                 var semanticText = $"{node.TypeName}: {node.PayloadJson}";
-                var embedding = await _embeddingModel.CreateEmbeddingsAsync(semanticText, ct);
+                var embedding = await _embeddingModel.CreateEmbeddingsAsync(semanticText, ct).ConfigureAwait(false);
                 _embeddingCache[node.Id] = embedding;
             }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 System.Diagnostics.Trace.TraceWarning(
                     $"[FeedbackLoop] Embedding failed for node {node.Id}: {ex.Message}. Using zero vector.");
@@ -222,28 +220,28 @@ public sealed partial class VectorGraphFeedbackLoop
         foreach (var nodeId in classification.Sources)
         {
             var fact = $"!(semantic-source \"{EscapeMeTTaString(nodeId.ToString())}\")";
-            await _mettaEngine.AddFactAsync(fact, ct);
+            await _mettaEngine.AddFactAsync(fact, ct).ConfigureAwait(false);
         }
 
         // Add facts about semantic sinks
         foreach (var nodeId in classification.Sinks)
         {
             var fact = $"!(semantic-sink \"{EscapeMeTTaString(nodeId.ToString())}\")";
-            await _mettaEngine.AddFactAsync(fact, ct);
+            await _mettaEngine.AddFactAsync(fact, ct).ConfigureAwait(false);
         }
 
         // Add facts about neutral nodes
         foreach (var nodeId in classification.Neutral)
         {
             var fact = $"!(semantic-neutral \"{EscapeMeTTaString(nodeId.ToString())}\")";
-            await _mettaEngine.AddFactAsync(fact, ct);
+            await _mettaEngine.AddFactAsync(fact, ct).ConfigureAwait(false);
         }
 
         // Add facts about cyclic nodes
         foreach (var nodeId in classification.Cyclic)
         {
             var fact = $"!(reasoning-cycle \"{EscapeMeTTaString(nodeId.ToString())}\")";
-            await _mettaEngine.AddFactAsync(fact, ct);
+            await _mettaEngine.AddFactAsync(fact, ct).ConfigureAwait(false);
         }
 
         // Add symbolic rules for graph modification reasoning
@@ -260,14 +258,14 @@ public sealed partial class VectorGraphFeedbackLoop
     (if (and (semantic-sink $sink1) (semantic-sink $sink2))
         (merge-sinks $sink1 $sink2)))
 ";
-        await _mettaEngine.ApplyRuleAsync(rule, ct);
+        await _mettaEngine.ApplyRuleAsync(rule, ct).ConfigureAwait(false);
     }
 
     private async Task<Result<string, string>> QueryMeTTaForModificationsAsync(CancellationToken ct)
     {
         // Query for suggested modifications
         var query = "!(match &self (suggest-edge-strengthen $s $t) (strengthen $s $t))";
-        return await _mettaEngine.ExecuteQueryAsync(query, ct);
+        return await _mettaEngine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
     }
 
     private static List<GraphModification> ParseModifications(string mettaResult)
@@ -473,7 +471,7 @@ public sealed partial class VectorGraphFeedbackLoop
             appliedCount++;
         }
 
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     private async Task ReEmbedAndPersistAsync(
@@ -493,13 +491,13 @@ public sealed partial class VectorGraphFeedbackLoop
 
             // Re-generate embedding
             var semanticText = $"{node.TypeName}: {node.PayloadJson}";
-            var newEmbedding = await _embeddingModel.CreateEmbeddingsAsync(semanticText, ct);
+            var newEmbedding = await _embeddingModel.CreateEmbeddingsAsync(semanticText, ct).ConfigureAwait(false);
 
             // Update cache
             _embeddingCache[nodeId] = newEmbedding;
 
             // Persist to Qdrant
-            await _store.SaveNodeAsync(node, ct);
+            await _store.SaveNodeAsync(node, ct).ConfigureAwait(false);
         }
     }
 

@@ -70,8 +70,8 @@ public sealed partial class WorldModelEngine
             for (int sample = 0; sample < 5; sample++)
             {
                 var candidateAction = SampleRandomAction();
-                var nextState = await model.TransitionModel.PredictAsync(currentState, candidateAction, ct);
-                var reward = await model.RewardModel.PredictAsync(currentState, candidateAction, nextState, ct);
+                var nextState = await model.TransitionModel.PredictAsync(currentState, candidateAction, ct).ConfigureAwait(false);
+                var reward = await model.RewardModel.PredictAsync(currentState, candidateAction, nextState, ct).ConfigureAwait(false);
 
                 if (reward > bestReward)
                 {
@@ -88,7 +88,7 @@ public sealed partial class WorldModelEngine
                 currentState = bestNextState;
 
                 // Check if terminal
-                var terminal = await model.TerminalModel.PredictAsync(currentState, ct);
+                var terminal = await model.TerminalModel.PredictAsync(currentState, ct).ConfigureAwait(false);
                 if (terminal)
                 {
                     break;
@@ -139,7 +139,7 @@ public sealed partial class WorldModelEngine
         CancellationToken ct)
     {
         var localTransitions = transitions.Select(ToLocalTransition).ToList();
-        var result = await LearnModelAsync(localTransitions, architecture, ct);
+        var result = await LearnModelAsync(localTransitions, architecture, ct).ConfigureAwait(false);
         return result.Match<Result<LearnedWorldModel, string>>(
             model => Result<LearnedWorldModel, string>.Success(ToLearnedWorldModel(model, architecture)),
             error => Result<LearnedWorldModel, string>.Failure(error));
@@ -157,7 +157,7 @@ public sealed partial class WorldModelEngine
             return Result<WorldState, string>.Failure($"Model {model.Id} not found in registry");
         }
 
-        var result = await PredictNextStateAsync(ToLocalState(currentState), ToLocalAction(action), localModel, ct);
+        var result = await PredictNextStateAsync(ToLocalState(currentState), ToLocalAction(action), localModel, ct).ConfigureAwait(false);
         return result.Match<Result<WorldState, string>>(
             state => Result<WorldState, string>.Success(ToWorldState(state)),
             error => Result<WorldState, string>.Failure(error));
@@ -176,7 +176,7 @@ public sealed partial class WorldModelEngine
             return Result<ActionPlan, string>.Failure($"Model {model.Id} not found in registry");
         }
 
-        var result = await PlanInImaginationAsync(ToLocalState(initialState), goal, localModel, lookaheadDepth, ct);
+        var result = await PlanInImaginationAsync(ToLocalState(initialState), goal, localModel, lookaheadDepth, ct).ConfigureAwait(false);
         return result.Match<Result<ActionPlan, string>>(
             plan => Result<ActionPlan, string>.Success(ToActionPlan(plan, lookaheadDepth)),
             error => Result<ActionPlan, string>.Failure(error));
@@ -194,7 +194,7 @@ public sealed partial class WorldModelEngine
         }
 
         var localTestSet = testSet.Select(ToLocalTransition).ToList();
-        return await EvaluateModelAsync(localModel, localTestSet, ct);
+        return await EvaluateModelAsync(localModel, localTestSet, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -209,7 +209,7 @@ public sealed partial class WorldModelEngine
             return Result<List<WorldTransition>, string>.Failure($"Model {model.Id} not found in registry");
         }
 
-        var result = await GenerateSyntheticExperienceAsync(localModel, ToLocalState(startState), trajectoryLength, ct);
+        var result = await GenerateSyntheticExperienceAsync(localModel, ToLocalState(startState), trajectoryLength, ct).ConfigureAwait(false);
         return result.Match<Result<List<WorldTransition>, string>>(
             transitions => Result<List<WorldTransition>, string>.Success(
                 transitions.Select(ToWorldTransition).ToList()),

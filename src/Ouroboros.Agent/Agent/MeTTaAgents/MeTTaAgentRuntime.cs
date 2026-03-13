@@ -71,7 +71,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
             "    (AgentDef $id $prov $model $role $prompt $tokens $temp) " +
             "    (safe-to-spawn $id) " +
             "    (can-spawn-more)) " +
-            "  (AgentDef $id $prov $model $role $prompt $tokens $temp))", ct);
+            "  (AgentDef $id $prov $model $role $prompt $tokens $temp))", ct).ConfigureAwait(false);
 
         if (result.IsFailure)
             return Result<int, string>.Failure($"Failed to query agent defs: {result.Error}");
@@ -81,7 +81,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
 
         foreach (var def in agentDefs)
         {
-            var spawnResult = await SpawnAgentAsync(def, ct);
+            var spawnResult = await SpawnAgentAsync(def, ct).ConfigureAwait(false);
             if (spawnResult.IsSuccess) spawned++;
         }
 
@@ -102,7 +102,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
             return Result<SpawnedAgent, string>.Failure(
                 $"No provider factory for '{def.Provider}'");
 
-        var modelResult = await provider.CreateModelAsync(def, ct);
+        var modelResult = await provider.CreateModelAsync(def, ct).ConfigureAwait(false);
         if (modelResult.IsFailure)
             return Result<SpawnedAgent, string>.Failure(modelResult.Error);
 
@@ -115,7 +115,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
 
         // Write spawn fact to MeTTa
         await _engine.AddFactAsync(
-            $"(Spawned \"{def.AgentId}\" Active \"{DateTime.UtcNow:O}\")", ct);
+            $"(Spawned \"{def.AgentId}\" Active \"{DateTime.UtcNow:O}\")", ct).ConfigureAwait(false);
 
         return Result<SpawnedAgent, string>.Success(agent);
     }
@@ -134,7 +134,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
         string defAtom = $"(AgentDef \"{def.AgentId}\" {def.Provider} \"{def.Model}\" {def.Role} " +
                          $"\"{EscapeMeTTa(def.SystemPrompt)}\" {def.MaxTokens} {def.Temperature})";
 
-        var addResult = await _engine.AddFactAsync(defAtom, ct);
+        var addResult = await _engine.AddFactAsync(defAtom, ct).ConfigureAwait(false);
         if (addResult.IsFailure)
             return Result<string, string>.Failure($"Failed to add agent def: {addResult.Error}");
 
@@ -144,7 +144,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
             foreach (var cap in def.Capabilities)
             {
                 var capResult = await _engine.AddFactAsync(
-                    $"(HasCapability \"{def.AgentId}\" {cap})", ct);
+                    $"(HasCapability \"{def.AgentId}\" {cap})", ct).ConfigureAwait(false);
                 if (capResult.IsFailure)
                     return Result<string, string>.Failure(
                         $"Failed to add capability '{cap}' for agent '{def.AgentId}': {capResult.Error}");
@@ -153,7 +153,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
 
         if (autoSpawn)
         {
-            var spawnResult = await SpawnAgentAsync(def, ct);
+            var spawnResult = await SpawnAgentAsync(def, ct).ConfigureAwait(false);
             if (spawnResult.IsFailure)
                 return Result<string, string>.Failure(spawnResult.Error);
         }
@@ -179,29 +179,29 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
 
         // Record assignment in MeTTa
         await _engine.AddFactAsync(
-            $"(AssignedTask \"{taskId}\" \"{agentId}\" \"{EscapeMeTTa(Truncate(prompt, 200))}\")", ct);
+            $"(AssignedTask \"{taskId}\" \"{agentId}\" \"{EscapeMeTTa(Truncate(prompt, 200))}\")", ct).ConfigureAwait(false);
 
         try
         {
             string fullPrompt = $"{agent.Definition.SystemPrompt}\n\n{prompt}";
-            string response = await agent.Model.GenerateTextAsync(fullPrompt, ct);
+            string response = await agent.Model.GenerateTextAsync(fullPrompt, ct).ConfigureAwait(false);
 
             // Record result in MeTTa
             await _engine.AddFactAsync(
                 $"(AgentResult \"{agentId}\" \"{taskId}\" Success " +
-                $"\"{EscapeMeTTa(Truncate(response, 500))}\")", ct);
+                $"\"{EscapeMeTTa(Truncate(response, 500))}\")", ct).ConfigureAwait(false);
 
             return Result<string, string>.Success(response);
         }
         catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             await _engine.AddFactAsync(
                 $"(AgentResult \"{agentId}\" \"{taskId}\" Failed " +
-                $"\"{EscapeMeTTa(ex.Message)}\")", ct);
+                $"\"{EscapeMeTTa(ex.Message)}\")", ct).ConfigureAwait(false);
 
             await _engine.AddFactAsync(
-                $"(Spawned \"{agentId}\" Failed \"{DateTime.UtcNow:O}\")", ct);
+                $"(Spawned \"{agentId}\" Failed \"{DateTime.UtcNow:O}\")", ct).ConfigureAwait(false);
 
             return Result<string, string>.Failure(ex.Message);
         }
@@ -227,13 +227,13 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
 
         // Ask MeTTa which agent should handle this
         var queryResult = await _engine.ExecuteQueryAsync(
-            $"!(agent-for-capability {capability})", ct);
+            $"!(agent-for-capability {capability})", ct).ConfigureAwait(false);
 
         if (queryResult.IsSuccess && !string.IsNullOrWhiteSpace(queryResult.Value))
         {
             string agentId = queryResult.Value.Trim().Trim('"');
             if (_agents.ContainsKey(agentId))
-                return await ExecuteTaskAsync(agentId, taskId, prompt, ct);
+                return await ExecuteTaskAsync(agentId, taskId, prompt, ct).ConfigureAwait(false);
         }
 
         // Fallback: find any spawned agent with matching capability
@@ -241,7 +241,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
             a.Definition.Capabilities?.Contains(capability) == true);
 
         if (fallbackAgent != null)
-            return await ExecuteTaskAsync(fallbackAgent.Definition.AgentId, taskId, prompt, ct);
+            return await ExecuteTaskAsync(fallbackAgent.Definition.AgentId, taskId, prompt, ct).ConfigureAwait(false);
 
         return Result<string, string>.Failure(
             $"No agent available for capability '{capability}'");
@@ -269,7 +269,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
             string agentId = agentIds[i];
             string stepTaskId = $"{taskId}-step{i}-{agentId}";
 
-            var stepResult = await ExecuteTaskAsync(agentId, stepTaskId, currentInput, ct);
+            var stepResult = await ExecuteTaskAsync(agentId, stepTaskId, currentInput, ct).ConfigureAwait(false);
             if (stepResult.IsFailure)
                 return stepResult;
 
@@ -278,7 +278,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
             {
                 await _engine.AddFactAsync(
                     $"(AgentMessage \"{agentId}\" \"{agentIds[i + 1]}\" " +
-                    $"\"{stepTaskId}\" \"{EscapeMeTTa(Truncate(stepResult.Value, 200))}\")", ct);
+                    $"\"{stepTaskId}\" \"{EscapeMeTTa(Truncate(stepResult.Value, 200))}\")", ct).ConfigureAwait(false);
             }
 
             currentInput = stepResult.Value;
@@ -300,7 +300,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
             return Result<string, string>.Failure($"Agent '{agentId}' not found");
 
         await _engine.AddFactAsync(
-            $"(Spawned \"{agentId}\" Terminated \"{DateTime.UtcNow:O}\")", ct);
+            $"(Spawned \"{agentId}\" Terminated \"{DateTime.UtcNow:O}\")", ct).ConfigureAwait(false);
 
         return Result<string, string>.Success($"Agent '{agentId}' terminated");
     }
@@ -341,7 +341,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
         foreach (var agent in _agents.Values)
         {
             await _engine.AddFactAsync(
-                $"(Spawned \"{agent.Definition.AgentId}\" Terminated \"{DateTime.UtcNow:O}\")");
+                $"(Spawned \"{agent.Definition.AgentId}\" Terminated \"{DateTime.UtcNow:O}\")").ConfigureAwait(false);
         }
         _agents.Clear();
     }
