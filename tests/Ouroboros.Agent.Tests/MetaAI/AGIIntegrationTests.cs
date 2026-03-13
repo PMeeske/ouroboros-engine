@@ -9,7 +9,7 @@ using Ouroboros.Core.Ethics;
 using AgentCapability = Ouroboros.Agent.MetaAI.AgentCapability;
 using MemoryStatistics = Ouroboros.Agent.MetaAI.MemoryStatistics;
 using Plan = Ouroboros.Agent.MetaAI.Plan;
-using PlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using PlanStep = Ouroboros.Agent.PlanStep;
 using Skill = Ouroboros.Agent.MetaAI.Skill;
 
 namespace Ouroboros.Agent.Tests.MetaAI;

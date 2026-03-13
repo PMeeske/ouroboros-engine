@@ -4,7 +4,7 @@
 
 using FluentAssertions;
 using MetaAIPlan = Ouroboros.Agent.MetaAI.Plan;
-using MetaAIPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using MetaAIPlanStep = Ouroboros.Agent.PlanStep;
 
 namespace Ouroboros.Tests.MetaAI;
 

@@ -2,7 +2,7 @@
 // Copyright (c) PlaceholderCompany. All rights reserved.
 // </copyright>
 
-using PlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using PlanStep = Ouroboros.Agent.PlanStep;
 using Plan = Ouroboros.Agent.MetaAI.Plan;
 using Skill = Ouroboros.Agent.MetaAI.Skill;
 

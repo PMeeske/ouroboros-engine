@@ -5,7 +5,7 @@
 using FluentAssertions;
 using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
 using MetaAIPlan = Ouroboros.Agent.MetaAI.Plan;
-using MetaAIPlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using MetaAIPlanStep = Ouroboros.Agent.PlanStep;
 using MetaAIAgentCapability = Ouroboros.Agent.MetaAI.AgentCapability;
 
 namespace Ouroboros.Tests.MetaAI.SelfImprovement;

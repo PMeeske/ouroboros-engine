@@ -64,7 +64,7 @@ public sealed class AdditionalCommandTests
     {
         // Arrange
         var plan = new Ouroboros.Agent.MetaAI.Plan(
-            "goal", new List<Ouroboros.Agent.MetaAI.PlanStep>(),
+            "goal", new List<Ouroboros.Agent.PlanStep>(),
             new Dictionary<string, double>(), DateTime.UtcNow);
 
         // Act

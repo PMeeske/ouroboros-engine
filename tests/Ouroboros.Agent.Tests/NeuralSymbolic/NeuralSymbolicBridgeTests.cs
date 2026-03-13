@@ -5,7 +5,7 @@
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Agent.MetaAI.Affect;
 using Hypothesis = Ouroboros.Agent.MetaAI.Hypothesis;
-using PlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using PlanStep = Ouroboros.Agent.PlanStep;
 using Skill = Ouroboros.Agent.MetaAI.Skill;
 
 namespace Ouroboros.Agent.Tests.NeuralSymbolic;

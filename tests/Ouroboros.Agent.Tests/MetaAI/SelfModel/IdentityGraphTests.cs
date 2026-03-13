@@ -5,7 +5,7 @@
 using Ouroboros.Agent.MetaAI.SelfModel;
 using AgentCapability = Ouroboros.Agent.MetaAI.AgentCapability;
 using Plan = Ouroboros.Agent.MetaAI.Plan;
-using PlanStep = Ouroboros.Agent.MetaAI.PlanStep;
+using PlanStep = Ouroboros.Agent.PlanStep;
 
 namespace Ouroboros.Agent.Tests.MetaAI.SelfModel;
 
