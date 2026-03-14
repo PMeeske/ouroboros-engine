@@ -15,7 +15,7 @@ concurrency:
 jobs:
   mutate-agent:
     name: Mutate Agent
-    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-mutation-testing.yml@main
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-mutation-testing.yml@develop
     with:
       project: src/Ouroboros.Agent/Ouroboros.Agent.csproj
       test-project: tests/Ouroboros.Agent.Tests/Ouroboros.Agent.Tests.csproj
@@ -24,7 +24,7 @@ jobs:
 
   mutate-pipeline:
     name: Mutate Pipeline
-    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-mutation-testing.yml@main
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-mutation-testing.yml@develop
     with:
       project: src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
       test-project: tests/Ouroboros.Pipeline.Tests/Ouroboros.Pipeline.Tests.csproj
@@ -33,7 +33,7 @@ jobs:
 
   mutate-providers:
     name: Mutate Providers
-    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-mutation-testing.yml@main
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-mutation-testing.yml@develop
     with:
       project: src/Ouroboros.Providers/Ouroboros.Providers.csproj
       test-project: tests/Ouroboros.Providers.Tests/Ouroboros.Providers.Tests.csproj
@@ -42,7 +42,7 @@ jobs:
 
   mutate-network:
     name: Mutate Network
-    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-mutation-testing.yml@main
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-mutation-testing.yml@develop
     with:
       project: src/Ouroboros.Network/Ouroboros.Network.csproj
       test-project: tests/Ouroboros.Network.Tests/Ouroboros.Network.Tests.csproj
