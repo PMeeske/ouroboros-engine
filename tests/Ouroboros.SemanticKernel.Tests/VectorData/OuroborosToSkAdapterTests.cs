@@ -1,4 +1,4 @@
-// <copyright file="OuroborosToSkAdapterTests.cs" company="Ouroboros">
+﻿// <copyright file="OuroborosToSkAdapterTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -37,7 +37,7 @@ public sealed class OuroborosToSkAdapterTests
     [Fact]
     public void GetCollection_ThrowsNotSupportedException()
     {
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
         var act = () => adapter.GetCollection<string, Dictionary<string, object?>>("name");
         act.Should().Throw<NotSupportedException>()
             .WithMessage("*Ouroboros-to-SK bridge does not support typed collection access*");
@@ -48,7 +48,7 @@ public sealed class OuroborosToSkAdapterTests
     [Fact]
     public void GetDynamicCollection_ThrowsNotSupportedException()
     {
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
         var definition = new Microsoft.Extensions.VectorData.VectorStoreCollectionDefinition
         {
             Properties = new List<Microsoft.Extensions.VectorData.VectorStoreProperty>
@@ -71,7 +71,7 @@ public sealed class OuroborosToSkAdapterTests
             .Setup(s => s.GetInfoAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new VectorStoreInfo("my_store", 100, 1536, "ready"));
 
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
         var names = new List<string>();
 
         await foreach (var name in adapter.ListCollectionNamesAsync())
@@ -89,7 +89,7 @@ public sealed class OuroborosToSkAdapterTests
             .Setup(s => s.GetInfoAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new VectorStoreInfo("", 0, 1536, "ready"));
 
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
         var names = new List<string>();
 
         await foreach (var name in adapter.ListCollectionNamesAsync())
@@ -107,7 +107,7 @@ public sealed class OuroborosToSkAdapterTests
             .Setup(s => s.GetInfoAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Store unavailable"));
 
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
         var names = new List<string>();
 
         await foreach (var name in adapter.ListCollectionNamesAsync())
@@ -128,7 +128,7 @@ public sealed class OuroborosToSkAdapterTests
             .Setup(s => s.GetInfoAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
 
         var act = async () =>
         {
@@ -157,7 +157,7 @@ public sealed class OuroborosToSkAdapterTests
             .Setup(s => s.GetInfoAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new VectorStoreInfo("store", 10, 1536, status));
 
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
 
         var result = await adapter.CollectionExistsAsync("any");
 
@@ -171,7 +171,7 @@ public sealed class OuroborosToSkAdapterTests
             .Setup(s => s.GetInfoAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Store error"));
 
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
 
         var result = await adapter.CollectionExistsAsync("any");
 
@@ -185,7 +185,7 @@ public sealed class OuroborosToSkAdapterTests
             .Setup(s => s.GetInfoAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
 
         var act = () => adapter.CollectionExistsAsync("any");
 
@@ -197,7 +197,7 @@ public sealed class OuroborosToSkAdapterTests
     [Fact]
     public async Task EnsureCollectionDeletedAsync_CallsClearOnStore()
     {
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
 
         await adapter.EnsureCollectionDeletedAsync("any");
 
@@ -209,7 +209,7 @@ public sealed class OuroborosToSkAdapterTests
     [Fact]
     public void GetService_NullServiceType_ThrowsArgumentNullException()
     {
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
         var act = () => adapter.GetService(null!);
         act.Should().Throw<ArgumentNullException>().WithParameterName("serviceType");
     }
@@ -217,7 +217,7 @@ public sealed class OuroborosToSkAdapterTests
     [Fact]
     public void GetService_IAdvancedVectorStore_ReturnsUnderlyingStore()
     {
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
         var result = adapter.GetService(typeof(IAdvancedVectorStore));
         result.Should().BeSameAs(_mockOuroStore.Object);
     }
@@ -225,7 +225,7 @@ public sealed class OuroborosToSkAdapterTests
     [Fact]
     public void GetService_SkVectorStoreType_ReturnsSelf()
     {
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
         var result = adapter.GetService(typeof(SkVectorStore));
         result.Should().BeSameAs(adapter);
     }
@@ -233,7 +233,7 @@ public sealed class OuroborosToSkAdapterTests
     [Fact]
     public void GetService_OuroborosToSkAdapterType_ReturnsSelf()
     {
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
         var result = adapter.GetService(typeof(OuroborosToSkAdapter));
         result.Should().BeSameAs(adapter);
     }
@@ -241,7 +241,7 @@ public sealed class OuroborosToSkAdapterTests
     [Fact]
     public void GetService_UnknownType_ReturnsNull()
     {
-        var adapter = CreateAdapter();
+        using var adapter = CreateAdapter();
         var result = adapter.GetService(typeof(string));
         result.Should().BeNull();
     }

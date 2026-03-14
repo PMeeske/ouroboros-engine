@@ -1,6 +1,7 @@
-// <copyright file="EmbeddingExtensionsTests.cs" company="Ouroboros">
+﻿// <copyright file="EmbeddingExtensionsTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
+
 
 namespace Ouroboros.Tests.Providers;
 

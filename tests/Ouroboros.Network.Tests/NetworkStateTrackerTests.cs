@@ -1,4 +1,4 @@
-namespace Ouroboros.Tests;
+﻿namespace Ouroboros.Tests;
 
 [Trait("Category", "Unit")]
 public sealed class NetworkStateTrackerTests : IDisposable

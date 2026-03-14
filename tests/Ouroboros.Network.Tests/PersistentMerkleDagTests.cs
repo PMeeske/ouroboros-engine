@@ -1,6 +1,11 @@
-// <copyright file="PersistentMerkleDagTests.cs" company="Ouroboros">
+﻿// <copyright file="PersistentMerkleDagTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
+
+#pragma warning disable CA1031 // Test file - catching general exceptions for test verification
+
+
+#pragma warning disable CA2000 // Test file - ownership is managed by test lifecycle
 
 namespace Ouroboros.Tests.Network;
 

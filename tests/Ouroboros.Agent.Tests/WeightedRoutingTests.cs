@@ -2,6 +2,8 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+#pragma warning disable CA2000 // Test file - ownership is managed by test lifecycle
+
 namespace Ouroboros.Tests.Autonomous;
 
 using System.Collections.Concurrent;

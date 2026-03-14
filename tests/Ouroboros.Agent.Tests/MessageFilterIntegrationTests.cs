@@ -1,6 +1,9 @@
-// <copyright file="MessageFilterIntegrationTests.cs" company="Ouroboros">
+﻿// <copyright file="MessageFilterIntegrationTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
+
+
+#pragma warning disable CA2000 // Test file - ownership is managed by test lifecycle
 
 namespace Ouroboros.Tests.Tests.Autonomous;
 

@@ -1,6 +1,7 @@
-// <copyright file="InMemoryAdapterStorageTests.cs" company="Ouroboros">
+﻿// <copyright file="InMemoryAdapterStorageTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
+
 
 namespace Ouroboros.Tests.Database.Storage;
 

@@ -1,6 +1,7 @@
-// <copyright file="EthicsMessageFilterTests.cs" company="Ouroboros">
+﻿// <copyright file="EthicsMessageFilterTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
+
 
 namespace Ouroboros.Tests.Tests.Autonomous;
 

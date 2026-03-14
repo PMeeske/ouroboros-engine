@@ -1,7 +1,10 @@
-// <copyright file="FullCycleWithEvolutionTests.cs" company="Ouroboros">
+﻿// <copyright file="FullCycleWithEvolutionTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
+
+
+#pragma warning disable CA2000 // Test file - ownership is managed by test lifecycle
 
 using Ouroboros.Abstractions;
 using Ouroboros.Abstractions.Core;

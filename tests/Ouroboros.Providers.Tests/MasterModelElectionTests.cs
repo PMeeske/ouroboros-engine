@@ -1,3 +1,4 @@
+#pragma warning disable CA2000 // Test file - ownership is managed by test lifecycle
 namespace Ouroboros.Tests;
 
 [Trait("Category", "Unit")]
