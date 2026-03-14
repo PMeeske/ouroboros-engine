@@ -22,7 +22,7 @@ concurrency:
 jobs:
   build:
     name: Build
-    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-build.yml@main
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-build.yml@develop
     with:
       projects: >-
         src/Ouroboros.Agent/Ouroboros.Agent.csproj
@@ -33,7 +33,7 @@ jobs:
   test:
     name: Test
     needs: build
-    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-test.yml@main
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-test.yml@develop
     permissions:
       contents: read
       checks: write
@@ -55,7 +55,7 @@ jobs:
   bdd:
     name: BDD Tests
     needs: build
-    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-test.yml@main
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-dotnet-test.yml@develop
     permissions:
       contents: read
       checks: write

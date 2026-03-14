@@ -15,7 +15,7 @@ jobs:
       pull-requests: write
     name: Update Build Submodule
     if: github.event.client_payload.source_repo == 'ouroboros-build'
-    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-update-submodule.yml@main
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-update-submodule.yml@develop
     with:
       submodule-path: libs/.build
       create-pr: true
@@ -29,7 +29,7 @@ jobs:
       pull-requests: write
     name: Update Foundation Submodule
     if: github.event.client_payload.source_repo == 'ouroboros-foundation'
-    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-update-submodule.yml@main
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-update-submodule.yml@develop
     with:
       submodule-path: libs/foundation
       create-pr: true
