@@ -3,6 +3,7 @@
 // </copyright>
 
 using System.Net.WebSockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Polly;
@@ -19,6 +20,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
 {
     private const string TrustedClientToken = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
     private const string WssUrl = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1";
+    private const string ChromiumVersion = "143.0.3650.75";
 
     private readonly string _voice;
     private readonly string _outputFormat;
@@ -241,9 +243,14 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
         ws.Options.SetRequestHeader("Origin", "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold");
         ws.Options.SetRequestHeader("Accept-Encoding", "gzip, deflate, br");
         ws.Options.SetRequestHeader("Accept-Language", "en-US,en;q=0.9");
-        ws.Options.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0");
+        ws.Options.SetRequestHeader("User-Agent",
+            $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{ChromiumVersion} Safari/537.36 Edg/{ChromiumVersion}");
 
-        string url = $"{WssUrl}?TrustedClientToken={TrustedClientToken}&ConnectionId={requestId}";
+        string secGec = GenerateSecMsGec();
+        string url = $"{WssUrl}?TrustedClientToken={TrustedClientToken}"
+            + $"&Sec-MS-GEC={secGec}"
+            + $"&Sec-MS-GEC-Version=1-{ChromiumVersion}"
+            + $"&ConnectionId={requestId}";
         await ws.ConnectAsync(new Uri(url), ct).ConfigureAwait(false);
 
         // Send config message
@@ -326,6 +333,30 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
         }
 
         return audioStream.ToArray();
+    }
+
+    /// <summary>
+    /// Generates the Sec-MS-GEC security token required by the Edge TTS API.
+    /// Algorithm: SHA-256 hash of (rounded Windows ticks + TrustedClientToken).
+    /// Ticks are rounded to 5-minute intervals for clock tolerance.
+    /// See: https://github.com/rany2/edge-tts
+    /// </summary>
+    private static string GenerateSecMsGec()
+    {
+        // Convert Unix timestamp (ms) to Windows epoch ticks (100ns intervals since 1601-01-01)
+        const long windowsEpochDiff = 116_444_736_000_000_000L; // ticks between 1601 and 1970
+        long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        long ticks = (unixMs * 10_000) + windowsEpochDiff;
+
+        // Round down to nearest 5-minute (300 second) boundary
+        const long fiveMinTicks = 3_000_000_000L; // 300 seconds * 10,000,000 ticks/second
+        long rounded = (ticks / fiveMinTicks) * fiveMinTicks;
+
+        // SHA-256 hash of "{rounded_ticks}{token}"
+        string data = $"{rounded}{TrustedClientToken}";
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(data));
+
+        return Convert.ToHexStringLower(hash).ToUpperInvariant();
     }
 
     private static int FindHeaderEnd(byte[] buffer, int length)
