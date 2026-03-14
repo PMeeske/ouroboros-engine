@@ -1,4 +1,4 @@
-namespace Ouroboros.Specs.Steps;
+﻿namespace Ouroboros.Specs.Steps;
 
 [Binding]
 public class TrackedVectorStoreSteps

@@ -1,6 +1,7 @@
-// <copyright file="NanoAtomChainTests.cs" company="Ouroboros">
+﻿// <copyright file="NanoAtomChainTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
+
 
 using Ouroboros.Agent.NanoAtoms;
 

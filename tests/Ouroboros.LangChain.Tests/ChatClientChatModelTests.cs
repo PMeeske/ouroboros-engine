@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using LangChain.Providers;
 using Microsoft.Extensions.AI;
 using Moq;

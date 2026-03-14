@@ -1,6 +1,7 @@
-// <copyright file="ToolAwareChatModelExtendedTests.cs" company="Ouroboros">
+﻿// <copyright file="ToolAwareChatModelExtendedTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
+
 
 namespace Ouroboros.Tests.Providers;
 

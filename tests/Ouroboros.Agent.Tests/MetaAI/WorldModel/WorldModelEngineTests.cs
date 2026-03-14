@@ -1,6 +1,7 @@
-// <copyright file="WorldModelEngineTests.cs" company="Ouroboros">
+﻿// <copyright file="WorldModelEngineTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
+
 
 using FluentAssertions;
 using Ouroboros.Abstractions;

@@ -1,4 +1,5 @@
-﻿namespace Ouroboros.Tests.Providers;
+#pragma warning disable CA1031 // Test file - catching general exceptions for test verification
+namespace Ouroboros.Tests.Providers;
 
 /// <summary>
 /// Simple math tool for testing thinking mode.

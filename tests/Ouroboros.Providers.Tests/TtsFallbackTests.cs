@@ -1,6 +1,9 @@
-// <copyright file="TtsFallbackTests.cs" company="Ouroboros">
+﻿// <copyright file="TtsFallbackTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
+
+#pragma warning disable CA1031 // Test file - catching general exceptions for test verification
+
 
 namespace Ouroboros.Tests.Providers;
 

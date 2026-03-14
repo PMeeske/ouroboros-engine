@@ -1,3 +1,4 @@
+#pragma warning disable CA1031 // Test file - catching general exceptions for test verification
 namespace Ouroboros.Specs.Steps;
 
 [Binding]

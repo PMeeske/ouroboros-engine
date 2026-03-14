@@ -2,6 +2,8 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+#pragma warning disable CA2000 // Test file - ownership is managed by test lifecycle
+
 using FluentAssertions;
 using Ouroboros.Abstractions;
 using Ouroboros.Agent.MetaLearning;

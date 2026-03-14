@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Ouroboros contributors. Licensed under the MIT License.
+﻿// Copyright (c) 2025 Ouroboros contributors. Licensed under the MIT License.
 
 using FluentAssertions;
 using Moq;

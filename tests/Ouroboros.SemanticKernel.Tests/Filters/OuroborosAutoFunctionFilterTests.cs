@@ -1,4 +1,4 @@
-// <copyright file="OuroborosAutoFunctionFilterTests.cs" company="Ouroboros">
+﻿// <copyright file="OuroborosAutoFunctionFilterTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 

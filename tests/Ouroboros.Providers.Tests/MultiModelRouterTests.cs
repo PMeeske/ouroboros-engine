@@ -1,6 +1,7 @@
-// <copyright file="MultiModelRouterTests.cs" company="Ouroboros">
+﻿// <copyright file="MultiModelRouterTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
+
 
 namespace Ouroboros.Tests.Providers;
 

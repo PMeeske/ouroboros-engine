@@ -1,6 +1,10 @@
 <Project>
   <!-- Import repo-level props (Engine → ouroboros-build base) -->
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)..'))" />
+n  <!-- xUnit has no SynchronizationContext -- ConfigureAwait is unnecessary in tests -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);CA2007</NoWarn>
+  </PropertyGroup>
 
   <!-- Common test global usings (mirrors original Ouroboros.Tests GlobalUsings.cs) -->
   <ItemGroup>

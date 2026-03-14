@@ -1,3 +1,4 @@
+﻿#pragma warning disable CA1031 // Test file - catching general exceptions for test verification
 using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
 
 namespace Ouroboros.Specs.Steps;
