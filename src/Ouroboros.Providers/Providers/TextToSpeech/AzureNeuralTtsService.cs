@@ -190,6 +190,13 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     /// <param name="isWhisper">Use whispering style.</param>
     /// <param name="cultureOverride">Override culture for this utterance only (e.g. "de-DE").</param>
     /// <param name="rate">Speed multiplier (1.0 = normal).</param>
+    /// <summary>
+    /// Current emotional speech style (e.g. "cheerful", "sad", "excited").
+    /// Set externally by the personality/embodiment system.
+    /// When set, overrides the default "assistant" style in SSML.
+    /// </summary>
+    public string? EmotionalStyle { get; set; }
+
     private string BuildSsml(string text, bool isWhisper, string? cultureOverride = null, double rate = 1.0)
     {
         var escaped     = System.Security.SecurityElement.Escape(text);
@@ -214,8 +221,10 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         }
         else if (isEnglish)
         {
-            // Cortana-style English: express-as assistant.
-            content = $"<mstts:express-as style='assistant' styledegree='1.2'>"
+            // Emotional style or default Cortana-style assistant
+            var style = EmotionalStyle ?? "assistant";
+            var degree = EmotionalStyle != null ? "1.5" : "1.2";
+            content = $"<mstts:express-as style='{style}' styledegree='{degree}'>"
                     + $"<prosody rate='{normalRate:+0;-0;0}%' pitch='+5%'>{escaped}</prosody>"
                     + $"</mstts:express-as>";
         }
