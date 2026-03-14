@@ -74,13 +74,12 @@ jobs:
     needs: [test]
     if: always() && needs.test.result == 'success'
     uses: PMeeske/ouroboros-build/.github/workflows/_reusable-coverage-badge.yml@develop
+    permissions:
+      contents: write
     with:
       coverage-percentage: ${{ needs.test.outputs.coverage-percentage }}
       tests-passed: ${{ needs.test.outputs.tests-passed }}
       tests-failed: ${{ needs.test.outputs.tests-failed }}
       badge-filename: "ouroboros-engine-coverage.json"
       tests-badge-filename: "ouroboros-engine-tests.json"
-      gist-id: ${{ vars.COVERAGE_GIST_ID }}
       repo-name: "engine coverage"
-    secrets:
-      gist-token: ${{ secrets.GIST_TOKEN }}
