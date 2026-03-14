@@ -49,7 +49,12 @@ public sealed class GrammarValidationStep
     /// <returns>Validation result.</returns>
     public async Task<GrammarValidationResult> ValidateAsync(string grammarG4, CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(grammarG4);
+#pragma warning disable CA1510 // Use ArgumentNullException.ThrowIfNull — must throw ArgumentException for null per API contract
+        if (string.IsNullOrWhiteSpace(grammarG4))
+        {
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(grammarG4));
+        }
+#pragma warning restore CA1510
 
         var result = await _validator.ValidateAsync(grammarG4, ct).ConfigureAwait(false);
 

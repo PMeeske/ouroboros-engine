@@ -18,6 +18,15 @@ internal static class JsonDefaults
     };
 
     /// <summary>
+    /// Indented output with PascalCase (default) property names.
+    /// Used for DAG serialization where consumers expect PascalCase.
+    /// </summary>
+    public static readonly JsonSerializerOptions IndentedPascalCase = new()
+    {
+        WriteIndented = true
+    };
+
+    /// <summary>
     /// Compact output with camelCase property names.
     /// </summary>
     public static readonly JsonSerializerOptions CamelCase = new()

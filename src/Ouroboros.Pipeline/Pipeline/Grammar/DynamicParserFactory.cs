@@ -28,7 +28,7 @@ using Microsoft.Extensions.Logging;
 /// Each compilation uses a collectible <see cref="SandboxedCompilationContext"/>
 /// so that compiled assemblies can be garbage-collected after use.
 /// </remarks>
-public sealed class DynamicParserFactory : IDisposable
+public class DynamicParserFactory : IDisposable
 {
     private static readonly Regex GrammarNameRegex = new(@"grammar\s+(\w+)\s*;", RegexOptions.Compiled);
 

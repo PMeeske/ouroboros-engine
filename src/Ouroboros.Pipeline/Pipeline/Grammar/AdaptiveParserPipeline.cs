@@ -74,7 +74,12 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
         int maxAttempts = 5,
         CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(description);
+#pragma warning disable CA1510 // Use ArgumentNullException.ThrowIfNull — must throw ArgumentException for null per API contract
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(description));
+        }
+#pragma warning restore CA1510
 
         // Step 1: Try to retrieve a previously proven grammar
         var (found, existingG4, grammarId, score) = await _validator.RetrieveGrammarAsync(description, ct).ConfigureAwait(false);

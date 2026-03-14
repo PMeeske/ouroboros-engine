@@ -67,7 +67,7 @@ public static class MerkleDagExtensions
                 e.DurationMs,
                 e.Hash)).ToArray());
 
-        return JsonSerializer.Serialize(data, JsonDefaults.Indented);
+        return JsonSerializer.Serialize(data, JsonDefaults.IndentedPascalCase);
     }
 
     /// <summary>
@@ -79,7 +79,7 @@ public static class MerkleDagExtensions
     {
         try
         {
-            var data = JsonSerializer.Deserialize<DagSerializationData>(json);
+            var data = JsonSerializer.Deserialize<DagSerializationData>(json, JsonDefaults.Default);
             if (data == null)
             {
                 return Result<MerkleDag>.Failure("Failed to deserialize DAG data");
