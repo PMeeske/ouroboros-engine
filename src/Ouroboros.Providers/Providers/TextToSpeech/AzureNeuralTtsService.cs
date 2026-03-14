@@ -197,6 +197,16 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     /// </summary>
     public string? EmotionalStyle { get; set; }
 
+    /// <summary>
+    /// Pitch offset from the SelfVector (-0.2 to +0.2). Overrides default when set.
+    /// </summary>
+    public float? SelfVectorPitchOffset { get; set; }
+
+    /// <summary>
+    /// Rate multiplier from the SelfVector (0.7 to 1.4). Overrides default when set.
+    /// </summary>
+    public float? SelfVectorRateMultiplier { get; set; }
+
     private string BuildSsml(string text, bool isWhisper, string? cultureOverride = null, double rate = 1.0)
     {
         var escaped     = System.Security.SecurityElement.Escape(text);
@@ -207,7 +217,9 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         bool isCrossLingual = voiceLoc.Length >= 2 && culture.Length >= 2
             && !string.Equals(voiceLoc[..2], culture[..2], StringComparison.OrdinalIgnoreCase);
 
-        int normalRate  = -5 + (int)((rate - 1.0) * 50);
+        int normalRate  = SelfVectorRateMultiplier.HasValue
+            ? (int)((SelfVectorRateMultiplier.Value - 1.0f) * 50)
+            : -5 + (int)((rate - 1.0) * 50);
         int whisperRate = -8 + (int)((rate - 1.0) * 50);
 
         string content;
@@ -224,8 +236,11 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
             // Emotional style or default Cortana-style assistant
             var style = EmotionalStyle ?? "assistant";
             var degree = EmotionalStyle != null ? "1.5" : "1.2";
+            var pitchStr = SelfVectorPitchOffset.HasValue
+                ? $"{(int)(SelfVectorPitchOffset.Value * 100):+0;-0;0}%"
+                : "+5%";
             content = $"<mstts:express-as style='{style}' styledegree='{degree}'>"
-                    + $"<prosody rate='{normalRate:+0;-0;0}%' pitch='+5%'>{escaped}</prosody>"
+                    + $"<prosody rate='{normalRate:+0;-0;0}%' pitch='{pitchStr}'>{escaped}</prosody>"
                     + $"</mstts:express-as>";
         }
         else if (isCrossLingual)
