@@ -96,11 +96,11 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
     /// Initializes a new instance of the <see cref="EdgeTtsService"/> class.
     /// </summary>
     /// <param name="voice">Voice name (e.g., "en-US-JennyNeural"). Uses Jenny (Cortana-like) by default.</param>
-    /// <param name="outputFormat">Audio format. Default is "audio-24khz-48kbitrate-mono-mp3".</param>
+    /// <param name="outputFormat">Audio format. Default is "audio-24khz-96kbitrate-mono-mp3".</param>
     public EdgeTtsService(string? voice = null, string? outputFormat = null)
     {
         _voice = voice ?? Voices.Default;
-        _outputFormat = outputFormat ?? "audio-24khz-48kbitrate-mono-mp3";
+        _outputFormat = outputFormat ?? "audio-24khz-96kbitrate-mono-mp3";
     }
 
     /// <inheritdoc/>
