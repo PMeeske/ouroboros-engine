@@ -336,6 +336,28 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
     }
 
     /// <summary>
+    /// Maps an Azure TTS emotional style name to Edge TTS prosody parameters.
+    /// Edge TTS doesn't support &lt;mstts:express-as&gt;, so we approximate
+    /// emotional styles with rate/pitch/volume adjustments.
+    /// </summary>
+    public static (int RatePercent, string Pitch, string Volume) MapStyleToProsody(string? style)
+    {
+        return style?.ToLowerInvariant() switch
+        {
+            "cheerful" or "friendly" => (5, "+8%", "+5%"),
+            "excited" => (15, "+12%", "+10%"),
+            "sad" or "empathetic" => (-10, "-5%", "-10%"),
+            "angry" or "shouting" => (10, "+5%", "+15%"),
+            "whispering" or "gentle" => (-15, "+3%", "-20%"),
+            "calm" or "hopeful" => (-5, "+2%", "-5%"),
+            "lyrical" or "poetry-reading" => (-8, "+6%", "0%"),
+            "chat" => (0, "+3%", "0%"),
+            "newscast-formal" => (-3, "-2%", "+5%"),
+            _ => (0, "+5%", "0%")
+        };
+    }
+
+    /// <summary>
     /// Generates the Sec-MS-GEC security token required by the Edge TTS API.
     /// Algorithm: SHA-256 hash of (rounded Windows ticks + TrustedClientToken).
     /// Ticks are rounded to 5-minute intervals for clock tolerance.

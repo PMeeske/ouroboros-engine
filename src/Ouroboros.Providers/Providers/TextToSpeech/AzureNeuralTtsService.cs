@@ -248,6 +248,48 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
              + $"</speak>";
     }
 
+    /// <summary>
+    /// Builds a multi-segment SSML document where each segment can have its own
+    /// express-as style and prosody. Used by VoiceAnnotatedText for inline voice markers.
+    /// </summary>
+    /// <param name="segments">Voice segments with per-segment style/prosody overrides.</param>
+    /// <param name="cultureOverride">Override culture for this utterance only.</param>
+    public string BuildMultiSegmentSsml(
+        IReadOnlyList<(string Text, string? Style, float? PitchOffset, float? RateMultiplier)> segments,
+        string? cultureOverride = null)
+    {
+        string culture  = cultureOverride ?? _culture;
+        string voiceLoc = SpeakLang;
+        bool isCrossLingual = voiceLoc.Length >= 2 && culture.Length >= 2
+            && !string.Equals(voiceLoc[..2], culture[..2], StringComparison.OrdinalIgnoreCase);
+
+        var sb = new System.Text.StringBuilder();
+        foreach (var (text, style, pitchOff, rateMul) in segments)
+        {
+            var escaped = System.Security.SecurityElement.Escape(text);
+            if (string.IsNullOrWhiteSpace(escaped)) continue;
+
+            var inner = isCrossLingual ? $"<lang xml:lang='{culture}'>{escaped}</lang>" : escaped;
+
+            int ratePercent = pitchOff.HasValue || rateMul.HasValue
+                ? (int)(((rateMul ?? 1.0f) - 1.0f) * 50) - 5
+                : -5;
+            string pitchStr = pitchOff.HasValue ? $"{pitchOff.Value * 100:+0;-0;0}%" : "+5%";
+
+            var segStyle = style ?? EmotionalStyle ?? "assistant";
+            var degree = style != null || EmotionalStyle != null ? "1.5" : "1.2";
+
+            sb.Append($"<mstts:express-as style='{segStyle}' styledegree='{degree}'>");
+            sb.Append($"<prosody rate='{ratePercent:+0;-0;0}%' pitch='{pitchStr}'>{inner}</prosody>");
+            sb.Append("</mstts:express-as>");
+        }
+
+        return $"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' "
+             + $"xmlns:mstts='https://www.w3.org/2001/mstts' xml:lang='{voiceLoc}'>"
+             + $"<voice name='{_voiceName}'>{sb}</voice>"
+             + $"</speak>";
+    }
+
     private void InitializeSynthesizer()
     {
         _config = SpeechConfig.FromSubscription(_subscriptionKey, _region);
