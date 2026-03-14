@@ -347,7 +347,9 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
                         string errorDetails = cancellation.ErrorDetails ?? string.Empty;
                         if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
                             throw new HttpRequestException($"Rate limited: {errorDetails}");
-                        System.Diagnostics.Trace.TraceWarning("[Azure TTS] Canceled: {0} - {1}", cancellation.Reason, errorDetails);
+                        // Throw so callers can fall back to Edge/Local TTS
+                        throw new InvalidOperationException(
+                            $"Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
                     }
                     else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
                     {
