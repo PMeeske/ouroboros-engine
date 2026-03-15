@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "label": "engine coverage",
-  "message": "2.1%",
+  "message": "0%",
   "color": "red",
   "namedLogo": "dotnet",
   "logoColor": "white"
