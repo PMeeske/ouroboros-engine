@@ -201,10 +201,10 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                     result = new ThinkingResponse(null, text);
                 }
 
-                // Check for fallback responses (indicates failure)
-                if (result.Content.Contains("-fallback:"))
+                // Check for empty responses (indicates failure)
+                if (string.IsNullOrEmpty(result.Content))
                 {
-                    throw new InvalidOperationException($"Provider {config.Name} returned fallback response");
+                    throw new InvalidOperationException($"Provider {config.Name} returned empty response");
                 }
 
                 // Success
@@ -304,7 +304,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                     {
                         // Fall back to non-streaming
                         string result = await model.GenerateTextAsync(prompt, token).ConfigureAwait(false);
-                        if (!result.Contains("-fallback:"))
+                        if (!string.IsNullOrEmpty(result))
                         {
                             Interlocked.Increment(ref stats.SuccessfulRequests);
                             Interlocked.Exchange(ref stats.ConsecutiveFailures, 0);

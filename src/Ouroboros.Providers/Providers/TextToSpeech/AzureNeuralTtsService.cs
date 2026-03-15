@@ -281,6 +281,13 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         var sb = new System.Text.StringBuilder();
         foreach (var (text, style, pitchOff, rateMul) in segments)
         {
+            // Break segments contain raw SSML (e.g. <break time='500ms'/>)
+            if (string.Equals(style, "break", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.Append(text); // Already SSML — don't escape
+                continue;
+            }
+
             var escaped = System.Security.SecurityElement.Escape(text);
             if (string.IsNullOrWhiteSpace(escaped)) continue;
 
@@ -291,7 +298,8 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
                 : -5;
             string pitchStr = pitchOff.HasValue ? $"{pitchOff.Value * 100:+0;-0;0}%" : "+5%";
 
-            var segStyle = style ?? EmotionalStyle ?? "assistant";
+            // Map voice marker styles to Azure TTS express-as styles
+            var segStyle = MapToAzureStyle(style) ?? EmotionalStyle ?? "assistant";
             var degree = style != null || EmotionalStyle != null ? "1.5" : "1.2";
 
             sb.Append($"<mstts:express-as style='{segStyle}' styledegree='{degree}'>");
@@ -304,6 +312,23 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
              + $"<voice name='{_voiceName}'>{sb}</voice>"
              + $"</speak>";
     }
+
+    /// <summary>
+    /// Maps voice marker style names to Azure Neural TTS express-as styles.
+    /// Jenny/AvaMultilingual support: cheerful, sad, angry, excited, friendly,
+    /// hopeful, shouting, terrified, unfriendly, whispering, chat.
+    /// </summary>
+    private static string? MapToAzureStyle(string? style) => style?.ToLowerInvariant() switch
+    {
+        "whisper" or "whispering" => "whispering",
+        "excited" => "excited",
+        "cheerful" or "happy" => "cheerful",
+        "sad" or "melancholy" => "sad",
+        "gentle" or "tender" => "friendly",
+        "emphasis" => "chat",
+        "sing" or "lyrical" => "poetry-reading",
+        _ => null
+    };
 
     private void InitializeSynthesizer()
     {
@@ -387,6 +412,75 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     /// <param name="ct">Cancellation token.</param>
     public Task SpeakAsync(string text, bool isWhisper, CancellationToken ct = default)
         => SpeakCoreAsync(text, isWhisper, cultureOverride: null, ct);
+
+    /// <summary>
+    /// Speaks voice-annotated segments with per-segment prosody (pitch, rate, style).
+    /// Each segment can have its own voice style (whisper, excited, etc.) and pitch/rate overrides.
+    /// </summary>
+    /// <param name="segments">Voice segments with per-segment style/prosody.</param>
+    /// <param name="cultureOverride">Override culture for this utterance.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public async Task SpeakSegmentsAsync(
+        IReadOnlyList<(string Text, string? Style, float? PitchOffset, float? RateMultiplier)> segments,
+        string? cultureOverride = null,
+        CancellationToken ct = default)
+    {
+        if (segments.Count == 0) return;
+
+        await StopSpeakingAsync().ConfigureAwait(false);
+        await _speechLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            _isSynthesizing = true;
+            _currentSynthesisCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            if (_synthesizer == null) InitializeSynthesizer();
+
+            var ssml = BuildMultiSegmentSsml(segments, cultureOverride);
+
+            await CircuitBreakerPipeline.ExecuteAsync(async _ =>
+            {
+                await RetryPipeline.ExecuteAsync(async token =>
+                {
+                    using SpeechSynthesisResult result = await _synthesizer!.SpeakSsmlAsync(ssml).ConfigureAwait(false);
+                    if (result.Reason == ResultReason.Canceled)
+                    {
+                        var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
+                        string errorDetails = cancellation.ErrorDetails ?? string.Empty;
+                        if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
+                            throw new HttpRequestException($"Rate limited: {errorDetails}");
+                        throw new InvalidOperationException(
+                            $"Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
+                    }
+                    else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Azure TTS] Segment synthesis complete, {result.AudioData.Length} bytes");
+                        try { OnAudioSynthesized?.Invoke(result.AudioData); } catch (Exception ex) when (ex is not OperationCanceledException) { }
+                    }
+                }, ct).ConfigureAwait(false);
+            }, ct).ConfigureAwait(false);
+        }
+        catch (BrokenCircuitException)
+        {
+            System.Diagnostics.Trace.TraceWarning("[TTS] Circuit open -- segment speech falling back to Edge TTS");
+            // Fallback: concatenate segments and speak as plain text
+            var plainText = string.Join(" ", segments.Select(s => s.Text));
+            await FallbackSpeakWithEdgeTtsAsync(plainText, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Trace.TraceWarning("[TTS] Segment speech failed: {0} -- falling back to Edge TTS", ex.Message);
+            var plainText = string.Join(" ", segments.Select(s => s.Text));
+            await FallbackSpeakWithEdgeTtsAsync(plainText, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _isSynthesizing = false;
+            _currentSynthesisCts?.Dispose();
+            _currentSynthesisCts = null;
+            _speechLock.Release();
+        }
+    }
 
     private async Task SpeakCoreAsync(string text, bool isWhisper, string? cultureOverride, CancellationToken ct)
     {

@@ -208,32 +208,35 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
         return Result<string, string>.Failure(result.Error ?? "Unknown error");
     }
 
-    private async Task<byte[]> SynthesizeInternalAsync(
+    private Task<byte[]> SynthesizeInternalAsync(
         string text,
         TextToSpeechOptions? options,
         CancellationToken ct)
     {
-        string voice = _voice;
         double rate = options?.Speed ?? 1.0;
         bool isWhisper = options?.IsWhisper ?? false;
 
-        // Convert rate to percentage (+0% is normal, +50% is 1.5x, -50% is 0.5x)
         int ratePercent = (int)((rate - 1.0) * 100);
         string rateString = ratePercent >= 0 ? $"+{ratePercent}%" : $"{ratePercent}%";
-
-        // Pitch adjustment for whisper mode
         string pitchString = isWhisper ? "-10Hz" : "+0Hz";
         string volumeString = isWhisper ? "-20%" : "+0%";
 
-        // Build SSML
         string ssml = $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>
-<voice name='{voice}'>
+<voice name='{_voice}'>
 <prosody rate='{rateString}' pitch='{pitchString}' volume='{volumeString}'>
 {System.Security.SecurityElement.Escape(text)}
 </prosody>
 </voice>
 </speak>";
 
+        return SynthesizeSsmlInternalAsync(ssml, ct);
+    }
+
+    /// <summary>
+    /// Sends pre-built SSML to the Edge TTS WebSocket and returns audio bytes.
+    /// </summary>
+    private async Task<byte[]> SynthesizeSsmlInternalAsync(string ssml, CancellationToken ct)
+    {
         string requestId = Guid.NewGuid().ToString("N");
         string timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
@@ -253,7 +256,6 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             + $"&ConnectionId={requestId}";
         await ws.ConnectAsync(new Uri(url), ct).ConfigureAwait(false);
 
-        // Send config message
         string configMessage = $"X-Timestamp:{timestamp}\r\n" +
             "Content-Type:application/json; charset=utf-8\r\n" +
             "Path:speech.config\r\n\r\n" +
@@ -278,7 +280,6 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             true,
             ct).ConfigureAwait(false);
 
-        // Send SSML message
         string ssmlMessage = $"X-RequestId:{requestId}\r\n" +
             $"X-Timestamp:{timestamp}\r\n" +
             "Content-Type:application/ssml+xml\r\n" +
@@ -291,7 +292,6 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             true,
             ct).ConfigureAwait(false);
 
-        // Receive audio data
         using MemoryStream audioStream = new();
         byte[] buffer = new byte[8192];
         bool audioStarted = false;
@@ -307,8 +307,6 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
 
             if (result.MessageType == WebSocketMessageType.Binary)
             {
-                // Binary data contains header + audio
-                // Find the header/data separator (double CRLF or "Path:audio\r\n")
                 int headerEnd = FindHeaderEnd(buffer, result.Count);
                 if (headerEnd > 0 && headerEnd < result.Count)
                 {
@@ -323,8 +321,6 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             else if (result.MessageType == WebSocketMessageType.Text)
             {
                 string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-
-                // Check for turn.end which signals completion
                 if (message.Contains("Path:turn.end"))
                 {
                     break;
@@ -355,6 +351,73 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             "newscast-formal" => (-3, "-2%", "+5%"),
             _ => (0, "+5%", "0%")
         };
+    }
+
+    /// <summary>
+    /// Builds multi-segment SSML where each segment can have its own prosody.
+    /// Edge TTS doesn't support mstts:express-as, so styles are approximated via rate/pitch/volume.
+    /// </summary>
+    public string BuildMultiSegmentSsml(
+        IReadOnlyList<(string Text, string? Style, float? PitchOffset, float? RateMultiplier)> segments)
+    {
+        var sb = new StringBuilder();
+        foreach (var (text, style, pitchOff, rateMul) in segments)
+        {
+            // Break segments contain raw SSML (e.g. <break time='500ms'/>)
+            if (string.Equals(style, "break", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.Append(text);
+                continue;
+            }
+
+            var escaped = System.Security.SecurityElement.Escape(text);
+            if (string.IsNullOrWhiteSpace(escaped)) continue;
+
+            // Map voice marker style to Edge-compatible prosody
+            var (baseRate, basePitch, baseVolume) = MapStyleToProsody(style);
+
+            // Apply per-segment pitch/rate overrides on top of style defaults
+            int ratePercent = rateMul.HasValue
+                ? (int)(((rateMul.Value - 1.0f) * 100) + baseRate)
+                : baseRate;
+            string pitchString = pitchOff.HasValue
+                ? $"{(int)(pitchOff.Value * 100) + int.Parse(basePitch.Replace("%", "").Replace("+", ""))}%"
+                : basePitch;
+
+            string rateString = ratePercent >= 0 ? $"+{ratePercent}%" : $"{ratePercent}%";
+
+            sb.Append($"<prosody rate='{rateString}' pitch='{pitchString}' volume='{baseVolume}'>");
+            sb.Append(escaped);
+            sb.Append("</prosody>");
+        }
+
+        return $@"<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'>
+<voice name='{_voice}'>
+{sb}
+</voice>
+</speak>";
+    }
+
+    /// <summary>
+    /// Synthesizes voice-annotated segments with per-segment prosody.
+    /// </summary>
+    public async Task<Result<SpeechResult, string>> SynthesizeSegmentsAsync(
+        IReadOnlyList<(string Text, string? Style, float? PitchOffset, float? RateMultiplier)> segments,
+        CancellationToken ct = default)
+    {
+        if (segments.Count == 0)
+            return Result<SpeechResult, string>.Failure("No segments to synthesize");
+
+        try
+        {
+            var ssml = BuildMultiSegmentSsml(segments);
+            var audioBytes = await SynthesizeSsmlInternalAsync(ssml, ct).ConfigureAwait(false);
+            return Result<SpeechResult, string>.Success(new SpeechResult(audioBytes, "mp3"));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return Result<SpeechResult, string>.Failure($"Edge TTS segment synthesis failed: {ex.Message}");
+        }
     }
 
     /// <summary>

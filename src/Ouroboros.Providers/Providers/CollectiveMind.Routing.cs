@@ -266,7 +266,7 @@ public sealed partial class CollectiveMind
 
                 sw.Stop();
 
-                if (!string.IsNullOrEmpty(result.Content) && !result.Content.Contains("-fallback:"))
+                if (!string.IsNullOrEmpty(result.Content))
                 {
                     pathway.RecordActivation(sw.Elapsed);
                     _thoughtStream.OnNext($"✓ '{pathway.Name}' responded in {sw.ElapsedMilliseconds}ms");
@@ -275,8 +275,8 @@ public sealed partial class CollectiveMind
                 }
 
                 pathway.RecordInhibition();
-                errors.Add($"{pathway.Name}: empty/fallback response");
-                _thoughtStream.OnNext($"⚠ '{pathway.Name}' returned empty/fallback response");
+                errors.Add($"{pathway.Name}: empty response");
+                _thoughtStream.OnNext($"⚠ '{pathway.Name}' returned empty response");
             }
             catch (BrokenCircuitException)
             {

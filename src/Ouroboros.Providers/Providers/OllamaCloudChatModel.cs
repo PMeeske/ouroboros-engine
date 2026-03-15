@@ -150,25 +150,29 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 return response;
             }, ct).ConfigureAwait(false);
 
-            return !string.IsNullOrEmpty(result) ? result : $"[ollama-cloud-fallback:{_model}]";
+            if (!string.IsNullOrEmpty(result))
+                return result;
+
+            // Empty response — throw so callers (CollectiveMind, RoundRobin) can
+            // trigger circuit breakers and failover to other pathways.
+            throw new InvalidOperationException($"Ollama model '{_model}' returned an empty response");
         }
-        catch (BrokenCircuitException)
+        catch (BrokenCircuitException ex)
         {
-            // Circuit is open - service is down, fail fast without spamming logs
+            // Circuit is open - propagate so CollectiveMind can failover to another pathway
+            throw new InvalidOperationException($"Ollama circuit open for '{_model}' — service appears down", ex);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            // Deliberate cancellation (e.g. Racing mode found a winner) — not an error, don't log
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException) { throw; }
+        catch (InvalidOperationException) { throw; }
+        catch (Exception ex)
         {
             System.Diagnostics.Trace.TraceWarning("[OllamaCloudChatModel] Error: {0}: {1}", ex.GetType().Name, ex.Message);
+            throw new InvalidOperationException($"Ollama model '{_model}' failed: {ex.Message}", ex);
         }
         finally
         {
             s_cloudConcurrency.Release();
         }
-        return $"[ollama-cloud-fallback:{_model}]";
     }
 
     /// <inheritdoc/>
