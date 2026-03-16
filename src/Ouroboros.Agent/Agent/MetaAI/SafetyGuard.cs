@@ -281,6 +281,7 @@ public sealed partial class SafetyGuard : ISafetyGuard
 
     /// <summary>
     /// Checks if an operation is safe to execute (synchronous).
+    /// Uses a pure sync code path to avoid sync-over-async deadlocks.
     /// Prefer CheckActionSafetyAsync for new code.
     /// </summary>
     public SafetyCheckResult CheckSafety(
@@ -292,12 +293,57 @@ public sealed partial class SafetyGuard : ISafetyGuard
         ArgumentNullException.ThrowIfNull(parameters);
 
         IReadOnlyDictionary<string, object> readOnlyParams = parameters;
-        SafetyCheckResult result = Task.Run(async () =>
-            await CheckActionSafetyAsync(operation, readOnlyParams, null, CancellationToken.None).ConfigureAwait(false))
-            .GetAwaiter()
-            .GetResult();
 
-        return result;
+        PermissionLevel requiredLevel = GetRequiredPermissionLevel(operation);
+        string permissionReason = _permissionPolicies.TryGetValue(operation, out var policy)
+            ? policy.Description
+            : $"Permission for {operation} action";
+        List<Permission> requiredPermissions = new() { new Permission(operation, requiredLevel, permissionReason) };
+        List<string> violations = new();
+
+        // Check for dangerous patterns
+        if (ContainsDangerousPatterns(operation, readOnlyParams))
+        {
+            violations.Add("Action contains potentially dangerous patterns");
+        }
+
+        // Check parameter safety
+        foreach (KeyValuePair<string, object> param in parameters)
+        {
+            if (param.Value is string strValue && ContainsInjectionPatterns(strValue))
+            {
+                violations.Add($"Parameter '{param.Key}' contains potential injection patterns");
+            }
+        }
+
+        // Inline sync risk assessment (mirrors AssessRiskAsync logic)
+        double risk = 0.0;
+        string actionLower = operation.ToLowerInvariant();
+        if (actionLower.Contains("delete") || actionLower.Contains("drop") || actionLower.Contains("remove"))
+            risk += 0.4;
+        else if (actionLower.Contains("system") || actionLower.Contains("admin") || actionLower.Contains("exec"))
+            risk += 0.5;
+        else if (actionLower.Contains("write") || actionLower.Contains("update") || actionLower.Contains("create"))
+            risk += 0.2;
+        else if (actionLower.Contains("read") || actionLower.Contains("get") || actionLower.Contains("list"))
+            risk += 0.1;
+
+        if (ContainsDangerousPatterns(operation, readOnlyParams))
+            risk += 0.3;
+
+        foreach (KeyValuePair<string, object> param in parameters)
+        {
+            if (param.Value is string strValue && ContainsInjectionPatterns(strValue))
+                risk += 0.2;
+        }
+
+        risk = Math.Min(risk, 1.0);
+
+        // Sync path skips MeTTa reasoning (async-only) — uses string-matching fallback
+        bool isAllowed = violations.Count == 0 && risk < RiskThresholdForDenial;
+        string reason = isAllowed ? "Action is safe to execute" : string.Join("; ", violations);
+
+        return new SafetyCheckResult(isAllowed, reason, requiredPermissions, risk, violations);
     }
 
     /// <summary>

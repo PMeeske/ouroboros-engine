@@ -1,7 +1,7 @@
 # Ouroboros Architecture
 
 **Version**: 1.0
-**Last Updated**: October 5, 2025
+**Last Updated**: March 16, 2026
 **Status**: Living Document
 
 ## Table of Contents
@@ -247,6 +247,14 @@ public class CritiquePipeline : DraftPipeline { }
 - **Phase 2**: Metacognition, goal hierarchy, self-evaluation
 
 **Dependencies**: Core, Domain, Pipeline, Tools, Providers
+
+#### **Integration Layer** (External Framework Bridges)
+
+- **LangChain**: LangChain integration bridge for chain composition and tool calling
+- **McpServer**: MCP (Model Context Protocol) server implementation exposing tools via stdio transport
+- **SemanticKernel**: Microsoft Semantic Kernel integration for plugin-based orchestration
+
+**Dependencies**: Core, Domain, Pipeline, Providers
 
 #### **Application Layer** (User Interface)
 - **CLI**: Command-line interface
@@ -788,31 +796,36 @@ var pipeline = Step.Pure<string>()
 
 ### Planned Enhancements
 
-#### 1. Advanced Monitoring (Q1 2026)
+#### 1. Advanced Monitoring (Q1 2026) (Status: TBD — review needed)
+
 - Distributed tracing with OpenTelemetry
 - Performance metrics collection
 - Real-time dashboard
 - Alerting system
 
-#### 2. Multi-Agent Collaboration (Q2 2026)
+#### 2. Multi-Agent Collaboration (Q2 2026) (Status: TBD — review needed)
+
 - Agent communication protocols
 - Shared memory/knowledge base
 - Consensus mechanisms
 - Role specialization
 
-#### 3. Persistent Learning (Q2 2026)
+#### 3. Persistent Learning (Q2 2026) (Status: TBD — review needed)
+
 - Long-term memory persistence
 - Skill library management
 - Transfer learning across tasks
 - Continual improvement tracking
 
-#### 4. Advanced RAG (Q3 2026)
+#### 4. Advanced RAG (Q3 2026) (Status: TBD — review needed)
+
 - Hybrid search (dense + sparse)
 - Multi-modal embeddings
 - Dynamic chunking strategies
 - Contextual re-ranking
 
-#### 5. Production Hardening (Q4 2026)
+#### 5. Production Hardening (Q4 2026) (Status: TBD — review needed)
+
 - Circuit breakers
 - Rate limiting
 - Retry policies

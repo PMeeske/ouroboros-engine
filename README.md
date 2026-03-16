@@ -27,12 +27,15 @@ This repository is part of the larger [Ouroboros-v2](https://github.com/PMeeske/
 
 ### What's in This Repository
 
-The `ouroboros-engine` contains four main projects:
+The `ouroboros-engine` contains seven main projects:
 
 - **Ouroboros.Agent** - AI orchestration and Meta-AI layer for autonomous agent execution
 - **Ouroboros.Pipeline** - Functional programming-based AI pipeline system with monadic composition
 - **Ouroboros.Providers** - Integrations with AI providers (OpenAI, Anthropic, Ollama, etc.)
 - **Ouroboros.Network** - Network communication and distributed system capabilities
+- **Ouroboros.LangChain** - LangChain integration bridge for chain composition and tool calling
+- **Ouroboros.McpServer** - MCP (Model Context Protocol) server implementation exposing tools via stdio transport
+- **Ouroboros.SemanticKernel** - Microsoft Semantic Kernel integration for plugin-based orchestration
 
 ### Key Features
 
@@ -83,6 +86,9 @@ dotnet build src/Ouroboros.Agent/Ouroboros.Agent.csproj
 dotnet build src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
 dotnet build src/Ouroboros.Providers/Ouroboros.Providers.csproj
 dotnet build src/Ouroboros.Network/Ouroboros.Network.csproj
+dotnet build src/Ouroboros.LangChain/Ouroboros.LangChain.csproj
+dotnet build src/Ouroboros.McpServer/Ouroboros.McpServer.csproj
+dotnet build src/Ouroboros.SemanticKernel/Ouroboros.SemanticKernel.csproj
 ```
 
 ## Testing
@@ -124,7 +130,10 @@ ouroboros-engine/
 │   ├── Ouroboros.Agent/        # Agent orchestration & Meta-AI
 │   ├── Ouroboros.Pipeline/     # AI pipeline system
 │   ├── Ouroboros.Providers/    # AI provider integrations
-│   └── Ouroboros.Network/      # Network & distributed capabilities
+│   ├── Ouroboros.Network/      # Network & distributed capabilities
+│   ├── Ouroboros.LangChain/    # LangChain integration bridge
+│   ├── Ouroboros.McpServer/    # MCP server implementation
+│   └── Ouroboros.SemanticKernel/ # Semantic Kernel integration
 ├── tests/
 │   ├── Ouroboros.Agent.Tests/
 │   ├── Ouroboros.Pipeline.Tests/

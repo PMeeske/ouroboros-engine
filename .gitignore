@@ -19,6 +19,9 @@
 TestCoverageReport/
 coverage/
 **/coverage.cobertura.xml
+*-merged.cobertura.xml
+*-coverage.cobertura.xml
+*-all-coverage.cobertura.xml
 StrykerOutput/
 **/StrykerOutput/
 .stryker-temp/

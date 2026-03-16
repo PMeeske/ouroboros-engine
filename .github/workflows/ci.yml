@@ -50,7 +50,8 @@ jobs:
         src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj
         src/Ouroboros.Providers/Ouroboros.Providers.csproj
         src/Ouroboros.Network/Ouroboros.Network.csproj
-      coverage-threshold: 60
+      coverage-threshold: 80
+      runsettings-path: libs/.build/build/coverlet.runsettings
 
   bdd:
     name: BDD Tests

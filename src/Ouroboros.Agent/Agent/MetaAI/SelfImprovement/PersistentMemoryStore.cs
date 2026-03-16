@@ -24,23 +24,56 @@ public sealed partial class PersistentMemoryStore : IMemoryStore
     private DateTime _lastConsolidation = DateTime.UtcNow;
     private readonly string? _persistencePath;
 
+    /// <summary>
+    /// Creates a PersistentMemoryStore without persistence (no disk load needed).
+    /// For persistent stores, use <see cref="CreateAsync"/> instead.
+    /// </summary>
     public PersistentMemoryStore(
         IEmbeddingModel? embedding = null,
         TrackedVectorStore? vectorStore = null,
-        PersistentMemoryConfig? config = null,
-        string? persistencePath = null)
+        PersistentMemoryConfig? config = null)
     {
         _embedding = embedding;
         _vectorStore = vectorStore;
         _config = config ?? new PersistentMemoryConfig(
             ConsolidationInterval: TimeSpan.FromHours(1));
-        _persistencePath = persistencePath;
+        _persistencePath = null;
+    }
 
-        if (!string.IsNullOrEmpty(_persistencePath))
+    private PersistentMemoryStore(
+        IEmbeddingModel? embedding,
+        TrackedVectorStore? vectorStore,
+        PersistentMemoryConfig config,
+        string persistencePath)
+    {
+        _embedding = embedding;
+        _vectorStore = vectorStore;
+        _config = config;
+        _persistencePath = persistencePath;
+    }
+
+    /// <summary>
+    /// Asynchronously creates a PersistentMemoryStore with disk persistence.
+    /// Loads existing data from disk before returning.
+    /// </summary>
+    public static async Task<PersistentMemoryStore> CreateAsync(
+        IEmbeddingModel? embedding = null,
+        TrackedVectorStore? vectorStore = null,
+        PersistentMemoryConfig? config = null,
+        string? persistencePath = null,
+        CancellationToken ct = default)
+    {
+        var effectiveConfig = config ?? new PersistentMemoryConfig(
+            ConsolidationInterval: TimeSpan.FromHours(1));
+
+        if (string.IsNullOrEmpty(persistencePath))
         {
-            // Intentional: sync-over-async in constructor; persistence load must complete before instance is usable
-            LoadFromDiskAsync().GetAwaiter().GetResult();
+            return new PersistentMemoryStore(embedding, vectorStore, effectiveConfig, persistencePath: null!);
         }
+
+        var store = new PersistentMemoryStore(embedding, vectorStore, effectiveConfig, persistencePath);
+        await store.LoadFromDiskAsync().ConfigureAwait(false);
+        return store;
     }
 
     /// <summary>

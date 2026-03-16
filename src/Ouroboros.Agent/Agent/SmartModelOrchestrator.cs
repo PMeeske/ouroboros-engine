@@ -29,6 +29,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
     private readonly DynamicToolSelector _toolSelector;
     private readonly string _fallbackModel;
     private readonly IMetricsStore? _metricsStore;
+    private Lazy<Task>? _metricsLoadTask;
     private bool _disposed;
 
     /// <summary>
@@ -41,6 +42,9 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
 
     /// <summary>
     /// Creates a new orchestrator with optional persistent metrics storage.
+    /// When <paramref name="metricsStore"/> is provided, use <see cref="CreateAsync"/>
+    /// instead to avoid sync-over-async. This constructor defers metrics loading
+    /// to the first <see cref="SelectModelAsync"/> call via lazy initialization.
     /// </summary>
     /// <param name="baseTools">Base tool registry</param>
     /// <param name="metricsStore">Optional metrics store for persistence. Use PersistentMetricsStore for disk persistence.</param>
@@ -56,11 +60,26 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
         _metricsStore = metricsStore;
         _fallbackModel = fallbackModel;
 
-        // Intentional: sync-over-async in constructor; metrics must be loaded before orchestrator is usable
         if (_metricsStore != null)
         {
-            LoadPersistedMetricsAsync().GetAwaiter().GetResult();
+            _metricsLoadTask = new Lazy<Task>(() => LoadPersistedMetricsAsync());
         }
+    }
+
+    /// <summary>
+    /// Asynchronously creates a new orchestrator with persistent metrics pre-loaded.
+    /// </summary>
+    public static async Task<SmartModelOrchestrator> CreateAsync(
+        ToolRegistry baseTools,
+        IMetricsStore metricsStore,
+        string fallbackModel = "default")
+    {
+        ArgumentNullException.ThrowIfNull(baseTools);
+        ArgumentNullException.ThrowIfNull(metricsStore);
+
+        var orchestrator = new SmartModelOrchestrator(baseTools, metricsStore, fallbackModel);
+        await orchestrator.EnsureMetricsLoadedAsync().ConfigureAwait(false);
+        return orchestrator;
     }
 
     /// <summary>
@@ -74,6 +93,18 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
         foreach (var kvp in persistedMetrics)
         {
             _metrics[kvp.Key] = kvp.Value;
+        }
+    }
+
+    /// <summary>
+    /// Ensures persisted metrics have been loaded (lazy initialization).
+    /// Safe to call multiple times; the load only executes once.
+    /// </summary>
+    private async Task EnsureMetricsLoadedAsync()
+    {
+        if (_metricsLoadTask != null)
+        {
+            await _metricsLoadTask.Value.ConfigureAwait(false);
         }
     }
 
@@ -124,6 +155,7 @@ public sealed partial class SmartModelOrchestrator : IModelOrchestrator, IDispos
         Dictionary<string, object>? context = null,
         CancellationToken ct = default)
     {
+        await EnsureMetricsLoadedAsync().ConfigureAwait(false);
         using var scope = OrchestrationScope.ModelSelection(prompt, context?.Count.ToString());
 
         if (string.IsNullOrWhiteSpace(prompt))
