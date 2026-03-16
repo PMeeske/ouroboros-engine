@@ -668,4 +668,56 @@ public class StructuredLlmParserTests
         // Assert
         a.Should().BeEquivalentTo(b);
     }
+
+    // ================================================================
+    // ExtractJsonBlock — balanced-scanner edge cases
+    // ================================================================
+
+    [Fact]
+    public void ExtractJsonBlock_MultipleJsonBlocks_ReturnsFirstValid()
+    {
+        // Arrange: two valid JSON objects; old greedy regex would span both
+        var input = """some text { "isAligned": true, "explanation": "first" } extra { "isAligned": false, "explanation": "second" }""";
+
+        // Act
+        var block = StructuredLlmParser.ExtractJsonBlock(input);
+
+        // Assert: balanced scanner returns the first valid block only
+        block.Should().NotBeNull();
+        var result = StructuredLlmParser.TryParseJson<AlignmentResponseDto>(block!);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.IsAligned.Should().BeTrue();
+        result.Value.Explanation.Should().Be("first");
+    }
+
+    [Fact]
+    public void ExtractJsonBlock_JsonContainingEscapedBraces_ReturnsCorrectBlock()
+    {
+        // Arrange: a JSON string value that itself contains braces
+        var input = """{ "expression": "{ nested braces }" }""";
+
+        // Act
+        var block = StructuredLlmParser.ExtractJsonBlock(input);
+
+        // Assert
+        block.Should().NotBeNull();
+        var result = StructuredLlmParser.TryParseJson<MeTTaConversionResponseDto>(block!);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Expression.Should().Be("{ nested braces }");
+    }
+
+    [Fact]
+    public void ExtractJsonBlock_ExtraBracesBeforeValidJson_ReturnsValidBlock()
+    {
+        // Arrange: stray opening brace before the actual JSON object
+        var input = """some { broken stuff } and then { "isAligned": false, "explanation": "ok" }""";
+
+        // Act
+        var result = StructuredLlmParser.TryParseJson<AlignmentResponseDto>(input);
+
+        // Assert: parser skips invalid blocks and finds the first parseable one
+        result.IsSuccess.Should().BeTrue();
+        result.Value.IsAligned.Should().BeFalse();
+        result.Value.Explanation.Should().Be("ok");
+    }
 }
