@@ -9,38 +9,6 @@ using System.Collections.Concurrent;
 namespace Ouroboros.Agent.MetaAI.SelfImprovement;
 
 /// <summary>
-/// Represents a learned habit following Duhigg's cue-routine-reward loop.
-/// </summary>
-/// <param name="Id">Unique habit identifier.</param>
-/// <param name="Cue">The trigger that initiates the routine.</param>
-/// <param name="Routine">The behavioral pattern executed.</param>
-/// <param name="Reward">The reinforcement received after the routine.</param>
-/// <param name="RepetitionCount">Number of times the habit loop has executed.</param>
-/// <param name="AutomaticityScore">How automatic the habit is (0–1).</param>
-/// <param name="AverageQuality">Average quality of habit execution (0–1).</param>
-/// <param name="LastExecuted">When the habit was last triggered.</param>
-public sealed record Habit(
-    string Id,
-    string Cue,
-    string Routine,
-    string Reward,
-    int RepetitionCount,
-    double AutomaticityScore,
-    double AverageQuality,
-    DateTime LastExecuted);
-
-/// <summary>
-/// Suggestion to execute a habit based on context matching.
-/// </summary>
-/// <param name="MatchedHabit">The habit that matches the current context.</param>
-/// <param name="CueMatchStrength">How strongly the context matches the cue (0–1).</param>
-/// <param name="IsAutomatic">Whether the habit is automatic (automaticity > 0.85).</param>
-public sealed record HabitSuggestion(
-    Habit MatchedHabit,
-    double CueMatchStrength,
-    bool IsAutomatic);
-
-/// <summary>
 /// Implements Duhigg's Habit Loop model with automaticity tracking.
 /// Automaticity follows the asymptotic formula 1 - exp(-0.05 * repetitions),
 /// approaching 1.0 as repetitions increase. Supports a maximum of 200 habits,
@@ -84,7 +52,8 @@ public sealed class HabitFormationEngine
                     RepetitionCount: 1,
                     AutomaticityScore: CalculateAutomaticity(1),
                     AverageQuality: quality,
-                    LastExecuted: DateTime.UtcNow);
+                    FirstPerformed: DateTime.UtcNow,
+                    LastPerformed: DateTime.UtcNow);
             },
             (_, existing) =>
             {
@@ -96,7 +65,7 @@ public sealed class HabitFormationEngine
                     AutomaticityScore = CalculateAutomaticity(newCount),
                     AverageQuality = Math.Round(newAvgQuality, 4),
                     Reward = reward,
-                    LastExecuted = DateTime.UtcNow
+                    LastPerformed = DateTime.UtcNow
                 };
             });
 
@@ -124,9 +93,13 @@ public sealed class HabitFormationEngine
             {
                 bestMatch = matchStrength;
                 bestSuggestion = new HabitSuggestion(
-                    habit,
-                    Math.Round(matchStrength, 3),
-                    habit.AutomaticityScore > AutomaticityThreshold);
+                    SuggestedRoutine: habit.Routine,
+                    TriggerCue: habit.Cue,
+                    ExpectedReward: habit.Reward,
+                    ConfidenceLevel: Math.Round(matchStrength, 3),
+                    Reasoning: habit.AutomaticityScore > AutomaticityThreshold
+                        ? $"Automatic habit (automaticity: {habit.AutomaticityScore:F2})"
+                        : $"Developing habit (automaticity: {habit.AutomaticityScore:F2})");
             }
         }
 

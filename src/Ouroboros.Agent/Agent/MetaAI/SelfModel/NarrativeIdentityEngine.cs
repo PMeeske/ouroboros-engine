@@ -9,48 +9,6 @@ using System.Text;
 namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>
-/// Significance level indicating how impactful a life event was.
-/// </summary>
-public enum EmotionalValence
-{
-    Negative = -1,
-    Neutral = 0,
-    Positive = 1
-}
-
-/// <summary>
-/// A single event in the agent's life story.
-/// </summary>
-/// <param name="Id">Unique event identifier.</param>
-/// <param name="Description">Human-readable description of what happened.</param>
-/// <param name="Significance">Impact score between 0.0 and 1.0.</param>
-/// <param name="Valence">Emotional valence of the event.</param>
-/// <param name="Timestamp">When the event occurred.</param>
-/// <param name="CausalPredecessor">Optional ID of the event that caused this one.</param>
-/// <param name="Chapter">The narrative chapter this event belongs to.</param>
-public sealed record LifeEvent(
-    Guid Id,
-    string Description,
-    double Significance,
-    EmotionalValence Valence,
-    DateTime Timestamp,
-    Guid? CausalPredecessor,
-    string Chapter);
-
-/// <summary>
-/// A narrative arc constructed from life events.
-/// </summary>
-/// <param name="Events">Ordered events comprising the arc.</param>
-/// <param name="Themes">Recurring themes extracted from events.</param>
-/// <param name="CurrentChapter">The active chapter label.</param>
-/// <param name="CoherenceScore">How coherent the narrative is (0.0 to 1.0).</param>
-public sealed record NarrativeArc(
-    IReadOnlyList<LifeEvent> Events,
-    IReadOnlyList<string> Themes,
-    string CurrentChapter,
-    double CoherenceScore);
-
-/// <summary>
 /// Implements McAdams' Life Story Model for constructing and maintaining
 /// an agent's autobiographical narrative identity.
 /// </summary>
@@ -59,6 +17,7 @@ public sealed class NarrativeIdentityEngine
     private const int MaxEvents = 500;
 
     private readonly List<LifeEvent> _events = new();
+    private readonly Dictionary<string, string> _eventChapters = new();
     private readonly object _lock = new();
     private string _currentChapter = "Genesis";
 
@@ -67,7 +26,7 @@ public sealed class NarrativeIdentityEngine
     /// </summary>
     /// <param name="description">What happened.</param>
     /// <param name="significance">Impact score between 0.0 and 1.0.</param>
-    /// <param name="valence">Emotional valence of the event.</param>
+    /// <param name="emotionalValence">Emotional valence of the event (e.g., "positive", "negative", "neutral").</param>
     /// <param name="causalPredecessor">Optional ID of a causally preceding event.</param>
     /// <param name="chapter">Optional chapter override; uses current chapter if null.</param>
     /// <param name="ct">Cancellation token.</param>
@@ -75,8 +34,8 @@ public sealed class NarrativeIdentityEngine
     public Task<Result<LifeEvent, string>> RecordLifeEventAsync(
         string description,
         double significance,
-        EmotionalValence valence,
-        Guid? causalPredecessor = null,
+        string emotionalValence,
+        string? causalPredecessor = null,
         string? chapter = null,
         CancellationToken ct = default)
     {
@@ -88,30 +47,32 @@ public sealed class NarrativeIdentityEngine
         lock (_lock)
         {
             // Validate causal predecessor exists if specified
-            if (causalPredecessor.HasValue &&
-                !_events.Any(e => e.Id == causalPredecessor.Value))
+            if (causalPredecessor != null &&
+                !_events.Any(e => e.Id == causalPredecessor))
             {
                 return Task.FromResult(
                     Result<LifeEvent, string>.Failure(
-                        $"Causal predecessor '{causalPredecessor.Value}' not found."));
+                        $"Causal predecessor '{causalPredecessor}' not found."));
             }
 
             string effectiveChapter = chapter ?? _currentChapter;
 
             var lifeEvent = new LifeEvent(
-                Guid.NewGuid(),
-                description,
-                significance,
-                valence,
-                DateTime.UtcNow,
-                causalPredecessor,
-                effectiveChapter);
+                Id: Guid.NewGuid().ToString(),
+                Description: description,
+                Significance: significance,
+                EmotionalValence: emotionalValence,
+                Timestamp: DateTime.UtcNow,
+                CausalPredecessor: causalPredecessor);
 
             _events.Add(lifeEvent);
+            _eventChapters[lifeEvent.Id] = effectiveChapter;
 
             // Prune oldest events if capacity exceeded
             while (_events.Count > MaxEvents)
             {
+                var removed = _events[0];
+                _eventChapters.Remove(removed.Id);
                 _events.RemoveAt(0);
             }
 
@@ -142,8 +103,8 @@ public sealed class NarrativeIdentityEngine
             double coherence = CalculateCoherence(ordered);
 
             var arc = new NarrativeArc(
-                ordered.AsReadOnly(),
-                themes.AsReadOnly(),
+                ordered,
+                themes,
                 _currentChapter,
                 coherence);
 
@@ -168,17 +129,17 @@ public sealed class NarrativeIdentityEngine
             var sb = new StringBuilder();
 
             // Group by chapter
-            var chapters = ordered.GroupBy(e => e.Chapter).ToList();
+            var chapters = ordered.GroupBy(e => GetChapter(e.Id)).ToList();
             foreach (var chapter in chapters)
             {
                 sb.AppendLine($"Chapter: {chapter.Key}");
 
                 foreach (LifeEvent evt in chapter.OrderBy(e => e.Timestamp))
                 {
-                    string valenceWord = evt.Valence switch
+                    string valenceWord = evt.EmotionalValence.ToLowerInvariant() switch
                     {
-                        EmotionalValence.Positive => "positively",
-                        EmotionalValence.Negative => "challengingly",
+                        "positive" => "positively",
+                        "negative" => "challengingly",
                         _ => "neutrally"
                     };
 
@@ -217,14 +178,21 @@ public sealed class NarrativeIdentityEngine
         }
     }
 
-    private static List<LifeEvent> GetTurningPointsInternal(List<LifeEvent> ordered)
+    private string GetChapter(string eventId)
+    {
+        return _eventChapters.TryGetValue(eventId, out string? chapter)
+            ? chapter
+            : _currentChapter;
+    }
+
+    private List<LifeEvent> GetTurningPointsInternal(List<LifeEvent> ordered)
     {
         var turningPoints = new List<LifeEvent>();
 
         for (int i = 0; i < ordered.Count; i++)
         {
             bool isHighSignificance = ordered[i].Significance > 0.8;
-            bool changedChapter = i > 0 && ordered[i].Chapter != ordered[i - 1].Chapter;
+            bool changedChapter = i > 0 && GetChapter(ordered[i].Id) != GetChapter(ordered[i - 1].Id);
 
             if (isHighSignificance || changedChapter)
                 turningPoints.Add(ordered[i]);
@@ -239,11 +207,11 @@ public sealed class NarrativeIdentityEngine
             return 1.0;
 
         // Causal chain ratio: fraction of events that have a causal predecessor
-        int causalCount = ordered.Count(e => e.CausalPredecessor.HasValue);
+        int causalCount = ordered.Count(e => e.CausalPredecessor != null);
         double causalChainRatio = causalCount / (double)(ordered.Count - 1);
 
         // Thematic consistency: ratio of events sharing the most common chapter
-        var chapterCounts = ordered.GroupBy(e => e.Chapter)
+        var chapterCounts = ordered.GroupBy(e => GetChapter(e.Id))
             .Select(g => g.Count())
             .OrderByDescending(c => c)
             .ToList();
@@ -261,12 +229,12 @@ public sealed class NarrativeIdentityEngine
         return causalChainRatio * 0.4 + thematicConsistency * 0.3 + temporalOrdering * 0.3;
     }
 
-    private static List<string> ExtractThemes(List<LifeEvent> ordered)
+    private List<string> ExtractThemes(List<LifeEvent> ordered)
     {
         // Extract themes from chapter names and high-significance events
         var themes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (string chapter in ordered.Select(e => e.Chapter).Distinct())
+        foreach (string chapter in ordered.Select(e => GetChapter(e.Id)).Distinct())
         {
             themes.Add(chapter);
         }

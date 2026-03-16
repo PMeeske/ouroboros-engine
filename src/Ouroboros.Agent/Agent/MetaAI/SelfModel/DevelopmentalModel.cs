@@ -6,34 +6,6 @@
 namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>
-/// Developmental stages based on the Dreyfus Skill Acquisition Model.
-/// </summary>
-public enum DevelopmentalStage
-{
-    Nascent,
-    Developing,
-    Competent,
-    Proficient,
-    Expert,
-    Wise
-}
-
-/// <summary>
-/// A developmental milestone achieved by the agent in a specific domain.
-/// </summary>
-/// <param name="Domain">The skill domain.</param>
-/// <param name="Milestone">Name of the milestone.</param>
-/// <param name="AchievedAt">When the milestone was reached.</param>
-/// <param name="StageAtAchievement">The developmental stage at the time of achievement.</param>
-/// <param name="PerformanceScore">The performance score that triggered the milestone.</param>
-public sealed record DevelopmentalMilestone(
-    string Domain,
-    string Milestone,
-    DateTime AchievedAt,
-    DevelopmentalStage StageAtAchievement,
-    double PerformanceScore);
-
-/// <summary>
 /// Tracks agent development across skill domains using a Piaget-inspired
 /// stage model with Dreyfus skill acquisition levels and S-curve learning rates.
 /// </summary>
@@ -153,7 +125,7 @@ public sealed class DevelopmentalModel
             // Check if already achieved
             if (_milestones.Any(m =>
                     m.Domain.Equals(domain, StringComparison.OrdinalIgnoreCase) &&
-                    m.Milestone.Equals(milestone, StringComparison.OrdinalIgnoreCase)))
+                    m.Description.Equals(milestone, StringComparison.OrdinalIgnoreCase)))
             {
                 return Task.FromResult(
                     Result<DevelopmentalMilestone, string>.Failure(
@@ -170,11 +142,11 @@ public sealed class DevelopmentalModel
 
             DevelopmentalStage stage = GetCurrentStage(domain);
             var achieved = new DevelopmentalMilestone(
-                domain,
-                milestone,
-                DateTime.UtcNow,
-                stage,
-                currentScore);
+                Domain: domain,
+                Description: milestone,
+                Stage: stage,
+                AchievedAt: DateTime.UtcNow,
+                PerformanceAtAchievement: currentScore);
 
             _milestones.Add(achieved);
 

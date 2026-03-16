@@ -9,43 +9,6 @@ using System.Collections.Concurrent;
 namespace Ouroboros.Agent.MetaAI.SelfImprovement;
 
 /// <summary>
-/// Type of prospective memory reminder trigger.
-/// </summary>
-public enum ReminderType
-{
-    /// <summary>Triggers at a specific time.</summary>
-    TimeBased,
-
-    /// <summary>Triggers when a matching event or context is encountered.</summary>
-    EventBased
-}
-
-/// <summary>
-/// A prospective memory reminder with its trigger condition and action.
-/// </summary>
-/// <param name="Id">Unique reminder identifier.</param>
-/// <param name="Description">Human-readable description of the reminder.</param>
-/// <param name="Type">Whether the reminder is time-based or event-based.</param>
-/// <param name="TriggerCondition">For event-based: the context substring that triggers it.</param>
-/// <param name="Action">The action to perform when triggered.</param>
-/// <param name="CreatedAt">When the reminder was created.</param>
-/// <param name="TriggerTime">For time-based: when the reminder should fire.</param>
-/// <param name="IsTriggered">Whether the reminder has already been triggered.</param>
-/// <param name="IsCompleted">Whether the reminder action has been completed.</param>
-/// <param name="IsCancelled">Whether the reminder has been cancelled.</param>
-public sealed record ProspectiveReminder(
-    string Id,
-    string Description,
-    ReminderType Type,
-    string? TriggerCondition,
-    string Action,
-    DateTime CreatedAt,
-    DateTime? TriggerTime,
-    bool IsTriggered,
-    bool IsCompleted,
-    bool IsCancelled);
-
-/// <summary>
 /// Implements Einstein and McDaniel's model of prospective memory —
 /// the ability to remember to perform intended actions at future points.
 /// Supports both time-based and event-based reminders with a maximum
@@ -55,6 +18,8 @@ public sealed class ProspectiveMemory
 {
     private const int MaxActiveReminders = 100;
     private readonly ConcurrentDictionary<string, ProspectiveReminder> _reminders = new();
+    private readonly ConcurrentDictionary<string, bool> _completed = new();
+    private readonly ConcurrentDictionary<string, bool> _cancelled = new();
 
     /// <summary>
     /// Creates a time-based reminder that triggers at a specified time.
@@ -80,13 +45,11 @@ public sealed class ProspectiveMemory
             Id: Guid.NewGuid().ToString("N"),
             Description: description,
             Type: ReminderType.TimeBased,
-            TriggerCondition: null,
+            TriggerCondition: string.Empty,
             Action: action,
             CreatedAt: DateTime.UtcNow,
             TriggerTime: triggerTime,
-            IsTriggered: false,
-            IsCompleted: false,
-            IsCancelled: false);
+            IsTriggered: false);
 
         _reminders.TryAdd(reminder.Id, reminder);
         return Task.FromResult(reminder);
@@ -121,9 +84,7 @@ public sealed class ProspectiveMemory
             Action: action,
             CreatedAt: DateTime.UtcNow,
             TriggerTime: null,
-            IsTriggered: false,
-            IsCompleted: false,
-            IsCancelled: false);
+            IsTriggered: false);
 
         _reminders.TryAdd(reminder.Id, reminder);
         return Task.FromResult(reminder);
@@ -147,7 +108,7 @@ public sealed class ProspectiveMemory
         foreach (var kvp in _reminders)
         {
             var r = kvp.Value;
-            if (r.IsTriggered || r.IsCompleted || r.IsCancelled)
+            if (r.IsTriggered || IsCompleted(r.Id) || IsCancelled(r.Id))
                 continue;
 
             bool shouldTrigger = r.Type switch
@@ -177,9 +138,12 @@ public sealed class ProspectiveMemory
     /// <returns>True if the reminder was found and marked complete.</returns>
     public bool MarkReminderComplete(string id)
     {
-        if (_reminders.TryGetValue(id, out var r) && !r.IsCancelled)
+        if (_reminders.TryGetValue(id, out var r) && !IsCancelled(id))
         {
-            return _reminders.TryUpdate(id, r with { IsCompleted = true, IsTriggered = true }, r);
+            _completed[id] = true;
+            var updated = r with { IsTriggered = true };
+            _reminders.TryUpdate(id, updated, r);
+            return true;
         }
         return false;
     }
@@ -191,9 +155,10 @@ public sealed class ProspectiveMemory
     /// <returns>True if the reminder was found and cancelled.</returns>
     public bool CancelReminder(string id)
     {
-        if (_reminders.TryGetValue(id, out var r) && !r.IsCompleted)
+        if (_reminders.ContainsKey(id) && !IsCompleted(id))
         {
-            return _reminders.TryUpdate(id, r with { IsCancelled = true }, r);
+            _cancelled[id] = true;
+            return true;
         }
         return false;
     }
@@ -204,7 +169,7 @@ public sealed class ProspectiveMemory
     public IReadOnlyList<ProspectiveReminder> GetPendingReminders()
     {
         return _reminders.Values
-            .Where(r => !r.IsTriggered && !r.IsCompleted && !r.IsCancelled)
+            .Where(r => !r.IsTriggered && !IsCompleted(r.Id) && !IsCancelled(r.Id))
             .OrderBy(r => r.TriggerTime ?? DateTime.MaxValue)
             .ToList();
     }
@@ -214,24 +179,32 @@ public sealed class ProspectiveMemory
     /// </summary>
     public int TotalReminders => _reminders.Count;
 
+    private bool IsCompleted(string id) => _completed.ContainsKey(id);
+
+    private bool IsCancelled(string id) => _cancelled.ContainsKey(id);
+
     private void EnforceCapacity()
     {
-        int activeCount = _reminders.Values.Count(r => !r.IsCompleted && !r.IsCancelled);
+        int activeCount = _reminders.Values.Count(r => !IsCompleted(r.Id) && !IsCancelled(r.Id));
         if (activeCount >= MaxActiveReminders)
         {
             // Remove oldest completed/cancelled reminders first
             var toRemove = _reminders
-                .Where(kvp => kvp.Value.IsCompleted || kvp.Value.IsCancelled)
+                .Where(kvp => IsCompleted(kvp.Key) || IsCancelled(kvp.Key))
                 .OrderBy(kvp => kvp.Value.CreatedAt)
                 .Take(10)
                 .Select(kvp => kvp.Key)
                 .ToList();
 
             foreach (string key in toRemove)
+            {
                 _reminders.TryRemove(key, out _);
+                _completed.TryRemove(key, out _);
+                _cancelled.TryRemove(key, out _);
+            }
 
             // If still over capacity, reject
-            activeCount = _reminders.Values.Count(r => !r.IsCompleted && !r.IsCancelled);
+            activeCount = _reminders.Values.Count(r => !IsCompleted(r.Id) && !IsCancelled(r.Id));
             if (activeCount >= MaxActiveReminders)
                 throw new InvalidOperationException(
                     $"Maximum active reminders ({MaxActiveReminders}) reached. Cancel or complete existing reminders first.");

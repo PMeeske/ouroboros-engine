@@ -9,62 +9,6 @@ using System.Collections.Concurrent;
 namespace Ouroboros.Agent.MetaAI.SelfImprovement;
 
 /// <summary>
-/// A creative idea generated through divergent thinking.
-/// </summary>
-/// <param name="Description">Description of the idea.</param>
-/// <param name="Novelty">Novelty score (0–1).</param>
-/// <param name="Value">Practical value score (0–1).</param>
-/// <param name="Surprise">Surprise factor (0–1).</param>
-/// <param name="GenerationMethod">How the idea was generated (e.g., SCAMPER operator).</param>
-public sealed record CreativeIdea(
-    string Description,
-    double Novelty,
-    double Value,
-    double Surprise,
-    string GenerationMethod);
-
-/// <summary>
-/// Result of conceptual blending between two concepts.
-/// </summary>
-/// <param name="ConceptA">First input concept.</param>
-/// <param name="ConceptB">Second input concept.</param>
-/// <param name="Mappings">Structural mappings found between the concepts.</param>
-/// <param name="EmergentConcept">The novel concept emerging from the blend.</param>
-/// <param name="BlendStrength">Strength of the blend (0–1).</param>
-public sealed record ConceptualBlend(
-    string ConceptA,
-    string ConceptB,
-    IReadOnlyList<string> Mappings,
-    string EmergentConcept,
-    double BlendStrength);
-
-/// <summary>
-/// Result of bisociative search between two domains.
-/// </summary>
-/// <param name="DomainA">First domain.</param>
-/// <param name="DomainB">Second domain.</param>
-/// <param name="Connections">Surprising connections found.</param>
-/// <param name="BisociationStrength">Strength of the bisociation (0–1).</param>
-public sealed record BisociationResult(
-    string DomainA,
-    string DomainB,
-    IReadOnlyList<string> Connections,
-    double BisociationStrength);
-
-/// <summary>
-/// Creativity assessment score.
-/// </summary>
-/// <param name="Novelty">Novelty component (0–1).</param>
-/// <param name="Value">Value component (0–1).</param>
-/// <param name="Surprise">Surprise component (0–1).</param>
-/// <param name="Overall">Weighted overall score.</param>
-public sealed record CreativityScore(
-    double Novelty,
-    double Value,
-    double Surprise,
-    double Overall);
-
-/// <summary>
 /// Implements computational creativity using Fauconnier and Turner's conceptual blending,
 /// Koestler's bisociation theory, and SCAMPER-based divergent thinking for idea generation.
 /// </summary>
@@ -109,11 +53,11 @@ public sealed class CreativityEngine
             value = Math.Max(value - i * 0.02, 0.1);
 
             var idea = new CreativeIdea(
-                description,
-                Math.Round(novelty, 3),
-                Math.Round(value, 3),
-                Math.Round(surprise, 3),
-                op);
+                Id: $"{op}-{i}",
+                Description: description,
+                NoveltyScore: Math.Round(novelty, 3),
+                ValueScore: Math.Round(value, 3),
+                SurpriseScore: Math.Round(surprise, 3));
 
             ideas.Add(idea);
             _ideaHistory.Add(idea);
@@ -165,7 +109,7 @@ public sealed class CreativityEngine
             ? Math.Round((double)(shared.Count + mappings.Count) / (totalWords + mappings.Count), 3)
             : 0.0;
 
-        return Task.FromResult(new ConceptualBlend(conceptA, conceptB, mappings, emergent, strength));
+        return Task.FromResult(new ConceptualBlend(conceptA, conceptB, emergent, mappings, strength));
     }
 
     /// <summary>
@@ -215,7 +159,10 @@ public sealed class CreativityEngine
             : 0.0;
         double strength = Math.Round(domainDistance * connectionDensity, 3);
 
-        return Task.FromResult(new BisociationResult(domainA, domainB, connections, strength));
+        string mostNovel = connections.Count > 0
+            ? connections[^1]
+            : "No connections found";
+        return Task.FromResult(new BisociationResult(domainA, domainB, connections, strength, mostNovel));
     }
 
     /// <summary>
@@ -229,8 +176,8 @@ public sealed class CreativityEngine
     {
         ArgumentNullException.ThrowIfNull(idea);
 
-        double overall = idea.Novelty * 0.4 + idea.Value * 0.3 + idea.Surprise * 0.3;
-        return new CreativityScore(idea.Novelty, idea.Value, idea.Surprise, Math.Round(overall, 3));
+        double overall = idea.NoveltyScore * 0.4 + idea.ValueScore * 0.3 + idea.SurpriseScore * 0.3;
+        return new CreativityScore(idea.NoveltyScore, idea.ValueScore, idea.SurpriseScore, Math.Round(overall, 3));
     }
 
     /// <summary>

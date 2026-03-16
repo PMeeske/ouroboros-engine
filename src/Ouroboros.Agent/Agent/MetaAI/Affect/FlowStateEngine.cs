@@ -6,74 +6,7 @@
 
 namespace Ouroboros.Agent.MetaAI.Affect;
 
-/// <summary>
-/// The eight channels of the Csikszentmihalyi flow model,
-/// determined by the relationship between skill level and challenge level.
-/// </summary>
-public enum FlowChannel
-{
-    /// <summary>Low skill, low challenge: lack of engagement.</summary>
-    Apathy,
 
-    /// <summary>Low skill, moderate challenge: unease about ability.</summary>
-    Worry,
-
-    /// <summary>Low skill, high challenge: overwhelmed by difficulty.</summary>
-    Anxiety,
-
-    /// <summary>Moderate skill, high challenge: heightened engagement approaching flow.</summary>
-    Arousal,
-
-    /// <summary>High skill, high challenge: optimal experience with full absorption.</summary>
-    Flow,
-
-    /// <summary>High skill, moderate challenge: comfortable mastery.</summary>
-    Control,
-
-    /// <summary>High skill, low challenge: effortless engagement.</summary>
-    Relaxation,
-
-    /// <summary>Moderate skill, low challenge: under-stimulation.</summary>
-    Boredom
-}
-
-/// <summary>
-/// Result of assessing the current flow state.
-/// </summary>
-/// <param name="Channel">The determined flow channel.</param>
-/// <param name="SkillLevel">Current skill level (0.0 to 1.0).</param>
-/// <param name="ChallengeLevel">Current challenge level (0.0 to 1.0).</param>
-/// <param name="Absorption">Degree of cognitive absorption (0.0 to 1.0).</param>
-/// <param name="ChallengeSkillRatio">Ratio of challenge to skill.</param>
-/// <param name="IsInFlow">Whether the agent is currently in a flow state.</param>
-/// <param name="TimeDistortionFactor">Perceived time dilation factor (1.0 = normal).</param>
-/// <param name="Timestamp">When the assessment was made.</param>
-public sealed record FlowAssessment(
-    FlowChannel Channel,
-    double SkillLevel,
-    double ChallengeLevel,
-    double Absorption,
-    double ChallengeSkillRatio,
-    bool IsInFlow,
-    double TimeDistortionFactor,
-    DateTime Timestamp);
-
-/// <summary>
-/// Recommendation for optimizing task parameters to achieve flow.
-/// </summary>
-/// <param name="TaskDescription">The task being optimized.</param>
-/// <param name="CurrentChannel">The current flow channel.</param>
-/// <param name="RecommendedChallengeAdjustment">Suggested change to challenge level (-1.0 to 1.0).</param>
-/// <param name="RecommendedSkillUtilization">How much of available skill to engage (0.0 to 1.0).</param>
-/// <param name="EstimatedFlowProbability">Probability of achieving flow with adjustments (0.0 to 1.0).</param>
-/// <param name="Rationale">Explanation of the optimization recommendation.</param>
-public sealed record FlowOptimization(
-    string TaskDescription,
-    FlowChannel CurrentChannel,
-    double RecommendedChallengeAdjustment,
-    double RecommendedSkillUtilization,
-    double EstimatedFlowProbability,
-    string Rationale);
 
 /// <summary>
 /// Record of a single task engagement episode.
@@ -88,7 +21,7 @@ public sealed record TaskEngagement(
     string TaskId,
     double ChallengeLevel,
     double PerformanceQuality,
-    FlowChannel Channel,
+    FlowState Channel,
     TimeSpan Duration,
     DateTime Timestamp);
 
@@ -104,16 +37,16 @@ public sealed class FlowStateEngine
     private readonly object _lock = new();
 
     /// <summary>Time distortion factors by flow channel. Flow compresses perceived time; boredom expands it.</summary>
-    private static readonly Dictionary<FlowChannel, double> TimeDistortionFactors = new()
+    private static readonly Dictionary<FlowState, double> TimeDistortionFactors = new()
     {
-        [FlowChannel.Apathy] = 1.8,
-        [FlowChannel.Worry] = 1.3,
-        [FlowChannel.Anxiety] = 1.5,
-        [FlowChannel.Arousal] = 0.8,
-        [FlowChannel.Flow] = 0.5,
-        [FlowChannel.Control] = 0.7,
-        [FlowChannel.Relaxation] = 1.0,
-        [FlowChannel.Boredom] = 2.0,
+        [FlowState.Apathy] = 1.8,
+        [FlowState.Worry] = 1.3,
+        [FlowState.Anxiety] = 1.5,
+        [FlowState.Arousal] = 0.8,
+        [FlowState.Flow] = 0.5,
+        [FlowState.Control] = 0.7,
+        [FlowState.Relaxation] = 1.0,
+        [FlowState.Boredom] = 2.0,
     };
 
     /// <summary>
@@ -134,7 +67,7 @@ public sealed class FlowStateEngine
 
         var channel = DetermineChannel(skillLevel, challengeLevel);
         var ratio = skillLevel > 0.01 ? challengeLevel / skillLevel : 0.0;
-        var isInFlow = channel == FlowChannel.Flow
+        var isInFlow = channel == FlowState.Flow
                        && ratio >= 0.8 && ratio <= 1.2
                        && skillLevel > 0.5 && challengeLevel > 0.5;
 
@@ -147,14 +80,12 @@ public sealed class FlowStateEngine
         }
 
         var assessment = new FlowAssessment(
-            Channel: channel,
+            State: channel,
             SkillLevel: skillLevel,
             ChallengeLevel: challengeLevel,
             Absorption: absorption,
-            ChallengeSkillRatio: Math.Round(ratio, 3),
-            IsInFlow: isInFlow,
-            TimeDistortionFactor: Math.Round(timeDistortion, 3),
-            Timestamp: DateTime.UtcNow);
+            TimeDistortion: Math.Round(timeDistortion, 3),
+            IntrinsicReward: isInFlow ? Math.Round(absorption * 0.8 + 0.2, 3) : Math.Round(absorption * 0.3, 3));
 
         lock (_lock)
         {
@@ -246,12 +177,9 @@ public sealed class FlowStateEngine
         }
 
         var optimization = new FlowOptimization(
-            TaskDescription: taskDescription,
-            CurrentChannel: currentChannel,
-            RecommendedChallengeAdjustment: Math.Round(challengeAdjustment, 3),
-            RecommendedSkillUtilization: skillUtilization,
-            EstimatedFlowProbability: Math.Round(flowProbability, 3),
-            Rationale: rationale);
+            RecommendedChallenge: Math.Round(Math.Clamp(currentSkillLevel + challengeAdjustment, 0.0, 1.0), 3),
+            SuggestedAdjustment: rationale,
+            PredictedFlowProbability: Math.Round(flowProbability, 3));
 
         return Task.FromResult(Result<FlowOptimization, string>.Success(optimization));
     }
@@ -267,7 +195,7 @@ public sealed class FlowStateEngine
             if (_assessmentHistory.Count == 0)
                 return 0.0;
 
-            return (double)_assessmentHistory.Count(a => a.IsInFlow) / _assessmentHistory.Count;
+            return (double)_assessmentHistory.Count(a => a.State == FlowState.Flow) / _assessmentHistory.Count;
         }
     }
 
@@ -280,7 +208,7 @@ public sealed class FlowStateEngine
         lock (_lock)
         {
             var flowEpisodes = _engagementHistory
-                .Where(e => e.Channel == FlowChannel.Flow)
+                .Where(e => e.Channel == FlowState.Flow)
                 .ToList();
 
             if (flowEpisodes.Count == 0)
@@ -301,13 +229,13 @@ public sealed class FlowStateEngine
         lock (_lock)
         {
             return _assessmentHistory
-                .OrderByDescending(a => a.Timestamp)
-                .Take(count)
+                .TakeLast(count)
+                .Reverse()
                 .ToList();
         }
     }
 
-    private static FlowChannel DetermineChannel(double skill, double challenge)
+    private static FlowState DetermineChannel(double skill, double challenge)
     {
         // Map skill and challenge to the 8-channel model
         // Using thirds: low (0-0.33), moderate (0.33-0.66), high (0.66-1.0)
@@ -316,16 +244,16 @@ public sealed class FlowStateEngine
 
         return (skillZone, challengeZone) switch
         {
-            (0, 0) => FlowChannel.Apathy,
-            (0, 1) => FlowChannel.Worry,
-            (0, 2) => FlowChannel.Anxiety,
-            (1, 2) => FlowChannel.Arousal,
-            (2, 2) => FlowChannel.Flow,
-            (2, 1) => FlowChannel.Control,
-            (2, 0) => FlowChannel.Relaxation,
-            (1, 0) => FlowChannel.Boredom,
-            (1, 1) => FlowChannel.Control, // Moderate/moderate defaults to control
-            _ => FlowChannel.Apathy
+            (0, 0) => FlowState.Apathy,
+            (0, 1) => FlowState.Worry,
+            (0, 2) => FlowState.Anxiety,
+            (1, 2) => FlowState.Arousal,
+            (2, 2) => FlowState.Flow,
+            (2, 1) => FlowState.Control,
+            (2, 0) => FlowState.Relaxation,
+            (1, 0) => FlowState.Boredom,
+            (1, 1) => FlowState.Control, // Moderate/moderate defaults to control
+            _ => FlowState.Apathy
         };
     }
 }

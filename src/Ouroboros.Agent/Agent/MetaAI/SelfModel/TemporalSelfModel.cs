@@ -6,21 +6,6 @@
 namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>
-/// A point-in-time snapshot of the agent's self-state.
-/// </summary>
-/// <param name="Id">Unique snapshot identifier.</param>
-/// <param name="Timestamp">When the snapshot was taken.</param>
-/// <param name="Capabilities">Capability name to proficiency score mapping.</param>
-/// <param name="Beliefs">Belief name to confidence score mapping.</param>
-/// <param name="PersonalityTraits">Trait name to intensity score mapping.</param>
-public sealed record SelfSnapshot(
-    Guid Id,
-    DateTime Timestamp,
-    Dictionary<string, double> Capabilities,
-    Dictionary<string, double> Beliefs,
-    Dictionary<string, double> PersonalityTraits);
-
-/// <summary>
 /// Growth rate information for a tracked dimension.
 /// </summary>
 /// <param name="Dimension">Name of the capability, belief, or trait.</param>
@@ -32,15 +17,6 @@ public sealed record GrowthRate(
     string Category,
     double RatePerDay,
     double CurrentValue);
-
-/// <summary>
-/// Trajectory of the agent's self over time, including growth rates.
-/// </summary>
-/// <param name="Snapshots">Ordered list of snapshots.</param>
-/// <param name="GrowthRates">Per-dimension growth rates.</param>
-public sealed record SelfTrajectory(
-    IReadOnlyList<SelfSnapshot> Snapshots,
-    IReadOnlyList<GrowthRate> GrowthRates);
 
 /// <summary>
 /// Tracks temporal self-continuity by capturing periodic snapshots
@@ -84,10 +60,10 @@ public sealed class TemporalSelfModel
             }
 
             var snapshot = new SelfSnapshot(
-                Guid.NewGuid(),
+                Guid.NewGuid().ToString(),
                 DateTime.UtcNow,
                 new Dictionary<string, double>(capabilities),
-                new Dictionary<string, double>(beliefs),
+                beliefs.ToDictionary(kv => kv.Key, kv => kv.Value.ToString("F4")),
                 new Dictionary<string, double>(personalityTraits));
 
             _snapshots.Add(snapshot);
@@ -122,9 +98,17 @@ public sealed class TemporalSelfModel
             List<SelfSnapshot> ordered = _snapshots.OrderBy(s => s.Timestamp).ToList();
             List<GrowthRate> growthRates = CalculateGrowthRates(ordered);
 
+            var growthRateDict = growthRates.ToDictionary(
+                gr => $"{gr.Category}:{gr.Dimension}",
+                gr => gr.RatePerDay);
+            var emerging = growthRates.Where(gr => gr.RatePerDay > 0.01).Select(gr => gr.Dimension).ToList();
+            var declining = growthRates.Where(gr => gr.RatePerDay < -0.01).Select(gr => gr.Dimension).ToList();
+
             var trajectory = new SelfTrajectory(
-                ordered.AsReadOnly(),
-                growthRates.AsReadOnly());
+                ordered,
+                growthRateDict,
+                emerging,
+                declining);
 
             return Task.FromResult(Result<SelfTrajectory, string>.Success(trajectory));
         }
@@ -155,7 +139,9 @@ public sealed class TemporalSelfModel
 
             SelfSnapshot latest = ordered[^1];
             var projectedCapabilities = new Dictionary<string, double>(latest.Capabilities);
-            var projectedBeliefs = new Dictionary<string, double>(latest.Beliefs);
+            var projectedBeliefs = latest.Beliefs.ToDictionary(
+                kv => kv.Key,
+                kv => double.TryParse(kv.Value, out double v) ? v : 0.0);
             var projectedTraits = new Dictionary<string, double>(latest.PersonalityTraits);
 
             foreach (GrowthRate rate in rates)
@@ -177,10 +163,10 @@ public sealed class TemporalSelfModel
             }
 
             var futureSnapshot = new SelfSnapshot(
-                Guid.NewGuid(),
+                Guid.NewGuid().ToString(),
                 DateTime.UtcNow + horizon,
                 projectedCapabilities,
-                projectedBeliefs,
+                projectedBeliefs.ToDictionary(kv => kv.Key, kv => kv.Value.ToString("F4")),
                 projectedTraits);
 
             return Task.FromResult(Result<SelfSnapshot, string>.Success(futureSnapshot));
@@ -226,10 +212,26 @@ public sealed class TemporalSelfModel
             return rates;
 
         AddRates(rates, first.Capabilities, last.Capabilities, "Capability", totalDays);
-        AddRates(rates, first.Beliefs, last.Beliefs, "Belief", totalDays);
+        AddBeliefRates(rates, first.Beliefs, last.Beliefs, totalDays);
         AddRates(rates, first.PersonalityTraits, last.PersonalityTraits, "PersonalityTrait", totalDays);
 
         return rates;
+    }
+
+    private static void AddBeliefRates(
+        List<GrowthRate> rates,
+        Dictionary<string, string> firstValues,
+        Dictionary<string, string> lastValues,
+        double totalDays)
+    {
+        foreach (string key in lastValues.Keys)
+        {
+            double currentValue = double.TryParse(lastValues[key], out double cv) ? cv : 0.0;
+            double startValue = firstValues.TryGetValue(key, out string? sv) && double.TryParse(sv, out double parsed) ? parsed : 0.0;
+            double ratePerDay = (currentValue - startValue) / totalDays;
+
+            rates.Add(new GrowthRate(key, "Belief", ratePerDay, currentValue));
+        }
     }
 
     private static void AddRates(
@@ -253,7 +255,8 @@ public sealed class TemporalSelfModel
     {
         var values = new List<double>();
         values.AddRange(snapshot.Capabilities.OrderBy(kv => kv.Key).Select(kv => kv.Value));
-        values.AddRange(snapshot.Beliefs.OrderBy(kv => kv.Key).Select(kv => kv.Value));
+        values.AddRange(snapshot.Beliefs.OrderBy(kv => kv.Key)
+            .Select(kv => double.TryParse(kv.Value, out double v) ? v : 0.0));
         values.AddRange(snapshot.PersonalityTraits.OrderBy(kv => kv.Key).Select(kv => kv.Value));
         return values.ToArray();
     }
