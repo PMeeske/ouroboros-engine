@@ -8,7 +8,7 @@ namespace Ouroboros.Tests.Meai;
 public sealed class ObservableAsyncEnumerableExtensionsTests
 {
     [Fact]
-    public void ToAsyncEnumerable_NullSource_ThrowsArgumentNullException()
+    public async Task ToAsyncEnumerable_NullSource_ThrowsArgumentNullException()
     {
         // Arrange
         IObservable<int> source = null!;
@@ -22,7 +22,7 @@ public sealed class ObservableAsyncEnumerableExtensionsTests
         };
 
         // Assert
-        act.Should().ThrowAsync<ArgumentNullException>();
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public sealed class ObservableAsyncEnumerableExtensionsTests
         }
 
         // Assert
-        results.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+        results.Should().Equal(new[] { 1, 2, 3 });
     }
 
     [Fact]

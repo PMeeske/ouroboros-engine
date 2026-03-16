@@ -1,7 +1,9 @@
 namespace Ouroboros.Tests.Pipeline.WorldModel;
 
+using FluentAssertions;
 using Ouroboros.Pipeline.Planning;
 using Ouroboros.Pipeline.WorldModel;
+using Xunit;
 
 [Trait("Category", "Unit")]
 public class ToolSelectionStateTests
