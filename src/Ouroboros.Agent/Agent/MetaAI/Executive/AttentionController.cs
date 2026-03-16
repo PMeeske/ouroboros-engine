@@ -9,57 +9,6 @@ using System.Collections.Concurrent;
 namespace Ouroboros.Agent.MetaAI.Executive;
 
 /// <summary>
-/// Mode of attentional deployment.
-/// </summary>
-public enum AttentionMode
-{
-    /// <summary>Concentrated attention on a single target.</summary>
-    Focused,
-
-    /// <summary>Attention split across multiple targets.</summary>
-    Divided,
-
-    /// <summary>Broad scanning for relevant stimuli.</summary>
-    Scanning
-}
-
-/// <summary>
-/// Source of attentional capture.
-/// </summary>
-public enum AttentionSource
-{
-    /// <summary>Goal-driven, top-down attention (20% priority boost).</summary>
-    Endogenous,
-
-    /// <summary>Stimulus-driven, bottom-up attention.</summary>
-    Exogenous
-}
-
-/// <summary>
-/// Represents an attention target with its allocated priority.
-/// </summary>
-/// <param name="TargetId">Identifier of the attention target.</param>
-/// <param name="AllocatedPriority">Priority weight allocated (0–1).</param>
-/// <param name="Source">Whether attention is goal-driven or stimulus-driven.</param>
-public sealed record AttentionTarget(
-    string TargetId,
-    double AllocatedPriority,
-    AttentionSource Source);
-
-/// <summary>
-/// Result of an attention allocation decision.
-/// </summary>
-/// <param name="Targets">The allocated attention targets (capacity-limited).</param>
-/// <param name="Mode">The attention mode used.</param>
-/// <param name="TotalCapacityUsed">Fraction of attentional capacity consumed (0–1).</param>
-/// <param name="DroppedCount">Number of targets dropped due to capacity limits.</param>
-public sealed record AttentionAllocation(
-    IReadOnlyList<AttentionTarget> Targets,
-    AttentionMode Mode,
-    double TotalCapacityUsed,
-    int DroppedCount);
-
-/// <summary>
 /// Records an attention capture event.
 /// </summary>
 /// <param name="StimulusId">Identifier of the capturing stimulus.</param>
@@ -107,7 +56,7 @@ public sealed class AttentionController
     /// <param name="targets">Candidate targets with their raw priorities and sources.</param>
     /// <param name="mode">The attention mode to use.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>An <see cref="AttentionAllocation"/> with capacity-limited targets.</returns>
+    /// <returns>An <see cref="AttentionAllocation"/> with capacity-limited allocations.</returns>
     public Task<AttentionAllocation> AllocateAttentionAsync(
         IReadOnlyList<AttentionTarget> targets,
         AttentionMode mode,
@@ -126,28 +75,27 @@ public sealed class AttentionController
         var boosted = targets.Select(t =>
         {
             double priority = t.Source == AttentionSource.Endogenous
-                ? Math.Min(t.AllocatedPriority * (1.0 + EndogenousBoost), 1.0)
-                : t.AllocatedPriority;
-            return new AttentionTarget(t.TargetId, Math.Round(priority, 4), t.Source);
+                ? Math.Min(t.Priority * (1.0 + EndogenousBoost), 1.0)
+                : t.Priority;
+            return new AttentionTarget(t.Id, t.Description, Math.Round(priority, 4), t.Source);
         })
-        .OrderByDescending(t => t.AllocatedPriority)
+        .OrderByDescending(t => t.Priority)
         .ToList();
 
         int dropped = Math.Max(0, boosted.Count - effectiveCapacity);
         var allocated = boosted.Take(effectiveCapacity).ToList();
 
-        double capacityUsed = effectiveCapacity > 0
-            ? Math.Min((double)allocated.Count / effectiveCapacity, 1.0)
-            : 0.0;
+        double totalCapacity = effectiveCapacity;
+        double usedCapacity = allocated.Count;
 
         // Apply fatigue reduction to quality
         double quality = GetSustainedAttentionQuality();
-        var fatigueAdjusted = allocated.Select(t =>
-            new AttentionTarget(t.TargetId, Math.Round(t.AllocatedPriority * quality, 4), t.Source))
-            .ToList();
+        var allocations = allocated.ToDictionary(
+            t => t.Id,
+            t => Math.Round(t.Priority * quality, 4));
 
         return Task.FromResult(new AttentionAllocation(
-            fatigueAdjusted, mode, Math.Round(capacityUsed, 3), dropped));
+            allocations, totalCapacity, usedCapacity));
     }
 
     /// <summary>

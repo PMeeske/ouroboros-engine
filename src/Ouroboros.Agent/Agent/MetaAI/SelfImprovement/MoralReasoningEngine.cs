@@ -8,39 +8,6 @@ using System.Collections.Concurrent;
 namespace Ouroboros.Agent.MetaAI.SelfImprovement;
 
 /// <summary>
-/// Ethical framework used for moral evaluation.
-/// </summary>
-public enum MoralFramework
-{
-    /// <summary>Duty-based ethics — actions are right or wrong in themselves.</summary>
-    Deontological,
-
-    /// <summary>Consequence-based ethics — maximize overall well-being.</summary>
-    Utilitarian,
-
-    /// <summary>Character-based ethics — does the action exemplify virtues?</summary>
-    VirtueEthics,
-
-    /// <summary>Relationship-based ethics — preserve care and connection.</summary>
-    CareEthics
-}
-
-/// <summary>
-/// Kohlberg-inspired moral development level.
-/// </summary>
-public enum MoralDevelopmentLevel
-{
-    /// <summary>Self-interest and punishment avoidance.</summary>
-    PreConventional,
-
-    /// <summary>Social norms and rule-following.</summary>
-    Conventional,
-
-    /// <summary>Universal principles and autonomous moral reasoning.</summary>
-    PostConventional
-}
-
-/// <summary>
 /// A single framework's verdict on a moral question.
 /// </summary>
 /// <param name="Framework">The framework used.</param>
@@ -53,31 +20,6 @@ public sealed record FrameworkVerdict(
     double Confidence,
     string Reasoning);
 
-/// <summary>
-/// Result of a moral evaluation across all frameworks.
-/// </summary>
-/// <param name="Action">The action being evaluated.</param>
-/// <param name="Verdicts">Per-framework verdicts.</param>
-/// <param name="SynthesizedVerdict">Overall verdict from majority vote.</param>
-/// <param name="OverallConfidence">Average confidence across frameworks.</param>
-public sealed record MoralJudgment(
-    string Action,
-    IReadOnlyList<FrameworkVerdict> Verdicts,
-    bool SynthesizedVerdict,
-    double OverallConfidence);
-
-/// <summary>
-/// Result of moral deliberation on a dilemma.
-/// </summary>
-/// <param name="Dilemma">The dilemma being deliberated.</param>
-/// <param name="Judgment">The moral judgment.</param>
-/// <param name="DevelopmentLevel">Current moral development level.</param>
-/// <param name="ReasoningSophistication">Sophistication score (0–1).</param>
-public sealed record MoralDeliberation(
-    string Dilemma,
-    MoralJudgment Judgment,
-    MoralDevelopmentLevel DevelopmentLevel,
-    double ReasoningSophistication);
 
 /// <summary>
 /// Implements multi-framework moral reasoning combining deontological,
@@ -132,7 +74,20 @@ public sealed class MoralReasoningEngine
         bool synthesized = permissibleCount > verdicts.Count / 2;
         double avgConfidence = verdicts.Average(v => v.Confidence);
 
-        var judgment = new MoralJudgment(action, verdicts, synthesized, Math.Round(avgConfidence, 3));
+        // Find the primary framework (highest confidence)
+        var primary = verdicts.OrderByDescending(v => v.Confidence).First();
+        var frameworkVerdicts = verdicts.ToDictionary(
+            v => v.Framework,
+            v => v.Reasoning);
+
+        var judgment = new MoralJudgment(
+            Id: Guid.NewGuid().ToString(),
+            Action: action,
+            PrimaryFramework: primary.Framework,
+            Verdict: synthesized ? "Permissible" : "Not permissible",
+            Confidence: Math.Round(avgConfidence, 3),
+            Reasoning: primary.Reasoning,
+            FrameworkVerdicts: frameworkVerdicts);
         _judgmentHistory.Add(judgment);
 
         return Task.FromResult(judgment);
@@ -154,9 +109,17 @@ public sealed class MoralReasoningEngine
         _totalDeliberations++;
         _cumulativeSophistication += sophistication;
 
-        var level = GetCurrentDevelopmentLevel();
+        var moralDilemma = new MoralDilemma(
+            Description: dilemma,
+            Stakeholders: ["self", "others", "society"],
+            Options: [],
+            ConflictingValues: []);
 
-        return new MoralDeliberation(dilemma, judgment, level, Math.Round(sophistication, 3));
+        return new MoralDeliberation(
+            Dilemma: moralDilemma,
+            FrameworkJudgments: [judgment],
+            SynthesizedVerdict: judgment.Verdict,
+            ConsensusLevel: Math.Round(sophistication, 3));
     }
 
     /// <summary>
@@ -259,17 +222,16 @@ public sealed class MoralReasoningEngine
         double score = 0.0;
 
         // Multiple frameworks engaged increases sophistication
-        int frameworksUsed = judgment.Verdicts.Count;
+        int frameworksUsed = judgment.FrameworkVerdicts.Count;
         score += Math.Min(frameworksUsed * 0.15, 0.6);
 
-        // Disagreement between frameworks indicates nuanced reasoning
-        bool hasDisagreement = judgment.Verdicts.Any(v => v.IsPermissible) &&
-                               judgment.Verdicts.Any(v => !v.IsPermissible);
-        if (hasDisagreement)
+        // Disagreement between frameworks indicates nuanced reasoning (at least 2 distinct verdicts)
+        var distinctVerdicts = judgment.FrameworkVerdicts.Values.Distinct().Count();
+        if (distinctVerdicts > 1)
             score += 0.2;
 
-        // Higher average confidence indicates clearer reasoning
-        score += judgment.OverallConfidence * 0.2;
+        // Higher confidence indicates clearer reasoning
+        score += judgment.Confidence * 0.2;
 
         return Math.Min(score, 1.0);
     }

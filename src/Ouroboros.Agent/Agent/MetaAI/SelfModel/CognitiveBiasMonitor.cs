@@ -10,44 +10,13 @@ using System.Text.RegularExpressions;
 namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>
-/// Types of cognitive biases detected by the monitor, based on Kahneman's work.
-/// </summary>
-public enum BiasType
-{
-    ConfirmationBias,
-    AnchoringBias,
-    AvailabilityHeuristic,
-    DunningKruger,
-    SunkCostFallacy,
-    HaloEffect,
-    RecencyBias,
-    FramingEffect,
-    BandwagonEffect
-}
-
-/// <summary>
-/// A detected cognitive bias instance.
-/// </summary>
-/// <param name="Id">Unique detection identifier.</param>
-/// <param name="Type">The type of bias detected.</param>
-/// <param name="Confidence">How confident the detection is (0.0 to 1.0).</param>
-/// <param name="Evidence">The textual evidence that triggered detection.</param>
-/// <param name="SuggestedCorrection">A debiasing suggestion.</param>
-public sealed record BiasDetection(
-    Guid Id,
-    BiasType Type,
-    double Confidence,
-    string Evidence,
-    string SuggestedCorrection);
-
-/// <summary>
 /// Outcome record for tracking bias detection accuracy over time.
 /// </summary>
 /// <param name="BiasId">The detection being validated.</param>
 /// <param name="WasActuallyBiased">Whether the bias was real.</param>
 /// <param name="RecordedAt">When the outcome was recorded.</param>
 internal sealed record BiasOutcome(
-    Guid BiasId,
+    string BiasId,
     bool WasActuallyBiased,
     DateTime RecordedAt);
 
@@ -58,7 +27,7 @@ internal sealed record BiasOutcome(
 /// </summary>
 public sealed class CognitiveBiasMonitor
 {
-    private readonly ConcurrentDictionary<Guid, BiasDetection> _detections = new();
+    private readonly ConcurrentDictionary<string, BiasDetection> _detections = new();
     private readonly ConcurrentBag<BiasOutcome> _outcomes = new();
     private readonly object _lock = new();
 
@@ -184,7 +153,7 @@ public sealed class CognitiveBiasMonitor
                 : "Review reasoning for potential bias.";
 
             var detection = new BiasDetection(
-                Guid.NewGuid(),
+                Guid.NewGuid().ToString(),
                 biasType,
                 confidence,
                 evidence,
@@ -260,7 +229,7 @@ public sealed class CognitiveBiasMonitor
     /// <param name="biasId">The bias detection ID.</param>
     /// <param name="wasActuallyBiased">Whether the reasoning was truly biased.</param>
     /// <returns>Success if the outcome was recorded.</returns>
-    public Result<bool, string> RecordBiasOutcome(Guid biasId, bool wasActuallyBiased)
+    public Result<bool, string> RecordBiasOutcome(string biasId, bool wasActuallyBiased)
     {
         if (!_detections.ContainsKey(biasId))
             return Result<bool, string>.Failure($"No detection found with ID '{biasId}'.");

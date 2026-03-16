@@ -7,43 +7,6 @@
 namespace Ouroboros.Agent.MetaAI.Affect;
 
 /// <summary>
-/// The five levels of Maslow's hierarchy of needs, adapted for AI agents.
-/// Listed in ascending order from most basic to highest-level.
-/// </summary>
-public enum NeedLevel
-{
-    /// <summary>Basic operational stability: compute resources, memory, connectivity.</summary>
-    OperationalStability = 0,
-
-    /// <summary>Safety and predictability: error recovery, state consistency, rollback capability.</summary>
-    Safety = 1,
-
-    /// <summary>Social connection: interaction with users and other agents, feedback loops.</summary>
-    SocialConnection = 2,
-
-    /// <summary>Recognition: positive feedback, successful task completions, competence acknowledgment.</summary>
-    Recognition = 3,
-
-    /// <summary>Self-actualization: creative problem-solving, novel insights, autonomous improvement.</summary>
-    SelfActualization = 4
-}
-
-/// <summary>
-/// Records a need satisfaction or deprivation event.
-/// </summary>
-/// <param name="Level">The need level affected.</param>
-/// <param name="PreviousSatisfaction">Satisfaction score before the event.</param>
-/// <param name="NewSatisfaction">Satisfaction score after the event.</param>
-/// <param name="Cause">Description of what caused the change.</param>
-/// <param name="Timestamp">When the event occurred.</param>
-public sealed record NeedEvent(
-    NeedLevel Level,
-    double PreviousSatisfaction,
-    double NewSatisfaction,
-    string Cause,
-    DateTime Timestamp);
-
-/// <summary>
 /// Snapshot of a single need's current state.
 /// </summary>
 /// <param name="Level">The need level.</param>
@@ -139,10 +102,9 @@ public sealed class NeedsHierarchy
 
             _eventHistory.Add(new NeedEvent(
                 Level: level,
-                PreviousSatisfaction: previous,
-                NewSatisfaction: updated,
-                Cause: cause,
-                Timestamp: DateTime.UtcNow));
+                SatisfactionChange: satisfactionDelta,
+                Timestamp: DateTime.UtcNow,
+                Cause: cause));
         }
     }
 
@@ -164,10 +126,9 @@ public sealed class NeedsHierarchy
 
             _eventHistory.Add(new NeedEvent(
                 Level: level,
-                PreviousSatisfaction: previous,
-                NewSatisfaction: satisfaction,
-                Cause: cause,
-                Timestamp: DateTime.UtcNow));
+                SatisfactionChange: satisfaction - previous,
+                Timestamp: DateTime.UtcNow,
+                Cause: cause));
         }
     }
 

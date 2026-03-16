@@ -8,19 +8,6 @@ using System.Collections.Concurrent;
 namespace Ouroboros.Agent.MetaAI.Executive;
 
 /// <summary>
-/// Result of evaluating whether a strategy shift is warranted.
-/// </summary>
-/// <param name="ShouldShift">Whether the current strategy should be abandoned.</param>
-/// <param name="Confidence">Confidence in the shift recommendation (0–1).</param>
-/// <param name="Reason">Explanation for the recommendation.</param>
-/// <param name="ConsecutiveFailures">Number of consecutive failures detected.</param>
-public sealed record StrategyShiftResult(
-    bool ShouldShift,
-    double Confidence,
-    string Reason,
-    int ConsecutiveFailures);
-
-/// <summary>
 /// An alternative strategy with its generation method.
 /// </summary>
 /// <param name="Description">Description of the alternative strategy.</param>
@@ -89,7 +76,8 @@ public sealed class CognitiveFlexibilityEngine
             ? $"Strategy '{currentStrategy}' has {consecutiveFailures} consecutive failures — shift recommended"
             : $"Strategy '{currentStrategy}' has {consecutiveFailures} consecutive failure(s) — continue";
 
-        return Task.FromResult(new StrategyShiftResult(shouldShift, Math.Max(confidence, 0.0), reason, consecutiveFailures));
+        string recommended = shouldShift ? "Alternative strategy needed" : currentStrategy;
+        return Task.FromResult(new StrategyShiftResult(shouldShift, recommended, Math.Max(confidence, 0.0), reason, 0.0));
     }
 
     /// <summary>

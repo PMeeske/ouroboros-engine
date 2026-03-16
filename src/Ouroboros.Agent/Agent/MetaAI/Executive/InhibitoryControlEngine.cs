@@ -24,21 +24,6 @@ public enum InhibitionType
 }
 
 /// <summary>
-/// Result of an inhibition evaluation.
-/// </summary>
-/// <param name="ShouldInhibit">Whether the proposed action should be suppressed.</param>
-/// <param name="Confidence">Confidence in the inhibition decision (0–1).</param>
-/// <param name="Reason">Human-readable explanation of the decision.</param>
-/// <param name="SuggestedDelay">Recommended delay before re-evaluation.</param>
-/// <param name="Type">The type of inhibition applied.</param>
-public sealed record InhibitionResult(
-    bool ShouldInhibit,
-    double Confidence,
-    string Reason,
-    TimeSpan SuggestedDelay,
-    InhibitionType Type);
-
-/// <summary>
 /// Tracks inhibitory control performance metrics.
 /// </summary>
 public sealed record InhibitionMetrics(
@@ -87,7 +72,6 @@ public sealed class InhibitoryControlEngine
         double actionUrgency = EstimateUrgency(proposedAction);
         bool shouldInhibit = actionUrgency < _inhibitionStrength * 1.2 && needsDeliberation;
 
-        var type = needsDeliberation ? InhibitionType.ResponseInhibition : InhibitionType.InterferenceControl;
         double confidence = Math.Abs(_inhibitionStrength * 1.2 - actionUrgency);
         confidence = Math.Min(confidence / _inhibitionStrength, 1.0);
 
@@ -101,7 +85,7 @@ public sealed class InhibitoryControlEngine
 
         Interlocked.Increment(ref _totalEvaluations);
 
-        return Task.FromResult(new InhibitionResult(shouldInhibit, confidence, reason, delay, type));
+        return Task.FromResult(new InhibitionResult(shouldInhibit, confidence, reason, delay));
     }
 
     /// <summary>

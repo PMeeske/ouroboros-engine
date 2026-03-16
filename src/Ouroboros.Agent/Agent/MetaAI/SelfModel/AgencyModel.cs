@@ -8,36 +8,6 @@ using System.Collections.Concurrent;
 namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>
-/// Classification of how an action was initiated, per Wegner's framework.
-/// </summary>
-public enum AgencyType
-{
-    /// <summary>The agent deliberately chose to act.</summary>
-    Voluntary,
-    /// <summary>The agent acted in response to an external stimulus.</summary>
-    Reactive,
-    /// <summary>An external system triggered the action.</summary>
-    Triggered,
-    /// <summary>An automatic, non-deliberative response.</summary>
-    Reflexive
-}
-
-/// <summary>
-/// Attribution record for a single action.
-/// </summary>
-/// <param name="ActionId">Unique action identifier.</param>
-/// <param name="Type">How the action was initiated.</param>
-/// <param name="AgencyScore">Prediction-outcome match score (0.0 to 1.0).</param>
-/// <param name="PredictionAccuracy">How well the predicted outcome matched reality.</param>
-/// <param name="Narrative">First-person narrative describing the action.</param>
-public sealed record AgencyAttribution(
-    string ActionId,
-    AgencyType Type,
-    double AgencyScore,
-    double PredictionAccuracy,
-    string Narrative);
-
-/// <summary>
 /// Implements Wegner's (2002) Apparent Mental Causation model for
 /// tracking and attributing agency to the agent's actions based on
 /// prediction-outcome matching.
