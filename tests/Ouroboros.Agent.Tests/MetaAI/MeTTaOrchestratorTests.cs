@@ -293,12 +293,12 @@ public class MeTTaOrchestratorTests
         if (safetyPasses)
         {
             _mockSafety.Setup(s => s.CheckSafety(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<PermissionLevel>()))
-                .Returns(SafetyCheckResult.Allowed("Safe"));
+                .Returns(new SafetyCheckResult { IsAllowed = true, RiskScore = 0.1, Reason = "Safe" });
         }
         else
         {
             _mockSafety.Setup(s => s.CheckSafety(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<PermissionLevel>()))
-                .Returns(new SafetyCheckResult(false, new List<string> { "unsafe" }));
+                .Returns(new SafetyCheckResult { IsAllowed = false, RiskScore = 0.9, Reason = "unsafe" });
         }
     }
 
