@@ -367,10 +367,8 @@ public class MetaAIPlannerOrchestratorTests
 
         var clearance = new EthicalClearance
         {
-            IsPermitted = ethicsPermitted,
-            Level = EthicalClearanceLevel.Permitted,
-            Reasoning = ethicsPermitted ? "Allowed" : "Blocked by ethics",
-            Concerns = new List<EthicalConcern>()
+            Level = ethicsPermitted ? EthicalClearanceLevel.Permitted : EthicalClearanceLevel.Denied,
+            Reasoning = ethicsPermitted ? "Allowed" : "Blocked by ethics"
         };
 
         _mockEthics.Setup(e => e.EvaluatePlanAsync(It.IsAny<PlanContext>(), It.IsAny<CancellationToken>()))
@@ -379,12 +377,12 @@ public class MetaAIPlannerOrchestratorTests
         if (safetyPasses)
         {
             _mockSafety.Setup(s => s.CheckSafety(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<PermissionLevel>()))
-                .Returns(SafetyCheckResult.Allowed("Safe"));
+                .Returns(new SafetyCheckResult { IsAllowed = true, RiskScore = 0.1, Reason = "Safe" });
         }
         else
         {
             _mockSafety.Setup(s => s.CheckSafety(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<PermissionLevel>()))
-                .Returns(SafetyCheckResult.Denied("unsafe operation", new List<string> { "unsafe operation" }, 0.9));
+                .Returns(new SafetyCheckResult { IsAllowed = false, RiskScore = 0.9, Reason = "unsafe operation" });
         }
     }
 
