@@ -5,7 +5,7 @@
 using FluentAssertions;
 using Ouroboros.Agent.TemporalReasoning;
 
-namespace Ouroboros.Agent.Tests.TemporalReasoning;
+namespace Ouroboros.Tests.TemporalReasoning;
 
 /// <summary>
 /// Unit tests for <see cref="TemporalReasoningConstants"/>.

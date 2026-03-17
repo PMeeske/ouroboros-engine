@@ -6,7 +6,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Ouroboros.Agent.Json;
 
-namespace Ouroboros.Agent.Tests.Json;
+namespace Ouroboros.Tests.Json;
 
 /// <summary>
 /// Unit tests for <see cref="JsonDefaults"/>.

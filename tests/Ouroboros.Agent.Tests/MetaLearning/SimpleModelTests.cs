@@ -6,7 +6,7 @@ using FluentAssertions;
 using Ouroboros.Agent.MetaLearning;
 using Ouroboros.Domain.MetaLearning;
 
-namespace Ouroboros.Agent.Tests.MetaLearning;
+namespace Ouroboros.Tests.MetaLearning;
 
 /// <summary>
 /// Unit tests for <see cref="SimpleModel"/>.
