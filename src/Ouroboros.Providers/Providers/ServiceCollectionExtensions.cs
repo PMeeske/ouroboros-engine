@@ -3,6 +3,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+#pragma warning disable CS0618 // Obsolete Qdrant types — intentional DI registration of direct-client services
+
 namespace Ouroboros.Providers;
 
 using Microsoft.Extensions.AI;

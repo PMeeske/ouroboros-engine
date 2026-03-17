@@ -16,6 +16,12 @@ using Qdrant.Client.Grpc;
 /// A persistent version of NetworkStateProjector that saves snapshots and learnings to Qdrant.
 /// Enables state recovery across sessions and continuous learning accumulation.
 /// </summary>
+/// <remarks>
+/// Direct Qdrant.Client usage with two collections (snapshots, learnings), paginated scroll,
+/// dimension migration, and filter-based queries. Migrate simple upsert/search paths to
+/// IVectorStoreRecordCollection as typed record support matures.
+/// </remarks>
+[Obsolete("Use IAdvancedVectorStore via SK Qdrant connector for new vector code. Network projector ops retained as direct Qdrant calls.")]
 public sealed partial class PersistentNetworkStateProjector : IAsyncDisposable
 {
     private readonly string _snapshotCollectionName;

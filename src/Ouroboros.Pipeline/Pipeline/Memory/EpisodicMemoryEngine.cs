@@ -16,6 +16,11 @@ using Qdrant.Client;
 /// Implementation of episodic memory system using Qdrant for vector storage.
 /// Provides semantic search, consolidation, and experience-based planning.
 /// </summary>
+/// <remarks>
+/// Direct Qdrant.Client usage with typed episode payloads and collection management.
+/// Migrate to IVectorStoreRecordCollection when SK typed record support covers the episode schema.
+/// </remarks>
+[Obsolete("Use IAdvancedVectorStore via SK Qdrant connector for new vector code. Episodic memory ops retained as direct Qdrant calls.")]
 public sealed partial class EpisodicMemoryEngine : IEpisodicMemoryEngine, IAsyncDisposable
 {
     private readonly QdrantClient _qdrantClient;

@@ -24,6 +24,12 @@ namespace Ouroboros.Agent.MetaAI;
 /// Qdrant-backed implementation of skill registry.
 /// Stores skills directly in Qdrant for persistence and semantic search.
 /// </summary>
+/// <remarks>
+/// Direct Qdrant.Client usage with typed skill payloads, collection-existence checks,
+/// and filter-based deletion. Migrate upsert/search paths to IVectorStoreRecordCollection
+/// when SK typed record support covers the skill payload schema.
+/// </remarks>
+[Obsolete("Use IAdvancedVectorStore via SK Qdrant connector for new vector code. Skill registry ops retained as direct Qdrant calls.")]
 public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, AgentSkill> _skillsCache = new();

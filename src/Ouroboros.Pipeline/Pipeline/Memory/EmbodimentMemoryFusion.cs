@@ -15,6 +15,12 @@ using Qdrant.Client.Grpc;
 /// Provides unified memory fusion across embodied perceptions with hybrid search
 /// combining dense vector similarity, payload filtering, and temporal decay rescoring.
 /// </summary>
+/// <remarks>
+/// Direct Qdrant.Client usage with temporal decay rescoring, paginated scroll-and-update,
+/// and keyword payload fields. These operations exceed SK VectorStore abstraction capabilities.
+/// Migrate simple upsert/search paths as typed record support matures.
+/// </remarks>
+[Obsolete("Use IAdvancedVectorStore via SK Qdrant connector for new vector code. Embodiment fusion ops retained as direct Qdrant calls.")]
 public sealed partial class EmbodimentMemoryFusion : IEmbodimentMemoryFusion, IAsyncDisposable
 {
     private const string DefaultCollectionName = "iaret_embodiment_memory";

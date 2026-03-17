@@ -8,7 +8,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.Qdrant;
+using Microsoft.SemanticKernel.Memory;
 using Ouroboros.Abstractions.Core;
+using Ouroboros.Core.Configuration;
 using SkQdrantVectorStore = Microsoft.SemanticKernel.Connectors.Qdrant.QdrantVectorStore;
 using Ouroboros.Domain.Vectors;
 using Ouroboros.Providers.Meai;
@@ -38,25 +40,67 @@ public static class SemanticKernelServiceExtensions
     /// </summary>
     public static IServiceCollection AddSemanticKernel(this IServiceCollection services)
     {
+        return AddSemanticKernel(services, bingApiKey: null);
+    }
+
+    /// <summary>
+    /// Registers a Semantic Kernel <see cref="Kernel"/> as a singleton,
+    /// with optional web search and memory plugins wired automatically.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="bingApiKey">
+    /// Optional Bing Web Search API key. When non-null, a <c>WebSearch</c> plugin is
+    /// registered on the kernel. Pass <c>null</c> to skip.
+    /// </param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddSemanticKernel(
+        this IServiceCollection services,
+        string? bingApiKey)
+    {
         ArgumentNullException.ThrowIfNull(services);
 
         // ── Auto-function invocation filter (logging + observability) ────────
         services.TryAddSingleton<IAutoFunctionInvocationFilter, OuroborosAutoFunctionFilter>();
 
+        // ── AgentFactory (depends on Kernel — registered as singleton) ───────
         services.TryAddSingleton(sp =>
         {
+            var kernel = sp.GetRequiredService<Kernel>();
+            return new AgentFactory(kernel);
+        });
+
+        services.TryAddSingleton(sp =>
+        {
+            // Collect optional additional plugins
+            var plugins = new List<KernelPlugin>();
+
+            // Web search plugin (Bing)
+            KernelPlugin? webPlugin = PluginFactory.CreateWebSearchPlugin(bingApiKey);
+            if (webPlugin is not null)
+            {
+                plugins.Add(webPlugin);
+            }
+
+            // Memory plugin (backed by ISemanticTextMemory if registered)
+            ISemanticTextMemory? memory = sp.GetService<ISemanticTextMemory>();
+            if (memory is not null)
+            {
+                plugins.Add(PluginFactory.CreateMemoryPlugin(memory));
+            }
+
             // Prefer IChatClient if already registered (e.g. via AddMeaiChatClient)
             IChatClient? chatClient = sp.GetService<IChatClient>();
             Ouroboros.Tools.ToolRegistry? tools = sp.GetService<Ouroboros.Tools.ToolRegistry>();
+            IEnumerable<KernelPlugin>? additionalPlugins = plugins.Count > 0 ? plugins : null;
 
             if (chatClient is not null)
             {
-                return KernelFactory.CreateKernel(chatClient, tools);
+                return KernelFactory.CreateKernel(chatClient, tools, additionalPlugins);
             }
 
             // Fall back to IChatCompletionModel
             var model = sp.GetRequiredService<IChatCompletionModel>();
-            return KernelFactory.CreateKernel(model, tools);
+            return KernelFactory.CreateKernel(model, tools, additionalPlugins);
         });
 
         return services;
@@ -94,6 +138,45 @@ public static class SemanticKernelServiceExtensions
         {
             var skStore = sp.GetRequiredService<SkVectorStore>();
             return VectorDataBridge.ToOuroboros(skStore, collectionName, vectorDimension);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers an SK <see cref="VectorStoreCollection{TKey, TRecord}"/> for the
+    /// expression-patterns collection used by NanoAtom grammar evolution.
+    /// <para>
+    /// Requires <see cref="AddSkVectorStore"/> to have been called first so that
+    /// <see cref="SkVectorStore"/> is available in the container.
+    /// </para>
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="vectorDimension">The vector dimension (default 1536).</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddSkExpressionPatterns(
+        this IServiceCollection services,
+        int vectorDimension = DefaultVectorDimension)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddSingleton(sp =>
+        {
+            var skStore = sp.GetRequiredService<SkVectorStore>();
+
+            // Resolve the collection name from the registry if available,
+            // otherwise fall back to the known default.
+            string collectionName = "ouroboros_expression_patterns";
+            IQdrantCollectionRegistry? registry = sp.GetService<IQdrantCollectionRegistry>();
+            if (registry is not null &&
+                registry.TryGetCollectionName(QdrantCollectionRole.ExpressionPatterns, out string? resolved) &&
+                !string.IsNullOrWhiteSpace(resolved))
+            {
+                collectionName = resolved;
+            }
+
+            var definition = ExpressionPatternRecord.BuildDefinition(vectorDimension);
+            return skStore.GetCollection<string, ExpressionPatternRecord>(collectionName, definition);
         });
 
         return services;
