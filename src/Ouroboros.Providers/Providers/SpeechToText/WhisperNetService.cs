@@ -11,6 +11,7 @@ namespace Ouroboros.Providers.SpeechToText;
 /// Native .NET Whisper speech-to-text service using Whisper.net.
 /// Provides high-performance local speech recognition without external processes.
 /// </summary>
+[Obsolete("Use OpenClawSttService via OpenClaw gateway. Kept as fallback.")]
 public sealed partial class WhisperNetService : ISpeechToTextService, IDisposable
 {
     private readonly GgmlType _modelType;

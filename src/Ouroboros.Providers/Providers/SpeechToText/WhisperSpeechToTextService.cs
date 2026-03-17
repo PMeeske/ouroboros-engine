@@ -12,6 +12,7 @@ namespace Ouroboros.Providers.SpeechToText;
 /// OpenAI Whisper API-based speech-to-text service.
 /// Supports transcription and translation of audio files.
 /// </summary>
+[Obsolete("Use OpenClawSttService via OpenClaw gateway. Kept as fallback.")]
 public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposable
 {
     private readonly HttpClient _httpClient;

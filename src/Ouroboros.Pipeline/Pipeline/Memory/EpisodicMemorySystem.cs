@@ -1,6 +1,8 @@
 using Ouroboros.Core.Configuration;
 using Qdrant.Client;
 
+#pragma warning disable CS0618 // Obsolete EpisodicMemoryEngine — intentional wrapper usage
+
 namespace Ouroboros.Pipeline.Memory;
 
 /// <summary>

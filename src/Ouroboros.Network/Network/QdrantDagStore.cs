@@ -13,6 +13,12 @@ namespace Ouroboros.Network;
 /// Persists MerkleDag nodes and transitions to Qdrant for durable storage and semantic search.
 /// Enables loading DAG history across sessions and searching nodes by semantic similarity.
 /// </summary>
+/// <remarks>
+/// Direct Qdrant.Client usage with two cross-linked collections (nodes, edges) and
+/// topological sort on load. The dual-collection graph structure has no SK VectorStore equivalent.
+/// Migrate simple upsert/search paths to IVectorStoreRecordCollection as typed record support matures.
+/// </remarks>
+[Obsolete("Use IAdvancedVectorStore via SK Qdrant connector for new vector code. DAG store ops retained as direct Qdrant calls.")]
 public sealed partial class QdrantDagStore : IAsyncDisposable
 {
     private const int DefaultQdrantPort = 6334;

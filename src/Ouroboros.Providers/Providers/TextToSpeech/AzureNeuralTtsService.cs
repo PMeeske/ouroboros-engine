@@ -15,6 +15,7 @@ namespace Ouroboros.Providers.TextToSpeech;
 /// Provides high-quality, natural-sounding voices including Jenny (Cortana-like).
 /// Implements streaming TTS for real-time voice synthesis.
 /// </summary>
+[Obsolete("Use OpenClawTtsService via OpenClaw gateway. Kept as fallback.")]
 public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDisposable
 {
     private volatile bool _isSynthesizing;

@@ -14,6 +14,7 @@ namespace Ouroboros.Providers.TextToSpeech;
 /// Works offline using Windows built-in speech synthesis.
 /// Enhanced with SSML support for natural prosody and expression.
 /// </summary>
+[Obsolete("Use OpenClawTtsService via OpenClaw gateway. Kept as offline fallback.")]
 public sealed partial class LocalWindowsTtsService : ITextToSpeechService
 {
     private readonly string _voiceName;

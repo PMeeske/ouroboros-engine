@@ -28,15 +28,33 @@ public static class KernelFactory
         IChatCompletionModel model,
         Ouroboros.Tools.ToolRegistry? tools = null)
     {
+        return CreateKernel(model, tools, additionalPlugins: null);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="Kernel"/> backed by the given Ouroboros chat model,
+    /// with optional additional plugins (web search, memory, etc.).
+    /// </summary>
+    /// <param name="model">The Ouroboros chat completion model.</param>
+    /// <param name="tools">Optional tool registry to expose as SK plugins.</param>
+    /// <param name="additionalPlugins">
+    /// Optional extra <see cref="KernelPlugin"/> instances (e.g. from <see cref="PluginFactory"/>).
+    /// </param>
+    /// <returns>A configured <see cref="Kernel"/> instance.</returns>
+    public static Kernel CreateKernel(
+        IChatCompletionModel model,
+        Ouroboros.Tools.ToolRegistry? tools,
+        IEnumerable<KernelPlugin>? additionalPlugins)
+    {
         ArgumentNullException.ThrowIfNull(model);
 
         if (model is IChatClientBridge bridge)
         {
-            return BuildKernel(bridge.GetChatClient(), tools);
+            return BuildKernel(bridge.GetChatClient(), tools, additionalPlugins);
         }
 
         using var adapter = new CompletionModelChatClientAdapter(model);
-        return BuildKernel(adapter, tools);
+        return BuildKernel(adapter, tools, additionalPlugins);
     }
 
     /// <summary>
@@ -47,8 +65,20 @@ public static class KernelFactory
         IChatClient chatClient,
         Ouroboros.Tools.ToolRegistry? tools = null)
     {
+        return CreateKernel(chatClient, tools, additionalPlugins: null);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="Kernel"/> from a pre-existing <see cref="IChatClient"/>
+    /// with optional additional plugins.
+    /// </summary>
+    public static Kernel CreateKernel(
+        IChatClient chatClient,
+        Ouroboros.Tools.ToolRegistry? tools,
+        IEnumerable<KernelPlugin>? additionalPlugins)
+    {
         ArgumentNullException.ThrowIfNull(chatClient);
-        return BuildKernel(chatClient, tools);
+        return BuildKernel(chatClient, tools, additionalPlugins);
     }
 
     /// <summary>
@@ -59,11 +89,26 @@ public static class KernelFactory
         IOuroborosChatClient client,
         Ouroboros.Tools.ToolRegistry? tools = null)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        return BuildKernel(client, tools);
+        return CreateKernel(client, tools, additionalPlugins: null);
     }
 
-    private static Kernel BuildKernel(IChatClient chatClient, Ouroboros.Tools.ToolRegistry? tools)
+    /// <summary>
+    /// Creates a <see cref="Kernel"/> from an <see cref="IOuroborosChatClient"/>
+    /// with optional additional plugins.
+    /// </summary>
+    public static Kernel CreateKernel(
+        IOuroborosChatClient client,
+        Ouroboros.Tools.ToolRegistry? tools,
+        IEnumerable<KernelPlugin>? additionalPlugins)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        return BuildKernel(client, tools, additionalPlugins);
+    }
+
+    private static Kernel BuildKernel(
+        IChatClient chatClient,
+        Ouroboros.Tools.ToolRegistry? tools,
+        IEnumerable<KernelPlugin>? additionalPlugins = null)
     {
         var builder = Kernel.CreateBuilder();
 
@@ -75,6 +120,14 @@ public static class KernelFactory
         {
             KernelPlugin plugin = ToolRegistryPluginBridge.ToKernelPlugin(tools);
             builder.Plugins.Add(plugin);
+        }
+
+        if (additionalPlugins is not null)
+        {
+            foreach (KernelPlugin plugin in additionalPlugins)
+            {
+                builder.Plugins.Add(plugin);
+            }
         }
 
         return builder.Build();
