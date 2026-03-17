@@ -5,7 +5,7 @@
 using FluentAssertions;
 using Ouroboros.Agent.NeuralSymbolic;
 
-namespace Ouroboros.Agent.Tests.NeuralSymbolic;
+namespace Ouroboros.Tests.NeuralSymbolic;
 
 /// <summary>
 /// Unit tests for <see cref="ConfidenceConfig"/>.

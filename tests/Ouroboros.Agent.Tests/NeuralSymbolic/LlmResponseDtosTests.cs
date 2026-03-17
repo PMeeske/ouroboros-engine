@@ -6,7 +6,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Ouroboros.Agent.NeuralSymbolic;
 
-namespace Ouroboros.Agent.Tests.NeuralSymbolic;
+namespace Ouroboros.Tests.NeuralSymbolic;
 
 /// <summary>
 /// Unit tests for LLM response DTO records in <see cref="SubgoalResponse"/>,
