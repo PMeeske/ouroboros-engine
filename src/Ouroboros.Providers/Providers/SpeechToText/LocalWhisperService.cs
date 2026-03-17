@@ -12,6 +12,7 @@ namespace Ouroboros.Providers.SpeechToText;
 /// Local Whisper-based speech-to-text service using whisper.cpp or faster-whisper.
 /// Falls back to using the system's installed whisper command-line tool.
 /// </summary>
+[Obsolete("Use OpenClawSttService via OpenClaw gateway. Kept as fallback.")]
 public sealed partial class LocalWhisperService : ISpeechToTextService
 {
     private readonly string _whisperPath;

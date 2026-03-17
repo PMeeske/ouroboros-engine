@@ -16,6 +16,7 @@ namespace Ouroboros.Providers.TextToSpeech;
 /// Requires internet connection but no billing/subscription.
 /// NOTE: Microsoft may block this unofficial API (403 errors) - use Azure TTS for production.
 /// </summary>
+[Obsolete("Use OpenClawTtsService via OpenClaw gateway. Kept as fallback.")]
 public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
 {
     private const string TrustedClientToken = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
