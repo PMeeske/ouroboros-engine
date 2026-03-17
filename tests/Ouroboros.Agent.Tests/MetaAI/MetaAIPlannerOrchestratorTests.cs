@@ -384,7 +384,7 @@ public class MetaAIPlannerOrchestratorTests
         else
         {
             _mockSafety.Setup(s => s.CheckSafety(It.IsAny<string>(), It.IsAny<Dictionary<string, object>>(), It.IsAny<PermissionLevel>()))
-                .Returns(new SafetyCheckResult(false, new List<string> { "unsafe operation" }));
+                .Returns(SafetyCheckResult.Denied("unsafe operation", new List<string> { "unsafe operation" }, 0.9));
         }
     }
 
