@@ -6,7 +6,6 @@ using FluentAssertions;
 using Ouroboros.Abstractions;
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Agent.NanoAtoms;
-using Ouroboros.Core.Monads;
 
 namespace Ouroboros.Agent.Tests.NanoAtoms;
 
