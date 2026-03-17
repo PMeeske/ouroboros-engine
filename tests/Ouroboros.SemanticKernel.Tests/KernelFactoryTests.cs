@@ -152,6 +152,80 @@ public sealed class KernelFactoryTests
         kernel.Plugins.Should().Contain(p => p.Name == "OuroborosTools");
     }
 
+    // ── CreateKernel with additionalPlugins ─────────────────────────────
+
+    [Fact]
+    public void CreateKernel_ChatCompletionModel_WithAdditionalPlugins_RegistersPlugins()
+    {
+#pragma warning disable CS0618
+        var mockModel = new Mock<IChatCompletionModel>();
+#pragma warning restore CS0618
+
+        var plugin = KernelPluginFactory.CreateFromFunctions("TestPlugin", new[]
+        {
+            KernelFunctionFactory.CreateFromMethod(() => "test", "TestFunc"),
+        });
+
+        var kernel = KernelFactory.CreateKernel(mockModel.Object, tools: null, additionalPlugins: new[] { plugin });
+
+        kernel.Should().NotBeNull();
+        kernel.Plugins.Should().Contain(p => p.Name == "TestPlugin");
+    }
+
+    [Fact]
+    public void CreateKernel_ChatCompletionModel_WithNullAdditionalPlugins_DoesNotThrow()
+    {
+#pragma warning disable CS0618
+        var mockModel = new Mock<IChatCompletionModel>();
+#pragma warning restore CS0618
+
+        var act = () => KernelFactory.CreateKernel(mockModel.Object, tools: null, additionalPlugins: null);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void CreateKernel_ChatClient_WithAdditionalPlugins_RegistersPlugins()
+    {
+        var mockClient = new Mock<IChatClient>();
+
+        var plugin = KernelPluginFactory.CreateFromFunctions("TestPlugin", new[]
+        {
+            KernelFunctionFactory.CreateFromMethod(() => "test", "TestFunc"),
+        });
+
+        var kernel = KernelFactory.CreateKernel(mockClient.Object, tools: null, additionalPlugins: new[] { plugin });
+
+        kernel.Should().NotBeNull();
+        kernel.Plugins.Should().Contain(p => p.Name == "TestPlugin");
+    }
+
+    [Fact]
+    public void CreateKernel_ChatClient_WithNullAdditionalPlugins_DoesNotThrow()
+    {
+        var mockClient = new Mock<IChatClient>();
+
+        var act = () => KernelFactory.CreateKernel(mockClient.Object, tools: null, additionalPlugins: null);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void CreateKernel_OuroborosChatClient_WithAdditionalPlugins_RegistersPlugins()
+    {
+        var mockClient = new Mock<IOuroborosChatClient>();
+
+        var plugin = KernelPluginFactory.CreateFromFunctions("TestPlugin", new[]
+        {
+            KernelFunctionFactory.CreateFromMethod(() => "test", "TestFunc"),
+        });
+
+        var kernel = KernelFactory.CreateKernel(mockClient.Object, tools: null, additionalPlugins: new[] { plugin });
+
+        kernel.Should().NotBeNull();
+        kernel.Plugins.Should().Contain(p => p.Name == "TestPlugin");
+    }
+
     /// <summary>
     /// Helper interface to combine IChatCompletionModel and IChatClientBridge
     /// for testing the bridge detection path.
