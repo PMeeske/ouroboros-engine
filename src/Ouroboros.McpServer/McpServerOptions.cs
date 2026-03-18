@@ -41,5 +41,6 @@ public enum McpTransport
     Stdio,
 
     /// <summary>Server-Sent Events over HTTP.</summary>
+    [Obsolete("SSE transport is not yet implemented. Only Stdio is supported.")]
     Sse,
 }
