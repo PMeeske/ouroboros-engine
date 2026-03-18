@@ -1,38 +1,25 @@
 using System.Text.Json;
+using CoreJson = Ouroboros.Core.Json.JsonDefaults;
 
 namespace Ouroboros.Providers.Json;
 
 /// <summary>
-/// Shared, pre-allocated <see cref="JsonSerializerOptions"/> instances
-/// to avoid repeated allocations across the providers layer.
+/// Layer-local façade over <see cref="Ouroboros.Core.Json.JsonDefaults"/>.
+/// All properties delegate to the single canonical set of pre-allocated
+/// <see cref="JsonSerializerOptions"/> instances defined in <c>Ouroboros.Core</c>.
 /// </summary>
 internal static class JsonDefaults
 {
-    /// <summary>
-    /// Indented output with camelCase property names.
-    /// </summary>
-    public static readonly JsonSerializerOptions Indented = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
+    /// <inheritdoc cref="CoreJson.Indented"/>
+    public static readonly JsonSerializerOptions Indented = CoreJson.Indented;
 
     /// <summary>
     /// Compact camelCase output with case-insensitive deserialization.
     /// Standard options for REST API clients (Docker, Firecrawl, Kubernetes).
+    /// Delegates to <see cref="CoreJson.CamelCaseInsensitive"/>.
     /// </summary>
-    public static readonly JsonSerializerOptions CamelCase = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-        WriteIndented = false
-    };
+    public static readonly JsonSerializerOptions CamelCase = CoreJson.CamelCaseInsensitive;
 
-    /// <summary>
-    /// Case-insensitive property name matching, default output.
-    /// </summary>
-    public static readonly JsonSerializerOptions Default = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
+    /// <inheritdoc cref="CoreJson.Default"/>
+    public static readonly JsonSerializerOptions Default = CoreJson.Default;
 }
