@@ -1,44 +1,24 @@
 using System.Text.Json;
+using CoreJson = Ouroboros.Core.Json.JsonDefaults;
 
 namespace Ouroboros.Network.Json;
 
 /// <summary>
-/// Shared, pre-allocated <see cref="JsonSerializerOptions"/> instances
-/// to avoid repeated allocations across the network layer.
+/// Layer-local façade over <see cref="Ouroboros.Core.Json.JsonDefaults"/>.
+/// All properties delegate to the single canonical set of pre-allocated
+/// <see cref="JsonSerializerOptions"/> instances defined in <c>Ouroboros.Core</c>.
 /// </summary>
 internal static class JsonDefaults
 {
-    /// <summary>
-    /// Indented output with camelCase property names.
-    /// </summary>
-    public static readonly JsonSerializerOptions Indented = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
+    /// <inheritdoc cref="CoreJson.Indented"/>
+    public static readonly JsonSerializerOptions Indented = CoreJson.Indented;
 
-    /// <summary>
-    /// Indented output with PascalCase (default) property names.
-    /// Used for DAG serialization where consumers expect PascalCase.
-    /// </summary>
-    public static readonly JsonSerializerOptions IndentedPascalCase = new()
-    {
-        WriteIndented = true
-    };
+    /// <inheritdoc cref="CoreJson.IndentedPascalCase"/>
+    public static readonly JsonSerializerOptions IndentedPascalCase = CoreJson.IndentedPascalCase;
 
-    /// <summary>
-    /// Compact output with camelCase property names.
-    /// </summary>
-    public static readonly JsonSerializerOptions CamelCase = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
+    /// <inheritdoc cref="CoreJson.CamelCase"/>
+    public static readonly JsonSerializerOptions CamelCase = CoreJson.CamelCase;
 
-    /// <summary>
-    /// Case-insensitive property name matching, default output.
-    /// </summary>
-    public static readonly JsonSerializerOptions Default = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
+    /// <inheritdoc cref="CoreJson.Default"/>
+    public static readonly JsonSerializerOptions Default = CoreJson.Default;
 }
