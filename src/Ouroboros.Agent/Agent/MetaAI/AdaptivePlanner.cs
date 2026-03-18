@@ -13,6 +13,11 @@ public sealed class AdaptivePlanner : IAdaptivePlanner
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly List<AdaptationTrigger> _triggers = new();
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="AdaptivePlanner"/> and registers default adaptation triggers.
+    /// </summary>
+    /// <param name="orchestrator">The underlying orchestrator used to re-plan when adaptation is triggered.</param>
+    /// <param name="llm">Language model used to generate recovery sub-plans on adaptation.</param>
     public AdaptivePlanner(
         IMetaAIPlannerOrchestrator orchestrator,
         Ouroboros.Abstractions.Core.IChatCompletionModel llm)

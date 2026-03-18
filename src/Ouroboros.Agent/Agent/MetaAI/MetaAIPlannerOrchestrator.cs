@@ -26,6 +26,18 @@ public sealed partial class MetaAIPlannerOrchestrator : IMetaAIPlannerOrchestrat
     private readonly ISkillExtractor? _skillExtractor;
     private readonly ConcurrentDictionary<string, PerformanceMetrics> _metrics = new();
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="MetaAIPlannerOrchestrator"/> with all required cognitive subsystems.
+    /// </summary>
+    /// <param name="llm">The language model used for planning, verification, and reasoning prompts.</param>
+    /// <param name="tools">Registry of tools available for plan execution.</param>
+    /// <param name="memory">Memory store for retrieving past experiences and storing new ones.</param>
+    /// <param name="skills">Skill registry for finding reusable execution patterns.</param>
+    /// <param name="router">Uncertainty-aware router for selecting execution strategies.</param>
+    /// <param name="safety">Safety guard that sandboxes and validates plan steps before execution.</param>
+    /// <param name="ethics">Ethics framework that evaluates plans before execution; plans failing ethics checks are blocked.</param>
+    /// <param name="approvalProvider">Optional human-in-the-loop approval provider; defaults to auto-deny for plans requiring human review.</param>
+    /// <param name="skillExtractor">Optional extractor that distils successful executions into reusable skills.</param>
     public MetaAIPlannerOrchestrator(
         Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
