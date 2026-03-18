@@ -160,6 +160,12 @@ public sealed class MeTTaPlanner
         return Result<Unit, string>.Success(Unit.Value);
     }
 
+    private static readonly Regex ToolNamePattern =
+        new(@"\b([a-z_]+_tool)\b", RegexOptions.Compiled);
+
+    private static readonly Regex IdentifierPattern =
+        new(@"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", RegexOptions.Compiled);
+
     /// <summary>
     /// Parses a tool chain from MeTTa output.
     /// </summary>
@@ -177,15 +183,12 @@ public sealed class MeTTaPlanner
         }
 
         // Extract tool names from the chain expression
-        Regex toolPattern = new(@"\b([a-z_]+_tool)\b", RegexOptions.Compiled);
-        
-        tools.AddRange(toolPattern.Matches(normalized).Select(match => match.Value));
+        tools.AddRange(ToolNamePattern.Matches(normalized).Select(match => match.Value));
 
         if (tools.Count == 0)
         {
             // Try to extract any identifier that looks like a tool
-            Regex identPattern = new(@"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", RegexOptions.Compiled);
-            tools.AddRange(identPattern.Matches(normalized)
+            tools.AddRange(IdentifierPattern.Matches(normalized)
                 .Select(match => match.Value)
                 .Where(value => value != "chain" && value != "solve" && value != "match"));
         }
@@ -200,9 +203,7 @@ public sealed class MeTTaPlanner
     /// </summary>
     private static IReadOnlyList<string> ParseToolNames(string mettaOutput)
     {
-        Regex toolPattern = new(@"\b([a-z_]+_tool)\b", RegexOptions.Compiled);
-
-        return toolPattern.Matches(mettaOutput)
+        return ToolNamePattern.Matches(mettaOutput)
             .Select(match => match.Value)
             .Distinct()
             .ToList();

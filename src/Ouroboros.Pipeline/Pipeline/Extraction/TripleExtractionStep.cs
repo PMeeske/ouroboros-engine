@@ -82,6 +82,12 @@ public sealed class TripleExtractionStep
     public Step<(string DocumentId, string Content), Result<ExtractionResult, string>> AsArrow()
         => input => this.ExtractAsync(input.DocumentId, input.Content);
 
+    private static readonly Regex TriplePattern =
+        new(@"\((\w+)\s+([^\s)]+)\s+([^)]+)\)", RegexOptions.Compiled);
+
+    private static readonly Regex SimplePattern =
+        new(@"(\w+):\s*(.+)", RegexOptions.Compiled);
+
     /// <summary>
     /// Parses LLM output into semantic triples.
     /// </summary>
@@ -90,10 +96,8 @@ public sealed class TripleExtractionStep
         List<SemanticTriple> triples = new();
 
         // Match patterns like (Relation Subject Object) or Relation: Subject -> Object
-        Regex triplePattern = new(@"\((\w+)\s+([^\s)]+)\s+([^)]+)\)", RegexOptions.Compiled);
-
         triples.AddRange(
-            from Match match in triplePattern.Matches(llmOutput)
+            from Match match in TriplePattern.Matches(llmOutput)
             where match.Groups.Count == 4
             let predicate = match.Groups[1].Value
             let subject = match.Groups[2].Value.Trim().Trim('"')
@@ -101,10 +105,9 @@ public sealed class TripleExtractionStep
             select new SemanticTriple(subject, predicate, obj));
 
         // Also try alternative format: Relation: Object
-        Regex simplePattern = new(@"(\w+):\s*(.+)", RegexOptions.Compiled);
         triples.AddRange(
             from string line in llmOutput.Split('\n')
-            let match = simplePattern.Match(line.Trim())
+            let match = SimplePattern.Match(line.Trim())
             where match.Success && !line.Contains('(')
             let predicate = match.Groups[1].Value
             let obj = match.Groups[2].Value.Trim().Trim('"')

@@ -27,6 +27,7 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
     private readonly QdrantClient _client;
     private readonly Func<string, Task<float[]>>? _embeddingFunc;
     private readonly bool _disposeClient;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _initialized;
     private bool _disposed;
 
@@ -65,8 +66,11 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
     {
         if (_initialized) return;
 
+        await _initLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            if (_initialized) return;
+
             // Create nodes collection
             if (!await _client.CollectionExistsAsync(_config.NodesCollection, ct).ConfigureAwait(false))
             {
@@ -91,6 +95,10 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
         catch (Grpc.Core.RpcException ex)
         {
             throw new InvalidOperationException($"Failed to initialize Qdrant collections: {ex.Message}", ex);
+        }
+        finally
+        {
+            _initLock.Release();
         }
     }
 
@@ -309,6 +317,7 @@ public sealed partial class QdrantDagStore : IAsyncDisposable
                 _client.Dispose();
             }
 
+            _initLock.Dispose();
             _disposed = true;
         }
 
