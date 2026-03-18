@@ -14,7 +14,6 @@ namespace Ouroboros.Providers.TextToSpeech;
 /// Contains voice selection, SSML building, and multi-segment SSML helpers.
 /// Synthesis execution lives in AzureNeuralTtsService.cs.
 /// </summary>
-[Obsolete("Use OpenClawTtsService via OpenClaw gateway. Kept as fallback.")]
 public sealed partial class AzureNeuralTtsService
 {
     private static string SelectVoice(string persona, string culture)

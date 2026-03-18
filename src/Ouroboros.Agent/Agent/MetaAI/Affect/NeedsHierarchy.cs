@@ -7,19 +7,6 @@
 namespace Ouroboros.Agent.MetaAI.Affect;
 
 /// <summary>
-/// Snapshot of a single need's current state.
-/// </summary>
-/// <param name="Level">The need level.</param>
-/// <param name="Satisfaction">Current satisfaction score (0.0 to 1.0).</param>
-/// <param name="IsBlocking">Whether this need is blocking higher needs.</param>
-/// <param name="IsActive">Whether this need is currently the most urgent.</param>
-public sealed record NeedState(
-    NeedLevel Level,
-    double Satisfaction,
-    bool IsBlocking,
-    bool IsActive);
-
-/// <summary>
 /// Implements Maslow's hierarchy of needs for AI agent motivation.
 /// Each level has a satisfaction score from 0.0 to 1.0.
 /// Lower needs block higher needs when their satisfaction drops below 0.3.
