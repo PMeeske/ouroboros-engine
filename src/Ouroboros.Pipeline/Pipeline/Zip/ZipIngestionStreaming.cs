@@ -22,7 +22,7 @@ public static class ZipIngestionStreaming
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
     {
         // Ensure asynchronous nature even if iteration is fast
-        await Task.Yield().ConfigureAwait(false);
+        await Task.Yield();
         using FileStream fs = File.OpenRead(zipPath);
         using ZipArchive archive = new ZipArchive(fs, ZipArchiveMode.Read, leaveOpen: false);
         long total = 0;
