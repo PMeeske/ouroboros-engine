@@ -16,6 +16,11 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
     private readonly ISafetyGuard _safety;
     private readonly DistributedOrchestrationConfig _config;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="DistributedOrchestrator"/>.
+    /// </summary>
+    /// <param name="safety">Safety guard used to validate plan steps before distributing them to agents.</param>
+    /// <param name="config">Optional configuration controlling maximum agent count and heartbeat timeout; defaults to a 5-minute heartbeat window.</param>
     public DistributedOrchestrator(
         ISafetyGuard safety,
         DistributedOrchestrationConfig? config = null)

@@ -17,6 +17,11 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
     private readonly IDistributedOrchestrator _distributor;
     private readonly EpicBranchConfig _config;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="EpicBranchOrchestrator"/>.
+    /// </summary>
+    /// <param name="distributor">The distributed orchestrator used to execute sub-issue plans across agents.</param>
+    /// <param name="config">Optional configuration for branch strategy and resource limits; defaults to standard branch settings.</param>
     public EpicBranchOrchestrator(
         IDistributedOrchestrator distributor,
         EpicBranchConfig? config = null)
