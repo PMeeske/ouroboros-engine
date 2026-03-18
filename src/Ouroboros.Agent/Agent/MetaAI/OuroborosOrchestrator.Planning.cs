@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -32,6 +33,23 @@ public sealed partial class OuroborosOrchestrator
 
             OuroborosConfidence confidence = _atom.AssessConfidence(goal);
             string selfReflection = _atom.SelfReflect();
+
+            // Score novelty of the goal before planning so high-novelty goals get richer context
+            double noveltyScore = 0.5;
+            if (_curiosityEngine != null)
+            {
+                try
+                {
+                    Plan goalPlan = new Plan(goal, new List<PlanStep>(), new Dictionary<string, double>(), DateTime.UtcNow);
+                    noveltyScore = await _curiosityEngine.ComputeNoveltyAsync(goalPlan, ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogDebug("[CuriosityEngine] Novelty scoring failed (non-fatal): {Message}", ex.Message);
+                }
+            }
+
             string prompt = BuildPlanPrompt(goal, selfReflection, confidence);
 
             string planText = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
@@ -49,6 +67,7 @@ public sealed partial class OuroborosOrchestrator
                 {
                     ["confidence"] = confidence.ToString(),
                     ["self_reflection_included"] = true,
+                    ["novelty_score"] = noveltyScore,
                 });
         }
         catch (OperationCanceledException) { throw; }

@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -173,6 +174,38 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
         if (!result.IsSuccess)
         {
             // Log error but don't fail the execution
+        }
+
+        // If the execution was successful and a SkillExtractor is available, attempt skill extraction
+        if (_skillExtractor != null && execution.Success && verification.Verified
+            && verification.QualityScore >= 0.7)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    bool shouldExtract = await _skillExtractor.ShouldExtractSkillAsync(verification).ConfigureAwait(false);
+                    if (shouldExtract)
+                    {
+                        Result<Skill, string> skillResult = await _skillExtractor.ExtractSkillAsync(
+                            execution,
+                            verification,
+                            ct: CancellationToken.None).ConfigureAwait(false);
+
+                        skillResult.Match(
+                            skill => _logger.LogInformation(
+                                "[SkillExtractor] Extracted skill '{SkillName}' (quality: {Quality:P0})",
+                                skill.Name, skill.SuccessRate),
+                            error => _logger.LogDebug(
+                                "[SkillExtractor] Skill extraction skipped: {Reason}", error));
+                    }
+                }
+                catch (OperationCanceledException) { /* fire-and-forget, ignore cancellation */ }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogDebug("[SkillExtractor] Non-fatal error during skill extraction: {Message}", ex.Message);
+                }
+            });
         }
     }
 
