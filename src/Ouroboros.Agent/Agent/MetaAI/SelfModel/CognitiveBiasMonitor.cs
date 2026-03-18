@@ -25,7 +25,7 @@ internal sealed record BiasOutcome(
 /// heuristics, and suggests debiased alternatives. Tracks detection accuracy
 /// with false positive and true positive rates.
 /// </summary>
-public sealed class CognitiveBiasMonitor
+public sealed class CognitiveBiasMonitor : ICognitiveBiasMonitor
 {
     private readonly ConcurrentDictionary<string, BiasDetection> _detections = new();
     private readonly ConcurrentBag<BiasOutcome> _outcomes = new();

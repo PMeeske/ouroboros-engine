@@ -12,7 +12,7 @@ namespace Ouroboros.Agent.MetaAI.SelfModel;
 /// Implements McAdams' Life Story Model for constructing and maintaining
 /// an agent's autobiographical narrative identity.
 /// </summary>
-public sealed class NarrativeIdentityEngine
+public sealed class NarrativeIdentityEngine : INarrativeIdentity
 {
     private const int MaxEvents = 500;
 

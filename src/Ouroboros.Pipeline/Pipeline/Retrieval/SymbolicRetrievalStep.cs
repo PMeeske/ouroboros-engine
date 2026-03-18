@@ -185,6 +185,12 @@ public sealed class SymbolicRetrievalStep
             error => Result<IReadOnlyList<string>, string>.Failure(error));
     }
 
+    private static readonly System.Text.RegularExpressions.Regex DocPattern =
+        new(@"\(Doc\s+""([^""]+)""\)", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private static readonly System.Text.RegularExpressions.Regex QuotedStringPattern =
+        new(@"""([^""]+)""", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     /// <summary>
     /// Parses document IDs from MeTTa query results.
     /// </summary>
@@ -192,10 +198,7 @@ public sealed class SymbolicRetrievalStep
     {
         // MeTTa returns results in various formats like:
         // [(Doc "deployment.md")] or (Doc "deployment.md") or just document identifiers
-        System.Text.RegularExpressions.Regex docPattern =
-            new(@"\(Doc\s+""([^""]+)""\)", System.Text.RegularExpressions.RegexOptions.Compiled);
-
-        List<string> ids = docPattern.Matches(mettaResult)
+        List<string> ids = DocPattern.Matches(mettaResult)
             .Cast<System.Text.RegularExpressions.Match>()
             .Where(match => match.Groups.Count > 1)
             .Select(match => match.Groups[1].Value)
@@ -205,10 +208,7 @@ public sealed class SymbolicRetrievalStep
         if (ids.Count == 0)
         {
             // Try to extract quoted strings
-            System.Text.RegularExpressions.Regex quotedPattern =
-                new(@"""([^""]+)""", System.Text.RegularExpressions.RegexOptions.Compiled);
-
-            ids = quotedPattern.Matches(mettaResult)
+            ids = QuotedStringPattern.Matches(mettaResult)
                 .Cast<System.Text.RegularExpressions.Match>()
                 .Where(match => match.Groups.Count > 1)
                 .Select(match => match.Groups[1].Value)

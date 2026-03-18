@@ -12,7 +12,7 @@ namespace Ouroboros.Agent.MetaAI.SelfModel;
 /// tracking and attributing agency to the agent's actions based on
 /// prediction-outcome matching.
 /// </summary>
-public sealed class AgencyModel
+public sealed class AgencyModel : IAgencyModel
 {
     private const int MaxRecentActions = 200;
 

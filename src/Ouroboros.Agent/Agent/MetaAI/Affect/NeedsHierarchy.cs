@@ -24,7 +24,7 @@ public sealed record NeedState(
 /// Each level has a satisfaction score from 0.0 to 1.0.
 /// Lower needs block higher needs when their satisfaction drops below 0.3.
 /// </summary>
-public sealed class NeedsHierarchy
+public sealed class NeedsHierarchy : INeedsHierarchy
 {
     /// <summary>
     /// Satisfaction threshold below which a need blocks all higher needs.

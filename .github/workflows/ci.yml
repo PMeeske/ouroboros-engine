@@ -19,6 +19,9 @@ concurrency:
   group: ci-${{ github.event_name == 'repository_dispatch' && format('dispatch-{0}', github.event.client_payload.source_repo) || github.ref }}
   cancel-in-progress: true
 
+# Deny all permissions by default; individual jobs grant only what they need
+permissions: {}
+
 jobs:
   build:
     name: Build
@@ -84,3 +87,14 @@ jobs:
       badge-filename: "ouroboros-engine-coverage.json"
       tests-badge-filename: "ouroboros-engine-tests.json"
       repo-name: "engine coverage"
+
+  claude-review:
+    name: Claude Code Review
+    if: github.event_name == 'pull_request'
+    uses: PMeeske/ouroboros-build/.github/workflows/_reusable-claude-review.yml@develop
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    secrets:
+      anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}

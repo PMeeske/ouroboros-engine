@@ -104,7 +104,7 @@ public sealed record EmpathyResponse(
 /// Models guilt, shame, pride, gratitude, empathy, jealousy, and compassion
 /// with trigger conditions and Gross's Process Model regulation.
 /// </summary>
-public sealed class SocialEmotionEngine
+public sealed class SocialEmotionEngine : ISocialEmotionEngine
 {
     private readonly List<SocialEmotion> _activeEmotions = [];
     private readonly List<(string Id, bool WasAppropriate)> _outcomes = [];

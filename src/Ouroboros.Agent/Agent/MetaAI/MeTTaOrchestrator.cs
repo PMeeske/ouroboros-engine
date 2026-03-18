@@ -17,7 +17,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// Mirrors all orchestration concepts as MeTTa atoms and uses symbolic reasoning for next-node selection.
 /// Supports Laws of Form integration for distinction-gated inference.
 /// </summary>
-public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
+public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator, IDisposable
 {
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ToolRegistry _tools;
@@ -326,6 +326,16 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     public IReadOnlyDictionary<string, PerformanceMetrics> GetMetrics()
     {
         return _metrics;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (_formBridge != null)
+        {
+            _formBridge.DistinctionChanged -= OnDistinctionChanged;
+            _formBridge.TruthValueEvaluated -= OnTruthValueEvaluated;
+        }
     }
 
 }
