@@ -111,7 +111,7 @@ public sealed class EpicBranchOrchestrator : IEpicBranchOrchestrator
                 agentId,
                 $"Agent for sub-issue #{subIssueNumber}",
                 new HashSet<string> { $"epic-{epicNumber}", $"sub-issue-{subIssueNumber}" },
-                AgentStatus.Available,
+                AgentStatus.Idle,
                 DateTime.UtcNow);
 
             _distributor.RegisterAgent(agent);

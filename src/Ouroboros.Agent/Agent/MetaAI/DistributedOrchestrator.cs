@@ -99,7 +99,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
                 finally
                 {
                     // Mark agent as available
-                    _agents[assignment.AgentId] = agent with { Status = AgentStatus.Available };
+                    _agents[assignment.AgentId] = agent with { Status = AgentStatus.Idle };
                 }
             });
 
@@ -151,7 +151,7 @@ public sealed class DistributedOrchestrator : IDistributedOrchestrator
     private List<AgentInfo> GetAvailableAgents()
     {
         return _agents.Values
-            .Where(a => a.Status == AgentStatus.Available)
+            .Where(a => a.Status == AgentStatus.Idle)
             .ToList();
     }
 
