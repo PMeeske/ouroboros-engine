@@ -22,7 +22,6 @@
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Tools\Ouroboros.Tools.csproj" />
     <!-- App layer (cross-layer test dependency) -->
     <ProjectReference Include="$(OuroborosApp)\Ouroboros.Application\Ouroboros.Application.csproj" />
-    <ProjectReference Include="$(OuroborosApp)\Ouroboros.WebApi\Ouroboros.WebApi.csproj" />
   </ItemGroup>
 
   <ItemGroup>

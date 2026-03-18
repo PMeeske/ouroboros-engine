@@ -116,7 +116,7 @@ dotnet test tests/Ouroboros.Engine.BDD/
 
 ### Generating Coverage Locally
 
-The repository maintains a minimum test coverage threshold of 60%. To generate a coverage report:
+The repository maintains a minimum test coverage threshold of 80%. To generate a coverage report:
 
 ```bash
 dotnet test --collect:"XPlat Code Coverage"
