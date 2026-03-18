@@ -12,7 +12,7 @@ namespace Ouroboros.Agent.MetaAI.SelfImprovement;
 /// Implements computational creativity using Fauconnier and Turner's conceptual blending,
 /// Koestler's bisociation theory, and SCAMPER-based divergent thinking for idea generation.
 /// </summary>
-public sealed class CreativityEngine
+public sealed class CreativityEngine : ICreativityEngine
 {
     private static readonly string[] ScamperOperators =
         ["Substitute", "Combine", "Adapt", "Modify", "Put to another use", "Eliminate", "Reverse"];

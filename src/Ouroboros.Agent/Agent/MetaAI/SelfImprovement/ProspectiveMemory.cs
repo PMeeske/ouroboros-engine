@@ -14,7 +14,7 @@ namespace Ouroboros.Agent.MetaAI.SelfImprovement;
 /// Supports both time-based and event-based reminders with a maximum
 /// of 100 active reminders.
 /// </summary>
-public sealed class ProspectiveMemory
+public sealed class ProspectiveMemory : IProspectiveMemory
 {
     private const int MaxActiveReminders = 100;
     private readonly ConcurrentDictionary<string, ProspectiveReminder> _reminders = new();

@@ -14,7 +14,7 @@ namespace Ouroboros.Agent.MetaAI.SelfImprovement;
 /// approaching 1.0 as repetitions increase. Supports a maximum of 200 habits,
 /// pruning lowest-quality habits when the limit is reached.
 /// </summary>
-public sealed class HabitFormationEngine
+public sealed class HabitFormationEngine : IHabitFormationEngine
 {
     private const int MaxHabits = 200;
     private const double AutomaticityThreshold = 0.85;
