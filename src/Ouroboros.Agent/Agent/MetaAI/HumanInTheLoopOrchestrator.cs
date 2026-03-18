@@ -12,6 +12,11 @@ public sealed class HumanInTheLoopOrchestrator : IHumanInTheLoopOrchestrator
     private readonly IMetaAIPlannerOrchestrator _orchestrator;
     private IHumanFeedbackProvider _feedbackProvider;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="HumanInTheLoopOrchestrator"/>.
+    /// </summary>
+    /// <param name="orchestrator">The underlying orchestrator used to execute plan steps between human checkpoints.</param>
+    /// <param name="feedbackProvider">Optional human feedback provider; defaults to <see cref="ConsoleFeedbackProvider"/> when not supplied.</param>
     public HumanInTheLoopOrchestrator(
         IMetaAIPlannerOrchestrator orchestrator,
         IHumanFeedbackProvider? feedbackProvider = null)

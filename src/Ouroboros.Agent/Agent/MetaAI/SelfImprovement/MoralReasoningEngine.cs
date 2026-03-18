@@ -27,7 +27,7 @@ public sealed record FrameworkVerdict(
 /// verdicts via majority vote and tracks moral development level based
 /// on reasoning sophistication over time.
 /// </summary>
-public sealed class MoralReasoningEngine
+public sealed class MoralReasoningEngine : IMoralReasoningEngine
 {
     private static readonly string[] DutyViolationKeywords =
         ["harm", "lie", "steal", "break promise", "deceive", "betray", "cheat", "exploit"];

@@ -103,9 +103,13 @@ Run tests for a specific project:
 
 ```bash
 dotnet test tests/Ouroboros.Agent.Tests/
+dotnet test tests/Ouroboros.Engine.BDD/
+dotnet test tests/Ouroboros.LangChain.Tests/
+dotnet test tests/Ouroboros.McpServer.Tests/
+dotnet test tests/Ouroboros.Network.Tests/
 dotnet test tests/Ouroboros.Pipeline.Tests/
 dotnet test tests/Ouroboros.Providers.Tests/
-dotnet test tests/Ouroboros.Network.Tests/
+dotnet test tests/Ouroboros.SemanticKernel.Tests/
 ```
 
 Run BDD tests:
@@ -116,7 +120,7 @@ dotnet test tests/Ouroboros.Engine.BDD/
 
 ### Generating Coverage Locally
 
-The repository maintains a minimum test coverage threshold of 60%. To generate a coverage report:
+The repository maintains a minimum test coverage threshold of 80%. To generate a coverage report:
 
 ```bash
 dotnet test --collect:"XPlat Code Coverage"

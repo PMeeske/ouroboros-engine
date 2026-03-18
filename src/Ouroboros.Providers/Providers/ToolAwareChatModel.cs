@@ -116,14 +116,16 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
 
     // ── Internal execution ───────────────────────────────────────────────────────
 
+    private static readonly System.Text.RegularExpressions.Regex ToolInvocationPattern =
+        new(@"\[TOOL:([^\s]+)\s*([^\]]*)\]", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     private async Task<(string Text, List<ToolExecution> Tools)> ProcessToolCallsAsync(string result, CancellationToken ct)
     {
         List<ToolExecution> toolCalls = [];
         string modifiedResult = result;
 
         // Use regex to find all tool invocations
-        var toolPattern = new System.Text.RegularExpressions.Regex(@"\[TOOL:([^\s]+)\s*([^\]]*)\]");
-        var matches = toolPattern.Matches(result);
+        var matches = ToolInvocationPattern.Matches(result);
 
         foreach (System.Text.RegularExpressions.Match match in matches)
         {

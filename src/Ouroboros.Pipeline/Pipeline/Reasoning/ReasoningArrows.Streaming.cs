@@ -5,6 +5,9 @@ namespace Ouroboros.Pipeline.Reasoning;
 
 public static partial class ReasoningArrows
 {
+    private static readonly System.Text.RegularExpressions.Regex StreamingToolPattern =
+        new(@"\[TOOL:([^\s]+)\s*([^\]]*)\]", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     /// <summary>
     /// Creates a streaming thinking arrow that emits reasoning chunks in real-time.
     /// </summary>
@@ -38,17 +41,18 @@ public static partial class ReasoningArrows
                 bool toolCalled = false;
                 currentTurnText.Clear();
 
+                string? lastFullText = null;
                 await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable().ConfigureAwait(false))
                 {
                     fullText.Append(chunk);
                     currentTurnText.Append(chunk);
 
-                    PipelineBranch updatedBranch = branch.WithReasoning(new Thinking(fullText.ToString()), prompt, allToolCalls);
+                    lastFullText = fullText.ToString();
+                    PipelineBranch updatedBranch = branch.WithReasoning(new Thinking(lastFullText), prompt, allToolCalls);
                     yield return (chunk, updatedBranch);
                 }
 
-                var toolPattern = new System.Text.RegularExpressions.Regex(@"\[TOOL:([^\s]+)\s*([^\]]*)\]");
-                var matches = toolPattern.Matches(currentTurnText.ToString());
+                var matches = StreamingToolPattern.Matches(currentTurnText.ToString());
 
                 foreach (System.Text.RegularExpressions.Match match in matches)
                 {
@@ -65,6 +69,7 @@ public static partial class ReasoningArrows
                         fullText.Append(errorTag);
                         PipelineBranch withError = branch.WithReasoning(new Thinking(fullText.ToString()), prompt, allToolCalls);
                         yield return (errorTag, withError);
+
                         continue;
                     }
 

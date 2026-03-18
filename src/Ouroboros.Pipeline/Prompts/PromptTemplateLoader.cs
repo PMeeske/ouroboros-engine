@@ -70,7 +70,7 @@ public static class PromptTemplateLoader
     /// <param name="yaml">The raw YAML content.</param>
     /// <returns>The extracted template text.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the template block cannot be found.</exception>
-    internal static string ExtractTemplateBlock(string yaml)
+    public static string ExtractTemplateBlock(string yaml)
     {
         string[] lines = yaml.Split('\n');
         int templateLineIndex = -1;

@@ -9,7 +9,7 @@ namespace Ouroboros.Agent.MetaAI.SelfModel;
 /// Tracks agent development across skill domains using a Piaget-inspired
 /// stage model with Dreyfus skill acquisition levels and S-curve learning rates.
 /// </summary>
-public sealed class DevelopmentalModel
+public sealed class DevelopmentalModel : IDevelopmentalModel
 {
     private const double EmaSmoothingFactor = 0.3;
 

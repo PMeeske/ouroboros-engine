@@ -4,8 +4,22 @@ using LangChain.Splitters.Text;
 
 namespace Ouroboros.Pipeline.Ingestion;
 
+/// <summary>
+/// Provides a single-pass helper for loading documents into an in-memory vector store.
+/// </summary>
 public static class InMemoryIngestion
 {
+    /// <summary>
+    /// Loads documents from <paramref name="source"/> using <typeparamref name="TLoader"/>, splits them
+    /// into chunks, embeds each chunk, and upserts the resulting vectors into <paramref name="store"/>.
+    /// </summary>
+    /// <typeparam name="TLoader">The document loader type, instantiated with a parameterless constructor.</typeparam>
+    /// <param name="store">The target vector store to receive the embedded chunks.</param>
+    /// <param name="embedding">The embedding model used to convert text chunks into float vectors.</param>
+    /// <param name="source">The data source (file path, URL, etc.) passed to the loader.</param>
+    /// <param name="splitter">Text splitter that controls chunk size and overlap.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The list of vectors that were added to the store.</returns>
     public static async Task<List<Vector>> LoadToMemory<TLoader>(
         IVectorStore store,
     IEmbeddingModel embedding,

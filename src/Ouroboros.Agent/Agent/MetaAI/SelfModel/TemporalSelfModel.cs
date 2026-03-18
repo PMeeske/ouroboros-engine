@@ -23,7 +23,7 @@ public sealed record GrowthRate(
 /// of the agent's capabilities, beliefs, and personality traits,
 /// and projecting future development trajectories.
 /// </summary>
-public sealed class TemporalSelfModel
+public sealed class TemporalSelfModel : ITemporalSelfModel
 {
     private const int MaxSnapshots = 100;
 

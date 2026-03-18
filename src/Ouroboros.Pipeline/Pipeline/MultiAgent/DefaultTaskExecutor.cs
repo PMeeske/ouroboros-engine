@@ -38,7 +38,7 @@ public sealed class DefaultTaskExecutor : ITaskExecutor
             string taskDescription = task.Goal.Description;
 
             // Yield to allow cancellation checks and avoid blocking the thread
-            await Task.Yield();
+            await Task.Yield().ConfigureAwait(false);
 
             timeoutCts.Token.ThrowIfCancellationRequested();
 

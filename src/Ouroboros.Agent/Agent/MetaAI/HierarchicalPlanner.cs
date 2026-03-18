@@ -14,6 +14,11 @@ public sealed partial class HierarchicalPlanner : IHierarchicalPlanner
     private readonly IMetaAIPlannerOrchestrator _orchestrator;
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="HierarchicalPlanner"/>.
+    /// </summary>
+    /// <param name="orchestrator">The underlying planner orchestrator used to create and execute atomic sub-plans.</param>
+    /// <param name="llm">Language model used for goal decomposition and plan explanation prompts.</param>
     public HierarchicalPlanner(
         IMetaAIPlannerOrchestrator orchestrator,
         Ouroboros.Abstractions.Core.IChatCompletionModel llm)

@@ -75,6 +75,8 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
     private readonly Affect.IPriorityModulator? _priorityModulator;
     private readonly Affect.IUrgeSystem? _urgeSystem;
     private readonly Affect.SpreadingActivation? _spreading;
+    private readonly ISkillExtractor? _skillExtractor;
+    private readonly ICuriosityEngine? _curiosityEngine;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OuroborosOrchestrator"/> class.
@@ -92,7 +94,9 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
         Affect.IValenceMonitor? valenceMonitor = null,
         Affect.IPriorityModulator? priorityModulator = null,
         Affect.IUrgeSystem? urgeSystem = null,
-        Affect.SpreadingActivation? spreading = null)
+        Affect.SpreadingActivation? spreading = null,
+        ISkillExtractor? skillExtractor = null,
+        ICuriosityEngine? curiosityEngine = null)
         : base("OuroborosOrchestrator", configuration ?? OrchestratorConfig.Default(), safety)
     {
         ArgumentNullException.ThrowIfNull(llm);
@@ -113,6 +117,8 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
         _priorityModulator = priorityModulator;
         _urgeSystem = urgeSystem;
         _spreading = spreading;
+        _skillExtractor = skillExtractor;
+        _curiosityEngine = curiosityEngine;
     }
 
     /// <summary>

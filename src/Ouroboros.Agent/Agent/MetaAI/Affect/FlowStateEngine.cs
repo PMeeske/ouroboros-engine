@@ -30,7 +30,7 @@ public sealed record TaskEngagement(
 /// Flow occurs when the challenge/skill ratio is between 0.8 and 1.2 and both exceed 0.5.
 /// Tracks flow episodes, duration, and entry rate over time.
 /// </summary>
-public sealed class FlowStateEngine
+public sealed class FlowStateEngine : IFlowStateEngine
 {
     private readonly List<FlowAssessment> _assessmentHistory = [];
     private readonly List<TaskEngagement> _engagementHistory = [];

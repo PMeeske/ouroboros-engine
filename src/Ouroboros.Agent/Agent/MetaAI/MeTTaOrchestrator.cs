@@ -17,7 +17,7 @@ namespace Ouroboros.Agent.MetaAI;
 /// Mirrors all orchestration concepts as MeTTa atoms and uses symbolic reasoning for next-node selection.
 /// Supports Laws of Form integration for distinction-gated inference.
 /// </summary>
-public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
+public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator, IDisposable
 {
     private readonly Ouroboros.Abstractions.Core.IChatCompletionModel _llm;
     private readonly ToolRegistry _tools;
@@ -40,6 +40,17 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     /// </summary>
     public bool FormReasoningEnabled => _formBridge != null;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="MeTTaOrchestrator"/> with the required cognitive subsystems.
+    /// </summary>
+    /// <param name="llm">Neural language model used for planning and verification prompts.</param>
+    /// <param name="tools">Registry of executable tools available to the planner.</param>
+    /// <param name="memory">Memory store for persisting and retrieving past experiences.</param>
+    /// <param name="skills">Skill registry for discovering reusable procedural patterns.</param>
+    /// <param name="router">Uncertainty router that selects execution strategies under ambiguity.</param>
+    /// <param name="safety">Safety guard that validates and sandboxes plan steps before execution.</param>
+    /// <param name="mettaEngine">The MeTTa symbolic reasoning engine used as the primary representation layer.</param>
+    /// <param name="formBridge">Optional Laws of Form bridge for distinction-gated inference; enables <see cref="FormReasoningEnabled"/>.</param>
     public MeTTaOrchestrator(
         Ouroboros.Abstractions.Core.IChatCompletionModel llm,
         ToolRegistry tools,
@@ -326,6 +337,16 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator
     public IReadOnlyDictionary<string, PerformanceMetrics> GetMetrics()
     {
         return _metrics;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (_formBridge != null)
+        {
+            _formBridge.DistinctionChanged -= OnDistinctionChanged;
+            _formBridge.TruthValueEvaluated -= OnTruthValueEvaluated;
+        }
     }
 
 }
