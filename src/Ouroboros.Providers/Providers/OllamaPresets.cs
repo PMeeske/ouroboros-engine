@@ -312,4 +312,38 @@ public static class OllamaPresets
     /// KeepAlive duration in seconds for TinyLlama Fast.
     /// </summary>
     public const string TinyLlamaFastKeepAlive = "5m";
+
+    /// <summary>
+    /// Preset for Qwen 3.5 0.8B optimized for MeTTa symbolic reasoning.
+    /// Ultra-fast, tiny footprint — ideal for atom space queries, pattern matching,
+    /// and neural-symbolic bridge operations. Runs entirely in VRAM on any GPU.
+    /// </summary>
+    public static RequestOptions Qwen35_08B_Symbolic
+    {
+        get
+        {
+            int cores = MachineCapabilities.CpuCores;
+            int gpus = MachineCapabilities.GpuCount;
+
+            return new RequestOptions
+            {
+                NumCtx = 4096,    // Sufficient for symbolic queries and MeTTa expressions
+                NumThread = Math.Max(1, cores / 4),  // Light threading — model is GPU-bound
+                NumGpu = gpus > 0 ? 1 : 0,
+                MainGpu = 0,
+                LowVram = false,  // 0.8B fits entirely in VRAM — no offloading needed
+                Temperature = 0.1f,  // Very low — symbolic reasoning requires precision
+                TopP = 0.85f,
+                TopK = 20,
+                RepeatPenalty = 1.15f,
+                UseMmap = true,
+                UseMlock = false
+            };
+        }
+    }
+
+    /// <summary>
+    /// KeepAlive duration for Qwen 3.5 0.8B Symbolic. Kept warm for fast atom space queries.
+    /// </summary>
+    public const string Qwen35_08B_SymbolicKeepAlive = "10m";
 }
