@@ -15,9 +15,9 @@ The system provides Ollama models with tool-calling capabilities through three m
 | 4 | **MeTTa Backward Chaining** | `(solve InputType OutputType)` for tool discovery |
 | 5 | **Regex Fallback** | Legacy `[TOOL:name args]` pattern |
 
-When a tool call fails, the **Evolutionary Retry Policy** mutates the request
-(format hints, format switching, tool simplification, temperature adjustment)
-instead of retrying the identical failing request.
+When a tool call fails, the **Evolutionary Retry Policy** uses a genetic algorithm
+with fitness-evaluated chromosomes to select and evolve mutation strategies, rather than
+simply retrying the identical failing request.
 
 ## Quick Start
 
@@ -26,13 +26,13 @@ instead of retrying the identical failing request.
 var registry = new ToolRegistry();
 registry.Register(new MyCustomTool());
 
-// 2. Create Ollama adapter with tool support
+// 2. Create Ollama adapter with tool support (includes Polly resilience + cost tracking)
 var adapter = new OllamaToolChatAdapter(
     endpoint: "https://ollama-cloud.example.com",
     model: "mistral:latest",
     tools: registry,
     parser: new McpToolCallParser(),
-    retryPolicy: EvolutionaryRetryPolicyBuilder.ForToolCallsWithDefaults().Build(),
+    retryPolicy: EvolutionaryRetryPolicyBuilder.ForToolCallsWithEvolution().Build(),
     apiKey: "your-api-key");
 
 // 3. Wire into Semantic Kernel
@@ -58,13 +58,13 @@ services.AddSingleton<ToolRegistry>(sp =>
     return registry;
 });
 
-// Evolutionary retry with all default mutation strategies
+// Evolutionary retry with GA-based chromosome evolution
 services.AddSingleton(sp =>
-    EvolutionaryRetryPolicyBuilder.ForToolCallsWithDefaults()
+    EvolutionaryRetryPolicyBuilder.ForToolCallsWithEvolution()
         .WithMaxGenerations(5)
         .Build());
 
-// Ollama with MCP tool support
+// Ollama with MCP tool support + Polly resilience + NeuralPathway + CostTracker
 services.AddSingleton<OllamaToolChatAdapter>(sp => new OllamaToolChatAdapter(
     endpoint: config["Ollama:Endpoint"]!,
     model: config["Ollama:Model"]!,
@@ -75,6 +75,54 @@ services.AddSingleton<OllamaToolChatAdapter>(sp => new OllamaToolChatAdapter(
 
 // SK Kernel
 services.AddSemanticKernel();
+```
+
+## Evolutionary Retry with Genetic Algorithm
+
+The retry policy uses real genetic algorithm infrastructure (analogous to
+`PlanStrategyChromosome` from `Ouroboros.Agent.MetaAI.Evolution`):
+
+### Chromosome-based Strategy Selection
+
+```csharp
+// Genes encode mutation strategy parameters
+var chromosome = ToolCallMutationChromosome.CreateDefault();
+// Genes: FormatHintAggression=0.50, TemperatureAmplitude=0.30,
+//         SimplificationRate=0.40, FormatSwitchPreference=0.50,
+//         LlmVariatorWeight=0.20
+
+// The policy evolves the chromosome based on retry outcomes
+var policy = EvolutionaryRetryPolicyBuilder.ForToolCalls()
+    .WithStrategy(new FormatHintMutation())
+    .WithStrategy(new FormatSwitchMutation())
+    .WithStrategy(new ToolSimplificationMutation())
+    .WithStrategy(new TemperatureMutation())
+    .WithStrategy(new LlmVariatorMutation(variatorModel)) // LLM-based prompt rephrasing
+    .WithChromosome(chromosome)
+    .WithFitnessFunction(new ToolCallMutationFitness(
+        successWeight: 0.5, costWeight: 0.2, speedWeight: 0.3))
+    .WithMaxGenerations(7)
+    .Build();
+
+// After each execution, the chromosome evolves via crossover + mutation
+policy.OnChromosomeEvolved += (_, args) =>
+{
+    Console.WriteLine($"Fitness: {args.Fitness:F3}, Generations: {args.GenerationsUsed}");
+};
+```
+
+### LLM-based Variator
+
+The `LlmVariatorMutation` uses an LLM model to intelligently rephrase prompts:
+
+```csharp
+// Use a small, fast model for prompt variation
+var variatorModel = new OllamaCloudChatModel(
+    endpoint, apiKey, "mistral:7b");
+
+var llmVariator = new LlmVariatorMutation(
+    variatorModel,
+    timeout: TimeSpan.FromSeconds(15));
 ```
 
 ## Custom Mutation Strategies
@@ -111,10 +159,11 @@ var policy = EvolutionaryRetryPolicyBuilder.ForToolCalls()
 
 ## MeTTa AtomSpace Integration
 
-Tool call intents can be tracked and reasoned about via MeTTa atoms:
+Tool call intents can be tracked and reasoned about via MeTTa atoms.
+Two modes: string generation (for logging) and direct HyperonMeTTaEngine recording:
 
 ```csharp
-// Convert tool calls to MeTTa atoms
+// ── String generation (for display/logging) ──
 var parser = new McpToolCallParser();
 var intents = parser.Parse(llmOutput);
 string atoms = McpToolCallAtomConverter.ToAtoms(intents);
@@ -128,8 +177,39 @@ string mutation = McpToolCallAtomConverter.ToRetryMutationAtom(
     "attempt-1", "FormatHint", 2, "MutationEvolved");
 
 // Tool chain discovery via backward chaining (ToolSignatures.metta)
-// (solve Text TestResult) → (chain (chain summarize_tool generate_code_tool) run_tests_tool)
 string chain = McpToolCallAtomConverter.ToChainAtom(intents);
+
+// ── Direct AtomSpace recording (for queries + backward chaining) ──
+var engine = new HyperonMeTTaEngine();
+
+// Record tool calls directly to AtomSpace
+McpToolCallAtomConverter.RecordToolCall(engine, intents[0]);
+McpToolCallAtomConverter.RecordToolChain(engine, intents);
+McpToolCallAtomConverter.RecordToolResult(engine, "search", "42 results found", isError: false);
+
+// Record evolutionary retry events
+McpToolCallAtomConverter.RecordRetryMutation(engine, "attempt-1", "format-hint", 1, "MutationEvolved");
+McpToolCallAtomConverter.RecordFitnessEvaluation(engine, "attempt-1", fitness: 0.85, succeeded: true, generationsUsed: 2);
+
+// Record permission checks
+McpToolCallAtomConverter.RecordPermissionCheck(engine, intents[0], "ReadOnly", allowed: true);
+```
+
+## Reactive Tool Execution Events
+
+`ToolAwareChatModel` exposes an IObservable event stream:
+
+```csharp
+var toolAware = new ToolAwareChatModel(llm, registry, parser);
+
+// Subscribe to tool execution events
+toolAware.ToolExecutions.Subscribe(evt =>
+{
+    Console.WriteLine($"Tool: {evt.ToolName}, Success: {evt.Success}, Elapsed: {evt.Elapsed}");
+
+    // Record to AtomSpace
+    McpToolCallAtomConverter.RecordToolResult(engine, evt.ToolName, evt.Output, !evt.Success);
+});
 ```
 
 ## Configuration
@@ -142,7 +222,7 @@ string chain = McpToolCallAtomConverter.ToChainAtom(intents);
     "Model": "mistral:latest",
     "EvolutionaryRetry": {
       "MaxGenerations": 5,
-      "Strategies": ["format-hint", "format-switch", "tool-simplification", "temperature"]
+      "Strategies": ["format-hint", "format-switch", "tool-simplification", "temperature", "llm-variator"]
     }
   },
   "McpServer": {
@@ -160,26 +240,35 @@ ouroboros-app
   │   ├─ ToolRegistry (domain tools)
   │   ├─ McpToolCallParser (multi-format)
   │   ├─ EvolutionaryRetryPolicy<ToolCallContext>
+  │   │   ├─ ToolCallMutationChromosome (GA genes)
+  │   │   ├─ ToolCallMutationFitness (weighted evaluation)
   │   │   ├─ FormatHintMutation (priority 10)
   │   │   ├─ FormatSwitchMutation (priority 20)
+  │   │   ├─ LlmVariatorMutation (priority 25, LLM-based)
   │   │   ├─ ToolSimplificationMutation (priority 30)
   │   │   ├─ TemperatureMutation (priority 40)
   │   │   └─ [Custom app mutations]
   │   ├─ OllamaToolChatAdapter
+  │   │   ├─ Polly AsyncPolicyWrap (retry + circuit breaker)
+  │   │   ├─ NeuralPathway (health tracking)
+  │   │   └─ LlmCostTracker (per-request cost metrics)
   │   └─ SK Kernel
   │
   ├─ Request Flow
   │   User → App Controller → SK Kernel
   │     → OllamaToolChatAdapter
+  │       → Polly resilience (retry + circuit breaker)
   │       → Try native /api/chat tools
   │       → Fallback: ANTLR parser (XML/JSON/Bracket/Markdown)
-  │       → EvolutionaryRetry on failure (mutate → retry)
+  │       → EvolutionaryRetry on failure (chromosome-driven mutation → fitness eval → evolve)
   │       → ToolRegistry.InvokeAsync()
   │     → Response with tool results
   │
   └─ Observability
-      ├─ MeTTa AtomSpace: ToolCallAtoms + RetryMutation history
-      ├─ NeuralPathway: weight/health tracking
+      ├─ MeTTa AtomSpace: ToolCallAtoms + RetryMutation + FitnessResult history
+      ├─ NeuralPathway: activation/inhibition weight tracking
+      ├─ LlmCostTracker: per-request token + cost metrics
+      ├─ IObservable<ToolExecutionEvent>: reactive event stream
       └─ AfterInvoke hooks: metrics + event bus
 ```
 
@@ -187,20 +276,25 @@ ouroboros-app
 
 | Type | Namespace | Purpose |
 |------|-----------|---------|
-| `OllamaToolChatAdapter` | `Ouroboros.Providers` | Ollama /api/chat with native tools + fallback |
+| `OllamaToolChatAdapter` | `Ouroboros.Providers` | Ollama /api/chat with native tools + Polly + NeuralPathway + CostTracker |
 | `McpToolCallParser` | `Ouroboros.Providers` | Multi-format tool call extraction from LLM text |
 | `ToolCallIntent` | `Ouroboros.Providers` | Parsed tool call (name, args, format) |
-| `McpToolCallAtomConverter` | `Ouroboros.Pipeline` | .NET ↔ MeTTa atom conversion |
-| `EvolutionaryRetryPolicy<T>` | `Ouroboros.Providers.Resilience` | Mutation-based retry |
+| `McpToolCallAtomConverter` | `Ouroboros.Pipeline` | .NET ↔ MeTTa atom conversion + HyperonMeTTaEngine recording |
+| `EvolutionaryRetryPolicy<T>` | `Ouroboros.Providers.Resilience` | GA-based mutation retry with chromosome evolution |
+| `ToolCallMutationChromosome` | `Ouroboros.Providers.Resilience` | Evolvable gene set for mutation strategy parameters |
+| `ToolCallMutationGene` | `Ouroboros.Providers.Resilience` | Single evolvable parameter (analogous to PlanStrategyGene) |
+| `ToolCallMutationFitness` | `Ouroboros.Providers.Resilience` | Fitness evaluation (success rate, cost, speed) |
+| `LlmVariatorMutation` | `Ouroboros.Providers.Resilience` | LLM-based prompt rephrasing mutation |
 | `IMutationStrategy<T>` | `Ouroboros.Providers.Resilience` | Strategy pattern for mutations |
 | `ToolCallContext` | `Ouroboros.Providers.Resilience` | Mutable execution context |
+| `ToolExecutionEvent` | `Ouroboros.Providers` | Reactive event for tool executions |
 | `KernelFactory` | `Ouroboros.SemanticKernel` | SK Kernel builder with Ollama overload |
 
 ## MeTTa Schema Files
 
 | File | Purpose |
 |------|---------|
-| `ToolCallAtoms.metta` | Tool call intents, MCP protocol, permissions, retry tracking |
+| `ToolCallAtoms.metta` | Tool call intents, MCP protocol, permissions, retry tracking, fitness |
 | `ToolSignatures.metta` | Tool type signatures + backward chaining |
 | `ActionTypes.metta` | Permission guard rails (SafeContext) |
 | `GrammarAtoms.metta` | Grammar lifecycle (for reference) |

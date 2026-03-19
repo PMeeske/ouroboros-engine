@@ -114,6 +114,48 @@ public sealed class OllamaToolChatAdapterTests
         adapter.Dispose();
     }
 
+    // ── ICostAwareChatModel ─────────────────────────────────────────────────
+
+    [Fact]
+    public void CostTracker_IsCreatedByDefault()
+    {
+        using var adapter = new OllamaToolChatAdapter(
+            "http://localhost:11434",
+            "model",
+            new ToolRegistry(),
+            new McpToolCallParser());
+
+        adapter.CostTracker.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void CostTracker_UsesProvidedTracker()
+    {
+        var tracker = new LlmCostTracker("test-model");
+        using var adapter = new OllamaToolChatAdapter(
+            "http://localhost:11434",
+            "model",
+            new ToolRegistry(),
+            new McpToolCallParser(),
+            costTracker: tracker);
+
+        adapter.CostTracker.Should().BeSameAs(tracker);
+    }
+
+    // ── NeuralPathway ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void Pathway_NullByDefault()
+    {
+        using var adapter = new OllamaToolChatAdapter(
+            "http://localhost:11434",
+            "model",
+            new ToolRegistry(),
+            new McpToolCallParser());
+
+        adapter.Pathway.Should().BeNull();
+    }
+
     // ── ToolDefinitionSlim ───────────────────────────────────────────────────
 
     [Fact]

@@ -2,6 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
@@ -11,6 +12,8 @@ using OllamaSharp.Models.Chat;
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Providers.Resilience;
 using Ouroboros.Tools;
+using Polly;
+using Polly.Wrap;
 
 namespace Ouroboros.Providers;
 
@@ -26,11 +29,11 @@ namespace Ouroboros.Providers;
 /// <item>OllamaSharp's native <see cref="Tool"/> definitions</item>
 /// <item>Semantic Kernel via <see cref="IChatClientBridge"/></item>
 /// </list>
-/// When the model supports native tool calling, tools are sent via <see cref="ChatRequest.Tools"/>.
-/// When it doesn't, the response text is parsed via <see cref="McpToolCallParser"/> and
-/// tool calls are extracted using the ANTLR-derived multi-format parser.
+/// Includes Polly resilience (retry + circuit breaker) following the pattern established
+/// by <see cref="OllamaCloudChatModel"/>. Integrates <see cref="NeuralPathway"/> health
+/// tracking and <see cref="LlmCostTracker"/> for per-request cost metrics.
 /// </remarks>
-public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBridge, IDisposable
+public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBridge, ICostAwareChatModel, IDisposable
 {
     private readonly OllamaApiClient _client;
     private readonly string _model;
@@ -39,6 +42,19 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
     private readonly EvolutionaryRetryPolicy<ToolCallContext>? _retryPolicy;
     private readonly ILogger? _logger;
     private readonly ChatRuntimeSettings _settings;
+    private readonly AsyncPolicyWrap _resiliencePolicy;
+    private readonly LlmCostTracker _costTracker;
+    private readonly NeuralPathway? _neuralPathway;
+
+    /// <summary>
+    /// Gets the cost tracker for this adapter.
+    /// </summary>
+    public LlmCostTracker? CostTracker => _costTracker;
+
+    /// <summary>
+    /// Gets the neural pathway health tracker, if configured.
+    /// </summary>
+    public NeuralPathway? Pathway => _neuralPathway;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OllamaToolChatAdapter"/> class.
@@ -51,6 +67,8 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
     /// <param name="settings">Optional chat runtime settings.</param>
     /// <param name="apiKey">Optional API key for cloud endpoints.</param>
     /// <param name="logger">Optional logger.</param>
+    /// <param name="neuralPathway">Optional neural pathway for health tracking.</param>
+    /// <param name="costTracker">Optional cost tracker. A new tracker is created if not provided.</param>
     public OllamaToolChatAdapter(
         string endpoint,
         string model,
@@ -59,7 +77,9 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
         EvolutionaryRetryPolicy<ToolCallContext>? retryPolicy = null,
         ChatRuntimeSettings? settings = null,
         string? apiKey = null,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        NeuralPathway? neuralPathway = null,
+        LlmCostTracker? costTracker = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
         ArgumentException.ThrowIfNullOrWhiteSpace(model);
@@ -85,6 +105,11 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
         _retryPolicy = retryPolicy;
         _settings = settings ?? new ChatRuntimeSettings();
         _logger = logger;
+        _neuralPathway = neuralPathway;
+        _costTracker = costTracker ?? new LlmCostTracker(model);
+
+        // Polly resilience policy matching OllamaCloudChatModel pattern
+        _resiliencePolicy = BuildResiliencePolicy();
     }
 
     /// <summary>
@@ -97,7 +122,9 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
         McpToolCallParser parser,
         EvolutionaryRetryPolicy<ToolCallContext>? retryPolicy = null,
         ChatRuntimeSettings? settings = null,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        NeuralPathway? neuralPathway = null,
+        LlmCostTracker? costTracker = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentException.ThrowIfNullOrWhiteSpace(model);
@@ -111,6 +138,10 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
         _retryPolicy = retryPolicy;
         _settings = settings ?? new ChatRuntimeSettings();
         _logger = logger;
+        _neuralPathway = neuralPathway;
+        _costTracker = costTracker ?? new LlmCostTracker(model);
+
+        _resiliencePolicy = BuildResiliencePolicy();
     }
 
     /// <inheritdoc/>
@@ -125,32 +156,62 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
     /// First tries native Ollama tool calling via <c>/api/chat</c>.
     /// Falls back to <see cref="McpToolCallParser"/> text parsing.
     /// Wraps the execution in <see cref="EvolutionaryRetryPolicy{TContext}"/> if available.
+    /// Uses Polly resilience for network-level retries and circuit breaking.
+    /// Tracks costs and neural pathway health.
     /// </summary>
-    /// <param name="prompt">The user prompt.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>A tuple of the final response text and list of tool executions.</returns>
     public async Task<(string Text, List<ToolExecution> Tools)> GenerateWithToolsAsync(
         string prompt,
         CancellationToken ct = default)
     {
-        if (_retryPolicy is not null)
+        _costTracker.StartRequest();
+        var stopwatch = Stopwatch.StartNew();
+
+        try
         {
-            var context = new ToolCallContext
+            (string text, List<ToolExecution> tools) result;
+
+            if (_retryPolicy is not null)
             {
-                Prompt = prompt,
-                Tools = _tools.All.Select(t =>
-                    new ToolDefinitionSlim(t.Name, t.Description, t.JsonSchema)).ToList(),
-                Temperature = (float)_settings.Temperature
-            };
+                var context = new ToolCallContext
+                {
+                    Prompt = prompt,
+                    Tools = _tools.All.Select(t =>
+                        new ToolDefinitionSlim(t.Name, t.Description, t.JsonSchema)).ToList(),
+                    Temperature = (float)_settings.Temperature
+                };
 
-            return await _retryPolicy.ExecuteWithEvolutionAsync(
-                context,
-                (ctx, innerCt) => ExecuteToolCallAsync(ctx.Prompt, ctx.Temperature, innerCt),
-                ct).ConfigureAwait(false);
+                result = await _retryPolicy.ExecuteWithEvolutionAsync(
+                    context,
+                    (ctx, innerCt) => ExecuteToolCallWithResilienceAsync(ctx.Prompt, ctx.Temperature, innerCt),
+                    ct).ConfigureAwait(false);
+            }
+            else
+            {
+                result = await ExecuteToolCallWithResilienceAsync(prompt, (float)_settings.Temperature, ct)
+                    .ConfigureAwait(false);
+            }
+
+            // Record success in NeuralPathway
+            stopwatch.Stop();
+            _neuralPathway?.RecordActivation(stopwatch.Elapsed);
+
+            // Estimate token count for cost tracking (rough approximation)
+            int estimatedInputTokens = prompt.Length / 4;
+            int estimatedOutputTokens = result.text.Length / 4;
+            _costTracker.EndRequest(estimatedInputTokens, estimatedOutputTokens);
+
+            return result;
         }
-
-        return await ExecuteToolCallAsync(prompt, (float)_settings.Temperature, ct)
-            .ConfigureAwait(false);
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // Record failure in NeuralPathway
+            _neuralPathway?.RecordInhibition();
+            throw;
+        }
     }
 
     /// <inheritdoc/>
@@ -160,6 +221,16 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
     public void Dispose()
     {
         _client.Dispose();
+    }
+
+    private async Task<(string Text, List<ToolExecution> Tools)> ExecuteToolCallWithResilienceAsync(
+        string prompt,
+        float temperature,
+        CancellationToken ct)
+    {
+        return await _resiliencePolicy.ExecuteAsync(
+            async (cancellation) => await ExecuteToolCallAsync(prompt, temperature, cancellation).ConfigureAwait(false),
+            ct).ConfigureAwait(false);
     }
 
     private async Task<(string Text, List<ToolExecution> Tools)> ExecuteToolCallAsync(
@@ -373,5 +444,53 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
                 Properties = new Dictionary<string, Property>()
             };
         }
+    }
+
+    /// <summary>
+    /// Builds a Polly resilience policy matching the pattern from <see cref="OllamaCloudChatModel"/>.
+    /// Retry with exponential backoff + jitter wrapping a circuit breaker.
+    /// </summary>
+    private AsyncPolicyWrap BuildResiliencePolicy()
+    {
+        var retryPolicy = Policy
+            .Handle<HttpRequestException>()
+            .Or<TaskCanceledException>(ex => ex.InnerException is TimeoutException)
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: retryAttempt =>
+                {
+                    var baseDelay = TimeSpan.FromSeconds(Math.Pow(2, retryAttempt));
+                    var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000));
+                    return baseDelay + jitter;
+                },
+                onRetry: (exception, timespan, retryCount, _) =>
+                {
+                    _logger?.LogInformation(
+                        "OllamaToolChatAdapter retry {RetryCount}/3 after {Delay:F1}s: {Error}",
+                        retryCount, timespan.TotalSeconds, exception.Message);
+                });
+
+        var circuitBreakerPolicy = Policy
+            .Handle<HttpRequestException>()
+            .CircuitBreakerAsync(
+                exceptionsAllowedBeforeBreaking: 5,
+                durationOfBreak: TimeSpan.FromSeconds(30),
+                onBreak: (exception, breakDelay) =>
+                {
+                    _logger?.LogWarning(
+                        "OllamaToolChatAdapter circuit OPEN for {Delay}s — service appears down",
+                        breakDelay.TotalSeconds);
+                    _neuralPathway?.RecordInhibition();
+                },
+                onReset: () =>
+                {
+                    _logger?.LogInformation("OllamaToolChatAdapter circuit CLOSED — service recovered");
+                },
+                onHalfOpen: () =>
+                {
+                    _logger?.LogInformation("OllamaToolChatAdapter circuit HALF-OPEN — testing service...");
+                });
+
+        return Policy.WrapAsync(retryPolicy, circuitBreakerPolicy);
     }
 }

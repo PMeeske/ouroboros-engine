@@ -161,6 +161,66 @@ public sealed class EvolutionaryRetryPolicyTests
         lowPriority.MutateCallCount.Should().Be(0);
     }
 
+    // ── Chromosome evolution ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ExecuteWithEvolution_Success_EvolvesChromosome()
+    {
+        var strategy = new AlwaysCanMutateStrategy();
+        var chromosome = ToolCallMutationChromosome.CreateDefault();
+        var policy = new EvolutionaryRetryPolicy<ToolCallContext>(
+            [strategy], maxGenerations: 3, chromosome: chromosome);
+
+        ChromosomeEvolvedEventArgs? evolvedArgs = null;
+        policy.OnChromosomeEvolved += (_, e) => evolvedArgs = e;
+
+        var context = CreateContext();
+        await policy.ExecuteWithEvolutionAsync(
+            context,
+            (ctx, ct) => Task.FromResult("success"),
+            CancellationToken.None);
+
+        evolvedArgs.Should().NotBeNull();
+        evolvedArgs!.Succeeded.Should().BeTrue();
+        evolvedArgs.Fitness.Should().BeGreaterThan(0);
+        policy.CurrentChromosome.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ExecuteWithEvolution_Failure_EvolvesChromosomeWithLowFitness()
+    {
+        var strategy = new AlwaysCanMutateStrategy();
+        var chromosome = ToolCallMutationChromosome.CreateDefault();
+        var policy = new EvolutionaryRetryPolicy<ToolCallContext>(
+            [strategy], maxGenerations: 2, chromosome: chromosome);
+
+        ChromosomeEvolvedEventArgs? evolvedArgs = null;
+        policy.OnChromosomeEvolved += (_, e) => evolvedArgs = e;
+
+        var context = CreateContext();
+
+        try
+        {
+            await policy.ExecuteWithEvolutionAsync(
+                context,
+                (ctx, ct) => throw new InvalidOperationException("always fails"),
+                CancellationToken.None);
+        }
+        catch (EvolutionaryRetryExhaustedException) { }
+
+        evolvedArgs.Should().NotBeNull();
+        evolvedArgs!.Succeeded.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CurrentChromosome_InitialValue_IsDefault()
+    {
+        var policy = new EvolutionaryRetryPolicy<ToolCallContext>([], maxGenerations: 3);
+
+        policy.CurrentChromosome.Should().NotBeNull();
+        policy.CurrentChromosome.Genes.Should().HaveCount(5);
+    }
+
     // ── Builder ──────────────────────────────────────────────────────────────
 
     [Fact]
@@ -181,6 +241,27 @@ public sealed class EvolutionaryRetryPolicyTests
             .Build();
 
         policy.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Builder_ForToolCallsWithEvolution_IncludesChromosomeAndFitness()
+    {
+        var policy = EvolutionaryRetryPolicyBuilder.ForToolCallsWithEvolution().Build();
+
+        policy.Should().NotBeNull();
+        policy.CurrentChromosome.Should().NotBeNull();
+        policy.CurrentChromosome.Genes.Should().HaveCount(5);
+    }
+
+    [Fact]
+    public void Builder_WithCustomChromosome_UsesProvided()
+    {
+        var chromosome = ToolCallMutationChromosome.CreateRandom(new Random(42));
+        var policy = EvolutionaryRetryPolicyBuilder.ForToolCalls()
+            .WithChromosome(chromosome)
+            .Build();
+
+        policy.CurrentChromosome.Genes.Should().BeEquivalentTo(chromosome.Genes);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

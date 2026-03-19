@@ -14,6 +14,8 @@ public sealed class EvolutionaryRetryPolicyBuilder<TContext> where TContext : cl
     private readonly List<IMutationStrategy<TContext>> _strategies = [];
     private int _maxGenerations = 5;
     private ILogger? _logger;
+    private ToolCallMutationChromosome? _chromosome;
+    private ToolCallMutationFitness? _fitnessFunction;
 
     /// <summary>
     /// Adds a mutation strategy to the policy.
@@ -44,11 +46,32 @@ public sealed class EvolutionaryRetryPolicyBuilder<TContext> where TContext : cl
     }
 
     /// <summary>
+    /// Sets the initial chromosome for GA-based strategy selection.
+    /// </summary>
+    public EvolutionaryRetryPolicyBuilder<TContext> WithChromosome(ToolCallMutationChromosome chromosome)
+    {
+        ArgumentNullException.ThrowIfNull(chromosome);
+        _chromosome = chromosome;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the fitness function for evaluating retry outcomes.
+    /// </summary>
+    public EvolutionaryRetryPolicyBuilder<TContext> WithFitnessFunction(ToolCallMutationFitness fitnessFunction)
+    {
+        ArgumentNullException.ThrowIfNull(fitnessFunction);
+        _fitnessFunction = fitnessFunction;
+        return this;
+    }
+
+    /// <summary>
     /// Builds the evolutionary retry policy.
     /// </summary>
     public EvolutionaryRetryPolicy<TContext> Build()
     {
-        return new EvolutionaryRetryPolicy<TContext>(_strategies, _maxGenerations, _logger);
+        return new EvolutionaryRetryPolicy<TContext>(
+            _strategies, _maxGenerations, _logger, _chromosome, _fitnessFunction);
     }
 }
 
@@ -75,5 +98,20 @@ public static class EvolutionaryRetryPolicyBuilder
             .WithStrategy(new FormatSwitchMutation())
             .WithStrategy(new ToolSimplificationMutation())
             .WithStrategy(new TemperatureMutation());
+    }
+
+    /// <summary>
+    /// Creates a builder with all default strategies plus GA chromosome and fitness function.
+    /// This is the recommended configuration for full evolutionary retry support.
+    /// </summary>
+    public static EvolutionaryRetryPolicyBuilder<ToolCallContext> ForToolCallsWithEvolution()
+    {
+        return new EvolutionaryRetryPolicyBuilder<ToolCallContext>()
+            .WithStrategy(new FormatHintMutation())
+            .WithStrategy(new FormatSwitchMutation())
+            .WithStrategy(new ToolSimplificationMutation())
+            .WithStrategy(new TemperatureMutation())
+            .WithChromosome(ToolCallMutationChromosome.CreateDefault())
+            .WithFitnessFunction(new ToolCallMutationFitness());
     }
 }
