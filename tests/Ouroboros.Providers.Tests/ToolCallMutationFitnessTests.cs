@@ -98,7 +98,7 @@ public sealed class ToolCallMutationFitnessTests
     {
         var fitness = new ToolCallMutationFitness();
         var chromosome = ToolCallMutationChromosome.CreateDefault();
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
         Func<Task> act = () => fitness.EvaluateAsync(

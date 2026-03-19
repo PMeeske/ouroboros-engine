@@ -74,7 +74,9 @@ public sealed class LlmVariatorMutation : IMutationStrategy<ToolCallContext>
         {
             mutatedPrompt = GenerateVariationSync(context);
         }
+#pragma warning disable CA1031 // Intentional: LLM variator failure falls back gracefully
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger?.LogWarning(ex, "LLM variator failed, falling back to original prompt with format hint");
             // Fallback: append a generic rephrase instruction
@@ -84,7 +86,7 @@ public sealed class LlmVariatorMutation : IMutationStrategy<ToolCallContext>
 
         context.Prompt = mutatedPrompt;
         context.Generation = generation;
-        context.History.Add(new MutationHistoryEntry(Name, generation, lastError: null!, DateTime.UtcNow));
+        context.History.Add(new MutationHistoryEntry(Name, generation, Error: null!, DateTime.UtcNow));
         return context;
     }
 

@@ -27,7 +27,7 @@ public sealed record ToolCallMutationGene(
     /// <param name="random">Random number generator.</param>
     /// <param name="mutationRate">Maximum mutation amount (default 0.1).</param>
     /// <returns>A new gene with mutated weight.</returns>
-    public ToolCallMutationGene Mutate(Random random, double mutationRate = 0.1)
+    public ToolCallMutationGene Mutate(System.Random random, double mutationRate = 0.1)
     {
         double variation = (random.NextDouble() - 0.5) * 2 * mutationRate;
         double newWeight = Math.Clamp(Weight + variation, 0.0, 1.0);

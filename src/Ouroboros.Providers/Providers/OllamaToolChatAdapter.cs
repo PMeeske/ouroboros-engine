@@ -12,6 +12,7 @@ using OllamaSharp.Models.Chat;
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Providers.Resilience;
 using Ouroboros.Tools;
+using ToolRegistry = Ouroboros.Tools.ToolRegistry;
 using Polly;
 using Polly.Wrap;
 
@@ -86,6 +87,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
         ArgumentNullException.ThrowIfNull(tools);
         ArgumentNullException.ThrowIfNull(parser);
 
+#pragma warning disable CA2000 // Ownership transferred to OllamaApiClient
         var httpClient = new HttpClient
         {
             BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute),
@@ -98,6 +100,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         }
 
+#pragma warning restore CA2000
         _client = new OllamaApiClient(httpClient) { SelectedModel = model };
         _model = model;
         _tools = tools;
@@ -240,7 +243,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
     {
         var messages = new List<Message>
         {
-            new(ChatRole.User, prompt)
+            new(OllamaSharp.Models.Chat.ChatRole.User, [prompt])
         };
 
         // Build Ollama tool definitions from registry
@@ -285,7 +288,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
             messages.Add(assistantMessage);
 
             // Check for native tool calls in the response
-            var nativeToolCalls = assistantMessage.ToolCalls;
+            var nativeToolCalls = assistantMessage.ToolCalls?.ToList();
             if (nativeToolCalls is { Count: > 0 })
             {
                 _logger?.LogDebug("Received {Count} native tool calls", nativeToolCalls.Count);
@@ -296,7 +299,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
                     toolExecutions.Add(execution);
 
                     // Feed tool result back as a tool message
-                    messages.Add(new Message(ChatRole.Tool, execution.Output));
+                    messages.Add(new Message(OllamaSharp.Models.Chat.ChatRole.Tool, [execution.Output]));
                 }
 
                 continue; // Let the model process the tool results
@@ -332,7 +335,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
         return (sb.ToString().Trim(), toolExecutions);
     }
 
-    private async Task<ToolExecution> ExecuteNativeToolCallAsync(ToolCall toolCall, CancellationToken ct)
+    private async Task<ToolExecution> ExecuteNativeToolCallAsync(OllamaSharp.Models.Chat.Message.ToolCall toolCall, CancellationToken ct)
     {
         string toolName = toolCall.Function?.Name ?? "unknown";
         string args = toolCall.Function?.Arguments is not null
@@ -366,7 +369,9 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
         {
             throw;
         }
+#pragma warning disable CA1031 // Intentional: tool execution failures are returned as error strings
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger?.LogWarning(ex, "Tool '{ToolName}' execution failed", toolName);
             return new ToolExecution(toolName, args, $"error: {ex.Message}", DateTime.UtcNow);
@@ -460,7 +465,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
                 sleepDurationProvider: retryAttempt =>
                 {
                     var baseDelay = TimeSpan.FromSeconds(Math.Pow(2, retryAttempt));
-                    var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, 1000));
+                    var jitter = TimeSpan.FromMilliseconds(System.Random.Shared.Next(0, 1000));
                     return baseDelay + jitter;
                 },
                 onRetry: (exception, timespan, retryCount, _) =>

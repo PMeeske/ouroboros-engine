@@ -34,7 +34,7 @@ public sealed class EvolutionaryRetryPolicy<TContext> where TContext : class
     private readonly ILogger? _logger;
     private readonly ToolCallMutationChromosome _chromosome;
     private readonly ToolCallMutationFitness _fitnessFunction;
-    private readonly Random _random;
+    private readonly System.Random _random;
 
     // Evolved chromosome — updated after each execution for learning across retries
     private ToolCallMutationChromosome _evolvedChromosome;
@@ -61,7 +61,7 @@ public sealed class EvolutionaryRetryPolicy<TContext> where TContext : class
         _chromosome = chromosome ?? ToolCallMutationChromosome.CreateDefault();
         _evolvedChromosome = _chromosome;
         _fitnessFunction = fitnessFunction ?? new ToolCallMutationFitness();
-        _random = new Random();
+        _random = new System.Random();
     }
 
     /// <summary>
@@ -122,7 +122,9 @@ public sealed class EvolutionaryRetryPolicy<TContext> where TContext : class
             {
                 throw;
             }
+#pragma warning disable CA1031 // Intentional: evolutionary retry catches all to mutate and retry
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 lastError = ex;
 

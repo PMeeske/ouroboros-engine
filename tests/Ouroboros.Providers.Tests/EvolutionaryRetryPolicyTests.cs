@@ -59,7 +59,7 @@ public sealed class EvolutionaryRetryPolicyTests
 
         Func<Task> act = () => policy.ExecuteWithEvolutionAsync(
             context,
-            (ctx, ct) => throw new InvalidOperationException("always fails"),
+            new Func<ToolCallContext, CancellationToken, Task<string>>((ctx, ct) => throw new InvalidOperationException("always fails")),
             CancellationToken.None);
 
         var ex = await act.Should().ThrowAsync<EvolutionaryRetryExhaustedException>();
@@ -79,7 +79,7 @@ public sealed class EvolutionaryRetryPolicyTests
 
         Func<Task> act = () => policy.ExecuteWithEvolutionAsync(
             context,
-            (ctx, ct) => throw new InvalidOperationException("fails"),
+            new Func<ToolCallContext, CancellationToken, Task<string>>((ctx, ct) => throw new InvalidOperationException("fails")),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<EvolutionaryRetryExhaustedException>();
@@ -90,7 +90,7 @@ public sealed class EvolutionaryRetryPolicyTests
     public async Task ExecuteWithEvolution_RespectsCancellation()
     {
         var policy = new EvolutionaryRetryPolicy<ToolCallContext>([], maxGenerations: 3);
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
         var context = CreateContext();
@@ -203,7 +203,7 @@ public sealed class EvolutionaryRetryPolicyTests
         {
             await policy.ExecuteWithEvolutionAsync(
                 context,
-                (ctx, ct) => throw new InvalidOperationException("always fails"),
+                new Func<ToolCallContext, CancellationToken, Task<string>>((ctx, ct) => throw new InvalidOperationException("always fails")),
                 CancellationToken.None);
         }
         catch (EvolutionaryRetryExhaustedException) { }
@@ -256,7 +256,7 @@ public sealed class EvolutionaryRetryPolicyTests
     [Fact]
     public void Builder_WithCustomChromosome_UsesProvided()
     {
-        var chromosome = ToolCallMutationChromosome.CreateRandom(new Random(42));
+        var chromosome = ToolCallMutationChromosome.CreateRandom(new System.Random(42));
         var policy = EvolutionaryRetryPolicyBuilder.ForToolCalls()
             .WithChromosome(chromosome)
             .Build();
