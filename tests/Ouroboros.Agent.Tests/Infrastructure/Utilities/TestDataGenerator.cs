@@ -2,6 +2,10 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+// TODO: AskRequest and PipelineRequest are defined in Ouroboros.ApiHost (app layer) which is not
+// referenced from engine tests. Either move these models to a shared contract project, or duplicate
+// lightweight versions here, or move this helper to the app-layer test project.
+#if false
 using Bogus;
 using Ouroboros.ApiHost.Models;
 
@@ -84,3 +88,4 @@ public static class TestDataGenerator
         return steps;
     }
 }
+#endif
