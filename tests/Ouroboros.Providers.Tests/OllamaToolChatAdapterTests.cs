@@ -48,7 +48,7 @@ public sealed class OllamaToolChatAdapterTests
     public void Constructor_NullEndpoint_Throws()
     {
         var act = () => new OllamaToolChatAdapter(
-            null!,
+            (string)null!,
             "model",
             new ToolRegistry(),
             new McpToolCallParser());

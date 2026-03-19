@@ -24,7 +24,7 @@ namespace Ouroboros.Pipeline;
 /// <see cref="Grammar.GrammarAtomConverter.RecordGrammarState"/>.
 /// </para>
 /// </remarks>
-public static class McpToolCallAtomConverter
+public static partial class McpToolCallAtomConverter
 {
     // ── String generation (for display, logging, MeTTa text files) ─────────────
 
@@ -193,7 +193,7 @@ public static class McpToolCallAtomConverter
     /// </summary>
     /// <param name="engine">The Hyperon engine to write atoms to.</param>
     /// <param name="intent">The tool call intent.</param>
-    public static void RecordToolCall(HyperonMeTTaEngine engine, ToolCallIntent intent)
+    public static void RecordToolCall(Ouroboros.Tools.MeTTa.HyperonMeTTaEngine engine, ToolCallIntent intent)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(intent);
@@ -229,7 +229,7 @@ public static class McpToolCallAtomConverter
     /// </summary>
     /// <param name="engine">The Hyperon engine.</param>
     /// <param name="intents">The ordered tool call intents forming the chain.</param>
-    public static void RecordToolChain(HyperonMeTTaEngine engine, IReadOnlyList<ToolCallIntent> intents)
+    public static void RecordToolChain(Ouroboros.Tools.MeTTa.HyperonMeTTaEngine engine, IReadOnlyList<ToolCallIntent> intents)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(intents);
@@ -259,7 +259,7 @@ public static class McpToolCallAtomConverter
     /// <param name="toolName">The tool name.</param>
     /// <param name="output">The execution output.</param>
     /// <param name="isError">Whether the result was an error.</param>
-    public static void RecordToolResult(HyperonMeTTaEngine engine, string toolName, string output, bool isError)
+    public static void RecordToolResult(Ouroboros.Tools.MeTTa.HyperonMeTTaEngine engine, string toolName, string output, bool isError)
     {
         ArgumentNullException.ThrowIfNull(engine);
 
@@ -278,7 +278,7 @@ public static class McpToolCallAtomConverter
     /// <param name="safetyContext">The safety context.</param>
     /// <param name="allowed">Whether the call was allowed.</param>
     public static void RecordPermissionCheck(
-        HyperonMeTTaEngine engine, ToolCallIntent intent, string safetyContext, bool allowed)
+        Ouroboros.Tools.MeTTa.HyperonMeTTaEngine engine, ToolCallIntent intent, string safetyContext, bool allowed)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(intent);
@@ -303,7 +303,7 @@ public static class McpToolCallAtomConverter
     /// <param name="generation">The generation number.</param>
     /// <param name="outcome">The outcome: "MutationSuccess", "MutationFailure", or "MutationEvolved".</param>
     public static void RecordRetryMutation(
-        HyperonMeTTaEngine engine, string attemptId, string strategyName, int generation, string outcome)
+        Ouroboros.Tools.MeTTa.HyperonMeTTaEngine engine, string attemptId, string strategyName, int generation, string outcome)
     {
         ArgumentNullException.ThrowIfNull(engine);
 
@@ -334,7 +334,7 @@ public static class McpToolCallAtomConverter
     /// <param name="succeeded">Whether the execution succeeded.</param>
     /// <param name="generationsUsed">How many generations were used.</param>
     public static void RecordFitnessEvaluation(
-        HyperonMeTTaEngine engine, string attemptId, double fitness, bool succeeded, int generationsUsed)
+        Ouroboros.Tools.MeTTa.HyperonMeTTaEngine engine, string attemptId, double fitness, bool succeeded, int generationsUsed)
     {
         ArgumentNullException.ThrowIfNull(engine);
 

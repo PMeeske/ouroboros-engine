@@ -69,7 +69,7 @@ public sealed class ToolCallMutationChromosome
     /// <summary>
     /// Creates a chromosome with randomized gene values.
     /// </summary>
-    public static ToolCallMutationChromosome CreateRandom(Random random) => new(
+    public static ToolCallMutationChromosome CreateRandom(System.Random random) => new(
     [
         ToolCallMutationGene.Parameters.FormatHintAggression(random.NextDouble()),
         ToolCallMutationGene.Parameters.TemperatureAmplitude(random.NextDouble()),
@@ -84,7 +84,7 @@ public sealed class ToolCallMutationChromosome
     /// <param name="random">Random number generator.</param>
     /// <param name="mutationRate">Maximum per-gene mutation amplitude (default 0.1).</param>
     /// <returns>A new chromosome with mutated genes.</returns>
-    public ToolCallMutationChromosome MutateAll(Random random, double mutationRate = 0.1)
+    public ToolCallMutationChromosome MutateAll(System.Random random, double mutationRate = 0.1)
     {
         var mutatedGenes = Genes.Select(g => g.Mutate(random, mutationRate)).ToList();
         return new ToolCallMutationChromosome(mutatedGenes);
@@ -97,7 +97,7 @@ public sealed class ToolCallMutationChromosome
     /// <param name="random">Random number generator.</param>
     /// <returns>Two offspring chromosomes.</returns>
     public (ToolCallMutationChromosome Child1, ToolCallMutationChromosome Child2) Crossover(
-        ToolCallMutationChromosome other, Random random)
+        ToolCallMutationChromosome other, System.Random random)
     {
         int crossoverPoint = random.Next(1, Math.Min(Genes.Count, other.Genes.Count));
 

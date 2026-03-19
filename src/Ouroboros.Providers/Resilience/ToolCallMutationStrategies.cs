@@ -2,8 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using Ouroboros.Pipeline;
-
 namespace Ouroboros.Providers.Resilience;
 
 /// <summary>
@@ -48,7 +46,7 @@ public sealed class FormatHintMutation : IMutationStrategy<ToolCallContext>
 
         context.Prompt += formatInstruction;
         context.Generation = generation;
-        context.History.Add(new MutationHistoryEntry(Name, generation, lastError: null!, DateTime.UtcNow));
+        context.History.Add(new MutationHistoryEntry(Name, generation, Error: null!, DateTime.UtcNow));
         return context;
     }
 }
@@ -106,7 +104,7 @@ public sealed class FormatSwitchMutation : IMutationStrategy<ToolCallContext>
 
         context.Prompt = cleanPrompt;
         context.Generation = generation;
-        context.History.Add(new MutationHistoryEntry(Name, generation, lastError: null!, DateTime.UtcNow));
+        context.History.Add(new MutationHistoryEntry(Name, generation, Error: null!, DateTime.UtcNow));
 
         // Re-apply format hint with the new format by delegating to FormatHintMutation
         return new FormatHintMutation().Mutate(context, generation);
@@ -142,7 +140,7 @@ public sealed class ToolSimplificationMutation : IMutationStrategy<ToolCallConte
         int keepCount = Math.Max(3, context.Tools.Count / 2);
         context.Tools = context.Tools.Take(keepCount).ToList();
         context.Generation = generation;
-        context.History.Add(new MutationHistoryEntry(Name, generation, lastError: null!, DateTime.UtcNow));
+        context.History.Add(new MutationHistoryEntry(Name, generation, Error: null!, DateTime.UtcNow));
         return context;
     }
 }
@@ -179,7 +177,7 @@ public sealed class TemperatureMutation : IMutationStrategy<ToolCallContext>
             : Math.Min(1.5f, context.Temperature * 1.5f); // More creative
 
         context.Generation = generation;
-        context.History.Add(new MutationHistoryEntry(Name, generation, lastError: null!, DateTime.UtcNow));
+        context.History.Add(new MutationHistoryEntry(Name, generation, Error: null!, DateTime.UtcNow));
         return context;
     }
 }
