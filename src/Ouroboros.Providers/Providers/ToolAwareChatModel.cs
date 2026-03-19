@@ -1,6 +1,8 @@
-﻿// <copyright file="ToolAwareChatModel.cs" company="Ouroboros">
+// <copyright file="ToolAwareChatModel.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
+
+using System.Reactive.Subjects;
 
 namespace Ouroboros.Providers;
 
@@ -9,10 +11,28 @@ namespace Ouroboros.Providers;
 /// Uses monadic Result{T,E} for consistent error handling throughout the pipeline.
 /// Supports thinking mode when the underlying model implements IThinkingChatModel.
 /// </summary>
+/// <remarks>
+/// When a <see cref="McpToolCallParser"/> is provided, it is used as the primary parser
+/// (supporting XML, JSON, markdown, and bracket formats). The legacy regex pattern
+/// <c>[TOOL:name args]</c> remains as an ultimate fallback.
+/// <para>
+/// Integrates with <see cref="NeuralPathway"/> for health tracking and exposes an
+/// <see cref="IObservable{T}"/> event stream for tool execution events, enabling
+/// reactive composition with the rest of the Ouroboros pipeline.
+/// </para>
+/// </remarks>
 /// <param name="llm">The underlying chat completion model.</param>
 /// <param name="registry">The tool registry for tool execution.</param>
-public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompletionModel llm, ToolRegistry registry)
+/// <param name="antlrParser">Optional ANTLR-based parser for multi-format tool call extraction.</param>
+/// <param name="neuralPathway">Optional neural pathway for health tracking.</param>
+public sealed class ToolAwareChatModel(
+    Ouroboros.Abstractions.Core.IChatCompletionModel llm,
+    ToolRegistry registry,
+    McpToolCallParser? antlrParser = null,
+    NeuralPathway? neuralPathway = null)
 {
+    private readonly Subject<ToolExecutionEvent> _toolExecutionSubject = new();
+
     /// <summary>
     /// Gets the underlying chat completion model.
     /// </summary>
@@ -24,6 +44,15 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
     public bool SupportsThinking => llm is IThinkingChatModel;
 
     /// <summary>
+    /// Observable stream of tool execution events for reactive composition.
+    /// </summary>
+    /// <remarks>
+    /// Subscribers receive <see cref="ToolExecutionEvent"/> for every tool invocation,
+    /// enabling integration with metrics collectors, event sourcing, and the MeTTa AtomSpace.
+    /// </remarks>
+    public IObservable<ToolExecutionEvent> ToolExecutions => _toolExecutionSubject;
+
+    /// <summary>
     /// Generates a response and executes any tools mentioned in the response.
     /// </summary>
     /// <param name="prompt">The input prompt.</param>
@@ -31,8 +60,23 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
     /// <returns>A tuple containing the final text and list of tool executions.</returns>
     public async Task<(string Text, List<ToolExecution> Tools)> GenerateWithToolsAsync(string prompt, CancellationToken ct = default)
     {
-        string result = await llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
-        return await ProcessToolCallsAsync(result, ct).ConfigureAwait(false);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            string result = await llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
+            var response = await ProcessToolCallsAsync(result, ct).ConfigureAwait(false);
+
+            sw.Stop();
+            neuralPathway?.RecordActivation(sw.Elapsed);
+            return response;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception)
+        {
+            sw.Stop();
+            neuralPathway?.RecordInhibition();
+            throw;
+        }
     }
 
     /// <summary>
@@ -43,20 +87,35 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
     /// <returns>A tuple containing the thinking response and list of tool executions.</returns>
     public async Task<(ThinkingResponse Response, List<ToolExecution> Tools)> GenerateWithThinkingAndToolsAsync(string prompt, CancellationToken ct = default)
     {
-        if (llm is not IThinkingChatModel thinkingModel)
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
         {
-            // Fallback: use regular generation and wrap in ThinkingResponse
-            string result = await llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
-            var (processedText, tools) = await ProcessToolCallsAsync(result, ct).ConfigureAwait(false);
-            return (new ThinkingResponse(null, processedText), tools);
+            if (llm is not IThinkingChatModel thinkingModel)
+            {
+                // Fallback: use regular generation and wrap in ThinkingResponse
+                string result = await llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
+                var (processedText, tools) = await ProcessToolCallsAsync(result, ct).ConfigureAwait(false);
+                sw.Stop();
+                neuralPathway?.RecordActivation(sw.Elapsed);
+                return (new ThinkingResponse(null, processedText), tools);
+            }
+
+            ThinkingResponse response = await thinkingModel.GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
+
+            // Process tool calls in the content only (not in thinking)
+            var (processedContent, toolCalls) = await ProcessToolCallsAsync(response.Content, ct).ConfigureAwait(false);
+            sw.Stop();
+            neuralPathway?.RecordActivation(sw.Elapsed);
+
+            return (response with { Content = processedContent }, toolCalls);
         }
-
-        ThinkingResponse response = await thinkingModel.GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
-
-        // Process tool calls in the content only (not in thinking)
-        var (processedContent, toolCalls) = await ProcessToolCallsAsync(response.Content, ct).ConfigureAwait(false);
-
-        return (response with { Content = processedContent }, toolCalls);
+        catch (OperationCanceledException) { throw; }
+        catch (Exception)
+        {
+            sw.Stop();
+            neuralPathway?.RecordInhibition();
+            throw;
+        }
     }
 
     /// <summary>
@@ -124,7 +183,65 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
         List<ToolExecution> toolCalls = [];
         string modifiedResult = result;
 
-        // Use regex to find all tool invocations
+        // Priority 1: ANTLR multi-format parser (XML, JSON, markdown, bracket)
+        if (antlrParser is not null)
+        {
+            var intents = antlrParser.Parse(result);
+            if (intents.Count > 0)
+            {
+                string cleanText = antlrParser.ExtractTextSegments(result);
+                foreach (var intent in intents)
+                {
+                    string name = intent.ToolName;
+                    string args = intent.ArgumentsJson;
+
+                    ITool? tool = registry.Get(name);
+                    if (tool is null)
+                    {
+                        cleanText += $" [TOOL-RESULT:{name}] error: tool not found";
+                        PublishToolEvent(name, args, "error: tool not found", TimeSpan.Zero, false);
+                        continue;
+                    }
+
+                    if (BeforeInvoke != null)
+                    {
+                        var allowed = await BeforeInvoke(name, args, ct).ConfigureAwait(false);
+                        if (!allowed)
+                        {
+                            cleanText += $" [TOOL-RESULT:{name}] denied by user";
+                            PublishToolEvent(name, args, "denied by user", TimeSpan.Zero, false);
+                            continue;
+                        }
+                    }
+
+                    string output;
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    try
+                    {
+                        Result<string, string> toolResult = await tool.InvokeAsync(args, ct).ConfigureAwait(false);
+                        output = toolResult.Match(success => success, error => $"error: {error}");
+                    }
+                    catch (OperationCanceledException) { throw; }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        output = $"error: {ex.Message}";
+                    }
+                    finally
+                    {
+                        sw.Stop();
+                    }
+
+                    bool success = !output.StartsWith("error:");
+                    AfterInvoke?.Invoke(name, args, output, sw.Elapsed, success);
+                    PublishToolEvent(name, args, output, sw.Elapsed, success);
+                    toolCalls.Add(new ToolExecution(name, args, output, DateTime.UtcNow));
+                }
+
+                return (cleanText.Trim(), toolCalls);
+            }
+        }
+
+        // Priority 2 (fallback): Legacy regex [TOOL:name args] pattern
         var matches = ToolInvocationPattern.Matches(result);
 
         foreach (System.Text.RegularExpressions.Match match in matches)
@@ -146,6 +263,7 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
             {
                 string errorResult = $"[TOOL-RESULT:{name}] error: tool not found";
                 modifiedResult = modifiedResult.Replace(fullMatch, errorResult);
+                PublishToolEvent(name, args, "error: tool not found", TimeSpan.Zero, false);
                 continue;
             }
 
@@ -156,6 +274,7 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
                 if (!allowed)
                 {
                     modifiedResult = modifiedResult.Replace(fullMatch, $"[TOOL-RESULT:{name}] denied by user");
+                    PublishToolEvent(name, args, "denied by user", TimeSpan.Zero, false);
                     continue;
                 }
             }
@@ -179,8 +298,11 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
                 sw.Stop();
             }
 
+            bool success = !output.StartsWith("error:");
+
             // ── Post-execution hook (metrics, UI, event bus) ──
-            AfterInvoke?.Invoke(name, args, output, sw.Elapsed, !output.StartsWith("error:"));
+            AfterInvoke?.Invoke(name, args, output, sw.Elapsed, success);
+            PublishToolEvent(name, args, output, sw.Elapsed, success);
 
             toolCalls.Add(new ToolExecution(name, args, output, DateTime.UtcNow));
 
@@ -191,4 +313,26 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
 
         return (modifiedResult, toolCalls);
     }
+
+    private void PublishToolEvent(string toolName, string args, string output, TimeSpan elapsed, bool success)
+    {
+        _toolExecutionSubject.OnNext(new ToolExecutionEvent(toolName, args, output, elapsed, success, DateTime.UtcNow));
+    }
 }
+
+/// <summary>
+/// Event raised for each tool execution, enabling reactive stream composition.
+/// </summary>
+/// <param name="ToolName">The tool that was invoked.</param>
+/// <param name="Arguments">The arguments passed to the tool.</param>
+/// <param name="Output">The tool execution output.</param>
+/// <param name="Elapsed">How long the tool execution took.</param>
+/// <param name="Success">Whether the execution was successful.</param>
+/// <param name="Timestamp">When the event occurred.</param>
+public sealed record ToolExecutionEvent(
+    string ToolName,
+    string Arguments,
+    string Output,
+    TimeSpan Elapsed,
+    bool Success,
+    DateTime Timestamp);
