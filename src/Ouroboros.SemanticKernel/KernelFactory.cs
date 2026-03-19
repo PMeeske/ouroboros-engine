@@ -6,6 +6,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Ouroboros.Abstractions.Core;
+using Ouroboros.Providers;
 using Ouroboros.Providers.Meai;
 
 namespace Ouroboros.SemanticKernel;
@@ -103,6 +104,28 @@ public static class KernelFactory
     {
         ArgumentNullException.ThrowIfNull(client);
         return BuildKernel(client, tools, additionalPlugins);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="Kernel"/> backed by an <see cref="OllamaToolChatAdapter"/>
+    /// with MCP tool support. Uses the adapter's native <see cref="IChatClient"/> for
+    /// SK auto-function-calling, with the ANTLR+MeTTa parser as fallback.
+    /// </summary>
+    /// <param name="adapter">The Ollama tool chat adapter.</param>
+    /// <param name="tools">The tool registry to expose as SK plugins.</param>
+    /// <param name="additionalPlugins">Optional extra plugins.</param>
+    /// <returns>A configured <see cref="Kernel"/> with Ollama tool support.</returns>
+    public static Kernel CreateKernel(
+        OllamaToolChatAdapter adapter,
+        Ouroboros.Tools.ToolRegistry tools,
+        IEnumerable<KernelPlugin>? additionalPlugins = null)
+    {
+        ArgumentNullException.ThrowIfNull(adapter);
+        ArgumentNullException.ThrowIfNull(tools);
+
+        // OllamaToolChatAdapter implements IChatClientBridge,
+        // so we get the native OllamaApiClient (which is an IChatClient).
+        return BuildKernel(adapter.GetChatClient(), tools, additionalPlugins);
     }
 
     private static Kernel BuildKernel(

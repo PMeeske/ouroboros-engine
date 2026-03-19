@@ -9,9 +9,18 @@ namespace Ouroboros.Providers;
 /// Uses monadic Result{T,E} for consistent error handling throughout the pipeline.
 /// Supports thinking mode when the underlying model implements IThinkingChatModel.
 /// </summary>
+/// <remarks>
+/// When a <see cref="McpToolCallParser"/> is provided, it is used as the primary parser
+/// (supporting XML, JSON, markdown, and bracket formats). The legacy regex pattern
+/// <c>[TOOL:name args]</c> remains as an ultimate fallback.
+/// </remarks>
 /// <param name="llm">The underlying chat completion model.</param>
 /// <param name="registry">The tool registry for tool execution.</param>
-public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompletionModel llm, ToolRegistry registry)
+/// <param name="antlrParser">Optional ANTLR-based parser for multi-format tool call extraction.</param>
+public sealed class ToolAwareChatModel(
+    Ouroboros.Abstractions.Core.IChatCompletionModel llm,
+    ToolRegistry registry,
+    McpToolCallParser? antlrParser = null)
 {
     /// <summary>
     /// Gets the underlying chat completion model.
@@ -124,7 +133,61 @@ public sealed class ToolAwareChatModel(Ouroboros.Abstractions.Core.IChatCompleti
         List<ToolExecution> toolCalls = [];
         string modifiedResult = result;
 
-        // Use regex to find all tool invocations
+        // Priority 1: ANTLR multi-format parser (XML, JSON, markdown, bracket)
+        if (antlrParser is not null)
+        {
+            var intents = antlrParser.Parse(result);
+            if (intents.Count > 0)
+            {
+                string cleanText = antlrParser.ExtractTextSegments(result);
+                foreach (var intent in intents)
+                {
+                    string name = intent.ToolName;
+                    string args = intent.ArgumentsJson;
+
+                    ITool? tool = registry.Get(name);
+                    if (tool is null)
+                    {
+                        cleanText += $" [TOOL-RESULT:{name}] error: tool not found";
+                        continue;
+                    }
+
+                    if (BeforeInvoke != null)
+                    {
+                        var allowed = await BeforeInvoke(name, args, ct).ConfigureAwait(false);
+                        if (!allowed)
+                        {
+                            cleanText += $" [TOOL-RESULT:{name}] denied by user";
+                            continue;
+                        }
+                    }
+
+                    string output;
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    try
+                    {
+                        Result<string, string> toolResult = await tool.InvokeAsync(args, ct).ConfigureAwait(false);
+                        output = toolResult.Match(success => success, error => $"error: {error}");
+                    }
+                    catch (OperationCanceledException) { throw; }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        output = $"error: {ex.Message}";
+                    }
+                    finally
+                    {
+                        sw.Stop();
+                    }
+
+                    AfterInvoke?.Invoke(name, args, output, sw.Elapsed, !output.StartsWith("error:"));
+                    toolCalls.Add(new ToolExecution(name, args, output, DateTime.UtcNow));
+                }
+
+                return (cleanText.Trim(), toolCalls);
+            }
+        }
+
+        // Priority 2 (fallback): Legacy regex [TOOL:name args] pattern
         var matches = ToolInvocationPattern.Matches(result);
 
         foreach (System.Text.RegularExpressions.Match match in matches)
