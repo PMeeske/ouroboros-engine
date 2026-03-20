@@ -22,6 +22,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
     private const string TrustedClientToken = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
     private const string WssUrl = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1";
     private const string ChromiumVersion = "143.0.3650.75";
+    private const string ChromiumMajorVersion = "143";
 
     private readonly string _voice;
     private readonly string _outputFormat;
@@ -245,16 +246,17 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
         ws.Options.SetRequestHeader("Pragma", "no-cache");
         ws.Options.SetRequestHeader("Cache-Control", "no-cache");
         ws.Options.SetRequestHeader("Origin", "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold");
-        ws.Options.SetRequestHeader("Accept-Encoding", "gzip, deflate, br");
+        ws.Options.SetRequestHeader("Accept-Encoding", "gzip, deflate, br, zstd");
         ws.Options.SetRequestHeader("Accept-Language", "en-US,en;q=0.9");
         ws.Options.SetRequestHeader("User-Agent",
-            $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{ChromiumVersion} Safari/537.36 Edg/{ChromiumVersion}");
+            $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{ChromiumMajorVersion}.0.0.0 Safari/537.36 Edg/{ChromiumMajorVersion}.0.0.0");
+        ws.Options.SetRequestHeader("Cookie", $"muid={GenerateMuid()};");
 
         string secGec = GenerateSecMsGec();
         string url = $"{WssUrl}?TrustedClientToken={TrustedClientToken}"
+            + $"&ConnectionId={requestId}"
             + $"&Sec-MS-GEC={secGec}"
-            + $"&Sec-MS-GEC-Version=1-{ChromiumVersion}"
-            + $"&ConnectionId={requestId}";
+            + $"&Sec-MS-GEC-Version=1-{ChromiumVersion}";
         await ws.ConnectAsync(new Uri(url), ct).ConfigureAwait(false);
 
         string configMessage = $"X-Timestamp:{timestamp}\r\n" +
@@ -423,26 +425,39 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
 
     /// <summary>
     /// Generates the Sec-MS-GEC security token required by the Edge TTS API.
-    /// Algorithm: SHA-256 hash of (rounded Windows ticks + TrustedClientToken).
-    /// Ticks are rounded to 5-minute intervals for clock tolerance.
+    /// Algorithm matches edge-tts 7.x Python reference:
+    ///   1. Unix seconds + Windows epoch offset (11644473600)
+    ///   2. Round down to nearest 300 seconds
+    ///   3. Convert to 100-nanosecond intervals (×1e7)
+    ///   4. SHA-256("{ticks}{token}").hex().upper()
     /// See: https://github.com/rany2/edge-tts
     /// </summary>
     private static string GenerateSecMsGec()
     {
-        // Convert Unix timestamp (ms) to Windows epoch ticks (100ns intervals since 1601-01-01)
-        const long windowsEpochDiff = 116_444_736_000_000_000L; // ticks between 1601 and 1970
-        long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        long ticks = (unixMs * 10_000) + windowsEpochDiff;
+        const long winEpochSeconds = 11_644_473_600L; // seconds between 1601-01-01 and 1970-01-01
+
+        // Get current Unix timestamp in seconds, add Windows epoch offset
+        double unixSeconds = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
+        long ticks = (long)(unixSeconds) + winEpochSeconds;
 
         // Round down to nearest 5-minute (300 second) boundary
-        const long fiveMinTicks = 3_000_000_000L; // 300 seconds * 10,000,000 ticks/second
-        long rounded = (ticks / fiveMinTicks) * fiveMinTicks;
+        ticks -= ticks % 300;
 
-        // SHA-256 hash of "{rounded_ticks}{token}"
-        string data = $"{rounded}{TrustedClientToken}";
-        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(data));
+        // Convert to 100-nanosecond intervals (Windows file time format)
+        long fileTicks = ticks * 10_000_000L;
+
+        // SHA-256 hash of "{file_ticks}{token}"
+        string data = $"{fileTicks}{TrustedClientToken}";
+        byte[] hash = SHA256.HashData(Encoding.ASCII.GetBytes(data));
 
         return Convert.ToHexStringLower(hash).ToUpperInvariant();
+    }
+
+    private static string GenerateMuid()
+    {
+        Span<byte> bytes = stackalloc byte[16];
+        RandomNumberGenerator.Fill(bytes);
+        return Convert.ToHexStringLower(bytes).ToUpperInvariant();
     }
 
     private static int FindHeaderEnd(byte[] buffer, int length)
