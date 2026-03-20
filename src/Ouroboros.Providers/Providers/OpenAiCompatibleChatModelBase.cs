@@ -160,10 +160,9 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Remote endpoint not reachable → fall back to indicating failure.
+            Console.Error.WriteLine($"  [{_providerName}] API error ({_model}): {ex.Message}");
+            return new ThinkingResponse(null, $"I'm having trouble reaching {_providerName} right now. ({ex.Message})");
         }
-
-        return new ThinkingResponse(null, GetFallbackMessage(prompt));
     }
 
     /// <inheritdoc/>

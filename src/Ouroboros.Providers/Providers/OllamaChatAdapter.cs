@@ -85,8 +85,8 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Deterministic fallback keeps the pipeline running in offline scenarios.
-            return $"[ollama-fallback:{_modelName}] {prompt}";
+            Console.Error.WriteLine($"  [Ollama] API error ({_modelName}): {ex.Message}");
+            return $"I'm having trouble reaching Ollama right now. ({ex.Message})";
         }
     }
 

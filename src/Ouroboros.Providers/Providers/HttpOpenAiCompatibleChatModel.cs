@@ -88,10 +88,12 @@ public sealed class HttpOpenAiCompatibleChatModel : Ouroboros.Abstractions.Core.
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Remote backend not reachable → fall back to indicating failure.
+            Console.Error.WriteLine($"  [HttpOpenAI] API error ({_model}): {ex.Message}");
+            _costTracker?.EndRequest(0, 0);
+            return $"I'm having trouble reaching the remote model right now. ({ex.Message})";
         }
         _costTracker?.EndRequest(0, 0);
-        return $"[remote-fallback:{_model}] {prompt}";
+        return string.Empty;
     }
 
     public void Dispose()

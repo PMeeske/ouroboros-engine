@@ -148,9 +148,10 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
         catch (HttpRequestException ex)
         {
             System.Diagnostics.Trace.TraceWarning("[AnthropicChatModel] Error: {0}: {1}", ex.GetType().Name, ex.Message);
+            Console.Error.WriteLine($"  [AnthropicChatModel] API error ({_model}): {ex.Message}");
+            // Return a concise error message — never echo the prompt back as a "response"
+            return new ThinkingResponse(null, $"I'm having trouble reaching my thinking backend right now. ({ex.Message})");
         }
-
-        return new ThinkingResponse(null, $"[anthropic-fallback:{_model}] {prompt}");
     }
 
     /// <inheritdoc/>
