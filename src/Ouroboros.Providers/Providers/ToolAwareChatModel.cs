@@ -192,6 +192,14 @@ public sealed class ToolAwareChatModel(
 
     private async Task<(string Text, List<ToolExecution> Tools)> ProcessToolCallsAsync(string result, CancellationToken ct)
     {
+        // SMCP: pipe response tokens through the atomizer for intent detection
+        if (SmcpMode && SmcpTokenCallback != null && !string.IsNullOrEmpty(result))
+        {
+            var tokens = result.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var token in tokens)
+                SmcpTokenCallback(token);
+        }
+
         List<ToolExecution> toolCalls = [];
         string modifiedResult = result;
 
