@@ -53,6 +53,18 @@ public sealed class ToolAwareChatModel(
     public IObservable<ToolExecutionEvent> ToolExecutions => _toolExecutionSubject;
 
     /// <summary>
+    /// When true, streaming tokens are piped through an SMCP token atomizer
+    /// for mid-stream intent detection and tool self-selection.
+    /// </summary>
+    public bool SmcpMode { get; set; }
+
+    /// <summary>
+    /// Callback invoked for each streaming token when <see cref="SmcpMode"/> is enabled.
+    /// Set by the app layer to feed tokens into the <c>SmcpTokenAtomizer</c>.
+    /// </summary>
+    public Action<string>? SmcpTokenCallback { get; set; }
+
+    /// <summary>
     /// Generates a response and executes any tools mentioned in the response.
     /// </summary>
     /// <param name="prompt">The input prompt.</param>

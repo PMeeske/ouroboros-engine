@@ -366,6 +366,38 @@ public static partial class McpToolCallAtomConverter
             .Replace("\\\\", "\\", StringComparison.Ordinal);
     }
 
+    // ── SMCP integration (records SMCP activity alongside MCP) ──────────────
+
+    /// <summary>
+    /// Records an SMCP intent atom in the engine's AtomSpace for audit/provenance.
+    /// <c>(SmcpIntentRecord verb args confidence timestamp)</c>
+    /// </summary>
+    public static void RecordSmcpIntent(Ouroboros.Tools.MeTTa.HyperonMeTTaEngine engine,
+        string verb, string argsDescription, double confidence)
+    {
+        engine.AddAtom(Atom.Expr(
+            Atom.Sym("SmcpIntentRecord"),
+            Atom.Sym(verb),
+            Atom.Sym($"\"{EscapeMeTTaString(argsDescription)}\""),
+            Atom.Sym(confidence.ToString("F4", CultureInfo.InvariantCulture)),
+            Atom.Sym(DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture))));
+    }
+
+    /// <summary>
+    /// Records an SMCP tool activation event in the engine's AtomSpace.
+    /// <c>(SmcpActivationRecord toolName compositeConfidence gateDecision timestamp)</c>
+    /// </summary>
+    public static void RecordSmcpActivation(Ouroboros.Tools.MeTTa.HyperonMeTTaEngine engine,
+        string toolName, double compositeConfidence, string gateDecision)
+    {
+        engine.AddAtom(Atom.Expr(
+            Atom.Sym("SmcpActivationRecord"),
+            Atom.Sym($"\"{EscapeMeTTaString(toolName)}\""),
+            Atom.Sym(compositeConfidence.ToString("F4", CultureInfo.InvariantCulture)),
+            Atom.Sym(gateDecision),
+            Atom.Sym(DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture))));
+    }
+
     [System.Text.RegularExpressions.GeneratedRegex(
         @"\(MkToolCall\s+""([^""\\]*(?:\\.[^""\\]*)*)""\s+""([^""\\]*(?:\\.[^""\\]*)*)""\)",
         System.Text.RegularExpressions.RegexOptions.Compiled)]
