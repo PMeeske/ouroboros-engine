@@ -184,16 +184,53 @@ public static partial class MicrophoneRecorder
             string error = process.StandardError.ReadToEnd();
             process.WaitForExit(5000);
 
-            // Parse output to find audio devices
-            // Format: [dshow @ ...] "Device Name" (audio)
+            // Parse output to find audio devices.
+            // Old ffmpeg (<7) format: [dshow @ ...] "Device Name" (audio)
+            // New ffmpeg (7+/8+) format: section header "DirectShow audio devices",
+            //   then [dshow @ ...]  "Device Name" with no suffix.
             List<string> audioDevices = new List<string>();
-            foreach (string line in error.Split('\n').Where(line => line.Contains("(audio)")))
+            bool inAudioSection = false;
+            foreach (string line in error.Split('\n'))
             {
-                int start = line.IndexOf('"');
-                int end = line.LastIndexOf('"');
-                if (start >= 0 && end > start)
+                // Old format: explicit (audio) tag
+                if (line.Contains("(audio)"))
                 {
-                    audioDevices.Add(line.Substring(start + 1, end - start - 1));
+                    int s = line.IndexOf('"');
+                    int e = line.LastIndexOf('"');
+                    if (s >= 0 && e > s)
+                    {
+                        audioDevices.Add(line.Substring(s + 1, e - s - 1));
+                    }
+
+                    continue;
+                }
+
+                // New format: section-based
+                if (line.Contains("DirectShow audio devices"))
+                {
+                    inAudioSection = true;
+                    continue;
+                }
+
+                if (line.Contains("DirectShow video devices") ||
+                    (inAudioSection && line.Contains("DirectShow")))
+                {
+                    inAudioSection = false;
+                    continue;
+                }
+
+                if (inAudioSection)
+                {
+                    int s = line.IndexOf('"');
+                    int e = line.LastIndexOf('"');
+                    if (s >= 0 && e > s)
+                    {
+                        string name = line.Substring(s + 1, e - s - 1);
+                        if (!name.StartsWith("@device_", StringComparison.Ordinal))
+                        {
+                            audioDevices.Add(name);
+                        }
+                    }
                 }
             }
 
