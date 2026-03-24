@@ -23,7 +23,7 @@ public static partial class MicrophoneRecorder
                 string? audioDevice = GetDefaultWindowsAudioDevice();
                 if (string.IsNullOrEmpty(audioDevice))
                 {
-                    audioDevice = "Microphone"; // Fallback
+                    return null; // No mic device found — caller will degrade gracefully
                 }
 
                 var psi = new ProcessStartInfo
