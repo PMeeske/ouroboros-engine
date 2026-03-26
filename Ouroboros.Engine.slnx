@@ -8,6 +8,7 @@
     <Project Path="src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj" />
     <Project Path="src/Ouroboros.Providers/Ouroboros.Providers.csproj" />
     <Project Path="src/Ouroboros.SemanticKernel/Ouroboros.SemanticKernel.csproj" />
+    <Project Path="src/Ouroboros.Tensor/Ouroboros.Tensor.csproj" />
   </Folder>
   <!-- Engine: Tests -->
   <Folder Name="/tests/">
@@ -19,6 +20,7 @@
     <Project Path="tests/Ouroboros.Pipeline.Tests/Ouroboros.Pipeline.Tests.csproj" />
     <Project Path="tests/Ouroboros.Providers.Tests/Ouroboros.Providers.Tests.csproj" />
     <Project Path="tests/Ouroboros.SemanticKernel.Tests/Ouroboros.SemanticKernel.Tests.csproj" />
+    <Project Path="tests/Ouroboros.Tensor.Tests/Ouroboros.Tensor.Tests.csproj" />
   </Folder>
   <!-- Foundation: Source (via libs/ submodule) -->
   <Folder Name="/libs/foundation/src/">
