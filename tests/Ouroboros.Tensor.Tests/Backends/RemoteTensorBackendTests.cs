@@ -11,7 +11,7 @@ namespace Ouroboros.Tests.Backends;
 public sealed class RemoteTensorBackendTests : IDisposable
 {
     private readonly TensorServiceOptions _options;
-    private readonly TensorServiceClient _client;
+    private readonly ITensorServiceClient _client;
     private readonly RemoteTensorBackend _sut;
 
     public RemoteTensorBackendTests()
@@ -23,13 +23,10 @@ public sealed class RemoteTensorBackendTests : IDisposable
             MaxRetryAttempts = 3
         };
 
-        // Create HttpClient without actual network calls
-        var httpClient = new HttpClient
-        {
-            BaseAddress = _options.BaseUrl,
-            Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds)
-        };
-        _client = Substitute.For<TensorServiceClient>(httpClient, _options);
+        _client = Substitute.For<ITensorServiceClient>();
+        _client.GetHealthAsync(Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new HealthResponse("healthy", "cpu")));
+
         _sut = new RemoteTensorBackend(_client, _options);
     }
 
@@ -227,7 +224,7 @@ public sealed class RemoteTensorBackendTests : IDisposable
         // Arrange
         var inputData = new float[] { 1f, 0f, 0f, 0f };
         var resultData = new float[] { 1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f }; // Complex as float pairs
-        var resultShape = new List<int> { 4 };
+        var resultShape = new List<int> { 4, 2 };
 
         _client.FftAsync(Arg.Any<TensorData>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new TensorDataResponse(resultShape, resultData.ToList())));
@@ -240,7 +237,7 @@ public sealed class RemoteTensorBackendTests : IDisposable
         // Assert
         result.IsSuccess.Should().BeTrue();
         using var tensor = result.Value;
-        tensor.Shape.Should().Be(TensorShape.Of(4));
+        tensor.Shape.Should().Be(TensorShape.Of(4, 2));
     }
 
     [Fact]

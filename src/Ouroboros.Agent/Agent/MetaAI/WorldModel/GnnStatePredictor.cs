@@ -400,7 +400,7 @@ public sealed class GnnStatePredictor : IStatePredictor
             float denom = normA * normB;
             return denom > 1e-8f ? dot / denom : 0;
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Fall back to CPU on any GPU error
             return CosineSimilarityCpu(a, b);

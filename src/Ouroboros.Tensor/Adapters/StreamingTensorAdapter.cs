@@ -39,17 +39,26 @@ public static class StreamingTensorAdapter
     /// Thrown when a vector's dimension is inconsistent with the dimension of the first vector
     /// in the stream.
     /// </exception>
-    public static async IAsyncEnumerable<ITensor<float>> AdaptAsync(
+    public static IAsyncEnumerable<ITensor<float>> AdaptAsync(
         IAsyncEnumerable<float[]> source,
         ITensorBackend backend,
         int batchSize,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(backend);
         if (batchSize <= 0)
             throw new ArgumentOutOfRangeException(nameof(batchSize), "Batch size must be positive.");
 
+        return AdaptAsyncCore(source, backend, batchSize, cancellationToken);
+    }
+
+    private static async IAsyncEnumerable<ITensor<float>> AdaptAsyncCore(
+        IAsyncEnumerable<float[]> source,
+        ITensorBackend backend,
+        int batchSize,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
         var batch = new List<float[]>(batchSize);
         int? expectedDim = null;
 

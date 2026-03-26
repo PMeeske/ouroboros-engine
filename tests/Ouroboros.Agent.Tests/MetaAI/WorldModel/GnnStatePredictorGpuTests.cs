@@ -6,6 +6,7 @@ using System.Numerics.Tensors;
 using FluentAssertions;
 using Ouroboros.Agent.MetaAI.WorldModel;
 using Xunit;
+using Action = Ouroboros.Agent.MetaAI.WorldModel.Action;
 
 namespace Ouroboros.Agent.Tests.MetaAI.WorldModel;
 
@@ -27,9 +28,9 @@ public class GnnStatePredictorGpuTests
     public void PredictAsync_WithNullBackend_ProducesValidOutput()
     {
         // Arrange
-        var predictor = GnnStatePredictor.CreateRandom(StateSize, ActionSize: 10, HiddenSize, seed: DefaultSeed);
+        var predictor = GnnStatePredictor.CreateRandom(StateSize, actionSize: 10, HiddenSize, seed: DefaultSeed);
         var state = CreateTestState(StateSize);
-        var action = new Action("test_action");
+        var action = new Action("test_action", new Dictionary<string, object>());
 
         // Act
         var result = predictor.PredictAsync(state, action).GetAwaiter().GetResult();
@@ -50,7 +51,7 @@ public class GnnStatePredictorGpuTests
         var predictor1 = GnnStatePredictor.CreateRandom(StateSize, 10, HiddenSize, seed: DefaultSeed);
         var predictor2 = GnnStatePredictor.CreateRandom(StateSize, 10, HiddenSize, seed: DefaultSeed);
         var state = CreateTestState(StateSize);
-        var action = new Action("test_action");
+        var action = new Action("test_action", new Dictionary<string, object>());
 
         // Act
         var result1 = predictor1.PredictAsync(state, action).GetAwaiter().GetResult();
@@ -70,7 +71,7 @@ public class GnnStatePredictorGpuTests
         var predictor1 = GnnStatePredictor.CreateRandom(StateSize, 10, HiddenSize, seed: 42);
         var predictor2 = GnnStatePredictor.CreateRandom(StateSize, 10, HiddenSize, seed: 24);
         var state = CreateTestState(StateSize);
-        var action = new Action("test_action");
+        var action = new Action("test_action", new Dictionary<string, object>());
 
         // Act
         var result1 = predictor1.PredictAsync(state, action).GetAwaiter().GetResult();

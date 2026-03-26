@@ -2,6 +2,8 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using System.Runtime.CompilerServices;
+
 namespace Ouroboros.Tests.Adapters;
 
 [Trait("Category", "Unit")]

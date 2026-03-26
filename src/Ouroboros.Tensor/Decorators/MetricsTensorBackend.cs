@@ -12,12 +12,13 @@ namespace Ouroboros.Tensor.Decorators;
 /// Metrics are published to the <c>Ouroboros.Tensor</c> meter and can be collected by any
 /// compatible consumer (OpenTelemetry, Prometheus exporter, dotnet-counters, etc.).
 /// </remarks>
-public sealed class MetricsTensorBackend : ITensorBackend
+public sealed class MetricsTensorBackend : ITensorBackend, IDisposable
 {
     /// <summary>The meter name used by this decorator.</summary>
     public const string MeterName = "Ouroboros.Tensor";
 
     private readonly ITensorBackend _inner;
+    private readonly Meter? _meter;
     private readonly Histogram<double> _matMulLatency;
     private readonly Histogram<double> _addLatency;
     private readonly Counter<long> _matMulCount;
@@ -34,7 +35,12 @@ public sealed class MetricsTensorBackend : ITensorBackend
         ArgumentNullException.ThrowIfNull(inner);
         _inner = inner;
 
-        var m = meter ?? new Meter(MeterName);
+        if (meter == null)
+        {
+            _meter = new Meter(MeterName);
+        }
+
+        var m = meter ?? _meter!;
         _matMulLatency = m.CreateHistogram<double>("tensor.matmul.duration_ms", "ms",
             "MatMul operation latency in milliseconds");
         _addLatency = m.CreateHistogram<double>("tensor.add.duration_ms", "ms",
@@ -86,5 +92,12 @@ public sealed class MetricsTensorBackend : ITensorBackend
         _addLatency.Record(sw.Elapsed.TotalMilliseconds);
         if (!result.IsSuccess) _addErrors.Add(1);
         return result;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _meter?.Dispose();
+        (_inner as IDisposable)?.Dispose();
     }
 }
