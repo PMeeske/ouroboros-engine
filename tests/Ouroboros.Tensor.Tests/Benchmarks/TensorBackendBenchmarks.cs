@@ -19,7 +19,6 @@ namespace Ouroboros.Tensor.Tests.Benchmarks;
 /// Compares naive CPU, TensorPrimitives SIMD, and RemoteTensorBackend GPU operations.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net100)]
 public class TensorBackendBenchmarks
 {
     private CpuTensorBackend _cpuBackend = null!;
@@ -68,7 +67,7 @@ public class TensorBackendBenchmarks
                 TimeoutSeconds = 5,
                 MaxRetryAttempts = 1
             };
-            var httpClient = new HttpClient
+            using var httpClient = new HttpClient
             {
                 BaseAddress = options.BaseUrl,
                 Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds)
@@ -76,9 +75,14 @@ public class TensorBackendBenchmarks
             var client = new TensorServiceClient(httpClient, options);
             _remoteBackend = new RemoteTensorBackend(client, options);
         }
-        catch
+        catch (HttpRequestException)
         {
             // Service not available — GPU benchmarks will be skipped
+            _remoteBackend = null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Other unexpected initialization failure
             _remoteBackend = null;
         }
 

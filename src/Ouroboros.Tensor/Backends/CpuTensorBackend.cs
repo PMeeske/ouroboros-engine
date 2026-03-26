@@ -2,6 +2,8 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Ouroboros.Tensor.Backends;
 
 /// <summary>
@@ -37,6 +39,7 @@ public sealed class CpuTensorBackend : ITensorBackend
     /// Performs naive O(n³) multiplication for correctness.
     /// High-throughput callers should consider batching or using a GPU backend (R02, R17).
     /// </remarks>
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Ownership transferred to returning Result.")]
     public Result<ITensor<float>, string> MatMul(ITensor<float> a, ITensor<float> b)
     {
         ArgumentNullException.ThrowIfNull(a);
@@ -58,26 +61,35 @@ public sealed class CpuTensorBackend : ITensorBackend
 
         var resultShape = TensorShape.Of(aRows, bCols);
         var result = TensorMemoryPool.Rent<float>(resultShape);
-        var resultSpan = result.WritableMemory.Span;
-        var aSpan = a.AsSpan();
-        var bSpan = b.AsSpan();
-
-        for (var i = 0; i < aRows; i++)
+        try
         {
-            for (var j = 0; j < bCols; j++)
-            {
-                var rowSlice = aSpan.Slice(i * aCols, aCols);
-                float dot = 0f;
-                for (var k = 0; k < aCols; k++)
-                    dot += rowSlice[k] * bSpan[k * bCols + j];
-                resultSpan[i * bCols + j] = dot;
-            }
-        }
+            var resultSpan = result.WritableMemory.Span;
+            var aSpan = a.AsSpan();
+            var bSpan = b.AsSpan();
 
-        return Result<ITensor<float>, string>.Success(result);
+            for (var i = 0; i < aRows; i++)
+            {
+                for (var j = 0; j < bCols; j++)
+                {
+                    var rowSlice = aSpan.Slice(i * aCols, aCols);
+                    float dot = 0f;
+                    for (var k = 0; k < aCols; k++)
+                        dot += rowSlice[k] * bSpan[k * bCols + j];
+                    resultSpan[i * bCols + j] = dot;
+                }
+            }
+
+            return Result<ITensor<float>, string>.Success(result);
+        }
+        catch
+        {
+            result.Dispose();
+            throw;
+        }
     }
 
     /// <inheritdoc/>
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "Ownership transferred to returning Result.")]
     public Result<ITensor<float>, string> Add(ITensor<float> a, ITensor<float> b)
     {
         ArgumentNullException.ThrowIfNull(a);
@@ -88,7 +100,15 @@ public sealed class CpuTensorBackend : ITensorBackend
                 $"Add shape mismatch: {a.Shape} vs {b.Shape}.");
 
         var result = TensorMemoryPool.Rent<float>(a.Shape);
-        TensorPrimitives.Add(a.AsSpan(), b.AsSpan(), result.WritableMemory.Span);
-        return Result<ITensor<float>, string>.Success(result);
+        try
+        {
+            TensorPrimitives.Add(a.AsSpan(), b.AsSpan(), result.WritableMemory.Span);
+            return Result<ITensor<float>, string>.Success(result);
+        }
+        catch
+        {
+            result.Dispose();
+            throw;
+        }
     }
 }

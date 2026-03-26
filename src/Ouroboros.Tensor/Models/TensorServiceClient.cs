@@ -22,7 +22,7 @@ namespace Ouroboros.Tensor.Models;
 /// All methods are async and support cancellation tokens.
 /// </para>
 /// </remarks>
-public sealed class TensorServiceClient
+public sealed class TensorServiceClient : ITensorServiceClient
 {
     private readonly HttpClient _httpClient;
     private readonly TensorServiceOptions _options;

@@ -7,6 +7,7 @@ using Ouroboros.Agent.MetaAI.WorldModel;
 using Ouroboros.Tensor.Abstractions;
 using Ouroboros.Tensor.Backends;
 using Xunit;
+using Action = Ouroboros.Agent.MetaAI.WorldModel.Action;
 
 namespace Ouroboros.Agent.Tests.MetaAI.WorldModel;
 
@@ -32,7 +33,7 @@ public class MlpStatePredictorGpuTests
         // Arrange
         var predictor = MlpStatePredictor.CreateRandom(StateSize, ActionSize, HiddenSize, seed: DefaultSeed);
         var state = CreateTestState(StateSize);
-        var action = new Action("test_action");
+        var action = new Action("test_action", new Dictionary<string, object>());
 
         // Act
         var result = predictor.PredictAsync(state, action).GetAwaiter().GetResult();
@@ -113,7 +114,7 @@ public class MlpStatePredictorGpuTests
         float[] v2 = CreateRandomVector(64, new Random(DefaultSeed));
 
         // Act
-        float similarity = System.Numerics.Tensors.TensorPrimitives.CosineSimilarity(v1, v2);
+        float similarity = ComputeCosineSimilarityManual(v1, v2);
 
         // Assert
         similarity.Should().Be(0f);
@@ -147,7 +148,7 @@ public class MlpStatePredictorGpuTests
         var predictor1 = MlpStatePredictor.CreateRandom(StateSize, ActionSize, HiddenSize, seed: 42);
         var predictor2 = MlpStatePredictor.CreateRandom(StateSize, ActionSize, HiddenSize, seed: 24);
         var state = CreateTestState(StateSize);
-        var action = new Action("test_action");
+        var action = new Action("test_action", new Dictionary<string, object>());
 
         // Act
         var result1 = predictor1.PredictAsync(state, action).GetAwaiter().GetResult();
@@ -167,7 +168,7 @@ public class MlpStatePredictorGpuTests
         var predictor1 = MlpStatePredictor.CreateRandom(StateSize, ActionSize, HiddenSize, seed: DefaultSeed);
         var predictor2 = MlpStatePredictor.CreateRandom(StateSize, ActionSize, HiddenSize, seed: DefaultSeed);
         var state = CreateTestState(StateSize);
-        var action = new Action("test_action");
+        var action = new Action("test_action", new Dictionary<string, object>());
 
         // Act
         var result1 = predictor1.PredictAsync(state, action).GetAwaiter().GetResult();

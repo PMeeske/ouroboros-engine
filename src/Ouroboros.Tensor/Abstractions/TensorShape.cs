@@ -50,6 +50,18 @@ public readonly record struct TensorShape
     public bool IsCompatibleWith(TensorShape other) => Dimensions.SequenceEqual(other.Dimensions);
 
     /// <inheritdoc/>
+    public bool Equals(TensorShape other)
+        => Dimensions.AsSpan().SequenceEqual(other.Dimensions.AsSpan());
+
+    /// <inheritdoc/>
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var d in Dimensions) hash.Add(d);
+        return hash.ToHashCode();
+    }
+
+    /// <inheritdoc/>
     public override string ToString()
         => Dimensions.IsEmpty ? "[]" : $"[{string.Join(", ", Dimensions)}]";
 }

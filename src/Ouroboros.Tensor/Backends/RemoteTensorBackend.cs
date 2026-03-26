@@ -27,7 +27,7 @@ namespace Ouroboros.Tensor.Backends;
 /// </remarks>
 public sealed class RemoteTensorBackend : ITensorBackend, IDisposable
 {
-    private readonly TensorServiceClient _client;
+    private readonly ITensorServiceClient _client;
     private readonly DeviceType _deviceType;
     private bool _disposed;
 
@@ -37,7 +37,7 @@ public sealed class RemoteTensorBackend : ITensorBackend, IDisposable
     /// </summary>
     /// <param name="client">The tensor service HTTP client.</param>
     /// <param name="options">The tensor service configuration options.</param>
-    public RemoteTensorBackend(TensorServiceClient client, TensorServiceOptions options)
+    public RemoteTensorBackend(ITensorServiceClient client, TensorServiceOptions options)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(options);

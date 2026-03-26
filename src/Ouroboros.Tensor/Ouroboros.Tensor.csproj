@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>Ouroboros</RootNamespace>
+    <RootNamespace>Ouroboros.Tensor</RootNamespace>
     <AssemblyName>Ouroboros.Tensor</AssemblyName>
     <Product>Ouroboros Tensor</Product>
     <Description>Backend-agnostic tensor processing pipeline with lazy vector materialization and streaming ingestion for Ouroboros</Description>

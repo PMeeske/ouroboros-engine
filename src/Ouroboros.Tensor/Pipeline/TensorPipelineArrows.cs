@@ -99,7 +99,7 @@ public static class TensorPipelineArrows
                 return Task.FromResult(
                     Result<IAsyncEnumerable<ITensor<float>>, string>.Success(batched));
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Task.FromResult(
                     Result<IAsyncEnumerable<ITensor<float>>, string>.Failure(ex.Message));
