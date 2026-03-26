@@ -48,11 +48,31 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
     public string? KeepAlive { get; set; }
 
     /// <inheritdoc/>
+    /// <summary>
+    /// Maximum prompt size in bytes before truncation. Ollama cloud rejects bodies &gt; ~100 KB;
+    /// local models have no hard limit but huge prompts degrade quality.
+    /// </summary>
+    public int MaxPromptBytes { get; set; } = 90_000;
+
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
         try
         {
             string finalPrompt = _culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
+
+            // Guard: truncate oversized prompts to prevent Ollama cloud "request body too large" / JSON size errors
+            int promptBytes = Encoding.UTF8.GetByteCount(finalPrompt);
+            if (promptBytes > MaxPromptBytes)
+            {
+                int charLimit = MaxPromptBytes * 3 / 4; // conservative: assume ~1.3 bytes/char avg
+                if (charLimit < finalPrompt.Length)
+                {
+                    Console.Error.WriteLine(
+                        $"  [Ollama] Prompt too large ({promptBytes / 1024}KB > {MaxPromptBytes / 1024}KB) — truncating to {charLimit} chars");
+                    finalPrompt = finalPrompt[..charLimit];
+                }
+            }
+
             var sb = new StringBuilder();
 
             var request = new GenerateRequest

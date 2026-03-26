@@ -1,4 +1,5 @@
 ﻿using System.Reactive.Linq;
+using System.Text;
 using OllamaSharp;
 using OllamaSharp.Models;
 using Polly;
@@ -109,6 +110,12 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
         _resiliencePolicy = Policy.WrapAsync(retryPolicy, circuitBreakerPolicy);
     }
 
+    /// <summary>
+    /// Maximum prompt size in bytes. Ollama cloud rejects bodies &gt; ~100 KB.
+    /// Prompts exceeding this are truncated to prevent 500 errors.
+    /// </summary>
+    public int MaxPromptBytes { get; set; } = 90_000;
+
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
@@ -117,6 +124,20 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
         try
         {
             string finalPrompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
+
+            // Guard: truncate oversized prompts to prevent "request body too large" / JSON size errors
+            int promptBytes = Encoding.UTF8.GetByteCount(finalPrompt);
+            if (promptBytes > MaxPromptBytes)
+            {
+                int charLimit = MaxPromptBytes * 3 / 4;
+                if (charLimit < finalPrompt.Length)
+                {
+                    System.Diagnostics.Trace.TraceWarning(
+                        "[OllamaCloudChatModel] Prompt too large ({0}KB > {1}KB) — truncating",
+                        promptBytes / 1024, MaxPromptBytes / 1024);
+                    finalPrompt = finalPrompt[..charLimit];
+                }
+            }
 
             var result = await _resiliencePolicy.ExecuteAsync(async (innerCt) =>
             {
