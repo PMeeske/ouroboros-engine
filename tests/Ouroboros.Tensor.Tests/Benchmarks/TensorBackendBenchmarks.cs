@@ -2,12 +2,14 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using System.Net.Http;
 using System.Numerics;
 using System.Numerics.Tensors;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using Ouroboros.Tensor.Abstractions;
 using Ouroboros.Tensor.Backends;
+using Ouroboros.Tensor.Configuration;
 using Ouroboros.Tensor.Memory;
 
 namespace Ouroboros.Tensor.Tests.Benchmarks;
@@ -21,6 +23,7 @@ namespace Ouroboros.Tensor.Tests.Benchmarks;
 public class TensorBackendBenchmarks
 {
     private CpuTensorBackend _cpuBackend = null!;
+    private RemoteTensorBackend? _remoteBackend;
     private float[] _inputSmall = null!;
     private float[] _inputMedium = null!;
     private float[] _inputLarge = null!;
@@ -55,6 +58,29 @@ public class TensorBackendBenchmarks
     {
         // Initialize CPU backend
         _cpuBackend = CpuTensorBackend.Instance;
+
+        // Initialize RemoteTensorBackend for GPU benchmarks (skipped if service unavailable)
+        try
+        {
+            var options = new TensorServiceOptions
+            {
+                BaseUrl = new Uri("http://localhost:8768"),
+                TimeoutSeconds = 5,
+                MaxRetryAttempts = 1
+            };
+            var httpClient = new HttpClient
+            {
+                BaseAddress = options.BaseUrl,
+                Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds)
+            };
+            var client = new TensorServiceClient(httpClient, options);
+            _remoteBackend = new RemoteTensorBackend(client, options);
+        }
+        catch
+        {
+            // Service not available — GPU benchmarks will be skipped
+            _remoteBackend = null;
+        }
 
         // Initialize test vectors with random data
         var random = new Random(42);
@@ -280,6 +306,105 @@ public class TensorBackendBenchmarks
     public float[] FFT_Cpu_Large()
     {
         return NaiveFftConvolve(_signalLarge, _kernelLarge);
+    }
+
+    #endregion
+
+    [GlobalCleanup]
+    public void GlobalCleanup()
+    {
+        _remoteBackend?.Dispose();
+    }
+
+    #region RemoteTensorBackend GPU Benchmarks (TNS-04)
+
+    /// <summary>
+    /// RemoteTensorBackend GPU MatMul - small (64x64). Requires Docker tensor service on port 8768.
+    /// </summary>
+    [Benchmark]
+    [BenchmarkCategory("MatMul", "GPU", "Small")]
+    public ITensor<float>? MatMul_RemoteGpu_Small()
+    {
+        if (_remoteBackend is null) return null;
+        var a = _remoteBackend.Create(TensorShape.Of(SmallMatrixSize, SmallMatrixSize), _inputSmall);
+        var b = _remoteBackend.Create(TensorShape.Of(SmallMatrixSize, SmallMatrixSize), _weightsSmall);
+        var result = _remoteBackend.MatMul(a, b);
+        a.Dispose(); b.Dispose();
+        return result.IsSuccess ? result.Value : null;
+    }
+
+    /// <summary>
+    /// RemoteTensorBackend GPU MatMul - medium (256x256). Requires Docker tensor service on port 8768.
+    /// </summary>
+    [Benchmark]
+    [BenchmarkCategory("MatMul", "GPU", "Medium")]
+    public ITensor<float>? MatMul_RemoteGpu_Medium()
+    {
+        if (_remoteBackend is null) return null;
+        var a = _remoteBackend.Create(TensorShape.Of(MediumMatrixSize, MediumMatrixSize), _inputMedium);
+        var b = _remoteBackend.Create(TensorShape.Of(MediumMatrixSize, MediumMatrixSize), _weightsMedium);
+        var result = _remoteBackend.MatMul(a, b);
+        a.Dispose(); b.Dispose();
+        return result.IsSuccess ? result.Value : null;
+    }
+
+    /// <summary>
+    /// RemoteTensorBackend GPU MatMul - large (1024x1024). Requires Docker tensor service on port 8768.
+    /// This is the primary >=5x speedup measurement for TNS-04.
+    /// </summary>
+    [Benchmark]
+    [BenchmarkCategory("MatMul", "GPU", "Large")]
+    public ITensor<float>? MatMul_RemoteGpu_Large()
+    {
+        if (_remoteBackend is null) return null;
+        var a = _remoteBackend.Create(TensorShape.Of(LargeMatrixSize, LargeMatrixSize), _inputLarge);
+        var b = _remoteBackend.Create(TensorShape.Of(LargeMatrixSize, LargeMatrixSize), _weightsLarge);
+        var result = _remoteBackend.MatMul(a, b);
+        a.Dispose(); b.Dispose();
+        return result.IsSuccess ? result.Value : null;
+    }
+
+    /// <summary>
+    /// RemoteTensorBackend GPU FFT - small (64 elements). Requires Docker tensor service on port 8768.
+    /// </summary>
+    [Benchmark]
+    [BenchmarkCategory("FFT", "GPU", "Small")]
+    public ITensor<float>? FFT_RemoteGpu_Small()
+    {
+        if (_remoteBackend is null) return null;
+        var input = _remoteBackend.Create(TensorShape.Of(SmallVectorSize), _signalSmall);
+        var result = _remoteBackend.FFT(input, dimensions: 1);
+        input.Dispose();
+        return result.IsSuccess ? result.Value : null;
+    }
+
+    /// <summary>
+    /// RemoteTensorBackend GPU FFT - medium (256 elements). Requires Docker tensor service on port 8768.
+    /// </summary>
+    [Benchmark]
+    [BenchmarkCategory("FFT", "GPU", "Medium")]
+    public ITensor<float>? FFT_RemoteGpu_Medium()
+    {
+        if (_remoteBackend is null) return null;
+        var input = _remoteBackend.Create(TensorShape.Of(MediumVectorSize), _signalMedium);
+        var result = _remoteBackend.FFT(input, dimensions: 1);
+        input.Dispose();
+        return result.IsSuccess ? result.Value : null;
+    }
+
+    /// <summary>
+    /// RemoteTensorBackend GPU FFT - large (1024 elements). Requires Docker tensor service on port 8768.
+    /// This is the primary >=5x speedup measurement for TNS-04 FFT path.
+    /// </summary>
+    [Benchmark]
+    [BenchmarkCategory("FFT", "GPU", "Large")]
+    public ITensor<float>? FFT_RemoteGpu_Large()
+    {
+        if (_remoteBackend is null) return null;
+        var input = _remoteBackend.Create(TensorShape.Of(LargeVectorSize), _signalLarge);
+        var result = _remoteBackend.FFT(input, dimensions: 1);
+        input.Dispose();
+        return result.IsSuccess ? result.Value : null;
     }
 
     #endregion

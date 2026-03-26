@@ -25,10 +25,11 @@ namespace Ouroboros.Tensor.Backends;
 /// Device detection: Constructor calls /health endpoint to determine if GPU is available.
 /// </para>
 /// </remarks>
-public sealed class RemoteTensorBackend : ITensorBackend
+public sealed class RemoteTensorBackend : ITensorBackend, IDisposable
 {
     private readonly TensorServiceClient _client;
     private readonly DeviceType _deviceType;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RemoteTensorBackend"/> class.
@@ -214,6 +215,14 @@ public sealed class RemoteTensorBackend : ITensorBackend
         // Add is fast on CPU with TensorPrimitives SIMD; delegate to CpuTensorBackend
         // Remote service can be extended with /tensor/add if needed for large tensors
         return CpuTensorBackend.Instance.Add(a, b);
+    }
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        _disposed = true;
+        // TensorServiceClient is injected — caller owns its lifetime.
+        // This method exists so test teardown (IDisposable.Dispose) compiles.
     }
 
     /// <summary>
