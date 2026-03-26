@@ -44,9 +44,13 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGenerato
                 return firstVector;
             }
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            // OllamaSharp communication error - fall through to fallback
+            throw; // Genuine caller cancellation — propagate
+        }
+        catch (Exception)
+        {
+            // HttpClient timeout or OllamaSharp communication error — fall through to fallback
         }
 
         // Use deterministic fallback (hash-based embedding)
