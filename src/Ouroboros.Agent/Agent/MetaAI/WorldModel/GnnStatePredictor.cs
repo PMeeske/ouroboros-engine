@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
+using System.Numerics.Tensors;
 using Ouroboros.Tensor.Abstractions;
 
 namespace Ouroboros.Agent.MetaAI.WorldModel;
@@ -355,21 +356,12 @@ public sealed class GnnStatePredictor : IStatePredictor
     }
 
     /// <summary>
-    /// CPU implementation of cosine similarity.
+    /// CPU cosine similarity using TensorPrimitives for SIMD acceleration (TNS-03).
     /// </summary>
     private static float CosineSimilarityCpu(float[] a, float[] b)
     {
-        float dot = 0, normA = 0, normB = 0;
         int len = Math.Min(a.Length, b.Length);
-        for (int i = 0; i < len; i++)
-        {
-            dot += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-
-        float denom = (float)(Math.Sqrt(normA) * Math.Sqrt(normB));
-        return denom > 1e-8f ? dot / denom : 0;
+        return TensorPrimitives.CosineSimilarity(a.AsSpan()[..len], b.AsSpan()[..len]);
     }
 
     /// <summary>
