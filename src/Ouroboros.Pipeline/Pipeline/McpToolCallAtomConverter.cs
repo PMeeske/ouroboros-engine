@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Text;
 using Ouroboros.Core.Hyperon;
 using Ouroboros.Providers;
+using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Pipeline;
 

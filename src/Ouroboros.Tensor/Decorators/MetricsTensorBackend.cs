@@ -34,7 +34,7 @@ public sealed class MetricsTensorBackend : ITensorBackend
         ArgumentNullException.ThrowIfNull(inner);
         _inner = inner;
 
-        var m = meter ?? new Meter(MeterName);
+        using var m = meter ?? new Meter(MeterName);
         _matMulLatency = m.CreateHistogram<double>("tensor.matmul.duration_ms", "ms",
             "MatMul operation latency in milliseconds");
         _addLatency = m.CreateHistogram<double>("tensor.add.duration_ms", "ms",
