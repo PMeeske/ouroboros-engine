@@ -2,6 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using System.Runtime.InteropServices;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 
@@ -91,7 +92,7 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
             {
                 var dims = tensor.Shape.Dimensions.Select(d => (long)d).ToArray();
                 var ortTensor = new DenseTensor<float>(
-                    tensor.AsMemory(),
+                    MemoryMarshal.AsMemory(tensor.AsMemory()),
                     dims.Select(d => (int)d).ToArray());
                 onnxInputs.Add(NamedOnnxValue.CreateFromTensor(name, ortTensor));
             }
@@ -119,7 +120,7 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
             return Result<IReadOnlyDictionary<string, ITensor<float>>, string>.Failure(
                 $"ONNX inference failed: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IReadOnlyDictionary<string, ITensor<float>>, string>.Failure(
                 $"Unexpected error during ONNX inference: {ex.Message}");

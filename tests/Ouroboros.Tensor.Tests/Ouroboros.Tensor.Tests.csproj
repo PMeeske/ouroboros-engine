@@ -5,9 +5,18 @@
     <AssemblyName>Ouroboros.Tensor.Tests</AssemblyName>
     <IsTestProject>true</IsTestProject>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591;SA0001</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;SA0001;CA2000</NoWarn>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Using Remove="Ouroboros.Pipeline.Branches" />
+    <Using Remove="Ouroboros.Pipeline.Reasoning" />
+    <Using Remove="Ouroboros.Tests.Infrastructure" />
+    <Using Remove="Ouroboros.Tests.Infrastructure.Utilities" />
+    <Using Remove="Ouroboros.Tests.Infrastructure.Fixtures" />
+    <Using Remove="Ouroboros.Tests.Mocks" />
+    <Using Remove="Ouroboros.Core.Synthesis.Program" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Ouroboros.Tensor\Ouroboros.Tensor.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Core\Ouroboros.Core.csproj" />
@@ -25,7 +34,9 @@
     </PackageReference>
     <PackageReference Include="FluentAssertions" Version="8.8.0" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.3" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
   </ItemGroup>
 
 </Project>

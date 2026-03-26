@@ -48,7 +48,7 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
 
         try
         {
-            var points = await _client.GetAsync(
+            var points = await _client.RetrieveAsync(
                 handle.CollectionName,
                 ids: new[] { pointId },
                 withPayload: false,
@@ -62,7 +62,7 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
 
             return ExtractVector(point, handle);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<float[], string>.Failure($"Qdrant fetch failed: {ex.Message}");
         }
@@ -98,7 +98,7 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
 
             try
             {
-                var points = await _client.GetAsync(
+                var points = await _client.RetrieveAsync(
                     group.Key,
                     ids: pointIds,
                     withPayload: false,
@@ -116,7 +116,7 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
                         results.Add((handle, vectorResult.Value));
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 return Result<IReadOnlyList<(VectorHandle, float[])>, string>.Failure(
                     $"Qdrant batch fetch for collection '{group.Key}' failed: {ex.Message}");
@@ -156,7 +156,7 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
 
             return Result<IReadOnlyList<VectorHandle>, string>.Success(handles);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<IReadOnlyList<VectorHandle>, string>.Failure(
                 $"Qdrant search in '{collectionName}' failed: {ex.Message}");
@@ -184,7 +184,7 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
     }
 
     private static string PointIdToString(PointId id)
-        => id.IdCase == PointId.IdOneofCase.Uuid ? id.Uuid : id.Num.ToString();
+        => id.Uuid ?? id.Num.ToString();
 
     private static Result<float[], string> ExtractVector(RetrievedPoint point, VectorHandle handle)
     {
