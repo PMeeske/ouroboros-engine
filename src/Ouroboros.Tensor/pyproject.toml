@@ -1,0 +1,15 @@
+[project]
+name = "ouroboros-tensor-service"
+version = "0.1.0"
+description = "GPU-accelerated tensor operations via PyTorch ROCm for Ouroboros Engine"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "numpy>=1.26.0",
+    "pydantic>=2.5.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
