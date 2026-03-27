@@ -5,6 +5,7 @@
 
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 using Ouroboros.Abstractions.Errors;
 
 namespace Ouroboros.Agent.NeuralSymbolic;
@@ -185,18 +186,87 @@ public static partial class StructuredLlmParser
     /// </summary>
     private static string? ScanFirstValidJsonBlock(string text)
     {
+        if (string.IsNullOrEmpty(text))
+            return null;
+
+        var stack = new Stack<char>();
+        int? currentStart = null;
+        var inString = false;
+        var escape = false;
+
         for (var i = 0; i < text.Length; i++)
         {
             var ch = text[i];
-            if (ch is not '{' and not '[')
-                continue;
 
-            var candidate = ExtractBalancedBlock(text, i);
-            if (candidate is null)
-                continue;
+            if (inString)
+            {
+                if (escape)
+                {
+                    // Current character is escaped; do not treat it specially.
+                    escape = false;
+                }
+                else if (ch == '\\')
+                {
+                    escape = true;
+                }
+                else if (ch == '"')
+                {
+                    inString = false;
+                }
 
-            if (IsValidJson(candidate))
-                return candidate;
+                continue;
+            }
+
+            // Not currently inside a string.
+            if (ch == '"')
+            {
+                inString = true;
+                escape = false;
+                continue;
+            }
+
+            if (ch is '{' or '[')
+            {
+                if (stack.Count == 0)
+                {
+                    // Mark start of a new top-level JSON block.
+                    currentStart = i;
+                }
+
+                var expectedCloser = ch == '{' ? '}' : ']';
+                stack.Push(expectedCloser);
+                continue;
+            }
+
+            if (ch is '}' or ']')
+            {
+                if (stack.Count == 0)
+                {
+                    // Unmatched closing delimiter; reset any current tracking.
+                    currentStart = null;
+                    continue;
+                }
+
+                var expected = stack.Pop();
+                if (expected != ch)
+                {
+                    // Mismatched delimiters; discard this candidate.
+                    stack.Clear();
+                    currentStart = null;
+                    continue;
+                }
+
+                if (stack.Count == 0 && currentStart.HasValue)
+                {
+                    var length = i - currentStart.Value + 1;
+                    var candidate = text.Substring(currentStart.Value, length);
+                    if (IsValidJson(candidate))
+                        return candidate;
+
+                    // If not valid JSON, allow scanning to continue to the next candidate.
+                    currentStart = null;
+                }
+            }
         }
 
         return null;
