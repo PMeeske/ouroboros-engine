@@ -680,11 +680,9 @@ public class StructuredLlmParserTests
         var input = """some text { "isAligned": true, "explanation": "first" } extra { "isAligned": false, "explanation": "second" }""";
 
         // Act
-        var block = StructuredLlmParser.ExtractJsonBlock(input);
+        var result = StructuredLlmParser.TryParseJson<AlignmentResponseDto>(input);
 
-        // Assert: balanced scanner returns the first valid block only
-        block.Should().NotBeNull();
-        var result = StructuredLlmParser.TryParseJson<AlignmentResponseDto>(block!);
+        // Assert: parser returns the first valid JSON block only
         result.IsSuccess.Should().BeTrue();
         result.Value.IsAligned.Should().BeTrue();
         result.Value.Explanation.Should().Be("first");
@@ -697,11 +695,9 @@ public class StructuredLlmParserTests
         var input = """{ "expression": "{ nested braces }" }""";
 
         // Act
-        var block = StructuredLlmParser.ExtractJsonBlock(input);
+        var result = StructuredLlmParser.TryParseJson<MeTTaConversionResponseDto>(input);
 
         // Assert
-        block.Should().NotBeNull();
-        var result = StructuredLlmParser.TryParseJson<MeTTaConversionResponseDto>(block!);
         result.IsSuccess.Should().BeTrue();
         result.Value.Expression.Should().Be("{ nested braces }");
     }
