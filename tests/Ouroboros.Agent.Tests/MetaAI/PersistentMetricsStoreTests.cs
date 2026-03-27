@@ -41,12 +41,27 @@ public class PersistentMetricsStoreTests : IDisposable
     [Fact]
     public void Constructor_NullConfig_UsesDefaults()
     {
-        // This will create a "metrics" directory in the current working directory
-        var act = () =>
+        // This will create a "metrics" directory in the current working directory.
+        // Ensure we clean it up before and after the test to avoid polluting the workspace.
+        var metricsDir = Path.Combine(Directory.GetCurrentDirectory(), "metrics");
+
+        if (Directory.Exists(metricsDir))
+        {
+            Directory.Delete(metricsDir, recursive: true);
+        }
+
+        try
         {
             using var store = new PersistentMetricsStore(null);
-        };
-        act.Should().NotThrow();
+            // If the constructor throws, the test will fail naturally.
+        }
+        finally
+        {
+            if (Directory.Exists(metricsDir))
+            {
+                Directory.Delete(metricsDir, recursive: true);
+            }
+        }
     }
 
     // === StoreMetricsAsync Tests ===
