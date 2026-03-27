@@ -61,7 +61,8 @@ public static class ServiceCollectionExtensions
                 }
             }
 
-            var ollamaClient = new OllamaApiClient(new Uri(Configuration.DefaultEndpoints.Ollama), model!);
+            var ollamaClient = sp.GetService<OllamaApiClient>()
+                ?? new OllamaApiClient(new Uri(Configuration.DefaultEndpoints.Ollama), model!);
             var adapter = new OllamaChatAdapter(ollamaClient, model!);
             try
             {
@@ -79,8 +80,10 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton<IEmbeddingModel>(sp =>
         {
-            var ollamaClient = new OllamaApiClient(new Uri(Configuration.DefaultEndpoints.Ollama), embed!);
-            return new OllamaEmbeddingAdapter(ollamaClient, embed!);
+            var qdrant = sp.GetService<QdrantClient>();
+            var logger = sp.GetService<ILogger<TensorEmbeddingModel>>();
+            var onnxPath = Environment.GetEnvironmentVariable("OUROBOROS_EMBEDDING_ONNX_MODEL");
+            return new TensorEmbeddingModel(qdrant, logger, onnxPath);
         });
 
         services.TryAddSingleton<ToolRegistry>();

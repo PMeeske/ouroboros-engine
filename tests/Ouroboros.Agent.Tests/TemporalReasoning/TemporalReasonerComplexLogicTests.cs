@@ -1,12 +1,13 @@
 // Copyright (c) 2025 Ouroboros contributors. Licensed under the MIT License.
 
 using FluentAssertions;
+using Microsoft.Extensions.AI;
 using Moq;
+using Ouroboros.Abstractions.Core;
 using Ouroboros.Agent.TemporalReasoning;
 using Xunit;
 using TRTemporalConstraint = Ouroboros.Agent.TemporalReasoning.TemporalConstraint;
 using TRTemporalRelation = Ouroboros.Agent.TemporalReasoning.TemporalRelation;
-using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
 
 namespace Ouroboros.Tests.TemporalReasoning;
 
@@ -284,10 +285,10 @@ public sealed class TemporalReasonerComplexLogicTests
     [Fact]
     public async Task InferCausality_WithLLM_ParsesCausalRelationsFromResponse()
     {
-        var llmMock = new Mock<IChatCompletionModel>();
-        llmMock.Setup(m => m.GenerateTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
-                "CAUSE: 1\nEFFECT: 2\nSTRENGTH: 0.85\nMECHANISM: Direct trigger\nCONFOUNDS: none\n---");
+        var llmMock = new Mock<IOuroborosChatClient>();
+        llmMock.Setup(m => m.GetResponseAsync(It.IsAny<IEnumerable<ChatMessage>>(), It.IsAny<ChatOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChatResponse([new ChatMessage(ChatRole.Assistant,
+                "CAUSE: 1\nEFFECT: 2\nSTRENGTH: 0.85\nMECHANISM: Direct trigger\nCONFOUNDS: none\n---")]));
 
         var reasoner = new TemporalReasoner(llmMock.Object);
         var now = new DateTime(2025, 1, 1, 10, 0, 0, DateTimeKind.Utc);
@@ -308,11 +309,12 @@ public sealed class TemporalReasonerComplexLogicTests
     [Fact]
     public async Task InferCausality_WithLLM_ParsesMultipleRelations()
     {
-        var llmMock = new Mock<IChatCompletionModel>();
-        llmMock.Setup(m => m.GenerateTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
+        var llmMock = new Mock<IOuroborosChatClient>();
+        llmMock.Setup(m => m.GetResponseAsync(It.IsAny<IEnumerable<ChatMessage>>(), It.IsAny<ChatOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChatResponse([new ChatMessage(ChatRole.Assistant,
                 "CAUSE: 1\nEFFECT: 2\nSTRENGTH: 0.9\nMECHANISM: Trigger\nCONFOUNDS: none\n---\n" +
-                "CAUSE: 2\nEFFECT: 3\nSTRENGTH: 0.7\nMECHANISM: Chain reaction\nCONFOUNDS: weather, time\n---");
+                "CAUSE: 2\nEFFECT: 3\nSTRENGTH: 0.7\nMECHANISM: Chain reaction\nCONFOUNDS: weather, time\n---")]));
+
 
         var reasoner = new TemporalReasoner(llmMock.Object);
         var now = new DateTime(2025, 1, 1, 10, 0, 0, DateTimeKind.Utc);
@@ -334,9 +336,11 @@ public sealed class TemporalReasonerComplexLogicTests
     [Fact]
     public async Task InferCausality_WithLLM_ClampsStrength()
     {
-        var llmMock = new Mock<IChatCompletionModel>();
-        llmMock.Setup(m => m.GenerateTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync("CAUSE: 1\nEFFECT: 2\nSTRENGTH: 5.0\nMECHANISM: Overflow\nCONFOUNDS: none");
+        var llmMock = new Mock<IOuroborosChatClient>();
+        llmMock.Setup(m => m.GetResponseAsync(It.IsAny<IEnumerable<ChatMessage>>(), It.IsAny<ChatOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChatResponse([new ChatMessage(ChatRole.Assistant,
+                "CAUSE: 1\nEFFECT: 2\nSTRENGTH: 5.0\nMECHANISM: Overflow\nCONFOUNDS: none")]));
+
 
         var reasoner = new TemporalReasoner(llmMock.Object);
         var now = new DateTime(2025, 1, 1, 10, 0, 0, DateTimeKind.Utc);
@@ -459,11 +463,12 @@ public sealed class TemporalReasonerComplexLogicTests
     [Fact]
     public async Task PredictWithLLM_ParsesPredictionsFromResponse()
     {
-        var llmMock = new Mock<IChatCompletionModel>();
-        llmMock.Setup(m => m.GenerateTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(
+        var llmMock = new Mock<IOuroborosChatClient>();
+        llmMock.Setup(m => m.GetResponseAsync(It.IsAny<IEnumerable<ChatMessage>>(), It.IsAny<ChatOptions>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ChatResponse([new ChatMessage(ChatRole.Assistant,
                 "TYPE: failure\nDESCRIPTION: System failure predicted\n" +
-                "TIME: 2.5\nCONFIDENCE: 0.8\nREASONING: Pattern detected\n---");
+                "TIME: 2.5\nCONFIDENCE: 0.8\nREASONING: Pattern detected\n---")]));
+
 
         var reasoner = new TemporalReasoner(llmMock.Object);
         var now = new DateTime(2025, 1, 1, 10, 0, 0, DateTimeKind.Utc);
