@@ -3,6 +3,7 @@
 // </copyright>
 
 using System.Collections.Concurrent;
+using System.Numerics.Tensors;
 using Ouroboros.Core.Hyperon;
 using Ouroboros.Tools.MeTTa.Smcp;
 
@@ -13,25 +14,45 @@ namespace Ouroboros.Pipeline.Smcp;
 /// <para>
 /// <c>CompositeConfidence = IntentConfidence × MatchConfidence × ToolReliability</c>
 /// </para>
-/// <list type="bullet">
-/// <item><term>IntentConfidence</term><description>How confident the classifier is about the intent (from the MkIntent atom).</description></item>
-/// <item><term>MatchConfidence</term><description>How well the tool's activation pattern matched (1.0 for exact unification, degraded for partial keyword overlap).</description></item>
-/// <item><term>ToolReliability</term><description>Historical success rate of the tool (exponential moving average).</description></item>
-/// </list>
+/// <para>
+/// When an <see cref="Ouroboros.Domain.IEmbeddingModel"/> is provided, match confidence
+/// uses tensor cosine similarity (SIMD-accelerated via <see cref="TensorPrimitives"/>)
+/// instead of keyword overlap. This makes Iaret <b>tensor-centric</b> — action routing
+/// is driven by embedding similarity rather than LLM tool-call parsing.
+/// </para>
 /// </summary>
 public sealed class SmcpConfidenceScorer
 {
     private readonly ConcurrentDictionary<string, double> _toolReliability = new();
+    private readonly ConcurrentDictionary<string, float[]> _toolEmbeddingCache = new();
+
+#pragma warning disable CS0618 // IEmbeddingModel is obsolete but is the available interface
+    private readonly Ouroboros.Domain.IEmbeddingModel? _embeddingModel;
+#pragma warning restore CS0618
+
     private const double DefaultReliability = 0.8;
     private const double ReliabilityAlpha = 0.1; // EMA smoothing factor
+
+    /// <summary>Creates a keyword-only scorer (legacy mode).</summary>
+    public SmcpConfidenceScorer() { }
+
+    /// <summary>
+    /// Creates a tensor-centric scorer backed by an embedding model.
+    /// Tool descriptions are embedded on first match and cached for SIMD cosine similarity.
+    /// </summary>
+#pragma warning disable CS0618
+    public SmcpConfidenceScorer(Ouroboros.Domain.IEmbeddingModel embeddingModel)
+    {
+        _embeddingModel = embeddingModel;
+    }
+#pragma warning restore CS0618
+
+    /// <summary>Whether this scorer uses tensor-based matching (true) or keyword-only (false).</summary>
+    public bool IsTensorCentric => _embeddingModel != null;
 
     /// <summary>
     /// Computes the composite confidence for a tool match.
     /// </summary>
-    /// <param name="intentAtom">The <c>MkIntent</c> atom (confidence is the last child).</param>
-    /// <param name="adapter">The tool's SMCP adapter (contains keywords for match scoring).</param>
-    /// <param name="bindings">Unification bindings from pattern matching.</param>
-    /// <returns>Composite confidence score between 0.0 and 1.0.</returns>
     public double Score(Expression intentAtom, SmcpToolAdapter adapter, Substitution bindings)
     {
         double intentConf = ExtractIntentConfidence(intentAtom);
@@ -76,14 +97,79 @@ public sealed class SmcpConfidenceScorer
     }
 
     /// <summary>
-    /// Computes match confidence based on keyword overlap between intent args and tool keywords.
-    /// Full overlap = 1.0, partial overlap degrades linearly.
+    /// Computes match confidence. When tensor-centric (embedding model available),
+    /// uses SIMD cosine similarity between intent and tool embeddings.
+    /// Falls back to keyword overlap when no embedding model is configured.
     /// </summary>
-    internal static double ComputeMatchConfidence(Expression intentAtom, SmcpToolAdapter adapter)
+    internal double ComputeMatchConfidence(Expression intentAtom, SmcpToolAdapter adapter)
     {
         if (intentAtom.Children.Count < 3)
             return 0.0;
 
+        // Tensor-centric path: cosine similarity between intent and tool embeddings
+        if (_embeddingModel != null)
+        {
+            return ComputeTensorMatchConfidence(intentAtom, adapter);
+        }
+
+        // Keyword fallback path
+        return ComputeKeywordMatchConfidence(intentAtom, adapter);
+    }
+
+    /// <summary>
+    /// Tensor-centric match: embeds intent text and tool description, then computes
+    /// cosine similarity using <see cref="TensorPrimitives"/> (SIMD-accelerated).
+    /// Tool embeddings are cached for O(1) subsequent lookups.
+    /// </summary>
+    private double ComputeTensorMatchConfidence(Expression intentAtom, SmcpToolAdapter adapter)
+    {
+        try
+        {
+            // Build intent text from atom children
+            var argsAtom = intentAtom.Children[2];
+            var intentText = argsAtom.ToSExpr().Trim('"');
+            if (intentAtom.Children.Count >= 2)
+            {
+                var verb = intentAtom.Children[1].ToSExpr().Trim('"');
+                intentText = $"{verb} {intentText}";
+            }
+
+            // Get or compute tool embedding (cached)
+            var toolEmb = _toolEmbeddingCache.GetOrAdd(
+                adapter.Tool.Name,
+                _ => _embeddingModel!.CreateEmbeddingsAsync(
+                    $"{adapter.Tool.Name}: {adapter.Tool.Description}").GetAwaiter().GetResult());
+
+            // Compute intent embedding (not cached — each intent is unique)
+            var intentEmb = _embeddingModel!.CreateEmbeddingsAsync(intentText).GetAwaiter().GetResult();
+
+            // Cosine similarity via TensorPrimitives (SIMD-accelerated on .NET 10)
+            int len = Math.Min(intentEmb.Length, toolEmb.Length);
+            if (len == 0) return 0.0;
+
+            float similarity = TensorPrimitives.CosineSimilarity(
+                intentEmb.AsSpan()[..len],
+                toolEmb.AsSpan()[..len]);
+
+            // Clamp to [0, 1] — cosine similarity can be negative for dissimilar vectors
+            return Math.Clamp(similarity, 0.0, 1.0);
+        }
+        catch (OperationCanceledException) { throw; }
+#pragma warning disable CA1031 // Embedding models can throw diverse exceptions
+        catch (Exception)
+#pragma warning restore CA1031
+        {
+            // Embedding failure — fall back to keyword matching
+            return ComputeKeywordMatchConfidence(intentAtom, adapter);
+        }
+    }
+
+    /// <summary>
+    /// Keyword-based match confidence (legacy fallback).
+    /// Full keyword overlap = 1.0, partial overlap degrades linearly.
+    /// </summary>
+    private static double ComputeKeywordMatchConfidence(Expression intentAtom, SmcpToolAdapter adapter)
+    {
         var argsAtom = intentAtom.Children[2];
         var intentWords = ExtractWords(argsAtom);
         var toolKeywords = adapter.ActivationPattern.Keywords;
@@ -94,15 +180,34 @@ public sealed class SmcpConfidenceScorer
         int matches = toolKeywords.Count(kw =>
             intentWords.Any(w => w.Contains(kw, StringComparison.OrdinalIgnoreCase)));
 
-        // Score: at least 1 keyword match gives 0.7 base, more matches scale up to 1.0
         if (matches == 0) return 0.0;
         return 0.7 + (0.3 * Math.Min(1.0, (double)matches / toolKeywords.Count));
+    }
+
+    /// <summary>
+    /// Pre-warms the tool embedding cache for all registered tool adapters.
+    /// Call at startup for O(1) match confidence during runtime.
+    /// </summary>
+    public async Task PrecomputeToolEmbeddingsAsync(
+        IEnumerable<SmcpToolAdapter> adapters, CancellationToken ct = default)
+    {
+        if (_embeddingModel == null) return;
+
+        foreach (var adapter in adapters)
+        {
+            if (ct.IsCancellationRequested) break;
+            if (_toolEmbeddingCache.ContainsKey(adapter.Tool.Name)) continue;
+
+            var text = $"{adapter.Tool.Name}: {adapter.Tool.Description}";
+            var embedding = await _embeddingModel.CreateEmbeddingsAsync(text, ct).ConfigureAwait(false);
+            _toolEmbeddingCache[adapter.Tool.Name] = embedding;
+        }
     }
 
     private static IReadOnlyList<string> ExtractWords(Atom atom)
     {
         if (atom is Expression expr)
             return expr.Children.Select(c => c.ToSExpr().Trim('"')).ToList();
-        return new[] { atom.ToSExpr().Trim('"') };
+        return [atom.ToSExpr().Trim('"')];
     }
 }

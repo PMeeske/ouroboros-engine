@@ -65,6 +65,14 @@ public sealed class ToolAwareChatModel(
     public Action<string>? SmcpTokenCallback { get; set; }
 
     /// <summary>
+    /// Tensor-centric fallback: invoked when the LLM response contains no explicit tool calls.
+    /// The delegate receives the LLM response text and should route it through SMCP tensor
+    /// matching to auto-fire actions (speak, express, etc.) based on embedding similarity.
+    /// Set by the app layer (IaretAgent) to bridge into <c>SmcpConsciousnessBridge</c>.
+    /// </summary>
+    public Func<string, CancellationToken, Task>? SmcpFallbackHandler { get; set; }
+
+    /// <summary>
     /// Generates a response and executes any tools mentioned in the response.
     /// </summary>
     /// <param name="prompt">The input prompt.</param>
@@ -77,6 +85,13 @@ public sealed class ToolAwareChatModel(
         {
             string result = await llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
             var response = await ProcessToolCallsAsync(result, ct).ConfigureAwait(false);
+
+            // Tensor-centric fallback: when LLM didn't call any tools,
+            // route response through SMCP tensor matching to auto-fire actions
+            if (response.Tools.Count == 0 && SmcpMode && SmcpFallbackHandler != null)
+            {
+                await SmcpFallbackHandler(response.Text, ct).ConfigureAwait(false);
+            }
 
             sw.Stop();
             neuralPathway?.RecordActivation(sw.Elapsed);
