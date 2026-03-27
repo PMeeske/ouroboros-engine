@@ -110,27 +110,29 @@ public class OllamaAgentProviderTests
     [Fact]
     public async Task CreateModelAsync_WithOllamaCloud_DefaultApiKeyEnvVar_ReturnsFailure()
     {
-        // Arrange — the default env var OLLAMA_CLOUD_API_KEY is unlikely to be set in test
-        var sut = new OllamaAgentProvider();
-        var agentDef = new MeTTaAgentDef(
-            "cloud-agent-2", "OllamaCloud", "llama3", "Reviewer",
-            "You review.", 2048, 0.5f,
-            ApiKeyEnvVar: null);
-
-        // Act
-        var result = await sut.CreateModelAsync(agentDef);
-
-        // Assert
-        // If OLLAMA_CLOUD_API_KEY is not set (typical in CI), this should fail
-        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("OLLAMA_CLOUD_API_KEY")))
+        // Arrange — explicitly clear the default env var for this test
+        var originalApiKey = Environment.GetEnvironmentVariable("OLLAMA_CLOUD_API_KEY");
+        try
         {
+            Environment.SetEnvironmentVariable("OLLAMA_CLOUD_API_KEY", null);
+
+            var sut = new OllamaAgentProvider();
+            var agentDef = new MeTTaAgentDef(
+                "cloud-agent-2", "OllamaCloud", "llama3", "Reviewer",
+                "You review.", 2048, 0.5f,
+                ApiKeyEnvVar: null);
+
+            // Act
+            var result = await sut.CreateModelAsync(agentDef);
+
+            // Assert — with OLLAMA_CLOUD_API_KEY unset, this should fail
             result.IsSuccess.Should().BeFalse();
             result.Error.Should().Contain("OLLAMA_CLOUD_API_KEY");
         }
-        else
+        finally
         {
-            // If it happens to be set, it should succeed
-            result.IsSuccess.Should().BeTrue();
+            // Restore original env var value
+            Environment.SetEnvironmentVariable("OLLAMA_CLOUD_API_KEY", originalApiKey);
         }
     }
 
