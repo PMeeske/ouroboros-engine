@@ -4,7 +4,7 @@
 
 using FluentAssertions;
 
-namespace Ouroboros.Tests.MetaAI.SelfImprovement;
+namespace Ouroboros.Agent.Tests.MetaAI.SelfImprovement;
 
 [Trait("Category", "Unit")]
 public class SelfAssessmentTests
