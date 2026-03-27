@@ -169,7 +169,11 @@ public static partial class StructuredLlmParser
         // Try markdown fenced code block first: ```json ... ``` or ``` ... ```
         var fenceMatch = MarkdownJsonFenceRegex().Match(rawResponse);
         if (fenceMatch.Success)
-            return fenceMatch.Groups[1].Value.Trim();
+        {
+            var fencedContent = fenceMatch.Groups[1].Value.Trim();
+            if (IsValidJson(fencedContent))
+                return fencedContent;
+        }
 
         // Fall back to scanning for the first valid bare JSON object or array.
         // Uses a balanced-brace scanner rather than greedy regex so that responses
