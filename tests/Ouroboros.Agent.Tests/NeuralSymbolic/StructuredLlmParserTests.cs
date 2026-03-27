@@ -689,7 +689,7 @@ public class StructuredLlmParserTests
     }
 
     [Fact]
-    public void ExtractJsonBlock_JsonContainingEscapedBraces_ReturnsCorrectBlock()
+    public void ExtractJsonBlock_JsonContainingBracesInStringLiteral_ReturnsCorrectBlock()
     {
         // Arrange: a JSON string value that itself contains braces
         var input = """{ "expression": "{ nested braces }" }""";
