@@ -4,6 +4,8 @@
 
 using System.Collections.Concurrent;
 using System.Globalization;
+using Microsoft.Extensions.AI;
+using Ouroboros.Abstractions.Core;
 
 namespace Ouroboros.Agent.TemporalReasoning;
 
@@ -13,7 +15,7 @@ namespace Ouroboros.Agent.TemporalReasoning;
 /// </summary>
 public sealed partial class TemporalReasoner : ITemporalReasoner
 {
-    private readonly Ouroboros.Abstractions.Core.IChatCompletionModel? llm;
+    private readonly IOuroborosChatClient? llm;
     private readonly ConcurrentDictionary<Guid, TemporalEvent> eventStore = new();
     private readonly ConcurrentDictionary<string, List<TemporalEvent>> eventsByType = new();
     private readonly ConcurrentDictionary<(Guid, Guid), TemporalRelationType> relationCache = new();
@@ -22,7 +24,7 @@ public sealed partial class TemporalReasoner : ITemporalReasoner
     /// Initializes a new instance of the <see cref="TemporalReasoner"/> class.
     /// </summary>
     /// <param name="llm">Optional LLM for causal inference and pattern recognition.</param>
-    public TemporalReasoner(Ouroboros.Abstractions.Core.IChatCompletionModel? llm = null)
+    public TemporalReasoner(IOuroborosChatClient? llm = null)
     {
         this.llm = llm;
     }

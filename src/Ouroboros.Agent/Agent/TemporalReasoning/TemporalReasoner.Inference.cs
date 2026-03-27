@@ -3,6 +3,7 @@
 // </copyright>
 
 using System.Globalization;
+using Microsoft.Extensions.AI;
 
 namespace Ouroboros.Agent.TemporalReasoning;
 
@@ -31,7 +32,9 @@ public sealed partial class TemporalReasoner
         {
             // Build prompt for LLM
             var prompt = BuildCausalInferencePrompt(events);
-            var response = await this.llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
+            var completion = await this.llm.GetResponseAsync(
+                [new ChatMessage(ChatRole.User, prompt)], cancellationToken: ct).ConfigureAwait(false);
+            var response = completion.Text ?? string.Empty;
 
             // Parse causal relations from response
             IReadOnlyList<CausalRelation> causalRelations = ParseCausalRelations(response, events);
@@ -275,7 +278,9 @@ Provide multiple causal relationships if they exist.";
         CancellationToken ct)
     {
         var prompt = BuildPredictionPrompt(history, horizon);
-        var response = await this.llm!.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
+        var llmResponse = await this.llm!.GetResponseAsync(
+            [new ChatMessage(ChatRole.User, prompt)], cancellationToken: ct).ConfigureAwait(false);
+        var response = llmResponse.Text ?? string.Empty;
         IReadOnlyList<PredictedEvent> predictions = ParsePredictions(response, history);
         return Result<IReadOnlyList<PredictedEvent>, string>.Success(predictions);
     }

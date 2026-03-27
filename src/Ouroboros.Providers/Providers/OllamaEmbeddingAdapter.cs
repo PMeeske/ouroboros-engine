@@ -48,9 +48,17 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGenerato
         {
             throw; // Genuine caller cancellation — propagate
         }
-        catch (Exception)
+        catch (OperationCanceledException)
         {
-            // HttpClient timeout or OllamaSharp communication error — fall through to fallback
+            // HttpClient timeout (not caller cancellation) — fall through to fallback
+        }
+        catch (HttpRequestException)
+        {
+            // OllamaSharp communication error — fall through to fallback
+        }
+        catch (IOException)
+        {
+            // Transport-level failure — fall through to fallback
         }
 
         // Use deterministic fallback (hash-based embedding)
