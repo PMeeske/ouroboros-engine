@@ -78,11 +78,21 @@ public class AgentCapabilityTests
         var time = DateTime.UtcNow;
 
         var cap1 = new AgentCapability("A", "B", tools, 0.5, 100, limitations, 1, time, time, metadata);
-        var cap2 = new AgentCapability("A", "B", tools, 0.5, 100, limitations, 1, time, time, metadata);
+        var cap2 = new AgentCapability(
+            "A",
+            "B",
+            new List<string>(tools),
+            0.5,
+            100,
+            new List<string>(limitations),
+            1,
+            time,
+            time,
+            new Dictionary<string, object>(metadata));
 
-        // Assert — record equality uses reference equality for mutable collections
-        // but the references are the same here
-        cap1.Should().Be(cap2);
+        // Assert — record equality uses reference equality for mutable collections,
+        // so otherwise-equivalent records with different collection instances are not equal
+        cap1.Should().NotBe(cap2);
     }
 
     [Fact]
