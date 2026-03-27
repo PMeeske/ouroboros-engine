@@ -17,4 +17,7 @@ public enum DeviceType
 
     /// <summary>Apple Metal Performance Shaders GPU.</summary>
     Mps,
+
+    /// <summary>Microsoft DirectML GPU (AMD/Intel/NVIDIA via WDDM).</summary>
+    DirectML,
 }
