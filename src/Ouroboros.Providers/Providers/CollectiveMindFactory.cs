@@ -200,10 +200,23 @@ public static class CollectiveMindFactory
         try
         {
             var (endpoint, apiKey, _) = ChatConfig.ResolveWithOverrides(null, null, type.ToString());
-            if (!string.IsNullOrWhiteSpace(apiKey) || type == ChatEndpointType.OllamaLocal)
+            if (type == ChatEndpointType.OllamaLocal)
             {
                 mind.AddPathway(name, type, model, endpoint, apiKey, settings);
+                return;
             }
+
+            // Skip cloud providers with placeholder/invalid API keys
+            if (string.IsNullOrWhiteSpace(apiKey)
+                || apiKey.Length < 20
+                || apiKey.Contains("local", StringComparison.OrdinalIgnoreCase)
+                || apiKey.Contains("placeholder", StringComparison.OrdinalIgnoreCase)
+                || apiKey.Contains("test", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            mind.AddPathway(name, type, model, endpoint, apiKey, settings);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
