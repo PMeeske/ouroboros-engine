@@ -27,4 +27,5 @@ global using Ouroboros.Tensor.Extensions;
 global using Ouroboros.Tensor.Lazy;
 global using Ouroboros.Tensor.Memory;
 global using Ouroboros.Tensor.Models;
+global using Ouroboros.Tensor.Orchestration;
 global using Ouroboros.Tensor.Pipeline;

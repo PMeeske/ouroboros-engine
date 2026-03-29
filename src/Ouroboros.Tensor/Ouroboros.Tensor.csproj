@@ -8,6 +8,11 @@
     <Description>Backend-agnostic tensor processing pipeline with lazy vector materialization and streaming ingestion for Ouroboros</Description>
   </PropertyGroup>
 
+  <!-- GPU backend toggles -->
+  <PropertyGroup>
+    <DefineConstants Condition="'$(EnableIlgpu)'=='true'">$(DefineConstants);ENABLE_ILGPU</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Abstractions\Ouroboros.Abstractions.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Core\Ouroboros.Core.csproj" />
@@ -26,6 +31,11 @@
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
     <!-- Qdrant client: concrete IHandleAwareVectorStore implementation. -->
     <PackageReference Include="Qdrant.Client" Version="1.17.0" />
+    <!-- ILGPU: pure C# GPU kernels with OpenCL backend for AMD/ROCm. Optional. -->
+    <PackageReference Include="ILGPU" Version="1.5.3" Condition="'$(EnableIlgpu)'=='true'" />
+    <PackageReference Include="ILGPU.Algorithms" Version="1.5.3" Condition="'$(EnableIlgpu)'=='true'" />
+    <!-- Reactive Extensions: GPU node graph integration. -->
+    <PackageReference Include="System.Reactive" Version="6.1.0" />
   </ItemGroup>
 
 </Project>
