@@ -20,4 +20,10 @@ public enum DeviceType
 
     /// <summary>Microsoft DirectML GPU (AMD/Intel/NVIDIA via WDDM).</summary>
     DirectML,
+
+    /// <summary>AMD ROCm GPU (HIP/OpenCL via ROCm stack).</summary>
+    Rocm,
+
+    /// <summary>OpenCL-capable GPU (cross-vendor, used by ILGPU).</summary>
+    OpenCL,
 }
