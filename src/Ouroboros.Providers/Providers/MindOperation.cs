@@ -1,4 +1,6 @@
-﻿namespace Ouroboros.Providers;
+﻿using R3;
+
+namespace Ouroboros.Providers;
 
 /// <summary>
 /// DSL operation that can be composed into pipelines.
@@ -7,11 +9,11 @@
 public sealed class MindOperation<T>
 {
     private readonly Func<CollectiveMind, CancellationToken, Task<T>> _execute;
-    private readonly Func<CollectiveMind, CancellationToken, IObservable<(bool IsThinking, string Chunk)>>? _stream;
+    private readonly Func<CollectiveMind, CancellationToken, Observable<(bool IsThinking, string Chunk)>>? _stream;
 
     private MindOperation(
         Func<CollectiveMind, CancellationToken, Task<T>> execute,
-        Func<CollectiveMind, CancellationToken, IObservable<(bool IsThinking, string Chunk)>>? stream = null)
+        Func<CollectiveMind, CancellationToken, Observable<(bool IsThinking, string Chunk)>>? stream = null)
     {
         _execute = execute;
         _stream = stream;
@@ -27,7 +29,7 @@ public sealed class MindOperation<T>
 
     /// <summary>Creates a streaming operation.</summary>
     public static MindOperation<T> FromStream(
-        Func<CollectiveMind, CancellationToken, IObservable<(bool IsThinking, string Chunk)>> stream,
+        Func<CollectiveMind, CancellationToken, Observable<(bool IsThinking, string Chunk)>> stream,
         Func<CollectiveMind, CancellationToken, Task<T>> finalResult) =>
         new(finalResult, stream);
 
@@ -36,7 +38,7 @@ public sealed class MindOperation<T>
         _execute(mind, ct);
 
     /// <summary>Gets the streaming observable if available.</summary>
-    public IObservable<(bool IsThinking, string Chunk)>? GetStream(CollectiveMind mind, CancellationToken ct = default) =>
+    public Observable<(bool IsThinking, string Chunk)>? GetStream(CollectiveMind mind, CancellationToken ct = default) =>
         _stream?.Invoke(mind, ct);
 
     /// <summary>Whether this operation supports streaming.</summary>

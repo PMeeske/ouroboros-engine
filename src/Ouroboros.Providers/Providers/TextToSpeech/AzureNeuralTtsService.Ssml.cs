@@ -2,7 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Reactive.Linq;
+using R3;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Retry;

@@ -1,4 +1,4 @@
-﻿using System.Reactive.Linq;
+﻿using R3;
 using System.Text;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
@@ -118,7 +118,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
     }
 
     /// <inheritdoc/>
-    public IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
+    public Observable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
     {
         return Observable.Create<(bool IsThinking, string Chunk)>(async (observer, token) =>
         {
@@ -191,13 +191,13 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                observer.OnError(ex);
+                observer.OnErrorResume(ex);
             }
         });
     }
 
     /// <inheritdoc/>
-    public IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    public Observable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
     {
         return Observable.Create<string>(async (observer, token) =>
         {
@@ -231,7 +231,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                observer.OnError(ex);
+                observer.OnErrorResume(ex);
             }
         });
     }

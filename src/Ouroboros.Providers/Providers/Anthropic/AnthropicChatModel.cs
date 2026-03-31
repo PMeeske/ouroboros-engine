@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using System.Reactive.Linq;
+using R3;
 using Anthropic.SDK;
 using Anthropic.SDK.Messaging;
 
@@ -155,7 +155,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
     }
 
     /// <inheritdoc/>
-    public IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
+    public Observable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
     {
         return Observable.Create<(bool IsThinking, string Chunk)>(async (observer, token) =>
         {
@@ -208,13 +208,13 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
             }
             catch (HttpRequestException ex)
             {
-                observer.OnError(ex);
+                observer.OnErrorResume(ex);
             }
         });
     }
 
     /// <inheritdoc/>
-    public IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    public Observable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
     {
         // Flatten the thinking stream to emit all chunks
         return StreamWithThinkingAsync(prompt, ct).Select(tuple => tuple.Chunk);

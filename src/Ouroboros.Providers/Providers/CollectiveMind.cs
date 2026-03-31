@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
+using R3;
 using System.Text;
 using System.Text.RegularExpressions;
 using Polly;
@@ -29,12 +28,12 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     /// <summary>
     /// Observable stream of the mind's internal thoughts and reasoning.
     /// </summary>
-    public IObservable<string> ThoughtStream => _thoughtStream.AsObservable();
+    public Observable<string> ThoughtStream => _thoughtStream;
 
     /// <summary>
     /// Observable stream of sub-goal execution results.
     /// </summary>
-    public IObservable<SubGoalResult> SubGoalStream => _subGoalStream.AsObservable();
+    public Observable<SubGoalResult> SubGoalStream => _subGoalStream;
 
     /// <summary>
     /// Configuration for goal decomposition behavior.
@@ -62,7 +61,7 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     /// <summary>
     /// Observable stream of election events.
     /// </summary>
-    public IObservable<ElectionEvent>? ElectionEvents => _election?.ElectionEvents;
+    public Observable<ElectionEvent>? ElectionEvents => _election?.ElectionEvents;
 
     /// <summary>
     /// Gets optimization suggestions from the election system.
@@ -183,20 +182,20 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     }
 
     /// <inheritdoc/>
-    public IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    public Observable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
     {
         return StreamWithThinkingAsync(prompt, ct).Select(t => t.Chunk);
     }
 
     /// <inheritdoc/>
-    public IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
+    public Observable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
     {
         return Observable.Create<(bool IsThinking, string Chunk)>(async (observer, token) =>
         {
             var pathway = GetNextPathway();
             if (pathway == null)
             {
-                observer.OnError(new InvalidOperationException("No neural pathways available"));
+                observer.OnErrorResume(new InvalidOperationException("No neural pathways available"));
                 return;
             }
 
@@ -209,7 +208,7 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
                     if (pathway.Model is IStreamingThinkingChatModel streaming)
                     {
                         await streaming.StreamWithThinkingAsync(prompt, token)
-                            .ForEachAsync(chunk => observer.OnNext(chunk), token).ConfigureAwait(false);
+                            .ForEachAsync(chunk => observer.OnNext(chunk), cancellationToken: token).ConfigureAwait(false);
                     }
                     else
                     {
@@ -226,7 +225,7 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
             {
                 pathway.RecordInhibition();
                 _thoughtStream.OnNext($"✗ Streaming failed on '{pathway.Name}': {ex.Message}");
-                observer.OnError(ex);
+                observer.OnErrorResume(ex);
             }
         });
     }
@@ -289,9 +288,9 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     {
         _election?.Dispose();
         _thoughtStream.OnCompleted();
-        _thoughtStream.Dispose();
+        _thoughtStream.Dispose(false);
         _subGoalStream.OnCompleted();
-        _subGoalStream.Dispose();
+        _subGoalStream.Dispose(false);
 
         lock (_lock)
         {

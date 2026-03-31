@@ -2,10 +2,10 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
+using R3;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Core.EmbodiedInteraction;
+using OuroborosUnit = Ouroboros.Abstractions.Unit;
 
 namespace Ouroboros.Providers.Tapo;
 
@@ -166,10 +166,10 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
     public bool IsConnected => _isConnected;
 
     /// <inheritdoc/>
-    public IObservable<PerceptionData> Perceptions => _perceptions.AsObservable();
+    public Observable<PerceptionData> Perceptions => _perceptions;
 
     /// <inheritdoc/>
-    public IObservable<EmbodimentProviderEvent> Events => _events.AsObservable();
+    public Observable<EmbodimentProviderEvent> Events => _events;
 
     /// <inheritdoc/>
     public async Task<Result<EmbodimentCapabilities>> ConnectAsync(CancellationToken ct = default)
@@ -227,9 +227,9 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
     }
 
     /// <inheritdoc/>
-    public async Task<Result<Unit>> DisconnectAsync(CancellationToken ct = default)
+    public async Task<Result<OuroborosUnit>> DisconnectAsync(CancellationToken ct = default)
     {
-        if (!_isConnected) return Result<Unit>.Success(Unit.Value);
+        if (!_isConnected) return Result<OuroborosUnit>.Success(OuroborosUnit.Value);
 
         try
         {
@@ -241,13 +241,13 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
             RaiseEvent(EmbodimentProviderEventType.Disconnected);
 
             await Task.CompletedTask.ConfigureAwait(false);
-            return Result<Unit>.Success(Unit.Value);
+            return Result<OuroborosUnit>.Success(OuroborosUnit.Value);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Error disconnecting from Tapo provider");
-            return Result<Unit>.Failure($"Disconnect failed: {ex.Message}");
+            return Result<OuroborosUnit>.Failure($"Disconnect failed: {ex.Message}");
         }
     }
 
@@ -279,8 +279,8 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
         _perceptions.OnCompleted();
         _events.OnCompleted();
 
-        _perceptions.Dispose();
-        _events.Dispose();
+        _perceptions.Dispose(false);
+        _events.Dispose(false);
 
         _logger?.LogInformation("TapoEmbodimentProvider disposed");
     }

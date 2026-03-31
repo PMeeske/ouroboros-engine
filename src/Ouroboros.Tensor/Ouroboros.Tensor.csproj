@@ -34,8 +34,8 @@
     <!-- ILGPU: pure C# GPU kernels with OpenCL backend for AMD/ROCm. Optional. -->
     <PackageReference Include="ILGPU" Version="1.5.3" Condition="'$(EnableIlgpu)'=='true'" />
     <PackageReference Include="ILGPU.Algorithms" Version="1.5.3" Condition="'$(EnableIlgpu)'=='true'" />
-    <!-- Reactive Extensions: GPU node graph integration. -->
-    <PackageReference Include="System.Reactive" Version="6.1.0" />
+    <!-- R3: GPU node graph integration. -->
+    <PackageReference Include="R3" Version="1.3.0" />
   </ItemGroup>
 
 </Project>

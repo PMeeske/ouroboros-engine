@@ -1,5 +1,5 @@
 ﻿using System.Net.Http.Json;
-using System.Reactive.Linq;
+using R3;
 using Polly;
 using Polly.Retry;
 
@@ -166,7 +166,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
     }
 
     /// <inheritdoc/>
-    public IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
+    public Observable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
     {
         return Observable.Create<(bool IsThinking, string Chunk)>(async (observer, token) =>
         {
@@ -291,13 +291,13 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
             catch (OperationCanceledException) { throw; }
             catch (HttpRequestException ex)
             {
-                observer.OnError(ex);
+                observer.OnErrorResume(ex);
             }
         });
     }
 
     /// <inheritdoc/>
-    public System.IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    public Observable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
     {
         // Flatten the thinking stream to just emit all chunks (both thinking and content)
         return StreamWithThinkingAsync(prompt, ct).Select(tuple => tuple.Chunk);

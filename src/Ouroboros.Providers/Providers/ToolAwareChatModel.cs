@@ -2,7 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Reactive.Subjects;
+using R3;
 
 namespace Ouroboros.Providers;
 
@@ -50,7 +50,7 @@ public sealed class ToolAwareChatModel(
     /// Subscribers receive <see cref="ToolExecutionEvent"/> for every tool invocation,
     /// enabling integration with metrics collectors, event sourcing, and the MeTTa AtomSpace.
     /// </remarks>
-    public IObservable<ToolExecutionEvent> ToolExecutions => _toolExecutionSubject;
+    public Observable<ToolExecutionEvent> ToolExecutions => _toolExecutionSubject;
 
     /// <summary>
     /// When true, streaming tokens are piped through an SMCP token atomizer

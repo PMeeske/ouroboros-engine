@@ -1,5 +1,4 @@
-﻿using System.Reactive.Linq;
-using System.Reactive.Subjects;
+﻿using R3;
 
 namespace Ouroboros.Providers;
 
@@ -17,7 +16,7 @@ public sealed partial class MasterModelElection : IDisposable
     private ElectionStrategy _strategy;
 
     /// <summary>Observable stream of election events.</summary>
-    public IObservable<ElectionEvent> ElectionEvents => _electionEvents.AsObservable();
+    public Observable<ElectionEvent> ElectionEvents => _electionEvents;
 
     /// <summary>Current election strategy.</summary>
     public ElectionStrategy Strategy
@@ -235,7 +234,7 @@ public sealed partial class MasterModelElection : IDisposable
     public void Dispose()
     {
         _electionEvents.OnCompleted();
-        _electionEvents.Dispose();
+        _electionEvents.Dispose(false);
     }
 
     [GeneratedRegex(@"\b(0?\.\d+|1\.0)\b")]

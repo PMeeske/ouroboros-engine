@@ -1,5 +1,5 @@
 ﻿using LangChain.DocumentLoaders;
-using System.Reactive.Linq;
+using R3;
 
 namespace Ouroboros.Pipeline.Reasoning;
 

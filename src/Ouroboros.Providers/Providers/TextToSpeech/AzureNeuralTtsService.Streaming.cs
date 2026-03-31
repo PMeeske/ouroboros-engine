@@ -2,7 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Reactive.Linq;
+using R3;
 using Microsoft.CognitiveServices.Speech;
 using Polly;
 using Polly.CircuitBreaker;
@@ -23,24 +23,24 @@ public sealed partial class AzureNeuralTtsService
     public bool SupportsStreaming => true;
 
     /// <inheritdoc/>
-    public IObservable<SpeechChunk> StreamSynthesis(
-        IObservable<string> textStream,
+    public Observable<SpeechChunk> StreamSynthesis(
+        Observable<string> textStream,
         TextToSpeechOptions? options = null,
         CancellationToken ct = default)
     {
         return textStream
             .BufferIntoSentences()
-            .SelectMany(sentence => Observable.FromAsync<SpeechChunk?>(async token =>
+            .SelectAwait(async (sentence, token) =>
             {
                 var result = await SynthesizeChunkAsync(sentence, options, token).ConfigureAwait(false);
                 return result.IsSuccess ? result.Value : null;
-            }))
+            })
             .Where(chunk => chunk != null)
             .Select(chunk => chunk!);
     }
 
     /// <inheritdoc/>
-    public IObservable<SpeechChunk> StreamSynthesisIncremental(
+    public Observable<SpeechChunk> StreamSynthesisIncremental(
         string text,
         TextToSpeechOptions? options = null,
         CancellationToken ct = default)
@@ -90,7 +90,7 @@ public sealed partial class AzureNeuralTtsService
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                observer.OnError(ex);
+                observer.OnErrorResume(ex);
             }
             finally
             {

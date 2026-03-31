@@ -1,20 +1,21 @@
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using R3;
 
 namespace Ouroboros.Providers.Meai;
 
 /// <summary>
-/// Extension methods to convert <see cref="IObservable{T}"/> to <see cref="IAsyncEnumerable{T}"/>
+/// Extension methods to convert <see cref="Observable{T}"/> to <see cref="IAsyncEnumerable{T}"/>
 /// using <see cref="Channel{T}"/> for backpressure-safe bridging.
 /// </summary>
 public static class ObservableAsyncEnumerableExtensions
 {
     /// <summary>
-    /// Converts an <see cref="IObservable{T}"/> to an <see cref="IAsyncEnumerable{T}"/>
+    /// Converts an R3 <see cref="Observable{T}"/> to an <see cref="IAsyncEnumerable{T}"/>
     /// using an unbounded channel as the bridge.
     /// </summary>
     public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(
-        this IObservable<T> source,
+        this Observable<T> source,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -26,9 +27,8 @@ public static class ObservableAsyncEnumerableExtensions
         });
 
         IDisposable subscription = source.Subscribe(
-            onNext: item => channel.Writer.TryWrite(item),
-            onError: ex => channel.Writer.TryComplete(ex),
-            onCompleted: () => channel.Writer.TryComplete());
+            item => channel.Writer.TryWrite(item),
+            result => channel.Writer.TryComplete(result.IsFailure ? result.Exception : null));
 
         try
         {
@@ -40,6 +40,7 @@ public static class ObservableAsyncEnumerableExtensions
         finally
         {
             subscription.Dispose();
+            channel.Writer.TryComplete();
         }
     }
 }
