@@ -66,15 +66,20 @@ public static class TensorReactiveExtensions
     /// Converts an <see cref="IObservable{T}"/> back to an
     /// <see cref="IAsyncEnumerable{T}"/> for interop with pipeline arrows.
     /// </summary>
+    /// <remarks>
+    /// Uses a bounded channel (capacity 128, DropOldest) to prevent unbounded
+    /// memory growth when the observable emits faster than the consumer iterates.
+    /// </remarks>
     public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(
         this IObservable<T> source,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        var channel = System.Threading.Channels.Channel.CreateUnbounded<T>(
-            new System.Threading.Channels.UnboundedChannelOptions
+        var channel = System.Threading.Channels.Channel.CreateBounded<T>(
+            new System.Threading.Channels.BoundedChannelOptions(128)
             {
+                FullMode = System.Threading.Channels.BoundedChannelFullMode.DropOldest,
                 SingleReader = true,
                 SingleWriter = true,
             });
