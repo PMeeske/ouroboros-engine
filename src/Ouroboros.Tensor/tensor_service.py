@@ -150,6 +150,134 @@ def cosine_similarity(request: CosineSimilarityRequest) -> CosineSimilarityRespo
     return CosineSimilarityResponse(similarity=float(sim))
 
 
+# ── Training loss / step models ──────────────────────────────────────────────
+
+class TrainingLossRequest(BaseModel):
+    predicted: List[float]          # RGB [0,1] normalized, H*W*3 flat
+    ground_truth: List[float]       # RGB [0,1] normalized, H*W*3 flat
+    width: int
+    height: int
+    face_mask: Optional[List[float]] = None  # H*W [0,1] optional weighting mask
+
+
+class TrainingLossResponse(BaseModel):
+    l1_loss: float
+    ssim_loss: float
+    total_loss: float
+
+
+class TrainingStepRequest(BaseModel):
+    lora_weights: List[float]       # flat LoRA weight array
+    gradient: List[float]           # same shape as weights — pre-computed gradient
+    learning_rate: float = 0.001
+
+
+class TrainingStepResponse(BaseModel):
+    updated_weights: List[float]
+
+
+# ── Training loss / step endpoints ───────────────────────────────────────────
+
+def _gaussian_window(size: int, sigma: float, device: torch.device) -> torch.Tensor:
+    """Create 2D Gaussian window for SSIM computation."""
+    coords = torch.arange(size, dtype=torch.float32, device=device) - (size - 1) / 2.0
+    g = torch.exp(-(coords ** 2) / (2.0 * sigma ** 2))
+    g = g / g.sum()
+    window = g.unsqueeze(1) @ g.unsqueeze(0)  # outer product → 2D
+    return window.unsqueeze(0).unsqueeze(0)     # (1, 1, size, size)
+
+
+def _ssim_channel(x: torch.Tensor, y: torch.Tensor, window: torch.Tensor,
+                  k1: float = 0.01, k2: float = 0.03) -> torch.Tensor:
+    """Compute SSIM for a single channel. x, y shape (1, 1, H, W)."""
+    c1 = k1 ** 2
+    c2 = k2 ** 2
+    pad = window.shape[-1] // 2
+
+    mu_x = F.conv2d(x, window, padding=pad)
+    mu_y = F.conv2d(y, window, padding=pad)
+    mu_x_sq = mu_x ** 2
+    mu_y_sq = mu_y ** 2
+    mu_xy = mu_x * mu_y
+
+    sigma_x_sq = F.conv2d(x ** 2, window, padding=pad) - mu_x_sq
+    sigma_y_sq = F.conv2d(y ** 2, window, padding=pad) - mu_y_sq
+    sigma_xy = F.conv2d(x * y, window, padding=pad) - mu_xy
+
+    numerator = (2.0 * mu_xy + c1) * (2.0 * sigma_xy + c2)
+    denominator = (mu_x_sq + mu_y_sq + c1) * (sigma_x_sq + sigma_y_sq + c2)
+    return (numerator / denominator).mean()
+
+
+@app.post("/training/loss", response_model=TrainingLossResponse)
+@torch.no_grad()
+def training_loss(request: TrainingLossRequest) -> TrainingLossResponse:
+    """Compute L1 + SSIM loss between predicted and ground-truth images on GPU.
+
+    Accepts RGB float arrays in [0, 1], returns L1, SSIM, and weighted total loss.
+    Total loss = 0.8 * L1 + 0.2 * (1 - SSIM).
+    """
+    h, w = request.height, request.width
+    expected_len = h * w * 3
+    if len(request.predicted) != expected_len or len(request.ground_truth) != expected_len:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Expected {expected_len} pixels (H={h} W={w} * 3), "
+                   f"got predicted={len(request.predicted)}, gt={len(request.ground_truth)}",
+        )
+
+    pred = torch.tensor(request.predicted, dtype=torch.float32, device=_device).reshape(1, h, w, 3).permute(0, 3, 1, 2)
+    gt = torch.tensor(request.ground_truth, dtype=torch.float32, device=_device).reshape(1, h, w, 3).permute(0, 3, 1, 2)
+
+    # Apply face mask if provided
+    if request.face_mask is not None:
+        if len(request.face_mask) != h * w:
+            raise HTTPException(status_code=400, detail=f"face_mask length {len(request.face_mask)} != {h * w}")
+        mask = torch.tensor(request.face_mask, dtype=torch.float32, device=_device).reshape(1, 1, h, w)
+        mask = mask.expand_as(pred)  # broadcast to (1, 3, H, W)
+        l1 = (torch.abs(pred - gt) * mask).sum() / mask.sum().clamp(min=1.0)
+    else:
+        l1 = torch.mean(torch.abs(pred - gt))
+
+    # SSIM — compute per channel and average
+    window = _gaussian_window(11, 1.5, _device)
+    ssim_val = torch.tensor(0.0, device=_device)
+    for c in range(3):
+        ssim_val = ssim_val + _ssim_channel(
+            pred[:, c:c+1, :, :], gt[:, c:c+1, :, :], window,
+        )
+    ssim_val = ssim_val / 3.0
+
+    total = 0.8 * l1 + 0.2 * (1.0 - ssim_val)
+
+    return TrainingLossResponse(
+        l1_loss=float(l1),
+        ssim_loss=float(ssim_val),
+        total_loss=float(total),
+    )
+
+
+@app.post("/training/step", response_model=TrainingStepResponse)
+@torch.no_grad()
+def training_step(request: TrainingStepRequest) -> TrainingStepResponse:
+    """Apply a single SGD gradient step on GPU.
+
+    Accepts LoRA weights and pre-computed gradient (same shape), returns updated weights.
+    updated = weights - learning_rate * gradient.
+    """
+    if len(request.lora_weights) != len(request.gradient):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Weight/gradient length mismatch: {len(request.lora_weights)} vs {len(request.gradient)}",
+        )
+
+    weights = torch.tensor(request.lora_weights, dtype=torch.float32, device=_device)
+    grad = torch.tensor(request.gradient, dtype=torch.float32, device=_device)
+    updated = weights - request.learning_rate * grad
+
+    return TrainingStepResponse(updated_weights=updated.cpu().tolist())
+
+
 # ── EWC (Elastic Weight Consolidation) models ────────────────────────────────
 
 class FisherRequest(BaseModel):
