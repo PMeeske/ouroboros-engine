@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
-using System.Reactive.Linq;
+using R3;
 using OllamaSharp;
 
 namespace Ouroboros.Providers.DeepSeek;
@@ -144,7 +144,7 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
     }
 
     /// <inheritdoc/>
-    public IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
+    public Observable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
     {
         if (_underlyingModel is IStreamingThinkingChatModel streamingThinkingModel)
         {
@@ -159,15 +159,15 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
         }
 
         // Ultimate fallback to non-streaming
-        return System.Reactive.Linq.Observable.FromAsync(async () =>
+        return Observable.FromAsync(async ct2 =>
         {
-            var response = await GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
+            var response = await GenerateWithThinkingAsync(prompt, ct2).ConfigureAwait(false);
             return (response.HasThinking, response.ToFormattedString());
         });
     }
 
     /// <inheritdoc/>
-    public IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    public Observable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
     {
         if (_underlyingModel is IStreamingChatModel streamingModel)
         {
@@ -175,6 +175,6 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
         }
 
         // Fallback to non-streaming
-        return System.Reactive.Linq.Observable.FromAsync(async () => await GenerateTextAsync(prompt, ct).ConfigureAwait(false));
+        return Observable.FromAsync(async ct2 => await GenerateTextAsync(prompt, ct2).ConfigureAwait(false));
     }
 }

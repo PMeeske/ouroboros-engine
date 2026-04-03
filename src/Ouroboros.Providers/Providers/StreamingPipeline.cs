@@ -1,4 +1,4 @@
-﻿using System.Reactive.Linq;
+﻿using R3;
 
 namespace Ouroboros.Providers;
 
@@ -8,7 +8,7 @@ namespace Ouroboros.Providers;
 public sealed class StreamingPipeline
 {
     private readonly CollectiveMind _mind;
-    private readonly List<Func<IObservable<(bool IsThinking, string Chunk)>, IObservable<(bool IsThinking, string Chunk)>>> _transformations = new();
+    private readonly List<Func<Observable<(bool IsThinking, string Chunk)>, Observable<(bool IsThinking, string Chunk)>>> _transformations = new();
 
     public StreamingPipeline(CollectiveMind mind)
     {
@@ -57,8 +57,8 @@ public sealed class StreamingPipeline
     public StreamingPipeline Buffer(TimeSpan window)
     {
         _transformations.Add(stream =>
-            stream.Buffer(window)
-                .Where(b => b.Count > 0)
+            stream.Chunk(window)
+                .Where(b => b.Length > 0)
                 .Select(b => (b[^1].IsThinking, string.Concat(b.Select(c => c.Chunk)))));
         return this;
     }
@@ -68,16 +68,16 @@ public sealed class StreamingPipeline
     /// </summary>
     public StreamingPipeline Throttle(TimeSpan interval)
     {
-        _transformations.Add(stream => stream.Throttle(interval));
+        _transformations.Add(stream => stream.Debounce(interval));
         return this;
     }
 
     /// <summary>
     /// Executes the pipeline and returns the observable.
     /// </summary>
-    public IObservable<(bool IsThinking, string Chunk)> Execute(string prompt, CancellationToken ct = default)
+    public Observable<(bool IsThinking, string Chunk)> Execute(string prompt, CancellationToken ct = default)
     {
-        IObservable<(bool IsThinking, string Chunk)> stream = _mind.StreamWithThinkingAsync(prompt, ct);
+        Observable<(bool IsThinking, string Chunk)> stream = _mind.StreamWithThinkingAsync(prompt, ct);
 
         foreach (var transform in _transformations)
         {
@@ -101,7 +101,7 @@ public sealed class StreamingPipeline
                 thinkingBuilder.Append(chunk.Chunk);
             else
                 contentBuilder.Append(chunk.Chunk);
-        }, ct).ConfigureAwait(false);
+        }, cancellationToken: ct).ConfigureAwait(false);
 
         return new ThinkingResponse(
             thinkingBuilder.Length > 0 ? thinkingBuilder.ToString() : null,

@@ -2,9 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
+using R3;
 
 namespace Ouroboros.Tensor.Orchestration;
 
@@ -54,7 +52,7 @@ public abstract class GpuTensorNode : IDisposable
 {
     private readonly Subject<ITensor<float>> _output = new();
     private readonly Subject<GpuNodeState> _stateChanges = new();
-    private readonly CompositeDisposable _subscriptions = new();
+    private DisposableBag _subscriptions;
     private GpuNodeState _state = GpuNodeState.Idle;
 
     /// <summary>The shared GPU scheduler for priority and VRAM management.</summary>
@@ -110,12 +108,12 @@ public abstract class GpuTensorNode : IDisposable
     /// <summary>
     /// Observable output stream. Downstream nodes subscribe to this.
     /// </summary>
-    public IObservable<ITensor<float>> Output => _output.AsObservable();
+    public Observable<ITensor<float>> Output => _output;
 
     /// <summary>
     /// Observable state changes for monitoring/UI.
     /// </summary>
-    public IObservable<GpuNodeState> StateChanges => _stateChanges.AsObservable();
+    public Observable<GpuNodeState> StateChanges => _stateChanges;
 
     /// <summary>
     /// Connects an upstream observable as the input to this node.
@@ -126,16 +124,15 @@ public abstract class GpuTensorNode : IDisposable
     /// A disposable that, when disposed, disconnects this input source.
     /// Also stored internally and disposed when the node is disposed.
     /// </returns>
-    public IDisposable SubscribeTo(IObservable<ITensor<float>> source)
+    public IDisposable SubscribeTo(Observable<ITensor<float>> source)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         var sub = source.Subscribe(
-            onNext: tensor => _ = ProcessInputAsync(tensor),
-            onError: ex => _output.OnError(ex),
-            onCompleted: () => _output.OnCompleted());
+            tensor => _ = ProcessInputAsync(tensor),
+            result => { if (result.IsSuccess) _output.OnCompleted(); });
 
-        _subscriptions.Add(sub);
+        sub.AddTo(ref _subscriptions);
         return sub;
     }
 
@@ -182,15 +179,15 @@ public abstract class GpuTensorNode : IDisposable
             }
             else
             {
-                _output.OnError(new InvalidOperationException(
-                    $"GPU node '{NodeId}' failed: {result.Error}"));
                 State = GpuNodeState.Error;
+                _output.OnErrorResume(new InvalidOperationException(
+                    $"GPU node '{NodeId}' failed: {result.Error}"));
             }
         }
         catch (InvalidOperationException ex)
         {
             State = GpuNodeState.Error;
-            _output.OnError(ex);
+            _output.OnErrorResume(ex);
         }
     }
 
@@ -199,8 +196,10 @@ public abstract class GpuTensorNode : IDisposable
     {
         State = GpuNodeState.Disposed;
         _subscriptions.Dispose();
-        _output.Dispose();
-        _stateChanges.Dispose();
+        _output.OnCompleted();
+        _output.Dispose(false);
+        _stateChanges.OnCompleted();
+        _stateChanges.Dispose(false);
     }
 }
 

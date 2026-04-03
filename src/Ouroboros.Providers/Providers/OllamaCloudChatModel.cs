@@ -1,4 +1,4 @@
-﻿using System.Reactive.Linq;
+﻿using R3;
 using System.Text;
 using OllamaSharp;
 using OllamaSharp.Models;
@@ -204,7 +204,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
     }
 
     /// <inheritdoc/>
-    public IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
+    public Observable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
     {
         return Observable.Create<(bool IsThinking, string Chunk)>(async (observer, token) =>
         {
@@ -288,7 +288,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                observer.OnError(ex);
+                observer.OnErrorResume(ex);
             }
             finally
             {
@@ -298,7 +298,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
     }
 
     /// <inheritdoc/>
-    public IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    public Observable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
     {
         return Observable.Create<string>(async (observer, token) =>
         {
@@ -344,7 +344,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                observer.OnError(ex);
+                observer.OnErrorResume(ex);
             }
             finally
             {

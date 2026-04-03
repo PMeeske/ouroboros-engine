@@ -1,5 +1,4 @@
-﻿using System.Reactive.Linq;
-using System.Reactive.Subjects;
+﻿using R3;
 
 namespace Ouroboros.Providers;
 
@@ -20,7 +19,7 @@ public sealed partial class EmergentConsciousness
     private string _currentFocus = "";
 
     /// <summary>Observable stream of consciousness events.</summary>
-    public IObservable<ConsciousnessEvent> Events => _events.AsObservable();
+    public Observable<ConsciousnessEvent> Events => _events;
 
     /// <summary>Current arousal level (0=calm, 1=highly activated).</summary>
     public double Arousal => _arousal;
@@ -168,7 +167,7 @@ public sealed partial class EmergentConsciousness
     public void Dispose()
     {
         _events.OnCompleted();
-        _events.Dispose();
+        _events.Dispose(false);
     }
 
     [GeneratedRegex(@"\b[a-z]{4,}\b")]

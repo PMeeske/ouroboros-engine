@@ -1,5 +1,5 @@
 ﻿using LangChain.DocumentLoaders;
-using System.Reactive.Linq;
+using R3;
 
 namespace Ouroboros.Pipeline.Reasoning;
 
@@ -11,7 +11,7 @@ public static partial class ReasoningArrows
     /// <summary>
     /// Creates a streaming thinking arrow that emits reasoning chunks in real-time.
     /// </summary>
-    public static IObservable<(string chunk, PipelineBranch branch)> StreamingThinkingArrow(
+    public static Observable<(string chunk, PipelineBranch branch)> StreamingThinkingArrow(
         Ouroboros.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
@@ -112,13 +112,13 @@ public static partial class ReasoningArrows
             }
         }
 
-        return StreamAsync().ToObservable();
+        return Observable.ToObservable(StreamAsync());
     }
 
     /// <summary>
     /// Creates a streaming draft arrow using Reactive Extensions.
     /// </summary>
-    public static IObservable<(string chunk, PipelineBranch branch)> StreamingDraftArrow(
+    public static Observable<(string chunk, PipelineBranch branch)> StreamingDraftArrow(
         Ouroboros.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
@@ -150,13 +150,13 @@ public static partial class ReasoningArrows
             }
         }
 
-        return StreamAsync().ToObservable();
+        return Observable.ToObservable(StreamAsync());
     }
 
     /// <summary>
     /// Creates a streaming critique arrow.
     /// </summary>
-    public static Result<IObservable<(string chunk, PipelineBranch branch)>, string> StreamingCritiqueArrow(
+    public static Result<Observable<(string chunk, PipelineBranch branch)>, string> StreamingCritiqueArrow(
         Ouroboros.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
@@ -167,7 +167,7 @@ public static partial class ReasoningArrows
     {
         ReasoningState? currentState = GetMostRecentReasoningState(inputBranch);
         if (currentState is null)
-            return Result<IObservable<(string chunk, PipelineBranch branch)>, string>.Failure("No draft or previous improvement found to critique");
+            return Result<Observable<(string chunk, PipelineBranch branch)>, string>.Failure("No draft or previous improvement found to critique");
 
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
@@ -193,13 +193,13 @@ public static partial class ReasoningArrows
             }
         }
 
-        return Result<IObservable<(string chunk, PipelineBranch branch)>, string>.Success(StreamAsync().ToObservable());
+        return Result<Observable<(string chunk, PipelineBranch branch)>, string>.Success(Observable.ToObservable(StreamAsync()));
     }
 
     /// <summary>
     /// Creates a streaming improvement arrow.
     /// </summary>
-    public static Result<IObservable<(string chunk, PipelineBranch branch)>, string> StreamingImproveArrow(
+    public static Result<Observable<(string chunk, PipelineBranch branch)>, string> StreamingImproveArrow(
         Ouroboros.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
@@ -212,9 +212,9 @@ public static partial class ReasoningArrows
         Critique? critique = inputBranch.Events.OfType<ReasoningStep>().Select(e => e.State).OfType<Critique>().LastOrDefault();
 
         if (currentState is null)
-            return Result<IObservable<(string chunk, PipelineBranch branch)>, string>.Failure("No draft or previous improvement found");
+            return Result<Observable<(string chunk, PipelineBranch branch)>, string>.Failure("No draft or previous improvement found");
         if (critique is null)
-            return Result<IObservable<(string chunk, PipelineBranch branch)>, string>.Failure("No critique found for improvement");
+            return Result<Observable<(string chunk, PipelineBranch branch)>, string>.Failure("No critique found for improvement");
 
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
@@ -241,13 +241,13 @@ public static partial class ReasoningArrows
             }
         }
 
-        return Result<IObservable<(string chunk, PipelineBranch branch)>, string>.Success(StreamAsync().ToObservable());
+        return Result<Observable<(string chunk, PipelineBranch branch)>, string>.Success(Observable.ToObservable(StreamAsync()));
     }
 
     /// <summary>
     /// Creates a complete streaming reasoning pipeline.
     /// </summary>
-    public static IObservable<(string stage, string chunk, PipelineBranch branch)> StreamingReasoningPipeline(
+    public static Observable<(string stage, string chunk, PipelineBranch branch)> StreamingReasoningPipeline(
         Ouroboros.Providers.IStreamingChatModel streamingModel,
         ToolRegistry tools,
         IEmbeddingModel embed,
@@ -261,46 +261,50 @@ public static partial class ReasoningArrows
             {
                 PipelineBranch branch = new PipelineBranch("streaming-pipeline", new TrackedVectorStore(), DataSource.FromPath("."));
 
+                (string chunk, PipelineBranch branch) lastThinking = default;
                 await StreamingThinkingArrow(streamingModel, tools, embed, topic, query, k)
-                    .Do(tuple => observer.OnNext(("Thinking", tuple.chunk, tuple.branch)))
-                    .LastAsync()
-                    .ForEachAsync(tuple => branch = tuple.branch, ct).ConfigureAwait(false);
+                    .Do(tuple => { observer.OnNext(("Thinking", tuple.chunk, tuple.branch)); lastThinking = tuple; })
+                    .LastOrDefaultAsync(cancellationToken: ct).ConfigureAwait(false);
+                if (lastThinking.branch != null) branch = lastThinking.branch;
 
+                (string chunk, PipelineBranch branch) lastDraft = default;
                 await StreamingDraftArrow(streamingModel, tools, embed, branch, topic, query, k)
-                    .Do(tuple => observer.OnNext(("Draft", tuple.chunk, tuple.branch)))
-                    .LastAsync()
-                    .ForEachAsync(tuple => branch = tuple.branch, ct).ConfigureAwait(false);
+                    .Do(tuple => { observer.OnNext(("Draft", tuple.chunk, tuple.branch)); lastDraft = tuple; })
+                    .LastOrDefaultAsync(cancellationToken: ct).ConfigureAwait(false);
+                if (lastDraft.branch != null) branch = lastDraft.branch;
 
                 var critiqueResult = StreamingCritiqueArrow(streamingModel, tools, embed, branch, topic, query, k);
                 if (!critiqueResult.IsSuccess)
                 {
-                    observer.OnError(new InvalidOperationException(critiqueResult.Error));
+                    observer.OnErrorResume(new InvalidOperationException(critiqueResult.Error));
                     return;
                 }
 
+                (string chunk, PipelineBranch branch) lastCritique = default;
                 await critiqueResult.Value
-                    .Do(tuple => observer.OnNext(("Critique", tuple.chunk, tuple.branch)))
-                    .LastAsync()
-                    .ForEachAsync(tuple => branch = tuple.branch, ct).ConfigureAwait(false);
+                    .Do(tuple => { observer.OnNext(("Critique", tuple.chunk, tuple.branch)); lastCritique = tuple; })
+                    .LastOrDefaultAsync(cancellationToken: ct).ConfigureAwait(false);
+                if (lastCritique.branch != null) branch = lastCritique.branch;
 
                 var improveResult = StreamingImproveArrow(streamingModel, tools, embed, branch, topic, query, k);
                 if (!improveResult.IsSuccess)
                 {
-                    observer.OnError(new InvalidOperationException(improveResult.Error));
+                    observer.OnErrorResume(new InvalidOperationException(improveResult.Error));
                     return;
                 }
 
+                (string chunk, PipelineBranch branch) lastImprove = default;
                 await improveResult.Value
-                    .Do(tuple => observer.OnNext(("Improve", tuple.chunk, tuple.branch)))
-                    .LastAsync()
-                    .ForEachAsync(tuple => branch = tuple.branch, ct).ConfigureAwait(false);
+                    .Do(tuple => { observer.OnNext(("Improve", tuple.chunk, tuple.branch)); lastImprove = tuple; })
+                    .LastOrDefaultAsync(cancellationToken: ct).ConfigureAwait(false);
+                if (lastImprove.branch != null) branch = lastImprove.branch;
 
                 observer.OnCompleted();
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                observer.OnError(ex);
+                observer.OnErrorResume(ex);
             }
         });
     }
@@ -343,6 +347,8 @@ public static partial class ReasoningArrows
                 : Observable.Throw<(string chunk, PipelineBranch branch)>(
                     new InvalidOperationException(result.Error));
         };
+
+
 
     /// <summary>
     /// Kleisli-typed streaming improvement arrow.

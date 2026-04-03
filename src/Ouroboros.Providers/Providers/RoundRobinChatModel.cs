@@ -1,4 +1,4 @@
-﻿using System.Reactive.Linq;
+﻿using R3;
 
 namespace Ouroboros.Providers;
 
@@ -252,13 +252,13 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
     }
 
     /// <inheritdoc/>
-    public IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    public Observable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
     {
         return StreamWithThinkingAsync(prompt, ct).Select(t => t.Chunk);
     }
 
     /// <inheritdoc/>
-    public IObservable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
+    public Observable<(bool IsThinking, string Chunk)> StreamWithThinkingAsync(string prompt, CancellationToken ct = default)
     {
         return Observable.Create<(bool IsThinking, string Chunk)>(async (observer, token) =>
         {
@@ -270,7 +270,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 var provider = GetNextProvider(triedIndices);
                 if (provider == null)
                 {
-                    observer.OnError(new InvalidOperationException("No available providers"));
+                    observer.OnErrorResume(new InvalidOperationException("No available providers"));
                     return;
                 }
 
@@ -289,7 +289,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                             {
                                 hasContent = true;
                                 observer.OnNext(chunk);
-                            }, token).ConfigureAwait(false);
+                            }, cancellationToken: token).ConfigureAwait(false);
 
                         if (hasContent)
                         {
@@ -319,7 +319,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 }
                 catch (OperationCanceledException ex) when (token.IsCancellationRequested)
                 {
-                    observer.OnError(ex); // deliberate cancellation — signal error, don't retry
+                    observer.OnErrorResume(ex); // deliberate cancellation — signal error, don't retry
                     return;
                 }
                 catch (OperationCanceledException) { throw; }
@@ -333,7 +333,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
 
                     if (!_failoverEnabled)
                     {
-                        observer.OnError(ex);
+                        observer.OnErrorResume(ex);
                         return;
                     }
 
@@ -341,7 +341,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 }
             }
 
-            observer.OnError(new InvalidOperationException($"All {retries} providers failed"));
+            observer.OnErrorResume(new InvalidOperationException($"All {retries} providers failed"));
         });
     }
 

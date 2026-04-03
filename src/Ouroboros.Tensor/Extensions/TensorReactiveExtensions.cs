@@ -2,8 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
+using R3;
 
 namespace Ouroboros.Tensor.Extensions;
 
@@ -35,7 +34,7 @@ public static class TensorReactiveExtensions
     /// <typeparam name="T">Element type (typically <see cref="ITensor{T}"/>).</typeparam>
     /// <param name="source">The async tensor stream.</param>
     /// <returns>A cold observable that emits each tensor from the stream.</returns>
-    public static IObservable<T> ToObservable<T>(this IAsyncEnumerable<T> source)
+    public static Observable<T> ToObservable<T>(this IAsyncEnumerable<T> source)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -55,7 +54,7 @@ public static class TensorReactiveExtensions
             }
             catch (InvalidOperationException ex)
             {
-                observer.OnError(ex);
+                observer.OnErrorResume(ex);
             }
         });
     }
@@ -66,23 +65,27 @@ public static class TensorReactiveExtensions
     /// Converts an <see cref="IObservable{T}"/> back to an
     /// <see cref="IAsyncEnumerable{T}"/> for interop with pipeline arrows.
     /// </summary>
+    /// <remarks>
+    /// Uses a bounded channel (capacity 128, DropOldest) to prevent unbounded
+    /// memory growth when the observable emits faster than the consumer iterates.
+    /// </remarks>
     public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(
-        this IObservable<T> source,
+        this Observable<T> source,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        var channel = System.Threading.Channels.Channel.CreateUnbounded<T>(
-            new System.Threading.Channels.UnboundedChannelOptions
+        var channel = System.Threading.Channels.Channel.CreateBounded<T>(
+            new System.Threading.Channels.BoundedChannelOptions(128)
             {
+                FullMode = System.Threading.Channels.BoundedChannelFullMode.DropOldest,
                 SingleReader = true,
                 SingleWriter = true,
             });
 
         using var sub = source.Subscribe(
-            onNext: item => channel.Writer.TryWrite(item),
-            onError: ex => channel.Writer.Complete(ex),
-            onCompleted: () => channel.Writer.Complete());
+            item => channel.Writer.TryWrite(item),
+            result => { if (result.IsSuccess) channel.Writer.Complete(); });
 
         await foreach (var item in channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
         {
@@ -105,8 +108,8 @@ public static class TensorReactiveExtensions
     /// The GPU operation to perform on each tensor. Runs while holding the GPU lock.
     /// </param>
     /// <returns>An observable of processed output tensors.</returns>
-    public static IObservable<ITensor<float>> ScheduleOnGpu(
-        this IObservable<ITensor<float>> source,
+    public static Observable<ITensor<float>> ScheduleOnGpu(
+        this Observable<ITensor<float>> source,
         GpuScheduler scheduler,
         GpuTaskPriority priority,
         GpuResourceRequirements requirements,
@@ -116,21 +119,20 @@ public static class TensorReactiveExtensions
         ArgumentNullException.ThrowIfNull(scheduler);
         ArgumentNullException.ThrowIfNull(gpuWork);
 
-        return source.SelectMany(input =>
-            Observable.FromAsync(async ct =>
-            {
-                var result = await scheduler.ScheduleAsync(
-                    priority,
-                    requirements,
-                    () => gpuWork(input),
-                    ct).ConfigureAwait(false);
+        return source.SelectAwait(async (input, ct) =>
+        {
+            var result = await scheduler.ScheduleAsync(
+                priority,
+                requirements,
+                () => gpuWork(input),
+                ct).ConfigureAwait(false);
 
-                if (result.IsFailure)
-                    throw new InvalidOperationException(
-                        $"GPU operation failed: {result.Error}");
+            if (result.IsFailure)
+                throw new InvalidOperationException(
+                    $"GPU operation failed: {result.Error}");
 
-                return result.Value;
-            }));
+            return result.Value;
+        });
     }
 
     // ── Node Graph Wiring Helpers ───────────────────────────────────────────
@@ -158,17 +160,18 @@ public static class TensorReactiveExtensions
         this GpuTensorNode upstream,
         params GpuTensorNode[] downstreams)
     {
-        var disposables = new CompositeDisposable();
+        DisposableBag disposables = default;
         foreach (var ds in downstreams)
-            disposables.Add(upstream.ConnectTo(ds));
-        return disposables;
+            upstream.ConnectTo(ds).AddTo(ref disposables);
+        var bag = disposables;
+        return Disposable.Create(() => bag.Dispose());
     }
 
     /// <summary>
     /// Merges outputs from multiple upstream nodes into a single observable,
     /// optionally concatenating the tensors along a batch dimension.
     /// </summary>
-    public static IObservable<ITensor<float>> MergeOutputs(
+    public static Observable<ITensor<float>> MergeOutputs(
         params GpuTensorNode[] nodes)
     {
         return nodes.Select(n => n.Output).Merge();
@@ -186,12 +189,11 @@ public static class TensorReactiveExtensions
     /// An async pipeline stage (e.g. from <see cref="TensorPipelineArrows"/>).
     /// </param>
     /// <returns>Flattened output observable.</returns>
-    public static IObservable<ITensor<float>> ThroughPipelineStage(
-        this IObservable<IAsyncEnumerable<float[]>> source,
+    public static Observable<ITensor<float>> ThroughPipelineStage(
+        this Observable<IAsyncEnumerable<float[]>> source,
         Step<IAsyncEnumerable<float[]>, IAsyncEnumerable<ITensor<float>>> stage)
     {
-        return source.SelectMany(batch =>
-            Observable.FromAsync(async () => await stage(batch).ConfigureAwait(false))
-                .SelectMany(stream => stream.ToObservable()));
+        return source.SelectAwait(async (batch, ct) => await stage(batch).ConfigureAwait(false))
+            .SelectMany(stream => stream.ToObservable());
     }
 }

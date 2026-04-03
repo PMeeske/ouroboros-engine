@@ -1,4 +1,6 @@
-﻿namespace Ouroboros.Providers;
+﻿using R3;
+
+namespace Ouroboros.Providers;
 
 /// <summary>
 /// Extended contract for models that support streaming responses.
@@ -6,5 +8,5 @@
 [Obsolete("Use IOuroborosChatClient with GetStreamingResponseAsync instead. Will be removed in v3.")]
 public interface IStreamingChatModel : Ouroboros.Abstractions.Core.IChatCompletionModel
 {
-    IObservable<string> StreamReasoningContent(string prompt, CancellationToken ct = default);
+    Observable<string> StreamReasoningContent(string prompt, CancellationToken ct = default);
 }

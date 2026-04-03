@@ -2,9 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
+using R3;
 using System.Text;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.CognitiveServices.Speech.Audio;
@@ -51,16 +49,16 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
     }
 
     /// <inheritdoc/>
-    public IObservable<TranscriptionEvent> StreamTranscription(
-        IObservable<AudioChunk> audioStream,
+    public Observable<TranscriptionEvent> StreamTranscription(
+        Observable<AudioChunk> audioStream,
         StreamingTranscriptionOptions? options = null,
         CancellationToken ct = default)
     {
         return Observable.Create<TranscriptionEvent>(async (observer, disposalCt) =>
         {
             var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, disposalCt);
-            var disposables = new CompositeDisposable();
-            disposables.Add(linkedCts);
+            DisposableBag disposables = default;
+            linkedCts.AddTo(ref disposables);
 
             try
             {
@@ -108,7 +106,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
                 {
                     if (e.Reason == CancellationReason.Error)
                     {
-                        observer.OnError(new InvalidOperationException(
+                        observer.OnErrorResume(new InvalidOperationException(
                             $"Azure Speech error [{e.ErrorCode}]: {e.ErrorDetails}"));
                     }
                     else
@@ -134,15 +132,9 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
                                 pushStream.Close();
                             }
                         }
-                    },
-                    ex =>
-                    {
-                        pushStream.Close();
-                        observer.OnError(ex);
-                    },
-                    () => pushStream.Close());
+                    });
 
-                disposables.Add(audioSubscription);
+                audioSubscription.AddTo(ref disposables);
 
                 // Wait for cancellation
                 try
@@ -162,7 +154,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
             }
             catch (InvalidOperationException ex)
             {
-                observer.OnError(ex);
+                observer.OnErrorResume(ex);
             }
             finally
             {
@@ -172,8 +164,8 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
     }
 
     /// <inheritdoc/>
-    public IObservable<VoiceActivityEvent> DetectVoiceActivity(
-        IObservable<AudioChunk> audioStream,
+    public Observable<VoiceActivityEvent> DetectVoiceActivity(
+        Observable<AudioChunk> audioStream,
         CancellationToken ct = default)
     {
         // Derive VAD from the transcription stream
@@ -289,8 +281,8 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
             _options = options;
         }
 
-        public IObservable<TranscriptionEvent> Results => _results.AsObservable();
-        public IObservable<VoiceActivityEvent> VoiceActivity => _voiceActivity.AsObservable();
+        public Observable<TranscriptionEvent> Results => _results;
+        public Observable<VoiceActivityEvent> VoiceActivity => _voiceActivity;
         public string AccumulatedText => _accumulated.ToString();
         public bool IsActive => _isActive;
 
@@ -338,7 +330,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
                 _isActive = false;
                 if (e.Reason == CancellationReason.Error)
                 {
-                    _results.OnError(new InvalidOperationException(e.ErrorDetails));
+                    _results.OnErrorResume(new InvalidOperationException(e.ErrorDetails));
                 }
             };
 
@@ -392,8 +384,10 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
             }
 
             _audioConfig?.Dispose();
-            _results.Dispose();
-            _voiceActivity.Dispose();
+            _results.OnCompleted();
+            _results.Dispose(false);
+            _voiceActivity.OnCompleted();
+            _voiceActivity.Dispose(false);
         }
     }
 }
