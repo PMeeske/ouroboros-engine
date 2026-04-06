@@ -428,6 +428,7 @@ class TTSRequest(BaseModel):
 class TTSGenerateRequest(BaseModel):
     """Request for LLAMA semantic token generation only (no DAC decode)."""
     text: str
+    reference_id: Optional[str] = None
     max_new_tokens: int = 1024
     chunk_length: int = 300
     top_p: float = 0.8
@@ -463,9 +464,11 @@ class FishTTSEngine:
 
         self.device = device
         self.generate = generate
+        self.encode_audio = encode_audio
         self.ServeTTSRequest = ServeTTSRequest
         self.Conversation = Conversation
         self.Message = Message
+        self._voice_embeddings: dict[str, torch.Tensor] = {}
 
         # Load LLAMA on GPU
         logger.info("Loading Fish Speech LLAMA from %s on %s", checkpoint_path, device)
@@ -502,6 +505,33 @@ class FishTTSEngine:
             providers=["CPUExecutionProvider"],
         )
         logger.info("Fish Speech DAC ONNX loaded from %s", dac_onnx_path)
+
+        # Auto-load reference audio embeddings for voice cloning
+        ref_dir = os.environ.get("FISH_REFERENCE_DIR", "/app/fish-speech/references/")
+        if os.path.isdir(ref_dir):
+            for fname in os.listdir(ref_dir):
+                if fname.endswith(".wav"):
+                    ref_id = fname[:-4]
+                    ref_path = os.path.join(ref_dir, fname)
+                    self.load_reference_audio(ref_id, ref_path)
+            logger.info("Loaded %d voice references from %s", len(self._voice_embeddings), ref_dir)
+
+    def load_reference_audio(self, reference_id: str, audio_path: str) -> None:
+        """Load a reference WAV and store its voice embedding for cloning."""
+        import os
+        if not os.path.isfile(audio_path):
+            logger.warning("Reference audio not found: %s", audio_path)
+            return
+        try:
+            embedding = self.encode_audio(
+                model=self.model,
+                audio_path=audio_path,
+                device=str(self.device),
+            )
+            self._voice_embeddings[reference_id] = embedding
+            logger.info("Loaded voice reference '%s' from %s", reference_id, audio_path)
+        except Exception as e:
+            logger.warning("Failed to load reference '%s': %s", reference_id, e)
 
     @torch.no_grad()
     def generate_codes(
@@ -696,6 +726,96 @@ def tts_decode(request: TTSDecodeRequest):
         media_type="audio/wav",
         headers={"X-Audio-RMS": str(round(rms, 1))},
     )
+
+
+@app.post("/tts/stream")
+def tts_stream(request: TTSRequest):
+    """Streaming TTS: returns chunked audio as LLAMA generates progressively.
+
+    First chunk includes WAV header. Subsequent chunks are raw PCM bytes.
+    Uses chunked transfer encoding for progressive audio delivery.
+    """
+    import struct
+    import numpy as np
+    from fastapi.responses import StreamingResponse
+
+    engine = _get_fish_tts()
+
+    def generate_audio_chunks():
+        """Generator yielding WAV header + PCM chunks."""
+        # WAV header with unknown data size (0xFFFFFFFF for streaming)
+        sample_rate = 44100
+        channels = 1
+        bits_per_sample = 16
+
+        # Write WAV header with max data size (streaming unknown length)
+        header = struct.pack(
+            '<4sI4s4sIHHIIHH4sI',
+            b'RIFF', 0xFFFFFFFF,  # file size placeholder
+            b'WAVE',
+            b'fmt ', 16,  # PCM format chunk
+            1,  # PCM format
+            channels, sample_rate,
+            sample_rate * channels * bits_per_sample // 8,  # byte rate
+            channels * bits_per_sample // 8,  # block align
+            bits_per_sample,
+            b'data', 0xFFFFFFFF,  # data size placeholder
+        )
+        yield header
+
+        # Generate codes in chunks
+        try:
+            codes_np, _ = engine.generate_codes(
+                text=request.text,
+                max_new_tokens=request.max_new_tokens,
+                chunk_length=min(request.chunk_length, 100),  # smaller chunks for streaming
+                top_p=request.top_p,
+                temperature=request.temperature,
+                repetition_penalty=request.repetition_penalty,
+            )
+
+            # Decode full codes to WAV, yield as PCM
+            wav_bytes, rms = engine.decode_codes_to_wav(codes_np)
+            # Skip WAV header (44 bytes) from decode output, yield raw PCM
+            pcm_data = wav_bytes[44:]
+            chunk_size = 8192
+            for i in range(0, len(pcm_data), chunk_size):
+                yield pcm_data[i:i + chunk_size]
+        except Exception as e:
+            logger.error("Streaming TTS error: %s", e)
+
+    return StreamingResponse(
+        generate_audio_chunks(),
+        media_type="audio/wav",
+        headers={"Transfer-Encoding": "chunked"},
+    )
+
+
+@app.get("/tts/references")
+def tts_references():
+    """List loaded voice reference embeddings."""
+    engine = _get_fish_tts()
+    refs = list(engine._voice_embeddings.keys())
+    return {"references": refs, "count": len(refs)}
+
+
+@app.post("/tts/reference/load")
+def tts_reference_load(request: dict):
+    """Load a voice reference at runtime.
+
+    Body: {"reference_id": str, "audio_path": str}
+    """
+    ref_id = request.get("reference_id")
+    audio_path = request.get("audio_path")
+    if not ref_id or not audio_path:
+        raise HTTPException(status_code=400, detail="reference_id and audio_path required")
+
+    engine = _get_fish_tts()
+    engine.load_reference_audio(ref_id, audio_path)
+
+    if ref_id in engine._voice_embeddings:
+        return {"loaded": True, "reference_id": ref_id}
+    raise HTTPException(status_code=500, detail=f"Failed to load reference '{ref_id}'")
 
 
 @app.post("/tts/generate")
