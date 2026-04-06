@@ -678,6 +678,47 @@ def tts_health():
     return {"loaded": False, "model_loaded": False, "device": str(_device)}
 
 
+@app.get("/tts/test_generate")
+def tts_test_generate():
+    """Diagnostic endpoint: verify LLAMA inference produces valid semantic tokens.
+
+    Runs generate_codes with a test phrase and validates code ranges.
+    This is a diagnostic endpoint for development verification only.
+    """
+    engine = _get_fish_tts()
+    codes_np, generation_time_ms = engine.generate_codes("Hello, this is a test.")
+
+    num_codebooks = int(codes_np.shape[0])
+    gen_length = int(codes_np.shape[1])
+    code_min = int(codes_np.min())
+    code_max = int(codes_np.max())
+    tokens_per_second = gen_length / (generation_time_ms / 1000) if generation_time_ms > 0 else 0
+
+    # At 44100 Hz with ~512 samples per code, real-time threshold ~ 86 codes/sec
+    realtime_threshold = 44100 / 512
+    exceeds_realtime = tokens_per_second > realtime_threshold
+    logger.info(
+        "test_generate: %d tokens at %.1f tok/s (realtime=%.1f, exceeds=%s)",
+        gen_length, tokens_per_second, realtime_threshold, exceeds_realtime,
+    )
+
+    if code_max > 4095:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Codes out of codebook range: max={code_max} > 4095",
+        )
+
+    return {
+        "success": True,
+        "num_codebooks": num_codebooks,
+        "gen_length": gen_length,
+        "code_range": [code_min, code_max],
+        "generation_time_ms": round(generation_time_ms, 2),
+        "tokens_per_second": round(tokens_per_second, 2),
+        "exceeds_realtime": exceeds_realtime,
+    }
+
+
 @app.post("/ewc/validate_drift", response_model=DriftResponse)
 def validate_drift(request: DriftRequest) -> DriftResponse:
     """Check if weight drift from anchor exceeds threshold."""
