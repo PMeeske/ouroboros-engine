@@ -421,6 +421,16 @@ class TTSRequest(BaseModel):
     format: str = "wav"
 
 
+class TTSGenerateRequest(BaseModel):
+    """Request for LLAMA semantic token generation only (no DAC decode)."""
+    text: str
+    max_new_tokens: int = 1024
+    chunk_length: int = 300
+    top_p: float = 0.8
+    temperature: float = 0.8
+    repetition_penalty: float = 1.1
+
+
 class FishTTSEngine:
     """Wraps Fish Speech LLAMA + DAC for GPU-isolated TTS inference."""
 
@@ -455,6 +465,11 @@ class FishTTSEngine:
         )
         self.tokenizer = FishTokenizer(os.path.join(checkpoint_path, "tokenizer.json"))
         logger.info("Fish Speech LLAMA loaded")
+        logger.info(
+            "LLAMA KV cache: %d layers, model dim %d",
+            self.model.config.num_layers,
+            self.model.config.dim,
+        )
 
         # Load DAC decoder via ONNX (CPU -- avoids MIOpen workspace issues)
         import onnxruntime as ort
@@ -463,6 +478,65 @@ class FishTTSEngine:
             providers=["CPUExecutionProvider"],
         )
         logger.info("Fish Speech DAC ONNX loaded from %s", dac_onnx_path)
+
+    @torch.no_grad()
+    def generate_codes(
+        self,
+        text: str,
+        max_new_tokens: int = 1024,
+        chunk_length: int = 300,
+        top_p: float = 0.8,
+        temperature: float = 0.8,
+        repetition_penalty: float = 1.1,
+    ) -> tuple:
+        """Run LLAMA text-to-semantic inference only (no DAC decode).
+
+        Returns:
+            (codes_np: ndarray[int64] shape [num_codebooks, gen_len], generation_time_ms: float)
+        """
+        import numpy as np
+        import time
+
+        from fish_speech.conversation import Conversation, Message
+
+        conv = Conversation(messages=[
+            Message(role="system", content="convert the provided text to speech"),
+            Message(role="user", content=text),
+        ])
+
+        prompt = conv.encode_for_inference(
+            tokenizer=self.tokenizer,
+            num_codebooks=self.model.config.num_codebooks,
+        )
+        prompt_tokens = prompt["tokens"].to(self.device)
+        prompt_length = prompt_tokens.shape[-1]
+
+        t0 = time.perf_counter()
+        all_codes = self.generate(
+            model=self.model,
+            prompt=prompt_tokens,
+            max_new_tokens=max_new_tokens,
+            encode_func=self.decode_one_token,
+            decode_func=self.decode_one_token,
+            temperature=temperature,
+            top_p=top_p,
+            repetition_penalty=repetition_penalty,
+            iterative_prompt=chunk_length > 0,
+            chunk_length=chunk_length,
+        )
+        generation_time_ms = (time.perf_counter() - t0) * 1000
+
+        codes = all_codes[1:, prompt_length:-1]  # [num_codebooks, gen_len]
+
+        if codes.shape[1] == 0:
+            raise ValueError("LLAMA generated 0 semantic tokens")
+
+        codes_np = codes.cpu().numpy().astype(np.int64)
+        logger.info(
+            "generate_codes: %d codebooks x %d tokens in %.1fms",
+            codes_np.shape[0], codes_np.shape[1], generation_time_ms,
+        )
+        return codes_np, generation_time_ms
 
     @torch.no_grad()
     def synthesize(self, text: str, max_new_tokens: int = 1024,
@@ -561,10 +635,47 @@ def tts(request: TTSRequest):
     return Response(content=wav_bytes, media_type="audio/wav")
 
 
+@app.post("/tts/generate")
+def tts_generate(request: TTSGenerateRequest):
+    """Generate semantic tokens via LLAMA only (no DAC decode).
+
+    Returns VQ codes tensor [num_codebooks, gen_len] with timing metadata.
+    """
+    engine = _get_fish_tts()
+    codes_np, generation_time_ms = engine.generate_codes(
+        text=request.text,
+        max_new_tokens=request.max_new_tokens,
+        chunk_length=request.chunk_length,
+        top_p=request.top_p,
+        temperature=request.temperature,
+        repetition_penalty=request.repetition_penalty,
+    )
+    num_codebooks = int(codes_np.shape[0])
+    gen_length = int(codes_np.shape[1])
+    return {
+        "codes": codes_np.tolist(),
+        "num_codebooks": num_codebooks,
+        "gen_length": gen_length,
+        "generation_time_ms": round(generation_time_ms, 2),
+    }
+
+
 @app.get("/tts/health")
 def tts_health():
-    """Check if Fish Speech TTS is loaded."""
-    return {"loaded": _fish_tts is not None, "device": str(_device)}
+    """Check if Fish Speech TTS is loaded. Returns model config when available."""
+    if _fish_tts is not None:
+        model_cfg = _fish_tts.model.config
+        return {
+            "loaded": True,
+            "model_loaded": True,
+            "device": str(_device),
+            "model_config": {
+                "num_codebooks": model_cfg.num_codebooks,
+                "vocab_size": model_cfg.vocab_size,
+                "dim": model_cfg.dim,
+            },
+        }
+    return {"loaded": False, "model_loaded": False, "device": str(_device)}
 
 
 @app.post("/ewc/validate_drift", response_model=DriftResponse)
