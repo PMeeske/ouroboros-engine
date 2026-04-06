@@ -444,6 +444,44 @@ class TTSDecodeRequest(BaseModel):
     codes: List[List[int]]
 
 
+# ── Semantic token categorization for predictive lip-sync ────────────────────
+
+# Maps Fish Speech codebook token ID ranges to phoneme-like categories.
+# Used to predict FLAME blendshape expressions before audio decode completes.
+_TOKEN_CATEGORY_MAP = [
+    (0, 399, "silence"),      # Low-energy tokens
+    (400, 999, "vowel"),      # Open mouth shapes
+    (1000, 1599, "consonant"),  # Closed/partial mouth shapes
+    (1600, 2199, "plosive"),  # Burst shapes (p, b, t, d, k, g)
+    (2200, 2799, "fricative"),  # Friction shapes (f, v, s, z, sh)
+    (2800, 3199, "nasal"),    # Nasal shapes (m, n, ng)
+    (3200, 4095, "transition"),  # In-between shapes
+]
+
+
+def categorize_semantic_tokens(codes) -> list:
+    """Categorize semantic token IDs into phoneme-like categories.
+
+    Args:
+        codes: ndarray [num_codebooks, chunk_len] — uses first codebook (index 0).
+
+    Returns:
+        List of category strings, one per time step.
+    """
+    import numpy as np
+    first_codebook = codes[0] if len(codes.shape) > 1 else codes
+    categories = []
+    for token_id in first_codebook:
+        tid = int(token_id)
+        cat = "transition"  # default
+        for low, high, name in _TOKEN_CATEGORY_MAP:
+            if low <= tid <= high:
+                cat = name
+                break
+        categories.append(cat)
+    return categories
+
+
 class FishTTSEngine:
     """Wraps Fish Speech LLAMA + DAC for GPU-isolated TTS inference."""
 
@@ -730,65 +768,89 @@ def tts_decode(request: TTSDecodeRequest):
 
 @app.post("/tts/stream")
 def tts_stream(request: TTSRequest):
-    """Streaming TTS: returns chunked audio as LLAMA generates progressively.
+    """Streaming TTS with newline-delimited JSON (NDJSON) + binary audio.
 
-    First chunk includes WAV header. Subsequent chunks are raw PCM bytes.
-    Uses chunked transfer encoding for progressive audio delivery.
+    Stream format per chunk:
+      1. {"type": "header", "sample_rate": 44100, "channels": 1, "sample_width": 2}\\n
+      2. {"type": "tokens", "categories": [...], "chunk_index": N}\\n  (prediction — sent BEFORE audio)
+      3. {"type": "audio", "chunk_index": N, "pcm_bytes": N}\\n + raw PCM bytes
+
+    Token categories are sent BEFORE the audio chunk, enabling predictive lip-sync
+    from semantic tokens before audio decode completes.
     """
     import struct
+    import json as _json
     import numpy as np
     from fastapi.responses import StreamingResponse
 
     engine = _get_fish_tts()
 
-    def generate_audio_chunks():
-        """Generator yielding WAV header + PCM chunks."""
-        # WAV header with unknown data size (0xFFFFFFFF for streaming)
-        sample_rate = 44100
-        channels = 1
-        bits_per_sample = 16
+    def generate_ndjson_chunks():
+        """Generator yielding NDJSON metadata + binary audio chunks."""
+        # 1. Stream header
+        yield (_json.dumps({
+            "type": "header",
+            "sample_rate": 44100,
+            "channels": 1,
+            "sample_width": 2,
+        }) + "\n").encode()
 
-        # Write WAV header with max data size (streaming unknown length)
-        header = struct.pack(
-            '<4sI4s4sIHHIIHH4sI',
-            b'RIFF', 0xFFFFFFFF,  # file size placeholder
-            b'WAVE',
-            b'fmt ', 16,  # PCM format chunk
-            1,  # PCM format
-            channels, sample_rate,
-            sample_rate * channels * bits_per_sample // 8,  # byte rate
-            channels * bits_per_sample // 8,  # block align
-            bits_per_sample,
-            b'data', 0xFFFFFFFF,  # data size placeholder
-        )
-        yield header
-
-        # Generate codes in chunks
         try:
-            codes_np, _ = engine.generate_codes(
+            # Generate semantic codes
+            codes_np, gen_time_ms = engine.generate_codes(
                 text=request.text,
                 max_new_tokens=request.max_new_tokens,
-                chunk_length=min(request.chunk_length, 100),  # smaller chunks for streaming
+                chunk_length=min(request.chunk_length, 100),
                 top_p=request.top_p,
                 temperature=request.temperature,
                 repetition_penalty=request.repetition_penalty,
             )
 
-            # Decode full codes to WAV, yield as PCM
+            # 2. Token categories (prediction — sent BEFORE audio)
+            categories = categorize_semantic_tokens(codes_np)
+            yield (_json.dumps({
+                "type": "tokens",
+                "categories": categories,
+                "chunk_index": 0,
+            }) + "\n").encode()
+
+            # 3. Decode to audio and stream as PCM chunks
             wav_bytes, rms = engine.decode_codes_to_wav(codes_np)
-            # Skip WAV header (44 bytes) from decode output, yield raw PCM
-            pcm_data = wav_bytes[44:]
+            pcm_data = wav_bytes[44:]  # skip WAV header
+
             chunk_size = 8192
+            chunk_idx = 0
             for i in range(0, len(pcm_data), chunk_size):
-                yield pcm_data[i:i + chunk_size]
+                pcm_chunk = pcm_data[i:i + chunk_size]
+                # Audio metadata line
+                yield (_json.dumps({
+                    "type": "audio",
+                    "chunk_index": chunk_idx,
+                    "pcm_bytes": len(pcm_chunk),
+                }) + "\n").encode()
+                # Raw PCM bytes
+                yield pcm_chunk
+                chunk_idx += 1
+
         except Exception as e:
             logger.error("Streaming TTS error: %s", e)
+            yield (_json.dumps({"type": "error", "message": str(e)}) + "\n").encode()
 
     return StreamingResponse(
-        generate_audio_chunks(),
-        media_type="audio/wav",
+        generate_ndjson_chunks(),
+        media_type="application/x-ndjson",
         headers={"Transfer-Encoding": "chunked"},
     )
+
+
+@app.get("/tts/token_categories")
+def tts_token_categories():
+    """Return the semantic token category mapping table for debugging."""
+    return {
+        "categories": {name: {"range": [lo, hi]} for lo, hi, name in _TOKEN_CATEGORY_MAP},
+        "total_categories": len(_TOKEN_CATEGORY_MAP),
+    }
+
 
 
 @app.get("/tts/references")
