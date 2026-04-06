@@ -73,6 +73,13 @@ public sealed class ToolAwareChatModel(
     public Func<string, CancellationToken, Task>? SmcpFallbackHandler { get; set; }
 
     /// <summary>
+    /// Optional session-scoped failure tracker. When set, known-failing tool+input
+    /// combinations are short-circuited with a degradation message instead of retried.
+    /// Set by the app layer (ToolSubsystem) to share a single tracker across all execution paths.
+    /// </summary>
+    public ToolFailureTracker? FailureTracker { get; set; }
+
+    /// <summary>
     /// Generates a response and executes any tools mentioned in the response.
     /// </summary>
     /// <param name="prompt">The input prompt.</param>
@@ -238,6 +245,20 @@ public sealed class ToolAwareChatModel(
                         continue;
                     }
 
+                    // Failure tracker: skip known-failing tool+input combinations
+                    if (FailureTracker != null)
+                    {
+                        var (isKnown, lastError) = FailureTracker.IsKnownFailure(name, args);
+                        if (isKnown)
+                        {
+                            string degradationMsg = ToolFailureTracker.GenerateDegradationMessage(name, lastError);
+                            cleanText += $" [TOOL-RESULT:{name}] {degradationMsg}";
+                            PublishToolEvent(name, args, degradationMsg, TimeSpan.Zero, false);
+                            toolCalls.Add(new ToolExecution(name, args, degradationMsg, DateTime.UtcNow));
+                            continue;
+                        }
+                    }
+
                     if (BeforeInvoke != null)
                     {
                         var allowed = await BeforeInvoke(name, args, ct).ConfigureAwait(false);
@@ -267,6 +288,13 @@ public sealed class ToolAwareChatModel(
                     }
 
                     bool success = !output.StartsWith("error:");
+
+                    // Record failures for future short-circuiting
+                    if (!success)
+                    {
+                        FailureTracker?.RecordFailure(name, args, output);
+                    }
+
                     AfterInvoke?.Invoke(name, args, output, sw.Elapsed, success);
                     PublishToolEvent(name, args, output, sw.Elapsed, success);
                     toolCalls.Add(new ToolExecution(name, args, output, DateTime.UtcNow));
@@ -302,6 +330,20 @@ public sealed class ToolAwareChatModel(
                 continue;
             }
 
+            // Failure tracker: skip known-failing tool+input combinations
+            if (FailureTracker != null)
+            {
+                var (isKnown, lastError) = FailureTracker.IsKnownFailure(name, args);
+                if (isKnown)
+                {
+                    string degradationMsg = ToolFailureTracker.GenerateDegradationMessage(name, lastError);
+                    modifiedResult = modifiedResult.Replace(fullMatch, $"[TOOL-RESULT:{name}] {degradationMsg}");
+                    PublishToolEvent(name, args, degradationMsg, TimeSpan.Zero, false);
+                    toolCalls.Add(new ToolExecution(name, args, degradationMsg, DateTime.UtcNow));
+                    continue;
+                }
+            }
+
             // ── Permission gate (Crush: [a]/[s]/[d] before every tool call) ──
             if (BeforeInvoke != null)
             {
@@ -334,6 +376,12 @@ public sealed class ToolAwareChatModel(
             }
 
             bool success = !output.StartsWith("error:");
+
+            // Record failures for future short-circuiting
+            if (!success)
+            {
+                FailureTracker?.RecordFailure(name, args, output);
+            }
 
             // ── Post-execution hook (metrics, UI, event bus) ──
             AfterInvoke?.Invoke(name, args, output, sw.Elapsed, success);
