@@ -23,6 +23,9 @@ app = FastAPI(title="Ouroboros Tensor Service", version="0.1.0")
 _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info("Tensor service starting. Device: %s", _device)
 
+# ── Fish Speech TTS state (loaded lazily on first /tts call) ─────────────────
+_fish_tts: Optional["FishTTSEngine"] = None
+
 
 # ── Pydantic models (field names match C# JsonPropertyName attributes) ──────
 
@@ -403,6 +406,165 @@ def ewc_status() -> dict:
         "fisher_shape": list(_ewc_fisher.shape) if _ewc_fisher is not None else None,
         "device": str(_device),
     }
+
+
+# ── Fish Speech TTS Engine ───────────────────────────────────────────────────
+
+class TTSRequest(BaseModel):
+    text: str
+    reference_id: Optional[str] = None
+    max_new_tokens: int = 1024
+    chunk_length: int = 300
+    top_p: float = 0.8
+    temperature: float = 0.8
+    repetition_penalty: float = 1.1
+    format: str = "wav"
+
+
+class FishTTSEngine:
+    """Wraps Fish Speech LLAMA + DAC for GPU-isolated TTS inference."""
+
+    def __init__(self, checkpoint_path: str, dac_onnx_path: str, device: torch.device):
+        import sys
+        import os
+        # Add fish-speech to path
+        fish_dir = os.environ.get("FISH_SPEECH_DIR", "/app/fish-speech")
+        if os.path.isdir(fish_dir) and fish_dir not in sys.path:
+            sys.path.insert(0, fish_dir)
+
+        from fish_speech.models.text2semantic.inference import (
+            init_model, generate, encode_audio,
+        )
+        from fish_speech.tokenizer import FishTokenizer
+        from fish_speech.conversation import Conversation, Message
+        from fish_speech.utils.schema import ServeTTSRequest
+
+        self.device = device
+        self.generate = generate
+        self.ServeTTSRequest = ServeTTSRequest
+        self.Conversation = Conversation
+        self.Message = Message
+
+        # Load LLAMA on GPU
+        logger.info("Loading Fish Speech LLAMA from %s on %s", checkpoint_path, device)
+        self.model, self.decode_one_token = init_model(
+            checkpoint_path=checkpoint_path,
+            device=str(device),
+            precision=torch.half,
+            compile=False,
+        )
+        self.tokenizer = FishTokenizer(os.path.join(checkpoint_path, "tokenizer.json"))
+        logger.info("Fish Speech LLAMA loaded")
+
+        # Load DAC decoder via ONNX (CPU -- avoids MIOpen workspace issues)
+        import onnxruntime as ort
+        self.dac_session = ort.InferenceSession(
+            dac_onnx_path,
+            providers=["CPUExecutionProvider"],
+        )
+        logger.info("Fish Speech DAC ONNX loaded from %s", dac_onnx_path)
+
+    @torch.no_grad()
+    def synthesize(self, text: str, max_new_tokens: int = 1024,
+                   chunk_length: int = 300, top_p: float = 0.8,
+                   temperature: float = 0.8, repetition_penalty: float = 1.1) -> bytes:
+        """Generate WAV audio from text. Returns raw WAV bytes."""
+        import numpy as np
+        import io
+        import wave as wave_mod
+
+        from fish_speech.conversation import Conversation, Message
+
+        # Build conversation
+        conv = Conversation(messages=[
+            Message(role="system", content="convert the provided text to speech"),
+            Message(role="user", content=text),
+        ])
+
+        # Encode for model
+        prompt = conv.encode_for_inference(
+            tokenizer=self.tokenizer,
+            num_codebooks=self.model.config.num_codebooks,
+        )
+        prompt_tokens = prompt["tokens"].to(self.device)
+        prompt_length = prompt_tokens.shape[-1]
+
+        # Generate codes with LLAMA on GPU
+        all_codes = self.generate(
+            model=self.model,
+            prompt=prompt_tokens,
+            max_new_tokens=max_new_tokens,
+            encode_func=self.decode_one_token,
+            decode_func=self.decode_one_token,
+            temperature=temperature,
+            top_p=top_p,
+            repetition_penalty=repetition_penalty,
+            iterative_prompt=chunk_length > 0,
+            chunk_length=chunk_length,
+        )
+
+        # Extract generated codes (skip prompt, remove eos)
+        codes = all_codes[1:, prompt_length:-1]  # [num_codebooks, gen_len]
+
+        if codes.shape[1] == 0:
+            logger.warning("Fish Speech generated 0 tokens")
+            return b""
+
+        # Decode codes to audio via ONNX DAC (CPU)
+        codes_np = codes.cpu().numpy().astype(np.int64)
+        codes_np = codes_np[np.newaxis, :, :]  # [1, num_codebooks, time]
+        audio_out = self.dac_session.run(None, {"codes": codes_np})[0]
+        audio_float = audio_out.squeeze()  # [audio_samples]
+
+        # Convert to 16-bit PCM WAV
+        audio_int16 = np.clip(audio_float * 32767, -32768, 32767).astype(np.int16)
+
+        buf = io.BytesIO()
+        with wave_mod.open(buf, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
+            wf.writeframes(audio_int16.tobytes())
+
+        return buf.getvalue()
+
+
+def _get_fish_tts() -> FishTTSEngine:
+    """Lazy-load Fish Speech TTS engine on first call."""
+    global _fish_tts
+    if _fish_tts is None:
+        import os
+        checkpoint = os.environ.get("FISH_CHECKPOINT", "checkpoints/openaudio-s1-mini")
+        dac_onnx = os.environ.get("FISH_DAC_ONNX", "checkpoints/onnx/dac_decode.onnx")
+        _fish_tts = FishTTSEngine(checkpoint, dac_onnx, _device)
+    return _fish_tts
+
+
+@app.post("/tts")
+def tts(request: TTSRequest):
+    """Synthesize speech from text using Fish Speech (GPU LLAMA + ONNX DAC)."""
+    from fastapi.responses import Response
+
+    engine = _get_fish_tts()
+    wav_bytes = engine.synthesize(
+        text=request.text,
+        max_new_tokens=request.max_new_tokens,
+        chunk_length=request.chunk_length,
+        top_p=request.top_p,
+        temperature=request.temperature,
+        repetition_penalty=request.repetition_penalty,
+    )
+
+    if not wav_bytes:
+        raise HTTPException(status_code=500, detail="TTS generated empty audio")
+
+    return Response(content=wav_bytes, media_type="audio/wav")
+
+
+@app.get("/tts/health")
+def tts_health():
+    """Check if Fish Speech TTS is loaded."""
+    return {"loaded": _fish_tts is not None, "device": str(_device)}
 
 
 @app.post("/ewc/validate_drift", response_model=DriftResponse)
