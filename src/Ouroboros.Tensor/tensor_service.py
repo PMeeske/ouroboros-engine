@@ -431,6 +431,14 @@ class TTSGenerateRequest(BaseModel):
     repetition_penalty: float = 1.1
 
 
+class TTSDecodeRequest(BaseModel):
+    """Request for DAC decode: VQ codes to WAV audio.
+
+    codes: list of lists [num_codebooks][gen_len], max 20 codebooks, max 4096 time steps.
+    """
+    codes: List[List[int]]
+
+
 class FishTTSEngine:
     """Wraps Fish Speech LLAMA + DAC for GPU-isolated TTS inference."""
 
@@ -538,60 +546,32 @@ class FishTTSEngine:
         )
         return codes_np, generation_time_ms
 
-    @torch.no_grad()
-    def synthesize(self, text: str, max_new_tokens: int = 1024,
-                   chunk_length: int = 300, top_p: float = 0.8,
-                   temperature: float = 0.8, repetition_penalty: float = 1.1) -> bytes:
-        """Generate WAV audio from text. Returns raw WAV bytes."""
+    def decode_codes_to_wav(self, codes_np) -> tuple:
+        """Decode VQ codes to WAV audio via ONNX DAC (CPU).
+
+        Args:
+            codes_np: ndarray[int64] shape [num_codebooks, gen_len]
+
+        Returns:
+            (wav_bytes: bytes, rms: float) — 44100Hz mono 16-bit PCM WAV and RMS on int16 scale.
+        """
         import numpy as np
         import io
         import wave as wave_mod
 
-        from fish_speech.conversation import Conversation, Message
-
-        # Build conversation
-        conv = Conversation(messages=[
-            Message(role="system", content="convert the provided text to speech"),
-            Message(role="user", content=text),
-        ])
-
-        # Encode for model
-        prompt = conv.encode_for_inference(
-            tokenizer=self.tokenizer,
-            num_codebooks=self.model.config.num_codebooks,
-        )
-        prompt_tokens = prompt["tokens"].to(self.device)
-        prompt_length = prompt_tokens.shape[-1]
-
-        # Generate codes with LLAMA on GPU
-        all_codes = self.generate(
-            model=self.model,
-            prompt=prompt_tokens,
-            max_new_tokens=max_new_tokens,
-            encode_func=self.decode_one_token,
-            decode_func=self.decode_one_token,
-            temperature=temperature,
-            top_p=top_p,
-            repetition_penalty=repetition_penalty,
-            iterative_prompt=chunk_length > 0,
-            chunk_length=chunk_length,
-        )
-
-        # Extract generated codes (skip prompt, remove eos)
-        codes = all_codes[1:, prompt_length:-1]  # [num_codebooks, gen_len]
-
-        if codes.shape[1] == 0:
-            logger.warning("Fish Speech generated 0 tokens")
-            return b""
-
-        # Decode codes to audio via ONNX DAC (CPU)
-        codes_np = codes.cpu().numpy().astype(np.int64)
-        codes_np = codes_np[np.newaxis, :, :]  # [1, num_codebooks, time]
-        audio_out = self.dac_session.run(None, {"codes": codes_np})[0]
+        codes_input = codes_np[np.newaxis, :, :]  # [1, num_codebooks, time]
+        audio_out = self.dac_session.run(None, {"codes": codes_input})[0]
         audio_float = audio_out.squeeze()  # [audio_samples]
 
         # Convert to 16-bit PCM WAV
         audio_int16 = np.clip(audio_float * 32767, -32768, 32767).astype(np.int16)
+
+        # Calculate RMS on int16 scale
+        rms = float(np.sqrt(np.mean(audio_int16.astype(np.float64) ** 2)))
+        if rms < 500:
+            logger.warning("DAC decode RMS %.1f < 500 — near-silent output", rms)
+        else:
+            logger.info("DAC decode RMS: %.1f", rms)
 
         buf = io.BytesIO()
         with wave_mod.open(buf, "wb") as wf:
@@ -600,7 +580,28 @@ class FishTTSEngine:
             wf.setframerate(44100)
             wf.writeframes(audio_int16.tobytes())
 
-        return buf.getvalue()
+        return buf.getvalue(), rms
+
+    @torch.no_grad()
+    def synthesize(self, text: str, max_new_tokens: int = 1024,
+                   chunk_length: int = 300, top_p: float = 0.8,
+                   temperature: float = 0.8, repetition_penalty: float = 1.1) -> tuple:
+        """Generate WAV audio from text.
+
+        Returns:
+            (wav_bytes: bytes, rms: float, generation_time_ms: float)
+        """
+        codes_np, generation_time_ms = self.generate_codes(
+            text=text,
+            max_new_tokens=max_new_tokens,
+            chunk_length=chunk_length,
+            top_p=top_p,
+            temperature=temperature,
+            repetition_penalty=repetition_penalty,
+        )
+
+        wav_bytes, rms = self.decode_codes_to_wav(codes_np)
+        return wav_bytes, rms, generation_time_ms
 
 
 def _get_fish_tts() -> FishTTSEngine:
@@ -620,7 +621,7 @@ def tts(request: TTSRequest):
     from fastapi.responses import Response
 
     engine = _get_fish_tts()
-    wav_bytes = engine.synthesize(
+    wav_bytes, rms, generation_time_ms = engine.synthesize(
         text=request.text,
         max_new_tokens=request.max_new_tokens,
         chunk_length=request.chunk_length,
@@ -632,7 +633,44 @@ def tts(request: TTSRequest):
     if not wav_bytes:
         raise HTTPException(status_code=500, detail="TTS generated empty audio")
 
-    return Response(content=wav_bytes, media_type="audio/wav")
+    return Response(
+        content=wav_bytes,
+        media_type="audio/wav",
+        headers={
+            "X-Audio-RMS": str(round(rms, 1)),
+            "X-Generation-Time-Ms": str(round(generation_time_ms, 1)),
+        },
+    )
+
+
+@app.post("/tts/decode")
+def tts_decode(request: TTSDecodeRequest):
+    """Decode VQ codes to WAV audio via ONNX DAC (CPU).
+
+    Input: codes array [num_codebooks][gen_len].
+    Output: 44100Hz mono 16-bit PCM WAV with X-Audio-RMS header.
+    """
+    import numpy as np
+    from fastapi.responses import Response
+
+    codes_np = np.array(request.codes, dtype=np.int64)
+
+    # Validate dimensions (T-144-01 DoS mitigation)
+    if codes_np.ndim != 2:
+        raise HTTPException(status_code=400, detail="codes must be 2D [num_codebooks, time_steps]")
+    if codes_np.shape[0] > 20:
+        raise HTTPException(status_code=400, detail=f"Max 20 codebooks, got {codes_np.shape[0]}")
+    if codes_np.shape[1] > 4096:
+        raise HTTPException(status_code=400, detail=f"Max 4096 time steps, got {codes_np.shape[1]}")
+
+    engine = _get_fish_tts()
+    wav_bytes, rms = engine.decode_codes_to_wav(codes_np)
+
+    return Response(
+        content=wav_bytes,
+        media_type="audio/wav",
+        headers={"X-Audio-RMS": str(round(rms, 1))},
+    )
 
 
 @app.post("/tts/generate")
@@ -716,6 +754,53 @@ def tts_test_generate():
         "generation_time_ms": round(generation_time_ms, 2),
         "tokens_per_second": round(tokens_per_second, 2),
         "exceeds_realtime": exceeds_realtime,
+    }
+
+
+@app.get("/tts/test_e2e")
+def tts_test_e2e():
+    """Diagnostic endpoint: full text-to-audio pipeline verification.
+
+    Runs generate_codes -> decode_codes_to_wav and validates audible output.
+    This is a diagnostic endpoint for development verification only.
+    """
+    import time
+
+    engine = _get_fish_tts()
+
+    t_total = time.perf_counter()
+    codes_np, generate_time_ms = engine.generate_codes(
+        "Testing end-to-end speech synthesis.",
+    )
+    gen_length = int(codes_np.shape[1])
+
+    t_decode = time.perf_counter()
+    wav_bytes, rms = engine.decode_codes_to_wav(codes_np)
+    decode_time_ms = (time.perf_counter() - t_decode) * 1000
+    total_time_ms = (time.perf_counter() - t_total) * 1000
+
+    # Audio duration from WAV size (16-bit mono 44100Hz)
+    pcm_bytes = len(wav_bytes) - 44  # subtract WAV header
+    audio_samples = pcm_bytes // 2
+    audio_duration_sec = audio_samples / 44100
+    realtime_factor = audio_duration_sec / (total_time_ms / 1000) if total_time_ms > 0 else 0
+
+    success = gen_length > 0 and rms > 500 and len(wav_bytes) > 1000
+    logger.info(
+        "test_e2e: RMS=%.0f, %.1fs audio in %.0fms (%.2fx realtime)",
+        rms, audio_duration_sec, total_time_ms, realtime_factor,
+    )
+
+    return {
+        "success": success,
+        "gen_length": gen_length,
+        "rms_16bit": round(rms, 1),
+        "wav_bytes": len(wav_bytes),
+        "total_time_ms": round(total_time_ms, 2),
+        "generate_time_ms": round(generate_time_ms, 2),
+        "decode_time_ms": round(decode_time_ms, 2),
+        "audio_duration_sec": round(audio_duration_sec, 3),
+        "realtime_factor": round(realtime_factor, 3),
     }
 
 
