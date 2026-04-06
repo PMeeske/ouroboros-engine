@@ -23,6 +23,10 @@ app = FastAPI(title="Ouroboros Tensor Service", version="0.1.0")
 _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info("Tensor service starting. Device: %s", _device)
 
+# ── GPU VRAM budget ──────────────────────────────────────────────────────────
+import os as _os
+_VRAM_BUDGET_CAP_MB = int(_os.environ.get("VRAM_BUDGET_CAP_MB", "4096"))
+
 # ── Fish Speech TTS state (loaded lazily on first /tts call) ─────────────────
 _fish_tts: Optional["FishTTSEngine"] = None
 
@@ -479,6 +483,18 @@ class FishTTSEngine:
             self.model.config.dim,
         )
 
+        # Track VRAM after model load
+        if torch.cuda.is_available():
+            self._model_vram_mb = torch.cuda.memory_allocated(self.device) / (1024 ** 2)
+            logger.info(
+                "LLAMA VRAM usage: %.0fMB (budget cap: %dMB)",
+                self._model_vram_mb, _VRAM_BUDGET_CAP_MB,
+            )
+            if self._model_vram_mb > _VRAM_BUDGET_CAP_MB:
+                logger.warning("LLAMA VRAM %.0fMB exceeds budget cap %dMB", self._model_vram_mb, _VRAM_BUDGET_CAP_MB)
+        else:
+            self._model_vram_mb = 0.0
+
         # Load DAC decoder via ONNX (CPU -- avoids MIOpen workspace issues)
         import onnxruntime as ort
         self.dac_session = ort.InferenceSession(
@@ -501,9 +517,18 @@ class FishTTSEngine:
 
         Returns:
             (codes_np: ndarray[int64] shape [num_codebooks, gen_len], generation_time_ms: float)
+            If VRAM exceeds budget, a warning is logged but generation proceeds.
         """
         import numpy as np
         import time
+
+        # VRAM budget check (soft cap — warn but proceed)
+        self._vram_warning = False
+        if torch.cuda.is_available():
+            alloc_mb = torch.cuda.memory_allocated(self.device) / (1024 ** 2)
+            if alloc_mb > _VRAM_BUDGET_CAP_MB:
+                logger.warning("VRAM over budget: %.0fMB > %dMB", alloc_mb, _VRAM_BUDGET_CAP_MB)
+                self._vram_warning = True
 
         from fish_speech.conversation import Conversation, Message
 
@@ -690,11 +715,59 @@ def tts_generate(request: TTSGenerateRequest):
     )
     num_codebooks = int(codes_np.shape[0])
     gen_length = int(codes_np.shape[1])
-    return {
+    result = {
         "codes": codes_np.tolist(),
         "num_codebooks": num_codebooks,
         "gen_length": gen_length,
         "generation_time_ms": round(generation_time_ms, 2),
+    }
+    if getattr(engine, "_vram_warning", False):
+        result["vram_warning"] = True
+    return result
+
+
+@app.get("/gpu/vram")
+def gpu_vram():
+    """Return GPU VRAM usage and budget information."""
+    if not torch.cuda.is_available():
+        return {"available": False, "device": "cpu"}
+
+    props = torch.cuda.get_device_properties(0)
+    total_mb = props.total_mem / (1024 ** 2)
+    allocated_mb = torch.cuda.memory_allocated(0) / (1024 ** 2)
+    reserved_mb = torch.cuda.memory_reserved(0) / (1024 ** 2)
+    free_mb = total_mb - reserved_mb
+    tts_model_mb = _fish_tts._model_vram_mb if _fish_tts is not None else 0.0
+
+    return {
+        "available": True,
+        "total_mb": round(total_mb, 1),
+        "allocated_mb": round(allocated_mb, 1),
+        "reserved_mb": round(reserved_mb, 1),
+        "free_mb": round(free_mb, 1),
+        "tts_model_mb": round(tts_model_mb, 1),
+        "budget_cap_mb": _VRAM_BUDGET_CAP_MB,
+    }
+
+
+@app.get("/gpu/miopen_check")
+def gpu_miopen_check():
+    """Verify MIOpen avoidance: DAC on CPU, LLAMA without conv layers."""
+    engine = _get_fish_tts()
+
+    # Check DAC provider
+    dac_providers = engine.dac_session.get_providers()
+
+    # Check LLAMA for nn.Conv layers
+    has_conv = any(
+        isinstance(m, (torch.nn.Conv1d, torch.nn.Conv2d, torch.nn.Conv3d))
+        for m in engine.model.modules()
+    )
+
+    return {
+        "dac_provider": dac_providers[0] if dac_providers else "unknown",
+        "llama_has_conv": has_conv,
+        "miopen_safe": dac_providers[0] == "CPUExecutionProvider" and not has_conv,
     }
 
 
