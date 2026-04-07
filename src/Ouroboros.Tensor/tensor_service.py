@@ -955,20 +955,36 @@ def gpu_miopen_check():
 
 @app.get("/tts/health")
 def tts_health():
-    """Check if Fish Speech TTS is loaded. Returns model config when available."""
+    """Check if Fish Speech TTS is loaded. Returns comprehensive readiness status."""
     if _fish_tts is not None:
         model_cfg = _fish_tts.model.config
+        dac_loaded = _fish_tts.dac_session is not None
+        references_loaded = len(_fish_tts._voice_embeddings)
+        vram_mb = _fish_tts._model_vram_mb if hasattr(_fish_tts, '_model_vram_mb') else 0.0
+        model_loaded = True
         return {
             "loaded": True,
-            "model_loaded": True,
+            "model_loaded": model_loaded,
+            "dac_loaded": dac_loaded,
+            "references_loaded": references_loaded,
             "device": str(_device),
+            "vram_mb": round(vram_mb, 1),
+            "ready": model_loaded and dac_loaded,
             "model_config": {
                 "num_codebooks": model_cfg.num_codebooks,
                 "vocab_size": model_cfg.vocab_size,
                 "dim": model_cfg.dim,
             },
         }
-    return {"loaded": False, "model_loaded": False, "device": str(_device)}
+    return {
+        "loaded": False,
+        "model_loaded": False,
+        "dac_loaded": False,
+        "references_loaded": 0,
+        "device": str(_device),
+        "vram_mb": 0.0,
+        "ready": False,
+    }
 
 
 @app.get("/tts/test_generate")
