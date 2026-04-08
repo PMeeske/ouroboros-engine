@@ -8,6 +8,7 @@ using ILGPU;
 using ILGPU.Algorithms;
 using ILGPU.Runtime;
 using ILGPU.Runtime.OpenCL;
+using System.Linq;
 
 namespace Ouroboros.Tensor.Backends;
 
@@ -36,8 +37,8 @@ public sealed class IlgpuOpenClTensorBackend : ITensorBackend, IDisposable
     private readonly Accelerator _accelerator;
 
     // Lazily compiled kernels
-    private Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>>? _addKernel;
-    private Action<Index3D, ArrayView<float>, ArrayView<float>, ArrayView<float>, int, int, int>? _matMulKernel;
+    private Action<AcceleratorStream, Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>>? _addKernel;
+    private Action<AcceleratorStream, Index3D, ArrayView<float>, ArrayView<float>, ArrayView<float>, int, int, int>? _matMulKernel;
 
     /// <summary>
     /// Initializes the ILGPU OpenCL backend, selecting the best available OpenCL device.
@@ -56,7 +57,10 @@ public sealed class IlgpuOpenClTensorBackend : ITensorBackend, IDisposable
             .EnableAlgorithms()
             .Optimize(OptimizationLevel.O2));
 
-        var devices = _context.GetCLDevices().ToList();
+        var devices = _context
+            .Devices
+            .OfType<CLDevice>()
+            .ToList();
         if (devices.Count == 0)
             throw new NotSupportedException(
                 "No OpenCL device found. Ensure AMD ROCm is installed and " +
@@ -92,7 +96,7 @@ public sealed class IlgpuOpenClTensorBackend : ITensorBackend, IDisposable
                 nameof(data));
 
         var buffer = _accelerator.Allocate1D<float>(count);
-        buffer.CopyFromCPU(data);
+        buffer.View.CopyFromCPU(data.ToArray());
         _accelerator.Synchronize();
         return new IlgpuTensor(buffer, shape, _accelerator);
     }
@@ -130,13 +134,17 @@ public sealed class IlgpuOpenClTensorBackend : ITensorBackend, IDisposable
                 Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>>(AddKernelImpl);
 
             var result = _accelerator.Allocate1D<float>((int)a.Shape.ElementCount);
-            _addKernel((int)a.Shape.ElementCount, viewA.Value, viewB.Value, result.View);
+            _addKernel(_accelerator.DefaultStream, (int)a.Shape.ElementCount, viewA.Value, viewB.Value, result.View);
             _accelerator.Synchronize();
 
+#pragma warning disable CA2000 // Ownership transferred to Result.Success return value
             return Result<ITensor<float>, string>.Success(
                 new IlgpuTensor(result, a.Shape, _accelerator));
+#pragma warning restore CA2000
         }
+#pragma warning disable CA1031 // Backend operations must return failure results instead of crashing the pipeline
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             return Result<ITensor<float>, string>.Failure($"ILGPU Add failed: {ex.Message}");
         }
@@ -174,15 +182,20 @@ public sealed class IlgpuOpenClTensorBackend : ITensorBackend, IDisposable
             var result = _accelerator.Allocate1D<float>(m * n);
 
             _matMulKernel(
+                _accelerator.DefaultStream,
                 new Index3D(m, n, 1),
                 viewA.Value, viewB.Value, result.View,
                 m, n, k);
             _accelerator.Synchronize();
 
+#pragma warning disable CA2000 // Ownership transferred to Result.Success return value
             return Result<ITensor<float>, string>.Success(
                 new IlgpuTensor(result, resultShape, _accelerator));
+#pragma warning restore CA2000
         }
+#pragma warning disable CA1031 // Backend operations must return failure results instead of crashing the pipeline
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             return Result<ITensor<float>, string>.Failure($"ILGPU MatMul failed: {ex.Message}");
         }
@@ -216,10 +229,14 @@ public sealed class IlgpuOpenClTensorBackend : ITensorBackend, IDisposable
             kernel(inputView.Value, output.View);
             _accelerator.Synchronize();
 
+#pragma warning disable CA2000 // Ownership transferred to Result.Success return value
             return Result<ITensor<float>, string>.Success(
                 new IlgpuTensor(output, outputShape, _accelerator));
+#pragma warning restore CA2000
         }
+#pragma warning disable CA1031 // Backend operations must return failure results instead of crashing the pipeline
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             return Result<ITensor<float>, string>.Failure($"ILGPU kernel failed: {ex.Message}");
         }
@@ -237,9 +254,9 @@ public sealed class IlgpuOpenClTensorBackend : ITensorBackend, IDisposable
         // CPU tensor → upload to GPU
         if (tensor.Device == DeviceType.Cpu)
         {
-            var data = tensor.AsSpan();
+            var data = tensor.AsSpan().ToArray();
             var buffer = _accelerator.Allocate1D<float>(data.Length);
-            buffer.CopyFromCPU(data);
+            buffer.View.CopyFromCPU(data);
             _accelerator.Synchronize();
             return buffer.View;
             // Note: this buffer is leaked if not tracked. For production,
@@ -333,7 +350,7 @@ public sealed class IlgpuOpenClTensorBackend : ITensorBackend, IDisposable
         public ITensor<float> ToCpu()
         {
             var data = new float[(int)Shape.ElementCount];
-            _buffer.CopyToCPU(data);
+            _buffer.View.CopyToCPU(data);
             _accelerator.Synchronize();
             return TensorMemoryPool.RentAndFill(Shape, data.AsSpan());
         }

@@ -48,7 +48,10 @@ public sealed class GpuAwareBackendSelector : ITensorBackendSelector
         if (_cudaBackend is not null)
             _logger?.LogInformation("GPU detected: CUDA/TorchSharp backend available");
         if (!IsGpuAvailable)
-            _logger?.LogWarning("No GPU backend available. All operations will use CPU");
+        {
+            _logger?.LogInformation(
+                "No generic tensor GPU backend available. OpenCL/CUDA tensor operations will use CPU; DirectML-backed ONNX inference is configured separately.");
+        }
     }
 
     /// <summary>
@@ -120,7 +123,9 @@ public sealed class GpuAwareBackendSelector : ITensorBackendSelector
             _logger?.LogDebug(ex, "ILGPU/OpenCL backend not available");
             return null;
         }
+#pragma warning disable CA1031 // Any unexpected ILGPU init failure should degrade to CPU
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger?.LogWarning(ex, "Failed to initialise ILGPU/OpenCL backend");
             return null;
