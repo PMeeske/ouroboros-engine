@@ -10,6 +10,7 @@
 
   <!-- GPU backend toggles -->
   <PropertyGroup>
+    <DefineConstants Condition="'$(EnableGpu)'=='true'">$(DefineConstants);ENABLE_GPU</DefineConstants>
     <DefineConstants Condition="'$(EnableIlgpu)'=='true'">$(DefineConstants);ENABLE_ILGPU</DefineConstants>
   </PropertyGroup>
 
