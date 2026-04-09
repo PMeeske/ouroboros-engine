@@ -465,13 +465,311 @@ public sealed partial class VectorGraphFeedbackLoop
                 break;
             }
 
-            // Apply the modification based on type
-            // This is a placeholder - real implementation would have specific logic
-            modifiedNodes.Add(modification.NodeId);
-            appliedCount++;
+            ct.ThrowIfCancellationRequested();
+
+            bool applied = modification.ModificationType switch
+            {
+                "strengthen" => ApplyStrengthen(dag, modification.NodeId, modifiedNodes),
+                "weaken" => ApplyWeaken(dag, modification.NodeId, modifiedNodes),
+                "merge" => ApplyMerge(dag, modification.NodeId, modifiedNodes),
+                _ => ApplyDefault(dag, modification.NodeId, modifiedNodes)
+            };
+
+            if (applied)
+            {
+                appliedCount++;
+            }
         }
 
         await Task.CompletedTask.ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Increases the weight (confidence) of all outgoing edges from the specified node.
+    /// Each edge's confidence is multiplied by 1.1, capped at 1.0.
+    /// </summary>
+    /// <param name="dag">The MerkleDAG to modify.</param>
+    /// <param name="nodeId">The node whose outgoing edges to strengthen.</param>
+    /// <param name="modifiedNodes">Set tracking which nodes were modified for re-embedding.</param>
+    /// <returns>True if any edge was modified, false otherwise.</returns>
+    internal static bool ApplyStrengthen(MerkleDag dag, Guid nodeId, HashSet<Guid> modifiedNodes)
+    {
+        ArgumentNullException.ThrowIfNull(dag);
+        ArgumentNullException.ThrowIfNull(modifiedNodes);
+
+        var outgoingEdges = dag.GetEdgesFrom(nodeId);
+        if (outgoingEdges.Count == 0)
+        {
+            System.Diagnostics.Trace.TraceInformation(
+                "[FeedbackLoop] Strengthen: Node {0} has no outgoing edges.", nodeId);
+            return false;
+        }
+
+        bool anyModified = false;
+
+        foreach (var (edgeId, edge) in outgoingEdges)
+        {
+            var currentConfidence = edge.Confidence ?? 0.5;
+            var newConfidence = Math.Min(currentConfidence * 1.1, 1.0);
+
+            if (Math.Abs(newConfidence - currentConfidence) < double.Epsilon)
+            {
+                continue;
+            }
+
+            var updatedEdge = new TransitionEdge(
+                edge.Id,
+                edge.InputIds,
+                edge.OutputId,
+                edge.OperationName,
+                edge.OperationSpecJson,
+                edge.CreatedAt,
+                confidence: newConfidence,
+                durationMs: edge.DurationMs);
+
+            var result = dag.UpdateEdge(updatedEdge);
+            if (result.IsSuccess)
+            {
+                anyModified = true;
+                modifiedNodes.Add(edge.OutputId);
+            }
+        }
+
+        if (anyModified)
+        {
+            modifiedNodes.Add(nodeId);
+        }
+
+        return anyModified;
+    }
+
+    /// <summary>
+    /// Reduces the weight (confidence) of all outgoing edges from the specified node.
+    /// Each edge's confidence is multiplied by 0.8. Edges below 0.05 confidence are pruned.
+    /// </summary>
+    /// <param name="dag">The MerkleDAG to modify.</param>
+    /// <param name="nodeId">The node whose outgoing edges to weaken.</param>
+    /// <param name="modifiedNodes">Set tracking which nodes were modified for re-embedding.</param>
+    /// <returns>True if any edge was modified or removed, false otherwise.</returns>
+    internal static bool ApplyWeaken(MerkleDag dag, Guid nodeId, HashSet<Guid> modifiedNodes)
+    {
+        ArgumentNullException.ThrowIfNull(dag);
+        ArgumentNullException.ThrowIfNull(modifiedNodes);
+
+        var outgoingEdges = dag.GetEdgesFrom(nodeId);
+        if (outgoingEdges.Count == 0)
+        {
+            return false;
+        }
+
+        bool anyModified = false;
+
+        foreach (var (edgeId, edge) in outgoingEdges)
+        {
+            var currentConfidence = edge.Confidence ?? 0.5;
+            var newConfidence = currentConfidence * 0.8;
+
+            if (newConfidence < 0.05)
+            {
+                // Prune edges below threshold
+                var removeResult = dag.RemoveEdge(edgeId);
+                if (removeResult.IsSuccess)
+                {
+                    anyModified = true;
+                    modifiedNodes.Add(edge.OutputId);
+                }
+            }
+            else
+            {
+                var updatedEdge = new TransitionEdge(
+                    edge.Id,
+                    edge.InputIds,
+                    edge.OutputId,
+                    edge.OperationName,
+                    edge.OperationSpecJson,
+                    edge.CreatedAt,
+                    confidence: newConfidence,
+                    durationMs: edge.DurationMs);
+
+                var result = dag.UpdateEdge(updatedEdge);
+                if (result.IsSuccess)
+                {
+                    anyModified = true;
+                    modifiedNodes.Add(edge.OutputId);
+                }
+            }
+        }
+
+        if (anyModified)
+        {
+            modifiedNodes.Add(nodeId);
+        }
+
+        return anyModified;
+    }
+
+    /// <summary>
+    /// Merges the specified node with its highest-weight outgoing edge target.
+    /// Combines payloads, redirects inbound edges, and removes the merge partner.
+    /// </summary>
+    /// <param name="dag">The MerkleDAG to modify.</param>
+    /// <param name="nodeId">The node to merge (absorbs its highest-weight neighbor).</param>
+    /// <param name="modifiedNodes">Set tracking which nodes were modified for re-embedding.</param>
+    /// <returns>True if the merge was performed, false otherwise.</returns>
+    internal static bool ApplyMerge(MerkleDag dag, Guid nodeId, HashSet<Guid> modifiedNodes)
+    {
+        ArgumentNullException.ThrowIfNull(dag);
+        ArgumentNullException.ThrowIfNull(modifiedNodes);
+
+        var nodeOption = dag.GetNode(nodeId);
+        if (!nodeOption.HasValue)
+        {
+            return false;
+        }
+
+        var outgoingEdges = dag.GetEdgesFrom(nodeId);
+        if (outgoingEdges.Count == 0)
+        {
+            return false;
+        }
+
+        // Find highest-weight merge partner
+        var bestEdge = outgoingEdges.Values
+            .OrderByDescending(e => e.Confidence ?? 0.5)
+            .First();
+
+        var partnerId = bestEdge.OutputId;
+        var partnerOption = dag.GetNode(partnerId);
+        if (!partnerOption.HasValue)
+        {
+            return false;
+        }
+
+        var node = nodeOption.Value;
+        var partner = partnerOption.Value;
+
+        // Combine payloads via JSON merge
+        var mergedPayload = MergePayloads(node.PayloadJson, partner.PayloadJson);
+
+        // Update this node with merged payload
+        var updatedNode = new MonadNode(
+            node.Id,
+            node.TypeName,
+            mergedPayload,
+            node.CreatedAt,
+            node.ParentIds);
+
+        var updateResult = dag.UpdateNode(updatedNode);
+        if (updateResult.IsFailure)
+        {
+            return false;
+        }
+
+        // Redirect all inbound edges of the partner to point to this node instead
+        var partnerIncomingEdges = dag.GetIncomingEdges(partnerId).ToList();
+        foreach (var incomingEdge in partnerIncomingEdges)
+        {
+            // Create a new edge with the same properties but output pointing to nodeId
+            var redirectedEdge = new TransitionEdge(
+                incomingEdge.Id,
+                incomingEdge.InputIds,
+                nodeId,
+                incomingEdge.OperationName,
+                incomingEdge.OperationSpecJson,
+                incomingEdge.CreatedAt,
+                confidence: incomingEdge.Confidence,
+                durationMs: incomingEdge.DurationMs);
+
+            // Remove old edge and add redirected one with new output target
+            dag.RemoveEdge(incomingEdge.Id);
+            dag.AddEdge(redirectedEdge);
+        }
+
+        // Remove the edge from nodeId to partnerId
+        dag.RemoveEdge(bestEdge.Id);
+
+        // Remove the merge partner node
+        dag.RemoveNode(partnerId);
+
+        // Track modified nodes for re-embedding
+        modifiedNodes.Add(nodeId);
+        modifiedNodes.Add(partnerId);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Default handler for unknown modification types — just tracks the node as modified.
+    /// </summary>
+    /// <param name="dag">The MerkleDAG (unused for default handler).</param>
+    /// <param name="nodeId">The node ID to track.</param>
+    /// <param name="modifiedNodes">Set tracking which nodes were modified.</param>
+    /// <returns>Always returns true.</returns>
+    internal static bool ApplyDefault(MerkleDag dag, Guid nodeId, HashSet<Guid> modifiedNodes)
+    {
+        ArgumentNullException.ThrowIfNull(modifiedNodes);
+
+        modifiedNodes.Add(nodeId);
+        return true;
+    }
+
+    /// <summary>
+    /// Merges two JSON payloads by combining their top-level properties.
+    /// Properties from the secondary payload override those in the primary.
+    /// </summary>
+    /// <param name="primaryJson">The primary payload JSON.</param>
+    /// <param name="secondaryJson">The secondary payload JSON (overrides primary on conflict).</param>
+    /// <returns>A merged JSON string.</returns>
+    private static string MergePayloads(string primaryJson, string secondaryJson)
+    {
+        try
+        {
+            // Use simple JSON merge: parse both, combine properties, serialize
+            using var primaryDoc = System.Text.Json.JsonDocument.Parse(primaryJson);
+            using var secondaryDoc = System.Text.Json.JsonDocument.Parse(secondaryJson);
+
+            var merged = new Dictionary<string, object?>();
+
+            // Copy primary properties
+            if (primaryDoc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                foreach (var prop in primaryDoc.RootElement.EnumerateObject())
+                {
+                    merged[prop.Name] = DeserializeJsonElement(prop.Value);
+                }
+            }
+
+            // Overlay secondary properties (secondary takes precedence on conflict)
+            if (secondaryDoc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                foreach (var prop in secondaryDoc.RootElement.EnumerateObject())
+                {
+                    merged[prop.Name] = DeserializeJsonElement(prop.Value);
+                }
+            }
+
+            return System.Text.Json.JsonSerializer.Serialize(merged);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // If either payload isn't valid JSON, concatenate them
+            return $"{primaryJson}+{secondaryJson}";
+        }
+    }
+
+    private static object? DeserializeJsonElement(System.Text.Json.JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            System.Text.Json.JsonValueKind.String => element.GetString(),
+            System.Text.Json.JsonValueKind.Number => element.TryGetInt64(out var l) ? l : element.GetDouble(),
+            System.Text.Json.JsonValueKind.True => true,
+            System.Text.Json.JsonValueKind.False => false,
+            System.Text.Json.JsonValueKind.Null => null,
+            System.Text.Json.JsonValueKind.Array => element.GetRawText(),
+            System.Text.Json.JsonValueKind.Object => element.GetRawText(),
+            _ => element.GetRawText()
+        };
     }
 
     private async Task ReEmbedAndPersistAsync(

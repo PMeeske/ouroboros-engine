@@ -275,6 +275,210 @@ public sealed class MerkleDag
     }
 
     /// <summary>
+    /// Removes an edge from the DAG.
+    /// </summary>
+    /// <param name="edgeId">The ID of the edge to remove.</param>
+    /// <returns>A Result indicating whether the removal succeeded.</returns>
+    public Result<bool> RemoveEdge(Guid edgeId)
+    {
+        lock (_syncLock)
+        {
+            if (!_edges.TryGetValue(edgeId, out var edge))
+            {
+                return Result<bool>.Failure($"Edge {edgeId} not found");
+            }
+
+            // Remove from edges collection
+            _edges.Remove(edgeId);
+
+            // Remove from outgoing adjacency lists
+            foreach (var inputId in edge.InputIds)
+            {
+                if (_nodeToOutgoingEdges.TryGetValue(inputId, out var outgoing))
+                {
+                    outgoing.Remove(edgeId);
+                }
+            }
+
+            // Remove from incoming adjacency list
+            if (_nodeToIncomingEdges.TryGetValue(edge.OutputId, out var incoming))
+            {
+                incoming.Remove(edgeId);
+            }
+
+            return Result<bool>.Success(true);
+        }
+    }
+
+    /// <summary>
+    /// Replaces an edge with a new version that has the same ID but updated properties.
+    /// Used for modifying edge weights (confidence) in-place.
+    /// </summary>
+    /// <param name="edge">The replacement edge (must have the same ID as an existing edge).</param>
+    /// <returns>A Result indicating whether the update succeeded.</returns>
+    public Result<TransitionEdge> UpdateEdge(TransitionEdge edge)
+    {
+        if (edge == null)
+        {
+            return Result<TransitionEdge>.Failure("Edge cannot be null");
+        }
+
+        lock (_syncLock)
+        {
+            if (!_edges.ContainsKey(edge.Id))
+            {
+                return Result<TransitionEdge>.Failure($"Edge {edge.Id} not found");
+            }
+
+            // Remove old edge from adjacency lists
+            var oldEdge = _edges[edge.Id];
+            foreach (var inputId in oldEdge.InputIds)
+            {
+                if (_nodeToOutgoingEdges.TryGetValue(inputId, out var outgoing))
+                {
+                    outgoing.Remove(edge.Id);
+                }
+            }
+
+            if (_nodeToIncomingEdges.TryGetValue(oldEdge.OutputId, out var incoming))
+            {
+                incoming.Remove(edge.Id);
+            }
+
+            // Replace the edge
+            _edges[edge.Id] = edge;
+
+            // Add new edge to adjacency lists
+            foreach (var inputId in edge.InputIds)
+            {
+                if (_nodeToOutgoingEdges.TryGetValue(inputId, out var outgoing))
+                {
+                    outgoing.Add(edge.Id);
+                }
+            }
+
+            if (_nodeToIncomingEdges.TryGetValue(edge.OutputId, out var incomingList))
+            {
+                incomingList.Add(edge.Id);
+            }
+
+            return Result<TransitionEdge>.Success(edge);
+        }
+    }
+
+    /// <summary>
+    /// Removes a node and all its connected edges from the DAG.
+    /// </summary>
+    /// <param name="nodeId">The ID of the node to remove.</param>
+    /// <returns>A Result indicating whether the removal succeeded.</returns>
+    public Result<bool> RemoveNode(Guid nodeId)
+    {
+        lock (_syncLock)
+        {
+            if (!_nodes.ContainsKey(nodeId))
+            {
+                return Result<bool>.Failure($"Node {nodeId} not found");
+            }
+
+            // Remove all outgoing edges
+            if (_nodeToOutgoingEdges.TryGetValue(nodeId, out var outgoingEdgeIds))
+            {
+                foreach (var edgeId in outgoingEdgeIds.ToList())
+                {
+                    if (_edges.TryGetValue(edgeId, out var edge))
+                    {
+                        // Remove from incoming list of the output node
+                        if (_nodeToIncomingEdges.TryGetValue(edge.OutputId, out var incomingList))
+                        {
+                            incomingList.Remove(edgeId);
+                        }
+
+                        _edges.Remove(edgeId);
+                    }
+                }
+            }
+
+            // Remove all incoming edges
+            if (_nodeToIncomingEdges.TryGetValue(nodeId, out var incomingEdgeIds))
+            {
+                foreach (var edgeId in incomingEdgeIds.ToList())
+                {
+                    if (_edges.TryGetValue(edgeId, out var edge))
+                    {
+                        // Remove from outgoing lists of input nodes
+                        foreach (var inputId in edge.InputIds)
+                        {
+                            if (_nodeToOutgoingEdges.TryGetValue(inputId, out var outgoingList))
+                            {
+                                outgoingList.Remove(edgeId);
+                            }
+                        }
+
+                        _edges.Remove(edgeId);
+                    }
+                }
+            }
+
+            // Remove the node and its adjacency entries
+            _nodes.Remove(nodeId);
+            _nodeToOutgoingEdges.Remove(nodeId);
+            _nodeToIncomingEdges.Remove(nodeId);
+
+            return Result<bool>.Success(true);
+        }
+    }
+
+    /// <summary>
+    /// Updates a node by replacing it with a new version (same ID, different payload).
+    /// The node's hash is recomputed automatically.
+    /// </summary>
+    /// <param name="node">The replacement node (must have the same ID as an existing node).</param>
+    /// <returns>A Result containing the updated node or an error.</returns>
+    public Result<MonadNode> UpdateNode(MonadNode node)
+    {
+        if (node == null)
+        {
+            return Result<MonadNode>.Failure("Node cannot be null");
+        }
+
+        if (!node.VerifyHash())
+        {
+            return Result<MonadNode>.Failure("Node hash verification failed");
+        }
+
+        lock (_syncLock)
+        {
+            if (!_nodes.ContainsKey(node.Id))
+            {
+                return Result<MonadNode>.Failure($"Node {node.Id} not found");
+            }
+
+            _nodes[node.Id] = node;
+            return Result<MonadNode>.Success(node);
+        }
+    }
+
+    /// <summary>
+    /// Gets all edges originating from a node, keyed by edge ID.
+    /// </summary>
+    /// <param name="nodeId">The node ID.</param>
+    /// <returns>A dictionary of edges keyed by edge ID.</returns>
+    public IReadOnlyDictionary<Guid, TransitionEdge> GetEdgesFrom(Guid nodeId)
+    {
+        lock (_syncLock)
+        {
+            if (!_nodeToOutgoingEdges.TryGetValue(nodeId, out var edgeIds))
+            {
+                return new Dictionary<Guid, TransitionEdge>();
+            }
+
+            return edgeIds
+                .Where(id => _edges.ContainsKey(id))
+                .ToDictionary(id => id, id => _edges[id]);
+        }
+    }
+
+    /// <summary>
     /// Verifies the integrity of the entire DAG.
     /// </summary>
     /// <returns>A Result indicating whether the DAG is valid.</returns>
