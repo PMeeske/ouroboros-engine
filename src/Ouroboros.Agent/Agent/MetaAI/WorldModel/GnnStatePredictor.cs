@@ -691,10 +691,12 @@ public sealed class GnnStatePredictor : IStatePredictor
 
             // Perturb +delta
             weights[i] = original + delta;
+            RebuildJaggedArrays();
             float lossPlus = ComputeLoss(batch);
 
             // Perturb -delta
             weights[i] = original - delta;
+            RebuildJaggedArrays();
             float lossMinus = ComputeLoss(batch);
 
             // Restore original
@@ -703,6 +705,9 @@ public sealed class GnnStatePredictor : IStatePredictor
             // Central difference gradient
             gradient[i] = (lossPlus - lossMinus) / (2f * delta);
         }
+
+        // Ensure jagged arrays are consistent after gradient computation
+        RebuildJaggedArrays();
 
         return gradient;
     }
