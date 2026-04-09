@@ -394,4 +394,51 @@ public class NeuralSymbolicBridgeTests
     }
 
     #endregion
+
+    #region MeTTa Form Semantics Integration Tests
+
+    [Fact]
+    public async Task HybridReasonAsync_SymbolicFirst_ReturnsMeTTaExpressionWithFormSemantics()
+    {
+        // Arrange - symbolic KB returns a MeTTa expression involving Form atoms
+        _mockKnowledgeBase
+            .Setup(kb => kb.ExecuteMeTTaQueryAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<string, string>.Success("(isa Form Mark)"));
+
+        // Act
+        var result = await _bridge.HybridReasonAsync("What is a Form?", ReasoningMode.SymbolicFirst);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.SymbolicSucceeded.Should().BeTrue();
+        result.Value.Answer.Should().Contain("Form");
+        result.Value.Answer.Should().Contain("Mark");
+        result.Value.Confidence.Should().BeApproximately(0.85, 0.01);
+    }
+
+    [Fact]
+    public async Task GroundConceptAsync_WithPhaseAwareForm_ReturnsGroundedConceptWithMeTTaType()
+    {
+        // Arrange - concept about a phase-aware Form with MeTTa type semantics
+        var embedding = new float[] { 0.2f, 0.4f, 0.6f };
+
+        _mockLlm
+            .Setup(m => m.GenerateTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("Type: Form\nProperties: phase, mark, void, imaginary\nRelations: crosses, reentry");
+
+        // Act
+        var result = await _bridge.GroundConceptAsync("A phase-aware Form in Laws of Form notation", embedding);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.MeTTaType.Should().Be("Form");
+        result.Value.Properties.Should().Contain("phase");
+        result.Value.Properties.Should().Contain("mark");
+        result.Value.Properties.Should().Contain("void");
+        result.Value.Relations.Should().Contain("crosses");
+        result.Value.Embedding.Should().BeEquivalentTo(embedding);
+        result.Value.GroundingConfidence.Should().Be(0.8);
+    }
+
+    #endregion
 }
