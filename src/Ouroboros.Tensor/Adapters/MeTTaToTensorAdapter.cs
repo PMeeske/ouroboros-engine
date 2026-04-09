@@ -10,6 +10,21 @@ using Ouroboros.Core.Hyperon;
 namespace Ouroboros.Tensor.Adapters;
 
 /// <summary>
+/// Provides semantic embeddings for symbols when available.
+/// When no provider is configured, the adapter falls back to deterministic hash-based vectors.
+/// </summary>
+public interface IEmbeddingProvider
+{
+    /// <summary>
+    /// Attempts to retrieve a semantic embedding for the given symbol name.
+    /// </summary>
+    /// <param name="symbolName">The symbol to look up.</param>
+    /// <param name="embeddingDim">Required embedding dimension.</param>
+    /// <returns>A float array if a semantic embedding exists, or null if unavailable.</returns>
+    float[]? TryGetEmbedding(string symbolName, int embeddingDim);
+}
+
+/// <summary>
 /// Semantic bag-of-words adapter that converts MeTTa atoms and expressions
 /// into tensor representations for neural operations.
 ///
@@ -38,6 +53,7 @@ public sealed class MeTTaToTensorAdapter
     private readonly Dictionary<string, float[]> _symbolCache;
     private readonly bool _normalize;
     private readonly HashAlgorithm _hasher;
+    private readonly IEmbeddingProvider? _embeddingProvider;
 
     /// <summary>
     /// Creates a new MeTTa-to-tensor adapter.
@@ -45,10 +61,12 @@ public sealed class MeTTaToTensorAdapter
     /// <param name="backend">The tensor backend to use for creating tensors.</param>
     /// <param name="embeddingDim">Dimension of the output embeddings (default 256).</param>
     /// <param name="normalize">Whether to L2-normalize output vectors (default true).</param>
+    /// <param name="embeddingProvider">Optional provider for semantic embeddings. When null, hash-based vectors are used.</param>
     public MeTTaToTensorAdapter(
         ITensorBackend backend,
         int embeddingDim = 256,
-        bool normalize = true)
+        bool normalize = true,
+        IEmbeddingProvider? embeddingProvider = null)
     {
         ArgumentNullException.ThrowIfNull(backend);
         if (embeddingDim <= 0)
@@ -57,9 +75,16 @@ public sealed class MeTTaToTensorAdapter
         _backend = backend;
         _embeddingDim = embeddingDim;
         _normalize = normalize;
+        _embeddingProvider = embeddingProvider;
         _symbolCache = new Dictionary<string, float[]>(capacity: 1024);
         _hasher = SHA256.Create();
     }
+
+    /// <summary>
+    /// Gets whether a semantic embedding provider is configured.
+    /// When true, SymbolToVector and VariableToVector will attempt semantic lookup before falling back to hash.
+    /// </summary>
+    public bool HasSemanticProvider => _embeddingProvider != null;
 
     /// <summary>
     /// Converts a single atom to its tensor representation.
@@ -248,6 +273,18 @@ public sealed class MeTTaToTensorAdapter
         if (_symbolCache.TryGetValue(sym.Name, out var cached))
             return cached;
 
+        // Try semantic embedding provider first
+        if (_embeddingProvider is not null)
+        {
+            var semantic = _embeddingProvider.TryGetEmbedding(sym.Name, _embeddingDim);
+            if (semantic is not null && semantic.Length == _embeddingDim)
+            {
+                _symbolCache[sym.Name] = semantic;
+                return semantic;
+            }
+        }
+
+        // Fall back to deterministic hash-based vector
         var vec = HashToVector(sym.Name);
         _symbolCache[sym.Name] = vec;
         return vec;
@@ -261,6 +298,18 @@ public sealed class MeTTaToTensorAdapter
         if (_symbolCache.TryGetValue(key, out var cached))
             return cached;
 
+        // Try semantic embedding provider first
+        if (_embeddingProvider is not null)
+        {
+            var semantic = _embeddingProvider.TryGetEmbedding(key, _embeddingDim);
+            if (semantic is not null && semantic.Length == _embeddingDim)
+            {
+                _symbolCache[key] = semantic;
+                return semantic;
+            }
+        }
+
+        // Fall back to deterministic hash-based vector
         var vec = HashToVector(key, offset: 0.5f); // Offset to distinguish from symbols
         _symbolCache[key] = vec;
         return vec;
