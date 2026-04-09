@@ -22,22 +22,22 @@ public sealed class GnnStatePredictor : IStatePredictor
     private readonly int _nodeFeatureSize;
     private readonly ITensorBackend? _backend;
 
-    // Contiguous weight storage for GPU transfer
-    private readonly float[] _messageWeightsFlat;
+    // Contiguous weight storage for GPU transfer (mutable for training)
+    private float[] _messageWeightsFlat;
     private readonly TensorShape _messageWeightsShape;
-    private readonly float[] _messageBias;
-    private readonly float[] _updateWeightsFlat;
+    private float[] _messageBias;
+    private float[] _updateWeightsFlat;
     private readonly TensorShape _updateWeightsShape;
-    private readonly float[] _updateBias;
-    private readonly float[] _readoutWeightsFlat;
+    private float[] _updateBias;
+    private float[] _readoutWeightsFlat;
     private readonly TensorShape _readoutWeightsShape;
-    private readonly float[] _readoutBias;
+    private float[] _readoutBias;
     private readonly int _messagePasses;
 
-    // Original jagged arrays for CPU fallback
-    private readonly float[][] _messageWeights;
-    private readonly float[][] _updateWeights;
-    private readonly float[][] _readoutWeights;
+    // CPU fallback jagged arrays (rebuild from flat after training updates)
+    private float[][] _messageWeights;
+    private float[][] _updateWeights;
+    private float[][] _readoutWeights;
 
     private GnnStatePredictor(
         int embeddingSize,
@@ -510,5 +510,239 @@ public sealed class GnnStatePredictor : IStatePredictor
         }
 
         return weights;
+    }
+
+    /// <summary>
+    /// Computes mean squared error loss between predicted and actual state embeddings.
+    /// </summary>
+    /// <param name="predicted">The predicted state.</param>
+    /// <param name="actual">The actual (ground truth) state.</param>
+    /// <returns>MSE value: mean of squared differences per embedding dimension.</returns>
+    public float ComputeLoss(State predicted, State actual)
+    {
+        int len = Math.Min(predicted.Embedding.Length, actual.Embedding.Length);
+        if (len == 0)
+        {
+            return 0f;
+        }
+
+        float sum = 0f;
+        for (int i = 0; i < len; i++)
+        {
+            float diff = predicted.Embedding[i] - actual.Embedding[i];
+            sum += diff * diff;
+        }
+
+        return sum / len;
+    }
+
+    /// <summary>
+    /// Computes average MSE loss over a batch of experience tuples.
+    /// For each experience, predicts next state from (current, action) and compares to actual next state.
+    /// </summary>
+    /// <param name="batch">Collection of experience tuples.</param>
+    /// <returns>Average MSE loss across the batch.</returns>
+    public float ComputeLoss(IEnumerable<Experience> batch)
+    {
+        ArgumentNullException.ThrowIfNull(batch);
+
+        float totalLoss = 0f;
+        int count = 0;
+
+        foreach (var exp in batch)
+        {
+            var predicted = PredictAsync(exp.Current, exp.Action).GetAwaiter().GetResult();
+            totalLoss += ComputeLoss(predicted, exp.NextState);
+            count++;
+        }
+
+        return count > 0 ? totalLoss / count : 0f;
+    }
+
+    /// <summary>
+    /// Computes finite-difference gradients for all weight arrays.
+    /// Uses central differences: gradient[i] = (loss(w+delta) - loss(w-delta)) / (2*delta).
+    /// </summary>
+    /// <param name="batch">Experience batch to compute loss over.</param>
+    /// <param name="delta">Perturbation magnitude for finite differences.</param>
+    /// <returns>Dictionary mapping parameter names to gradient arrays.</returns>
+    /// <remarks>
+    /// Complexity is O(n * batch_size) where n is the total number of weights.
+    /// For large weight arrays (>1000 elements), this is expensive and could be
+    /// optimized with analytical gradients in a future iteration.
+    /// </remarks>
+    public Dictionary<string, float[]> ComputeGradients(IEnumerable<Experience> batch, float delta = 1e-5f)
+    {
+        ArgumentNullException.ThrowIfNull(batch);
+
+        // Materialize batch once to avoid multiple enumeration
+        var batchList = batch as IList<Experience> ?? batch.ToList();
+
+        var gradients = new Dictionary<string, float[]>();
+
+        // Compute gradients for each weight array
+        gradients["messageWeights"] = ComputeGradientForArray(_messageWeightsFlat, batchList, delta);
+        gradients["messageBias"] = ComputeGradientForArray(_messageBias, batchList, delta);
+        gradients["updateWeights"] = ComputeGradientForArray(_updateWeightsFlat, batchList, delta);
+        gradients["updateBias"] = ComputeGradientForArray(_updateBias, batchList, delta);
+        gradients["readoutWeights"] = ComputeGradientForArray(_readoutWeightsFlat, batchList, delta);
+        gradients["readoutBias"] = ComputeGradientForArray(_readoutBias, batchList, delta);
+
+        return gradients;
+    }
+
+    /// <summary>
+    /// Executes a single training step: sample from buffer, compute gradients, update weights.
+    /// </summary>
+    /// <param name="buffer">Experience buffer to sample from.</param>
+    /// <param name="learningRate">Step size for gradient descent.</param>
+    /// <param name="batchSize">Number of experiences to sample per step.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The loss value before the weight update (for logging).</returns>
+    public async Task<float> TrainStepAsync(ExperienceBuffer buffer, float learningRate = 0.01f, int batchSize = 32, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(buffer);
+
+        var batch = buffer.Sample(batchSize);
+
+        // Record loss before update
+        float lossBeforeUpdate = ComputeLoss(batch);
+
+        // Compute gradients via finite differences
+        var gradients = ComputeGradients(batch);
+
+        // Apply gradient descent: w[i] -= learningRate * gradient[i]
+        ApplyGradientUpdate(_messageWeightsFlat, gradients["messageWeights"], learningRate);
+        ApplyGradientUpdate(_messageBias, gradients["messageBias"], learningRate);
+        ApplyGradientUpdate(_updateWeightsFlat, gradients["updateWeights"], learningRate);
+        ApplyGradientUpdate(_updateBias, gradients["updateBias"], learningRate);
+        ApplyGradientUpdate(_readoutWeightsFlat, gradients["readoutWeights"], learningRate);
+        ApplyGradientUpdate(_readoutBias, gradients["readoutBias"], learningRate);
+
+        // Rebuild CPU fallback jagged arrays from updated flat arrays
+        RebuildJaggedArrays();
+
+        return lossBeforeUpdate;
+    }
+
+    /// <summary>
+    /// Returns current flat weight arrays as jagged for inspection.
+    /// </summary>
+    /// <returns>Array of flat weight arrays: messageWeights, messageBias, updateWeights, updateBias, readoutWeights, readoutBias.</returns>
+    public float[][] GetAllWeights()
+    {
+        return new float[][]
+        {
+            _messageWeightsFlat,
+            _messageBias,
+            _updateWeightsFlat,
+            _updateBias,
+            _readoutWeightsFlat,
+            _readoutBias,
+        };
+    }
+
+    /// <summary>
+    /// Replaces a weight array by name. Used for testing and parameter inspection.
+    /// </summary>
+    /// <param name="name">Parameter name: messageWeights, messageBias, updateWeights, updateBias, readoutWeights, readoutBias.</param>
+    /// <param name="weights">New weight values.</param>
+    public void SetAllWeights(string name, float[] weights)
+    {
+        ArgumentNullException.ThrowIfNull(weights);
+
+        switch (name)
+        {
+            case "messageWeights":
+                _messageWeightsFlat = weights;
+                break;
+            case "messageBias":
+                _messageBias = weights;
+                break;
+            case "updateWeights":
+                _updateWeightsFlat = weights;
+                break;
+            case "updateBias":
+                _updateBias = weights;
+                break;
+            case "readoutWeights":
+                _readoutWeightsFlat = weights;
+                break;
+            case "readoutBias":
+                _readoutBias = weights;
+                break;
+            default:
+                throw new ArgumentException($"Unknown weight name: {name}", nameof(name));
+        }
+
+        RebuildJaggedArrays();
+    }
+
+    /// <summary>
+    /// Computes finite-difference gradient for a single weight array.
+    /// </summary>
+    private float[] ComputeGradientForArray(float[] weights, IList<Experience> batch, float delta)
+    {
+        float[] gradient = new float[weights.Length];
+
+        for (int i = 0; i < weights.Length; i++)
+        {
+            float original = weights[i];
+
+            // Perturb +delta
+            weights[i] = original + delta;
+            float lossPlus = ComputeLoss(batch);
+
+            // Perturb -delta
+            weights[i] = original - delta;
+            float lossMinus = ComputeLoss(batch);
+
+            // Restore original
+            weights[i] = original;
+
+            // Central difference gradient
+            gradient[i] = (lossPlus - lossMinus) / (2f * delta);
+        }
+
+        return gradient;
+    }
+
+    /// <summary>
+    /// Applies gradient descent update to a weight array.
+    /// </summary>
+    private static void ApplyGradientUpdate(float[] weights, float[] gradients, float learningRate)
+    {
+        for (int i = 0; i < weights.Length; i++)
+        {
+            weights[i] -= learningRate * gradients[i];
+        }
+    }
+
+    /// <summary>
+    /// Reconstructs CPU fallback jagged arrays from flat weight arrays.
+    /// Called after training updates modify the flat arrays.
+    /// </summary>
+    private void RebuildJaggedArrays()
+    {
+        _messageWeights = RebuildJaggedFromFlat(_messageWeightsFlat, _messageWeightsShape);
+        _updateWeights = RebuildJaggedFromFlat(_updateWeightsFlat, _updateWeightsShape);
+        _readoutWeights = RebuildJaggedFromFlat(_readoutWeightsFlat, _readoutWeightsShape);
+    }
+
+    /// <summary>
+    /// Reconstructs a jagged array from a flat array using the stored shape dimensions.
+    /// </summary>
+    private static float[][] RebuildJaggedFromFlat(float[] flat, TensorShape shape)
+    {
+        int rows = shape.Dimensions[0];
+        int cols = shape.Dimensions[1];
+        float[][] jagged = new float[rows][];
+        for (int i = 0; i < rows; i++)
+        {
+            jagged[i] = new float[cols];
+            Array.Copy(flat, i * cols, jagged[i], 0, cols);
+        }
+
+        return jagged;
     }
 }
