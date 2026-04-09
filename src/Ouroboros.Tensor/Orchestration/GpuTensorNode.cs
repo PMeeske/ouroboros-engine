@@ -321,7 +321,7 @@ public sealed class OnnxInferenceNode : GpuTensorNode
 public sealed class IlgpuKernelNode : GpuTensorNode
 {
     private readonly Func<ILGPU.Runtime.Accelerator,
-        Action<ILGPU.Runtime.ArrayView<float>, ILGPU.Runtime.ArrayView<float>>> _kernelFactory;
+        Action<ILGPU.ArrayView<float>, ILGPU.ArrayView<float>>> _kernelFactory;
     private readonly Func<TensorShape, TensorShape> _outputShapeFactory;
 
     /// <summary>
@@ -343,7 +343,7 @@ public sealed class IlgpuKernelNode : GpuTensorNode
         GpuScheduler scheduler,
         Backends.IlgpuOpenClTensorBackend backend,
         Func<ILGPU.Runtime.Accelerator,
-            Action<ILGPU.Runtime.ArrayView<float>, ILGPU.Runtime.ArrayView<float>>> kernelFactory,
+            Action<ILGPU.ArrayView<float>, ILGPU.ArrayView<float>>> kernelFactory,
         Func<TensorShape, TensorShape>? outputShapeFactory = null)
         : base(nodeId, scheduler, backend)
     {

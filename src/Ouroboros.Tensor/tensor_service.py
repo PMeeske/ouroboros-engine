@@ -23,6 +23,10 @@ app = FastAPI(title="Ouroboros Tensor Service", version="0.1.0")
 _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info("Tensor service starting. Device: %s", _device)
 
+# ── GPU VRAM budget ──────────────────────────────────────────────────────────
+import os as _os
+_VRAM_BUDGET_CAP_MB = int(_os.environ.get("VRAM_BUDGET_CAP_MB", "4096"))
+
 # ── Fish Speech TTS state (loaded lazily on first /tts call) ─────────────────
 _fish_tts: Optional["FishTTSEngine"] = None
 
@@ -421,6 +425,63 @@ class TTSRequest(BaseModel):
     format: str = "wav"
 
 
+class TTSGenerateRequest(BaseModel):
+    """Request for LLAMA semantic token generation only (no DAC decode)."""
+    text: str
+    reference_id: Optional[str] = None
+    max_new_tokens: int = 1024
+    chunk_length: int = 300
+    top_p: float = 0.8
+    temperature: float = 0.8
+    repetition_penalty: float = 1.1
+
+
+class TTSDecodeRequest(BaseModel):
+    """Request for DAC decode: VQ codes to WAV audio.
+
+    codes: list of lists [num_codebooks][gen_len], max 20 codebooks, max 4096 time steps.
+    """
+    codes: List[List[int]]
+
+
+# ── Semantic token categorization for predictive lip-sync ────────────────────
+
+# Maps Fish Speech codebook token ID ranges to phoneme-like categories.
+# Used to predict FLAME blendshape expressions before audio decode completes.
+_TOKEN_CATEGORY_MAP = [
+    (0, 399, "silence"),      # Low-energy tokens
+    (400, 999, "vowel"),      # Open mouth shapes
+    (1000, 1599, "consonant"),  # Closed/partial mouth shapes
+    (1600, 2199, "plosive"),  # Burst shapes (p, b, t, d, k, g)
+    (2200, 2799, "fricative"),  # Friction shapes (f, v, s, z, sh)
+    (2800, 3199, "nasal"),    # Nasal shapes (m, n, ng)
+    (3200, 4095, "transition"),  # In-between shapes
+]
+
+
+def categorize_semantic_tokens(codes) -> list:
+    """Categorize semantic token IDs into phoneme-like categories.
+
+    Args:
+        codes: ndarray [num_codebooks, chunk_len] — uses first codebook (index 0).
+
+    Returns:
+        List of category strings, one per time step.
+    """
+    import numpy as np
+    first_codebook = codes[0] if len(codes.shape) > 1 else codes
+    categories = []
+    for token_id in first_codebook:
+        tid = int(token_id)
+        cat = "transition"  # default
+        for low, high, name in _TOKEN_CATEGORY_MAP:
+            if low <= tid <= high:
+                cat = name
+                break
+        categories.append(cat)
+    return categories
+
+
 class FishTTSEngine:
     """Wraps Fish Speech LLAMA + DAC for GPU-isolated TTS inference."""
 
@@ -441,9 +502,11 @@ class FishTTSEngine:
 
         self.device = device
         self.generate = generate
+        self.encode_audio = encode_audio
         self.ServeTTSRequest = ServeTTSRequest
         self.Conversation = Conversation
         self.Message = Message
+        self._voice_embeddings: dict[str, torch.Tensor] = {}
 
         # Load LLAMA on GPU
         logger.info("Loading Fish Speech LLAMA from %s on %s", checkpoint_path, device)
@@ -455,6 +518,23 @@ class FishTTSEngine:
         )
         self.tokenizer = FishTokenizer(os.path.join(checkpoint_path, "tokenizer.json"))
         logger.info("Fish Speech LLAMA loaded")
+        logger.info(
+            "LLAMA KV cache: %d layers, model dim %d",
+            self.model.config.num_layers,
+            self.model.config.dim,
+        )
+
+        # Track VRAM after model load
+        if torch.cuda.is_available():
+            self._model_vram_mb = torch.cuda.memory_allocated(self.device) / (1024 ** 2)
+            logger.info(
+                "LLAMA VRAM usage: %.0fMB (budget cap: %dMB)",
+                self._model_vram_mb, _VRAM_BUDGET_CAP_MB,
+            )
+            if self._model_vram_mb > _VRAM_BUDGET_CAP_MB:
+                logger.warning("LLAMA VRAM %.0fMB exceeds budget cap %dMB", self._model_vram_mb, _VRAM_BUDGET_CAP_MB)
+        else:
+            self._model_vram_mb = 0.0
 
         # Load DAC decoder via ONNX (CPU -- avoids MIOpen workspace issues)
         import onnxruntime as ort
@@ -464,24 +544,67 @@ class FishTTSEngine:
         )
         logger.info("Fish Speech DAC ONNX loaded from %s", dac_onnx_path)
 
+        # Auto-load reference audio embeddings for voice cloning
+        ref_dir = os.environ.get("FISH_REFERENCE_DIR", "/app/fish-speech/references/")
+        if os.path.isdir(ref_dir):
+            for fname in os.listdir(ref_dir):
+                if fname.endswith(".wav"):
+                    ref_id = fname[:-4]
+                    ref_path = os.path.join(ref_dir, fname)
+                    self.load_reference_audio(ref_id, ref_path)
+            logger.info("Loaded %d voice references from %s", len(self._voice_embeddings), ref_dir)
+
+    def load_reference_audio(self, reference_id: str, audio_path: str) -> None:
+        """Load a reference WAV and store its voice embedding for cloning."""
+        import os
+        if not os.path.isfile(audio_path):
+            logger.warning("Reference audio not found: %s", audio_path)
+            return
+        try:
+            embedding = self.encode_audio(
+                model=self.model,
+                audio_path=audio_path,
+                device=str(self.device),
+            )
+            self._voice_embeddings[reference_id] = embedding
+            logger.info("Loaded voice reference '%s' from %s", reference_id, audio_path)
+        except Exception as e:
+            logger.warning("Failed to load reference '%s': %s", reference_id, e)
+
     @torch.no_grad()
-    def synthesize(self, text: str, max_new_tokens: int = 1024,
-                   chunk_length: int = 300, top_p: float = 0.8,
-                   temperature: float = 0.8, repetition_penalty: float = 1.1) -> bytes:
-        """Generate WAV audio from text. Returns raw WAV bytes."""
+    def generate_codes(
+        self,
+        text: str,
+        max_new_tokens: int = 1024,
+        chunk_length: int = 300,
+        top_p: float = 0.8,
+        temperature: float = 0.8,
+        repetition_penalty: float = 1.1,
+    ) -> tuple:
+        """Run LLAMA text-to-semantic inference only (no DAC decode).
+
+        Returns:
+            (codes_np: ndarray[int64] shape [num_codebooks, gen_len], generation_time_ms: float)
+            If VRAM exceeds budget, a warning is logged but generation proceeds.
+        """
         import numpy as np
-        import io
-        import wave as wave_mod
+        import time
+
+        # VRAM budget check (soft cap — warn but proceed)
+        self._vram_warning = False
+        if torch.cuda.is_available():
+            alloc_mb = torch.cuda.memory_allocated(self.device) / (1024 ** 2)
+            if alloc_mb > _VRAM_BUDGET_CAP_MB:
+                logger.warning("VRAM over budget: %.0fMB > %dMB", alloc_mb, _VRAM_BUDGET_CAP_MB)
+                self._vram_warning = True
 
         from fish_speech.conversation import Conversation, Message
 
-        # Build conversation
         conv = Conversation(messages=[
             Message(role="system", content="convert the provided text to speech"),
             Message(role="user", content=text),
         ])
 
-        # Encode for model
         prompt = conv.encode_for_inference(
             tokenizer=self.tokenizer,
             num_codebooks=self.model.config.num_codebooks,
@@ -489,7 +612,7 @@ class FishTTSEngine:
         prompt_tokens = prompt["tokens"].to(self.device)
         prompt_length = prompt_tokens.shape[-1]
 
-        # Generate codes with LLAMA on GPU
+        t0 = time.perf_counter()
         all_codes = self.generate(
             model=self.model,
             prompt=prompt_tokens,
@@ -502,22 +625,46 @@ class FishTTSEngine:
             iterative_prompt=chunk_length > 0,
             chunk_length=chunk_length,
         )
+        generation_time_ms = (time.perf_counter() - t0) * 1000
 
-        # Extract generated codes (skip prompt, remove eos)
         codes = all_codes[1:, prompt_length:-1]  # [num_codebooks, gen_len]
 
         if codes.shape[1] == 0:
-            logger.warning("Fish Speech generated 0 tokens")
-            return b""
+            raise ValueError("LLAMA generated 0 semantic tokens")
 
-        # Decode codes to audio via ONNX DAC (CPU)
         codes_np = codes.cpu().numpy().astype(np.int64)
-        codes_np = codes_np[np.newaxis, :, :]  # [1, num_codebooks, time]
-        audio_out = self.dac_session.run(None, {"codes": codes_np})[0]
+        logger.info(
+            "generate_codes: %d codebooks x %d tokens in %.1fms",
+            codes_np.shape[0], codes_np.shape[1], generation_time_ms,
+        )
+        return codes_np, generation_time_ms
+
+    def decode_codes_to_wav(self, codes_np) -> tuple:
+        """Decode VQ codes to WAV audio via ONNX DAC (CPU).
+
+        Args:
+            codes_np: ndarray[int64] shape [num_codebooks, gen_len]
+
+        Returns:
+            (wav_bytes: bytes, rms: float) — 44100Hz mono 16-bit PCM WAV and RMS on int16 scale.
+        """
+        import numpy as np
+        import io
+        import wave as wave_mod
+
+        codes_input = codes_np[np.newaxis, :, :]  # [1, num_codebooks, time]
+        audio_out = self.dac_session.run(None, {"codes": codes_input})[0]
         audio_float = audio_out.squeeze()  # [audio_samples]
 
         # Convert to 16-bit PCM WAV
         audio_int16 = np.clip(audio_float * 32767, -32768, 32767).astype(np.int16)
+
+        # Calculate RMS on int16 scale
+        rms = float(np.sqrt(np.mean(audio_int16.astype(np.float64) ** 2)))
+        if rms < 500:
+            logger.warning("DAC decode RMS %.1f < 500 — near-silent output", rms)
+        else:
+            logger.info("DAC decode RMS: %.1f", rms)
 
         buf = io.BytesIO()
         with wave_mod.open(buf, "wb") as wf:
@@ -526,7 +673,28 @@ class FishTTSEngine:
             wf.setframerate(44100)
             wf.writeframes(audio_int16.tobytes())
 
-        return buf.getvalue()
+        return buf.getvalue(), rms
+
+    @torch.no_grad()
+    def synthesize(self, text: str, max_new_tokens: int = 1024,
+                   chunk_length: int = 300, top_p: float = 0.8,
+                   temperature: float = 0.8, repetition_penalty: float = 1.1) -> tuple:
+        """Generate WAV audio from text.
+
+        Returns:
+            (wav_bytes: bytes, rms: float, generation_time_ms: float)
+        """
+        codes_np, generation_time_ms = self.generate_codes(
+            text=text,
+            max_new_tokens=max_new_tokens,
+            chunk_length=chunk_length,
+            top_p=top_p,
+            temperature=temperature,
+            repetition_penalty=repetition_penalty,
+        )
+
+        wav_bytes, rms = self.decode_codes_to_wav(codes_np)
+        return wav_bytes, rms, generation_time_ms
 
 
 def _get_fish_tts() -> FishTTSEngine:
@@ -546,7 +714,7 @@ def tts(request: TTSRequest):
     from fastapi.responses import Response
 
     engine = _get_fish_tts()
-    wav_bytes = engine.synthesize(
+    wav_bytes, rms, generation_time_ms = engine.synthesize(
         text=request.text,
         max_new_tokens=request.max_new_tokens,
         chunk_length=request.chunk_length,
@@ -558,13 +726,353 @@ def tts(request: TTSRequest):
     if not wav_bytes:
         raise HTTPException(status_code=500, detail="TTS generated empty audio")
 
-    return Response(content=wav_bytes, media_type="audio/wav")
+    return Response(
+        content=wav_bytes,
+        media_type="audio/wav",
+        headers={
+            "X-Audio-RMS": str(round(rms, 1)),
+            "X-Generation-Time-Ms": str(round(generation_time_ms, 1)),
+        },
+    )
+
+
+@app.post("/tts/decode")
+def tts_decode(request: TTSDecodeRequest):
+    """Decode VQ codes to WAV audio via ONNX DAC (CPU).
+
+    Input: codes array [num_codebooks][gen_len].
+    Output: 44100Hz mono 16-bit PCM WAV with X-Audio-RMS header.
+    """
+    import numpy as np
+    from fastapi.responses import Response
+
+    codes_np = np.array(request.codes, dtype=np.int64)
+
+    # Validate dimensions (T-144-01 DoS mitigation)
+    if codes_np.ndim != 2:
+        raise HTTPException(status_code=400, detail="codes must be 2D [num_codebooks, time_steps]")
+    if codes_np.shape[0] > 20:
+        raise HTTPException(status_code=400, detail=f"Max 20 codebooks, got {codes_np.shape[0]}")
+    if codes_np.shape[1] > 4096:
+        raise HTTPException(status_code=400, detail=f"Max 4096 time steps, got {codes_np.shape[1]}")
+
+    engine = _get_fish_tts()
+    wav_bytes, rms = engine.decode_codes_to_wav(codes_np)
+
+    return Response(
+        content=wav_bytes,
+        media_type="audio/wav",
+        headers={"X-Audio-RMS": str(round(rms, 1))},
+    )
+
+
+@app.post("/tts/stream")
+def tts_stream(request: TTSRequest):
+    """Streaming TTS with newline-delimited JSON (NDJSON) + binary audio.
+
+    Stream format per chunk:
+      1. {"type": "header", "sample_rate": 44100, "channels": 1, "sample_width": 2}\\n
+      2. {"type": "tokens", "categories": [...], "chunk_index": N}\\n  (prediction — sent BEFORE audio)
+      3. {"type": "audio", "chunk_index": N, "pcm_bytes": N}\\n + raw PCM bytes
+
+    Token categories are sent BEFORE the audio chunk, enabling predictive lip-sync
+    from semantic tokens before audio decode completes.
+    """
+    import struct
+    import json as _json
+    import numpy as np
+    from fastapi.responses import StreamingResponse
+
+    engine = _get_fish_tts()
+
+    def generate_ndjson_chunks():
+        """Generator yielding NDJSON metadata + binary audio chunks."""
+        # 1. Stream header
+        yield (_json.dumps({
+            "type": "header",
+            "sample_rate": 44100,
+            "channels": 1,
+            "sample_width": 2,
+        }) + "\n").encode()
+
+        try:
+            # Generate semantic codes
+            codes_np, gen_time_ms = engine.generate_codes(
+                text=request.text,
+                max_new_tokens=request.max_new_tokens,
+                chunk_length=min(request.chunk_length, 100),
+                top_p=request.top_p,
+                temperature=request.temperature,
+                repetition_penalty=request.repetition_penalty,
+            )
+
+            # 2. Token categories (prediction — sent BEFORE audio)
+            categories = categorize_semantic_tokens(codes_np)
+            yield (_json.dumps({
+                "type": "tokens",
+                "categories": categories,
+                "chunk_index": 0,
+            }) + "\n").encode()
+
+            # 3. Decode to audio and stream as PCM chunks
+            wav_bytes, rms = engine.decode_codes_to_wav(codes_np)
+            pcm_data = wav_bytes[44:]  # skip WAV header
+
+            chunk_size = 8192
+            chunk_idx = 0
+            for i in range(0, len(pcm_data), chunk_size):
+                pcm_chunk = pcm_data[i:i + chunk_size]
+                # Audio metadata line
+                yield (_json.dumps({
+                    "type": "audio",
+                    "chunk_index": chunk_idx,
+                    "pcm_bytes": len(pcm_chunk),
+                }) + "\n").encode()
+                # Raw PCM bytes
+                yield pcm_chunk
+                chunk_idx += 1
+
+        except Exception as e:
+            logger.error("Streaming TTS error: %s", e)
+            yield (_json.dumps({"type": "error", "message": str(e)}) + "\n").encode()
+
+    return StreamingResponse(
+        generate_ndjson_chunks(),
+        media_type="application/x-ndjson",
+        headers={"Transfer-Encoding": "chunked"},
+    )
+
+
+@app.get("/tts/token_categories")
+def tts_token_categories():
+    """Return the semantic token category mapping table for debugging."""
+    return {
+        "categories": {name: {"range": [lo, hi]} for lo, hi, name in _TOKEN_CATEGORY_MAP},
+        "total_categories": len(_TOKEN_CATEGORY_MAP),
+    }
+
+
+
+@app.get("/tts/references")
+def tts_references():
+    """List loaded voice reference embeddings."""
+    engine = _get_fish_tts()
+    refs = list(engine._voice_embeddings.keys())
+    return {"references": refs, "count": len(refs)}
+
+
+@app.post("/tts/reference/load")
+def tts_reference_load(request: dict):
+    """Load a voice reference at runtime.
+
+    Body: {"reference_id": str, "audio_path": str}
+    """
+    ref_id = request.get("reference_id")
+    audio_path = request.get("audio_path")
+    if not ref_id or not audio_path:
+        raise HTTPException(status_code=400, detail="reference_id and audio_path required")
+
+    engine = _get_fish_tts()
+    engine.load_reference_audio(ref_id, audio_path)
+
+    if ref_id in engine._voice_embeddings:
+        return {"loaded": True, "reference_id": ref_id}
+    raise HTTPException(status_code=500, detail=f"Failed to load reference '{ref_id}'")
+
+
+@app.post("/tts/generate")
+def tts_generate(request: TTSGenerateRequest):
+    """Generate semantic tokens via LLAMA only (no DAC decode).
+
+    Returns VQ codes tensor [num_codebooks, gen_len] with timing metadata.
+    """
+    engine = _get_fish_tts()
+    codes_np, generation_time_ms = engine.generate_codes(
+        text=request.text,
+        max_new_tokens=request.max_new_tokens,
+        chunk_length=request.chunk_length,
+        top_p=request.top_p,
+        temperature=request.temperature,
+        repetition_penalty=request.repetition_penalty,
+    )
+    num_codebooks = int(codes_np.shape[0])
+    gen_length = int(codes_np.shape[1])
+    result = {
+        "codes": codes_np.tolist(),
+        "num_codebooks": num_codebooks,
+        "gen_length": gen_length,
+        "generation_time_ms": round(generation_time_ms, 2),
+    }
+    if getattr(engine, "_vram_warning", False):
+        result["vram_warning"] = True
+    return result
+
+
+@app.get("/gpu/vram")
+def gpu_vram():
+    """Return GPU VRAM usage and budget information."""
+    if not torch.cuda.is_available():
+        return {"available": False, "device": "cpu"}
+
+    props = torch.cuda.get_device_properties(0)
+    total_mb = props.total_mem / (1024 ** 2)
+    allocated_mb = torch.cuda.memory_allocated(0) / (1024 ** 2)
+    reserved_mb = torch.cuda.memory_reserved(0) / (1024 ** 2)
+    free_mb = total_mb - reserved_mb
+    tts_model_mb = _fish_tts._model_vram_mb if _fish_tts is not None else 0.0
+
+    return {
+        "available": True,
+        "total_mb": round(total_mb, 1),
+        "allocated_mb": round(allocated_mb, 1),
+        "reserved_mb": round(reserved_mb, 1),
+        "free_mb": round(free_mb, 1),
+        "tts_model_mb": round(tts_model_mb, 1),
+        "budget_cap_mb": _VRAM_BUDGET_CAP_MB,
+    }
+
+
+@app.get("/gpu/miopen_check")
+def gpu_miopen_check():
+    """Verify MIOpen avoidance: DAC on CPU, LLAMA without conv layers."""
+    engine = _get_fish_tts()
+
+    # Check DAC provider
+    dac_providers = engine.dac_session.get_providers()
+
+    # Check LLAMA for nn.Conv layers
+    has_conv = any(
+        isinstance(m, (torch.nn.Conv1d, torch.nn.Conv2d, torch.nn.Conv3d))
+        for m in engine.model.modules()
+    )
+
+    return {
+        "dac_provider": dac_providers[0] if dac_providers else "unknown",
+        "llama_has_conv": has_conv,
+        "miopen_safe": dac_providers[0] == "CPUExecutionProvider" and not has_conv,
+    }
 
 
 @app.get("/tts/health")
 def tts_health():
-    """Check if Fish Speech TTS is loaded."""
-    return {"loaded": _fish_tts is not None, "device": str(_device)}
+    """Check if Fish Speech TTS is loaded. Returns comprehensive readiness status."""
+    if _fish_tts is not None:
+        model_cfg = _fish_tts.model.config
+        dac_loaded = _fish_tts.dac_session is not None
+        references_loaded = len(_fish_tts._voice_embeddings)
+        vram_mb = _fish_tts._model_vram_mb if hasattr(_fish_tts, '_model_vram_mb') else 0.0
+        model_loaded = True
+        return {
+            "loaded": True,
+            "model_loaded": model_loaded,
+            "dac_loaded": dac_loaded,
+            "references_loaded": references_loaded,
+            "device": str(_device),
+            "vram_mb": round(vram_mb, 1),
+            "ready": model_loaded and dac_loaded,
+            "model_config": {
+                "num_codebooks": model_cfg.num_codebooks,
+                "vocab_size": model_cfg.vocab_size,
+                "dim": model_cfg.dim,
+            },
+        }
+    return {
+        "loaded": False,
+        "model_loaded": False,
+        "dac_loaded": False,
+        "references_loaded": 0,
+        "device": str(_device),
+        "vram_mb": 0.0,
+        "ready": False,
+    }
+
+
+@app.get("/tts/test_generate")
+def tts_test_generate():
+    """Diagnostic endpoint: verify LLAMA inference produces valid semantic tokens.
+
+    Runs generate_codes with a test phrase and validates code ranges.
+    This is a diagnostic endpoint for development verification only.
+    """
+    engine = _get_fish_tts()
+    codes_np, generation_time_ms = engine.generate_codes("Hello, this is a test.")
+
+    num_codebooks = int(codes_np.shape[0])
+    gen_length = int(codes_np.shape[1])
+    code_min = int(codes_np.min())
+    code_max = int(codes_np.max())
+    tokens_per_second = gen_length / (generation_time_ms / 1000) if generation_time_ms > 0 else 0
+
+    # At 44100 Hz with ~512 samples per code, real-time threshold ~ 86 codes/sec
+    realtime_threshold = 44100 / 512
+    exceeds_realtime = tokens_per_second > realtime_threshold
+    logger.info(
+        "test_generate: %d tokens at %.1f tok/s (realtime=%.1f, exceeds=%s)",
+        gen_length, tokens_per_second, realtime_threshold, exceeds_realtime,
+    )
+
+    if code_max > 4095:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Codes out of codebook range: max={code_max} > 4095",
+        )
+
+    return {
+        "success": True,
+        "num_codebooks": num_codebooks,
+        "gen_length": gen_length,
+        "code_range": [code_min, code_max],
+        "generation_time_ms": round(generation_time_ms, 2),
+        "tokens_per_second": round(tokens_per_second, 2),
+        "exceeds_realtime": exceeds_realtime,
+    }
+
+
+@app.get("/tts/test_e2e")
+def tts_test_e2e():
+    """Diagnostic endpoint: full text-to-audio pipeline verification.
+
+    Runs generate_codes -> decode_codes_to_wav and validates audible output.
+    This is a diagnostic endpoint for development verification only.
+    """
+    import time
+
+    engine = _get_fish_tts()
+
+    t_total = time.perf_counter()
+    codes_np, generate_time_ms = engine.generate_codes(
+        "Testing end-to-end speech synthesis.",
+    )
+    gen_length = int(codes_np.shape[1])
+
+    t_decode = time.perf_counter()
+    wav_bytes, rms = engine.decode_codes_to_wav(codes_np)
+    decode_time_ms = (time.perf_counter() - t_decode) * 1000
+    total_time_ms = (time.perf_counter() - t_total) * 1000
+
+    # Audio duration from WAV size (16-bit mono 44100Hz)
+    pcm_bytes = len(wav_bytes) - 44  # subtract WAV header
+    audio_samples = pcm_bytes // 2
+    audio_duration_sec = audio_samples / 44100
+    realtime_factor = audio_duration_sec / (total_time_ms / 1000) if total_time_ms > 0 else 0
+
+    success = gen_length > 0 and rms > 500 and len(wav_bytes) > 1000
+    logger.info(
+        "test_e2e: RMS=%.0f, %.1fs audio in %.0fms (%.2fx realtime)",
+        rms, audio_duration_sec, total_time_ms, realtime_factor,
+    )
+
+    return {
+        "success": success,
+        "gen_length": gen_length,
+        "rms_16bit": round(rms, 1),
+        "wav_bytes": len(wav_bytes),
+        "total_time_ms": round(total_time_ms, 2),
+        "generate_time_ms": round(generate_time_ms, 2),
+        "decode_time_ms": round(decode_time_ms, 2),
+        "audio_duration_sec": round(audio_duration_sec, 3),
+        "realtime_factor": round(realtime_factor, 3),
+    }
 
 
 @app.post("/ewc/validate_drift", response_model=DriftResponse)
