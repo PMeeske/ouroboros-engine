@@ -6,6 +6,7 @@
     <AssemblyName>Ouroboros.Pipeline</AssemblyName>
     <Product>Ouroboros Pipeline</Product>
     <Description>Pipeline implementations including reasoning, ingestion, and replay for Ouroboros</Description>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
