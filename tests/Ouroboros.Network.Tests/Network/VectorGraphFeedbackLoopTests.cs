@@ -581,4 +581,154 @@ public class VectorGraphFeedbackLoopTests
         // lowTarget should still exist
         dag.GetNode(lowTarget.Id).HasValue.Should().BeTrue();
     }
+
+    // === MeTTa Feedback Integration Tests ===
+
+    [Fact]
+    public async Task ApplyModificationsAsync_MeTTaStrengthenModification_IncreasesEdgeWeights()
+    {
+        // Arrange - build a dag with a source->sink edge at confidence 0.5
+        var dag = new MerkleDag();
+        var source = CreateNode(typeName: "Source", payload: "{\"data\":\"source\"}");
+        var sink = CreateNode(typeName: "Sink", payload: "{\"data\":\"sink\"}");
+        dag.AddNode(source);
+        dag.AddNode(sink);
+        var edge = TransitionEdge.CreateSimple(
+            source.Id, sink.Id, "Connect", new { }, confidence: 0.5);
+        dag.AddEdge(edge);
+
+        // Parse a MeTTa strengthen directive
+        var mettaOutput = $"(strengthen \"{source.Id}\" \"{sink.Id}\")";
+        var modifications = VectorGraphFeedbackLoop.ParseModifications(mettaOutput);
+        var modifiedNodes = new HashSet<Guid>();
+
+        // Act
+        await VectorGraphFeedbackLoop.ApplyModificationsAsync(dag, modifications, modifiedNodes, CancellationToken.None);
+
+        // Assert - edge confidence should have increased from 0.5
+        var outgoingEdges = dag.GetOutgoingEdges(source.Id).ToList();
+        outgoingEdges.Should().HaveCount(1);
+        outgoingEdges[0].Confidence.Should().BeApproximately(0.55, 0.01);
+        modifiedNodes.Should().Contain(source.Id);
+        modifiedNodes.Should().Contain(sink.Id);
+    }
+
+    [Fact]
+    public async Task ApplyModificationsAsync_MeTTaWeakenModification_DecreasesEdgeWeights()
+    {
+        // Arrange - build a dag with a source->sink edge at confidence 0.5
+        var dag = new MerkleDag();
+        var source = CreateNode(typeName: "Source", payload: "{\"data\":\"source\"}");
+        var sink = CreateNode(typeName: "Sink", payload: "{\"data\":\"sink\"}");
+        dag.AddNode(source);
+        dag.AddNode(sink);
+        var edge = TransitionEdge.CreateSimple(
+            source.Id, sink.Id, "Connect", new { }, confidence: 0.5);
+        dag.AddEdge(edge);
+
+        // Parse a MeTTa weaken directive
+        var mettaOutput = $"(weaken-outgoing-edges \"{source.Id}\")";
+        var modifications = VectorGraphFeedbackLoop.ParseModifications(mettaOutput);
+        var modifiedNodes = new HashSet<Guid>();
+
+        // Act
+        await VectorGraphFeedbackLoop.ApplyModificationsAsync(dag, modifications, modifiedNodes, CancellationToken.None);
+
+        // Assert - edge confidence should have decreased from 0.5
+        var outgoingEdges = dag.GetOutgoingEdges(source.Id).ToList();
+        outgoingEdges.Should().HaveCount(1);
+        outgoingEdges[0].Confidence.Should().BeApproximately(0.4, 0.01);
+        modifiedNodes.Should().Contain(source.Id);
+    }
+
+    [Fact]
+    public async Task ApplyModificationsAsync_MeTTaMergeModification_CombinesNodes()
+    {
+        // Arrange - sink1 -> sink2 with an incoming edge from a third node
+        var dag = new MerkleDag();
+        var sink1 = CreateNode(typeName: "Sink", payload: "{\"name\":\"sink1\",\"value\":1}");
+        var sink2 = CreateNode(typeName: "Sink", payload: "{\"name\":\"sink2\",\"value\":2}");
+        var third = CreateNode(typeName: "Other", payload: "{}");
+        dag.AddNode(sink1);
+        dag.AddNode(sink2);
+        dag.AddNode(third);
+
+        var outEdge = TransitionEdge.CreateSimple(
+            sink1.Id, sink2.Id, "Relate", new { }, confidence: 0.8);
+        dag.AddEdge(outEdge);
+
+        var inboundEdge = TransitionEdge.CreateSimple(
+            third.Id, sink2.Id, "Connect", new { }, confidence: 0.6);
+        dag.AddEdge(inboundEdge);
+
+        // Parse a MeTTa merge directive targeting both sink nodes
+        var mettaOutput = $"(merge-sinks \"{sink1.Id}\" \"{sink2.Id}\")";
+        var modifications = VectorGraphFeedbackLoop.ParseModifications(mettaOutput);
+        var modifiedNodes = new HashSet<Guid>();
+
+        // Act
+        await VectorGraphFeedbackLoop.ApplyModificationsAsync(dag, modifications, modifiedNodes, CancellationToken.None);
+
+        // Assert - sink1 should still exist with merged payload, sink2 should be removed
+        var mergedNode = dag.GetNode(sink1.Id);
+        mergedNode.HasValue.Should().BeTrue();
+        mergedNode.Value.PayloadJson.Should().Contain("sink2");
+
+        var removedNode = dag.GetNode(sink2.Id);
+        removedNode.HasValue.Should().BeFalse();
+
+        modifiedNodes.Should().Contain(sink1.Id);
+        modifiedNodes.Should().Contain(sink2.Id);
+    }
+
+    [Fact]
+    public async Task FeedbackCycle_ClassifyBuildReasonParse_MeTTaModificationsApplyToGraph()
+    {
+        // Arrange - build a dag with nodes that simulate a source-sink topology
+        var dag = new MerkleDag();
+        var source = CreateNode(typeName: "Source", payload: "{\"data\":\"source\"}");
+        var sink = CreateNode(typeName: "Sink", payload: "{\"data\":\"sink\"}");
+        var cyclic = CreateNode(typeName: "Cyclic", payload: "{\"data\":\"cyclic\"}");
+        dag.AddNode(source);
+        dag.AddNode(sink);
+        dag.AddNode(cyclic);
+
+        var sourceToSink = TransitionEdge.CreateSimple(
+            source.Id, sink.Id, "Flow", new { }, confidence: 0.5);
+        var cyclicToSink = TransitionEdge.CreateSimple(
+            cyclic.Id, sink.Id, "Loop", new { }, confidence: 0.3);
+        dag.AddEdge(sourceToSink);
+        dag.AddEdge(cyclicToSink);
+
+        // Record pre-mutation state
+        var preSourceSinkConfidence = dag.GetEdge(sourceToSink.Id)!.Value.Confidence ?? 0.5;
+        var preCyclicSinkConfidence = dag.GetEdge(cyclicToSink.Id)!.Value.Confidence ?? 0.5;
+        preSourceSinkConfidence.Should().Be(0.5);
+        preCyclicSinkConfidence.Should().Be(0.3);
+
+        // Simulate MeTTa output that would result from classifying source as
+        // semantic-source and sink as semantic-sink, then querying for modifications:
+        // strengthen the source->sink edge, weaken the cyclic node's outgoing edges
+        var mettaOutput = $"(strengthen \"{source.Id}\" \"{sink.Id}\")\n(weaken \"{cyclic.Id}\")";
+        var modifications = VectorGraphFeedbackLoop.ParseModifications(mettaOutput);
+        modifications.Should().NotBeEmpty("MeTTa should produce actionable modifications");
+
+        var modifiedNodes = new HashSet<Guid>();
+
+        // Act - apply the parsed MeTTa modifications to the graph
+        await VectorGraphFeedbackLoop.ApplyModificationsAsync(dag, modifications, modifiedNodes, CancellationToken.None);
+
+        // Assert - the MerkleDag has been mutated by the MeTTa feedback
+        modifiedNodes.Should().NotBeEmpty("at least some nodes should be tracked as modified");
+
+        // Source->sink edge should have been strengthened (confidence increased from 0.5)
+        var strengthenedEdge = dag.GetEdge(sourceToSink.Id);
+        strengthenedEdge.HasValue.Should().BeTrue();
+        strengthenedEdge.Value.Confidence.Should().BeGreaterThan(preSourceSinkConfidence);
+
+        // Cyclic->sink edge should have been weakened (confidence decreased from 0.3)
+        var weakenedEdge = dag.GetEdge(cyclicToSink.Id);
+        weakenedEdge.HasValue.Should().BeTrue();
+        weakenedEdge.Value.Confidence.Should().BeLessThan(preCyclicSinkConfidence);
+    }
 }

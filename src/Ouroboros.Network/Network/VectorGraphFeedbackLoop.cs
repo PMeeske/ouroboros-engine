@@ -120,7 +120,7 @@ public sealed partial class VectorGraphFeedbackLoop
             // Step 6: Apply modifications to DAG
             var modifications = ParseModifications(modificationsResult.Value);
             var modifiedNodes = new HashSet<Guid>();
-            await ApplyModificationsAsync(dag, modifications, modifiedNodes, ct).ConfigureAwait(false);
+            await VectorGraphFeedbackLoop.ApplyModificationsAsync(dag, modifications, modifiedNodes, ct, _config.MaxModificationsPerCycle).ConfigureAwait(false);
 
             // Step 7: Re-embed and persist modified nodes
             if (_config.AutoPersist && modifiedNodes.Count > 0)
@@ -268,7 +268,7 @@ public sealed partial class VectorGraphFeedbackLoop
         return await _mettaEngine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
     }
 
-    private static List<GraphModification> ParseModifications(string mettaResult)
+    internal static List<GraphModification> ParseModifications(string mettaResult)
     {
         var modifications = new List<GraphModification>();
 
@@ -450,17 +450,18 @@ public sealed partial class VectorGraphFeedbackLoop
     [GeneratedRegex(@"\([^()]*(?:\([^()]*\))*[^()]*\)")]
     private static partial Regex SExpressionPattern();
 
-    private async Task ApplyModificationsAsync(
+    internal static async Task ApplyModificationsAsync(
         MerkleDag dag,
         List<GraphModification> modifications,
         HashSet<Guid> modifiedNodes,
-        CancellationToken ct)
+        CancellationToken ct,
+        int maxModifications = 10)
     {
         int appliedCount = 0;
 
         foreach (var modification in modifications)
         {
-            if (appliedCount >= _config.MaxModificationsPerCycle)
+            if (appliedCount >= maxModifications)
             {
                 break;
             }
@@ -817,5 +818,10 @@ public sealed partial class VectorGraphFeedbackLoop
         List<Guid> Neutral,
         List<Guid> Cyclic);
 
-    private sealed record GraphModification(Guid NodeId, string ModificationType);
+    /// <summary>
+    /// Represents a single graph modification directive parsed from MeTTa output.
+    /// </summary>
+    /// <param name="NodeId">The node ID targeted by this modification.</param>
+    /// <param name="ModificationType">The type of modification (strengthen, weaken, merge, or unknown).</param>
+    internal sealed record GraphModification(Guid NodeId, string ModificationType);
 }
