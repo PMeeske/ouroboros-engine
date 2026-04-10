@@ -6,6 +6,7 @@
     <AssemblyName>Ouroboros.Pipeline</AssemblyName>
     <Product>Ouroboros Pipeline</Product>
     <Description>Pipeline implementations including reasoning, ingestion, and replay for Ouroboros</Description>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +15,7 @@
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Domain\Ouroboros.Domain.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Tools\Ouroboros.Tools.csproj" />
     <ProjectReference Include="..\Ouroboros.Providers\Ouroboros.Providers.csproj" />
+    <ProjectReference Include="..\Ouroboros.Tensor\Ouroboros.Tensor.csproj" />
   </ItemGroup>
 
   <ItemGroup>

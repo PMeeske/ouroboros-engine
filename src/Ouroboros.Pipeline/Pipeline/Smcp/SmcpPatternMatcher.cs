@@ -134,6 +134,19 @@ public sealed class SmcpPatternMatcher : IDisposable
 
             // 3. Confidence scoring
             double composite = _scorer.Score(intentAtom, adapter, sub);
+
+            // HALO OOD detection: negative composite means origin sink won
+            if (composite < 0)
+            {
+                var clarification = SmcpAtomFactory.ClarificationRequest(
+                    "auto",
+                    "Intent out of distribution — no confident tool match",
+                    intentAtom);
+                _engine.AddAtom(clarification);
+                ClarificationNeeded?.Invoke(clarification);
+                continue; // Skip this adapter, try next
+            }
+
             var decision = _config.Gate(composite);
 
             switch (decision)

@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Ouroboros.MetaLearning.Tests</RootNamespace>
+    <AssemblyName>Ouroboros.SimpleModel.Tests</AssemblyName>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>$(NoWarn);CS1591;SA0001</NoWarn>
+  </PropertyGroup>
+
+  <!-- Override test Directory.Build.props global usings that require test infrastructure -->
+  <ItemGroup>
+    <Using Remove="Ouroboros.Tests.Mocks" />
+    <Using Remove="Ouroboros.Tests.Infrastructure" />
+    <Using Remove="Ouroboros.Tests.Infrastructure.Utilities" />
+    <Using Remove="Ouroboros.Tests.Infrastructure.Fixtures" />
+    <Using Remove="Ouroboros.Core.Kleisli" />
+    <Using Remove="Ouroboros.Core.Memory" />
+    <Using Remove="Ouroboros.Abstractions.Monads" />
+    <Using Remove="Ouroboros.Core.Monads" />
+    <Using Remove="Ouroboros.Core.Steps" />
+    <Using Remove="Ouroboros.Domain" />
+    <Using Remove="Ouroboros.Domain.Events" />
+    <Using Remove="Ouroboros.Domain.States" />
+    <Using Remove="Ouroboros.Domain.Vectors" />
+    <Using Remove="Ouroboros.Tools" />
+    <Using Remove="Ouroboros.Tools.MeTTa" />
+    <Using Remove="Ouroboros.Agent" />
+    <Using Remove="Ouroboros.Pipeline.Branches" />
+    <Using Remove="Ouroboros.Pipeline.Reasoning" />
+    <Using Remove="Ouroboros.Providers" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Direct project references — only what SimpleModel needs -->
+    <ProjectReference Include="..\..\src\Ouroboros.Agent\Ouroboros.Agent.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="8.0.1" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="8.8.0" />
+  </ItemGroup>
+
+</Project>

@@ -5,6 +5,7 @@
 using System.Collections.Concurrent;
 using System.Numerics.Tensors;
 using Ouroboros.Core.Hyperon;
+using Ouroboros.Tensor.Classification;
 using Ouroboros.Tools.MeTTa.Smcp;
 
 namespace Ouroboros.Pipeline.Smcp;
@@ -25,6 +26,8 @@ public sealed class SmcpConfidenceScorer
 {
     private readonly ConcurrentDictionary<string, double> _toolReliability = new();
     private readonly ConcurrentDictionary<string, float[]> _toolEmbeddingCache = new();
+    private HaloClassificationHead? _haloHead;
+    private readonly object _haloInitLock = new();
 
 #pragma warning disable CS0618 // IEmbeddingModel is obsolete but is the available interface
     private readonly Ouroboros.Domain.IEmbeddingModel? _embeddingModel;
@@ -82,6 +85,62 @@ public sealed class SmcpConfidenceScorer
         _toolReliability.GetValueOrDefault(toolName, DefaultReliability);
 
     /// <summary>
+    /// Lazily initializes the HALO classification head from tool embeddings.
+    /// Thread-safe double-checked locking pattern.
+    /// </summary>
+    /// <param name="adapters">Tool adapters to use as centroids.</param>
+    /// <returns>The initialized HALO head.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// When no embedding model is configured (cannot embed tool descriptions).
+    /// </exception>
+    private HaloClassificationHead EnsureHaloHead(IReadOnlyList<SmcpToolAdapter> adapters)
+    {
+        if (_haloHead is not null) return _haloHead;
+        lock (_haloInitLock)
+        {
+            if (_haloHead is not null) return _haloHead;
+            if (_embeddingModel is null)
+                throw new InvalidOperationException("Cannot init HALO without embedding model");
+
+            var centroids = new float[adapters.Count][];
+            var names = new string[adapters.Count];
+            for (int i = 0; i < adapters.Count; i++)
+            {
+                names[i] = adapters[i].Tool.Name;
+                centroids[i] = _toolEmbeddingCache.GetOrAdd(
+                    adapters[i].Tool.Name,
+                    _ => _embeddingModel.CreateEmbeddingsAsync(
+                        $"{adapters[i].Tool.Name}: {adapters[i].Tool.Description}")
+                    .GetAwaiter().GetResult());
+            }
+
+            _haloHead = new HaloClassificationHead(centroids, names, sigma: 1.0f, includeOriginSink: true);
+            return _haloHead;
+        }
+    }
+
+    /// <summary>
+    /// Attempts to initialize the HALO classification head at startup.
+    /// Non-critical — HALO is a best-effort enhancement over cosine similarity.
+    /// </summary>
+    /// <param name="adapters">Tool adapters to use as centroids.</param>
+    /// <returns>True if the HALO head was initialized; false if initialization failed or was already done.</returns>
+    public bool TryInitializeHaloHead(IReadOnlyList<SmcpToolAdapter> adapters)
+    {
+        try
+        {
+            EnsureHaloHead(adapters);
+            return _haloHead is not null;
+        }
+#pragma warning disable CA1031 // HALO initialization is best-effort
+        catch
+#pragma warning restore CA1031
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Extracts the confidence value from the last child of an MkIntent atom.
     /// <c>(MkIntent verb args confidence)</c> → confidence as double.
     /// </summary>
@@ -117,8 +176,8 @@ public sealed class SmcpConfidenceScorer
     }
 
     /// <summary>
-    /// Tensor-centric match: embeds intent text and tool description, then computes
-    /// cosine similarity using <see cref="TensorPrimitives"/> (SIMD-accelerated).
+    /// Tensor-centric match: uses HALO classification head when available for bounded
+    /// confidence with OOD detection, otherwise falls back to cosine similarity.
     /// Tool embeddings are cached for O(1) subsequent lookups.
     /// </summary>
     private double ComputeTensorMatchConfidence(Expression intentAtom, SmcpToolAdapter adapter)
@@ -143,7 +202,24 @@ public sealed class SmcpConfidenceScorer
             // Compute intent embedding (not cached — each intent is unique)
             var intentEmb = _embeddingModel!.CreateEmbeddingsAsync(intentText).GetAwaiter().GetResult();
 
-            // Cosine similarity via TensorPrimitives (SIMD-accelerated on .NET 10)
+            // HALO path: use classification head for bounded confidence with OOD detection
+            if (_haloHead is not null)
+            {
+                var result = _haloHead.Classify(intentEmb);
+
+                // OOD detection: origin sink won — signal to caller with negative score
+                if (result.IsOutOfDistribution)
+                    return -1.0;
+
+                // Matching tool: return HALO-bounded confidence (RBF-geometric, not threshold-driven)
+                if (result.ClassName == adapter.Tool.Name)
+                    return result.Confidence;
+
+                // This tool is not the winner: return 0 to avoid partial activation
+                return 0.0;
+            }
+
+            // Cosine similarity fallback (SIMD-accelerated on .NET 10)
             int len = Math.Min(intentEmb.Length, toolEmb.Length);
             if (len == 0) return 0.0;
 
@@ -186,6 +262,7 @@ public sealed class SmcpConfidenceScorer
 
     /// <summary>
     /// Pre-warms the tool embedding cache for all registered tool adapters.
+    /// Also initializes the HALO classification head for principled OOD detection.
     /// Call at startup for O(1) match confidence during runtime.
     /// </summary>
     public async Task PrecomputeToolEmbeddingsAsync(
@@ -193,7 +270,9 @@ public sealed class SmcpConfidenceScorer
     {
         if (_embeddingModel == null) return;
 
-        foreach (var adapter in adapters)
+        var adapterList = adapters as IList<SmcpToolAdapter> ?? adapters.ToList();
+
+        foreach (var adapter in adapterList)
         {
             if (ct.IsCancellationRequested) break;
             if (_toolEmbeddingCache.ContainsKey(adapter.Tool.Name)) continue;
@@ -201,6 +280,18 @@ public sealed class SmcpConfidenceScorer
             var text = $"{adapter.Tool.Name}: {adapter.Tool.Description}";
             var embedding = await _embeddingModel.CreateEmbeddingsAsync(text, ct).ConfigureAwait(false);
             _toolEmbeddingCache[adapter.Tool.Name] = embedding;
+        }
+
+        // Initialize HALO head from cached embeddings (best-effort — non-critical)
+        try
+        {
+            EnsureHaloHead(adapterList.ToList());
+        }
+#pragma warning disable CA1031 // HALO init is best-effort enhancement
+        catch
+#pragma warning restore CA1031
+        {
+            // HALO initialization failed — cosine similarity fallback still works
         }
     }
 
