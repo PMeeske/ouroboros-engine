@@ -3,6 +3,7 @@
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Providers;
 using Polly;
+using R3;
 
 namespace Ouroboros.Tests;
 
@@ -302,7 +303,9 @@ public class CollectiveMindComplexLogicTests
         // Arrange
         using var mind = new CollectiveMind();
         var thoughts = new List<string>();
-        using var subscription = mind.ThoughtStream.Subscribe(t => thoughts.Add(t));
+        using var subscription = mind.ThoughtStream.Subscribe(
+            t => thoughts.Add(t),
+            _ => { });
 
         // Act: set master (emits to thought stream)
         mind.SetFirstAsMaster(); // No pathways, so nothing happens
@@ -324,7 +327,7 @@ public class CollectiveMindComplexLogicTests
         bool completed = false;
         using var subscription = mind.ThoughtStream.Subscribe(
             t => thoughts.Add(t),
-            onCompleted: () => completed = true);
+            _ => completed = true);
 
         // Act
         mind.Dispose();

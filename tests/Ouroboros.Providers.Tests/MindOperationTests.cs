@@ -23,7 +23,7 @@ public sealed class MindOperationTests
     public void FromStream_CreatesStreamingOperation()
     {
         var op = MindOperation<string>.FromStream(
-            (_, _) => System.Reactive.Linq.Observable.Empty<(bool, string)>(),
+            (_, _) => R3.Observable.Empty<(bool, string)>(),
             (_, _) => Task.FromResult("done"));
 
         op.SupportsStreaming.Should().BeTrue();
