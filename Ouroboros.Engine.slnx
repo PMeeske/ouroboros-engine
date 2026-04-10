@@ -20,6 +20,7 @@
     <Project Path="tests/Ouroboros.Pipeline.Tests/Ouroboros.Pipeline.Tests.csproj" />
     <Project Path="tests/Ouroboros.Providers.Tests/Ouroboros.Providers.Tests.csproj" />
     <Project Path="tests/Ouroboros.SemanticKernel.Tests/Ouroboros.SemanticKernel.Tests.csproj" />
+    <Project Path="tests/Ouroboros.SimpleModel.Tests/Ouroboros.SimpleModel.Tests.csproj" />
     <Project Path="tests/Ouroboros.Tensor.Tests/Ouroboros.Tensor.Tests.csproj" />
   </Folder>
   <!-- Foundation: Source (via libs/ submodule) -->
