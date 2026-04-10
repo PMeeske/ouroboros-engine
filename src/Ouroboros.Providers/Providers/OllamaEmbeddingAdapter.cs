@@ -13,6 +13,8 @@ namespace Ouroboros.Providers;
 /// </summary>
 public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGeneratorBridge
 {
+    private static readonly TimeSpan EmbedTimeout = TimeSpan.FromSeconds(30);
+
     private readonly OllamaApiClient _client;
     private readonly string _modelName;
     private readonly DeterministicEmbeddingModel _fallback = new();
@@ -32,11 +34,14 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGenerato
 
         try
         {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(EmbedTimeout);
+
             EmbedResponse response = await _client.EmbedAsync(new EmbedRequest
             {
                 Model = _modelName,
                 Input = [safeInput]
-            }, ct).ConfigureAwait(false);
+            }, timeoutCts.Token).ConfigureAwait(false);
 
             if (response?.Embeddings is { Count: > 0 } embeddings
                 && embeddings[0] is { Length: > 0 } firstVector)
@@ -50,7 +55,10 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGenerato
         }
         catch (OperationCanceledException)
         {
-            // HttpClient timeout (not caller cancellation) — fall through to fallback
+            System.Diagnostics.Trace.TraceWarning(
+                "[OllamaEmbeddingAdapter] Embedding request timed out after {0}s for model '{1}'. Falling back to deterministic embeddings.",
+                EmbedTimeout.TotalSeconds,
+                _modelName);
         }
         catch (HttpRequestException)
         {
