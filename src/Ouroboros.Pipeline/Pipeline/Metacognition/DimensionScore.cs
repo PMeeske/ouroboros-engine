@@ -1,4 +1,4 @@
-// <copyright file="SelfAssessment.cs" company="Ouroboros">
+// <copyright file="DimensionScore.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 

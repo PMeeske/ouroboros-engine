@@ -5,6 +5,7 @@
 
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 using Ouroboros.Abstractions.Errors;
 
 namespace Ouroboros.Agent.NeuralSymbolic;
@@ -156,6 +157,7 @@ public static partial class StructuredLlmParser
     ///   <item>Bare JSON objects (<c>{{ ... }}</c>)</item>
     ///   <item>Bare JSON arrays (<c>[ ... ]</c>)</item>
     /// </list>
+    /// When multiple JSON blocks are present, returns the first valid one.
     /// </summary>
     /// <param name="rawResponse">The raw LLM output.</param>
     /// <returns>The extracted JSON string, or <c>null</c> if no JSON was found.</returns>
@@ -167,19 +169,190 @@ public static partial class StructuredLlmParser
         // Try markdown fenced code block first: ```json ... ``` or ``` ... ```
         var fenceMatch = MarkdownJsonFenceRegex().Match(rawResponse);
         if (fenceMatch.Success)
-            return fenceMatch.Groups[1].Value.Trim();
+        {
+            var fencedContent = fenceMatch.Groups[1].Value.Trim();
+            if (IsValidJson(fencedContent))
+                return fencedContent;
+        }
 
-        // Try bare JSON object
-        var objectMatch = BareJsonObjectRegex().Match(rawResponse);
-        if (objectMatch.Success)
-            return objectMatch.Value;
+        // Fall back to scanning for the first valid bare JSON object or array.
+        // Uses a balanced-brace scanner rather than greedy regex so that responses
+        // containing multiple JSON blocks (or extra braces/brackets) reliably
+        // return the first syntactically valid block.
+        return ScanFirstValidJsonBlock(rawResponse);
+    }
 
-        // Try bare JSON array
-        var arrayMatch = BareJsonArrayRegex().Match(rawResponse);
-        if (arrayMatch.Success)
-            return arrayMatch.Value;
+    /// <summary>
+    /// Scans <paramref name="text"/> left-to-right and returns the first
+    /// substring that starts with <c>{</c> or <c>[</c>, has balanced
+    /// braces/brackets (respecting quoted strings and escape sequences),
+    /// and is valid JSON according to <see cref="JsonDocument.Parse"/>.
+    /// </summary>
+    private static string? ScanFirstValidJsonBlock(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return null;
+
+        var stack = new Stack<char>();
+        int? currentStart = null;
+        var inString = false;
+        var escape = false;
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+
+            if (inString)
+            {
+                if (escape)
+                {
+                    // Current character is escaped; do not treat it specially.
+                    escape = false;
+                }
+                else if (ch == '\\')
+                {
+                    escape = true;
+                }
+                else if (ch == '"')
+                {
+                    inString = false;
+                }
+
+                continue;
+            }
+
+            // Not currently inside a string.
+            if (ch == '"')
+            {
+                inString = true;
+                escape = false;
+                continue;
+            }
+
+            if (ch is '{' or '[')
+            {
+                if (stack.Count == 0)
+                {
+                    // Mark start of a new top-level JSON block.
+                    currentStart = i;
+                }
+
+                var expectedCloser = ch == '{' ? '}' : ']';
+                stack.Push(expectedCloser);
+                continue;
+            }
+
+            if (ch is '}' or ']')
+            {
+                if (stack.Count == 0)
+                {
+                    // Unmatched closing delimiter; reset any current tracking.
+                    currentStart = null;
+                    continue;
+                }
+
+                var expected = stack.Pop();
+                if (expected != ch)
+                {
+                    // Mismatched delimiters; discard this candidate.
+                    stack.Clear();
+                    currentStart = null;
+                    continue;
+                }
+
+                if (stack.Count == 0 && currentStart.HasValue)
+                {
+                    var length = i - currentStart.Value + 1;
+                    var candidate = text.Substring(currentStart.Value, length);
+                    if (IsValidJson(candidate))
+                        return candidate;
+
+                    // If not valid JSON, allow scanning to continue to the next candidate.
+                    currentStart = null;
+                }
+            }
+        }
 
         return null;
+    }
+
+    /// <summary>
+    /// Extracts a balanced <c>{…}</c> or <c>[…]</c> block from <paramref name="text"/>
+    /// starting at <paramref name="startIndex"/>, tracking nested structures and
+    /// JSON string literals (including escape sequences) to avoid false matches.
+    /// Returns <c>null</c> if the character at <paramref name="startIndex"/> is not
+    /// <c>{</c> or <c>[</c>, or if the block is not properly closed.
+    /// </summary>
+    private static string? ExtractBalancedBlock(string text, int startIndex)
+    {
+        var open = text[startIndex];
+        if (open is not '{' and not '[')
+            return null;
+
+        var close = open == '{' ? '}' : ']';
+        var depth = 0;
+        var inString = false;
+        var escape = false;
+
+        for (var i = startIndex; i < text.Length; i++)
+        {
+            var ch = text[i];
+
+            if (escape)
+            {
+                escape = false;
+                continue;
+            }
+
+            if (ch == '\\' && inString)
+            {
+                escape = true;
+                continue;
+            }
+
+            if (ch == '"')
+            {
+                inString = !inString;
+                continue;
+            }
+
+            if (inString)
+                continue;
+
+            if (ch == open)
+            {
+                depth++;
+            }
+            else if (ch == close)
+            {
+                depth--;
+                if (depth == 0)
+                    return text[startIndex..(i + 1)];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Returns <c>true</c> when <paramref name="candidate"/> can be parsed as
+    /// valid JSON by <see cref="JsonDocument.Parse"/>.
+    /// </summary>
+    private static bool IsValidJson(string candidate)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(candidate, new JsonDocumentOptions
+            {
+                AllowTrailingCommas = true,
+                CommentHandling = JsonCommentHandling.Skip,
+            });
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static string BuildSchemaDescription(Type type)
@@ -259,10 +432,4 @@ public static partial class StructuredLlmParser
 
     [GeneratedRegex(@"```(?:json)?\s*\n?([\s\S]*?)\n?\s*```", RegexOptions.Singleline)]
     private static partial Regex MarkdownJsonFenceRegex();
-
-    [GeneratedRegex(@"\{[\s\S]*\}", RegexOptions.Singleline)]
-    private static partial Regex BareJsonObjectRegex();
-
-    [GeneratedRegex(@"\[[\s\S]*\]", RegexOptions.Singleline)]
-    private static partial Regex BareJsonArrayRegex();
 }

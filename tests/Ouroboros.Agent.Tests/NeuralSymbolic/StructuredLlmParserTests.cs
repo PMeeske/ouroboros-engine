@@ -668,4 +668,52 @@ public class StructuredLlmParserTests
         // Assert
         a.Should().BeEquivalentTo(b);
     }
+
+    // ================================================================
+    // ExtractJsonBlock — balanced-scanner edge cases
+    // ================================================================
+
+    [Fact]
+    public void ExtractJsonBlock_MultipleJsonBlocks_ReturnsFirstValid()
+    {
+        // Arrange: two valid JSON objects; old greedy regex would span both
+        var input = """some text { "isAligned": true, "explanation": "first" } extra { "isAligned": false, "explanation": "second" }""";
+
+        // Act
+        var result = StructuredLlmParser.TryParseJson<AlignmentResponseDto>(input);
+
+        // Assert: parser returns the first valid JSON block only
+        result.IsSuccess.Should().BeTrue();
+        result.Value.IsAligned.Should().BeTrue();
+        result.Value.Explanation.Should().Be("first");
+    }
+
+    [Fact]
+    public void ExtractJsonBlock_JsonContainingBracesInStringLiteral_ReturnsCorrectBlock()
+    {
+        // Arrange: a JSON string value that itself contains braces
+        var input = """{ "expression": "{ nested braces }" }""";
+
+        // Act
+        var result = StructuredLlmParser.TryParseJson<MeTTaConversionResponseDto>(input);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Expression.Should().Be("{ nested braces }");
+    }
+
+    [Fact]
+    public void ExtractJsonBlock_ExtraBracesBeforeValidJson_ReturnsValidBlock()
+    {
+        // Arrange: stray opening brace before the actual JSON object
+        var input = """some { broken stuff } and then { "isAligned": false, "explanation": "ok" }""";
+
+        // Act
+        var result = StructuredLlmParser.TryParseJson<AlignmentResponseDto>(input);
+
+        // Assert: parser skips invalid blocks and finds the first parseable one
+        result.IsSuccess.Should().BeTrue();
+        result.Value.IsAligned.Should().BeFalse();
+        result.Value.Explanation.Should().Be("ok");
+    }
 }
