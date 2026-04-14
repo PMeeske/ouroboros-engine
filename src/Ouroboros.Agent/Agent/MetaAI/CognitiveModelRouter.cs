@@ -108,7 +108,7 @@ public sealed class CognitiveModelRouter
         RegisterRoute(CognitiveTask.HabitPatternMatching,
             "all-minilm:latest", "ollama-cloud");
         RegisterRoute(CognitiveTask.AttentionPriority,
-            "nomic-embed-text:latest", "ollama-cloud");
+            "mxbai-embed-large:latest", "ollama-cloud");
         RegisterRoute(CognitiveTask.FaceEmotionRecognition,
             "llava:13b", "ollama-cloud");
     }
