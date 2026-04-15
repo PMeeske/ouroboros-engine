@@ -27,6 +27,28 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGenerato
         _modelName = modelName;
     }
 
+    /// <summary>
+    /// Gets the embedding dimension for the current model (mxbai-embed-large = 1024).
+    /// </summary>
+    public int Dimension => 1024;
+
+    /// <summary>
+    /// Generates embedding vectors for a batch of text inputs sequentially.
+    /// Loops over <see cref="CreateEmbeddingsAsync"/> to avoid Ollama batch API complexity (v0).
+    /// </summary>
+    /// <param name="inputs">The texts to embed.</param>
+    /// <param name="ct">Optional cancellation token.</param>
+    /// <returns>A list of float arrays representing the embedding vectors.</returns>
+    public async Task<IReadOnlyList<float[]>> EmbedBatchAsync(IReadOnlyList<string> inputs, CancellationToken ct = default)
+    {
+        var results = new float[inputs.Count][];
+        for (int i = 0; i < inputs.Count; i++)
+        {
+            results[i] = await CreateEmbeddingsAsync(inputs[i], ct).ConfigureAwait(false);
+        }
+        return results;
+    }
+
     /// <inheritdoc/>
     public async Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
     {
