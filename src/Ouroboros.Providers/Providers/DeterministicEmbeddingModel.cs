@@ -15,7 +15,7 @@ public sealed class DeterministicEmbeddingModel : IEmbeddingModel
     private readonly int _dimension;
 
     /// <summary>
-    /// Initializes a new instance with the default dimension (768).
+    /// Initializes a new instance with the default dimension (1024).
     /// </summary>
     public DeterministicEmbeddingModel() : this(DefaultDimension) { }
 

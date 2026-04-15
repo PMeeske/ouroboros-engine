@@ -38,7 +38,7 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         model = string.IsNullOrWhiteSpace(model) ? "llama3" : model;
-        embed = string.IsNullOrWhiteSpace(embed) ? "nomic-embed-text" : embed;
+        embed = string.IsNullOrWhiteSpace(embed) ? "mxbai-embed-large" : embed;
 
         services.TryAddSingleton<Ouroboros.Abstractions.Core.IChatCompletionModel>(sp =>
         {
@@ -255,6 +255,13 @@ public static class ServiceCollectionExtensions
             var registry = sp.GetRequiredService<IQdrantCollectionRegistry>();
             var settings = sp.GetRequiredService<QdrantSettings>();
             return new QdrantNeuralMemory(client, registry, settings);
+        });
+
+        services.TryAddSingleton<IStoreAdapter>(sp =>
+        {
+            var client = sp.GetRequiredService<QdrantClient>();
+            var logger = sp.GetService<ILogger<QdrantStoreAdapter>>();
+            return new QdrantStoreAdapter(client, logger);
         });
 
         // QdrantCollectionAdmin — needs gRPC client + registry
