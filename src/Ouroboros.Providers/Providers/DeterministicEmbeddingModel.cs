@@ -8,14 +8,14 @@
 public sealed class DeterministicEmbeddingModel : IEmbeddingModel
 {
     /// <summary>
-    /// Default vector dimension matching nomic-embed-text (768).
+    /// Default vector dimension matching mxbai-embed-large (1024).
     /// </summary>
-    public const int DefaultDimension = 768;
+    public const int DefaultDimension = 1024;
 
     private readonly int _dimension;
 
     /// <summary>
-    /// Initializes a new instance with the default dimension (768).
+    /// Initializes a new instance with the default dimension (1024).
     /// </summary>
     public DeterministicEmbeddingModel() : this(DefaultDimension) { }
 

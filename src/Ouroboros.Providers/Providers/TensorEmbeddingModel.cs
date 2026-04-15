@@ -31,8 +31,8 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
     private readonly ILogger? _logger;
     private bool _disposed;
 
-    /// <summary>Default output dimension matching nomic-embed-text (768).</summary>
-    public const int DefaultDimension = 768;
+    /// <summary>Default output dimension matching mxbai-embed-large (1024).</summary>
+    public const int DefaultDimension = 1024;
 
     /// <summary>Default sparse feature dimension (number of hash buckets for n-grams).</summary>
     public const int DefaultFeatureDim = 4096;

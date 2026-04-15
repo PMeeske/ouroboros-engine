@@ -71,6 +71,7 @@ public sealed class LlmCostTracker
         ["mistral"] = new("Local", 0m, 0m, "Free (local)"),
         ["mixtral"] = new("Local", 0m, 0m, "Free (local)"),
         ["nomic-embed-text"] = new("Local", 0m, 0m, "Free (local embeddings)"),
+        ["mxbai-embed-large"] = new("Local", 0m, 0m, "Free (local embeddings)"),
     };
 
     private readonly string _model;
