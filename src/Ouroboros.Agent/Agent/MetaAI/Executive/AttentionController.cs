@@ -28,8 +28,8 @@ public sealed record AttentionCaptureEvent(
 /// </summary>
 public sealed class AttentionController
 {
-    /// <summary>Miller's magic number: maximum active attention targets.</summary>
-    private const int MaxCapacity = 7;
+    /// <summary>Miller's magic number + 2: maximum active attention targets (RING-05).</summary>
+    private const int MaxCapacity = 9;
 
     /// <summary>Tolerance range (± 2) around the magic number.</summary>
     private const int CapacityTolerance = 2;
