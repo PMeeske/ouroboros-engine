@@ -32,6 +32,15 @@ var argsList = args.ToList();
 var includeLateBound = argsList.Remove("--include-late-bound");
 var writeArtifacts = argsList.Remove("--write-artifacts");
 
+string? outputDirOverride = null;
+int outputDirFlagIdx = argsList.IndexOf("--output-dir");
+if (outputDirFlagIdx >= 0 && outputDirFlagIdx + 1 < argsList.Count)
+{
+    outputDirOverride = argsList[outputDirFlagIdx + 1];
+    argsList.RemoveAt(outputDirFlagIdx + 1);
+    argsList.RemoveAt(outputDirFlagIdx);
+}
+
 var snapshotPath = argsList.Count > 0
     ? argsList[0]
     : Path.Combine(root, ".planning", "milestones", "v32.0-metta-conformance", "reference", "stdlib.metta");
@@ -63,7 +72,7 @@ await Console.Out.WriteLineAsync($"[scanner] mismatches={mismatches.Count}").Con
 
 if (writeArtifacts)
 {
-    var milestoneDir = Path.Combine(root, ".planning", "milestones", "v32.0-metta-conformance");
+    var milestoneDir = outputDirOverride ?? Path.Combine(root, ".planning", "milestones", "v32.0-metta-conformance");
     Directory.CreateDirectory(milestoneDir);
 
     var gapPath = Path.Combine(milestoneDir, "gap-report.md");
