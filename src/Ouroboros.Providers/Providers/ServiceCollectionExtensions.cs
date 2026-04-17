@@ -150,6 +150,48 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers a keyed MEAI <see cref="IChatClient"/> for Anthropic Claude when an API key is configured.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">
+    /// Optional configuration; <c>Anthropic:ApiKey</c> and <c>Anthropic:Model</c> override environment defaults.
+    /// </param>
+    /// <param name="serviceKey">DI key (default <c>anthropic</c>) for keyed <see cref="IChatClient"/> resolution.</param>
+    /// <returns><paramref name="services"/> for chaining.</returns>
+    /// <remarks>
+    /// <para>
+    /// Uses <see cref="AnthropicOfficialChatClient"/>, a thin MEAI adapter over the official
+    /// <see cref="Anthropic.AnthropicClient"/> via <see cref="AnthropicChatModel"/> — not a separate
+    /// Anthropic.Extensions.Microsoft.Extensions.AI package (none published for this stack).
+    /// </para>
+    /// <para>
+    /// The default unkeyed <see cref="IChatClient"/> remains host-owned (Ollama-first <c>TryAddSingleton</c> in ApiHost);
+    /// this registration is additive only.
+    /// </para>
+    /// </remarks>
+    public static IServiceCollection AddAnthropicKeyedMeaiChatClient(
+        this IServiceCollection services,
+        IConfiguration? configuration = null,
+        string serviceKey = "anthropic")
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        string? apiKey = configuration?["Anthropic:ApiKey"] ?? Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+        if (string.IsNullOrWhiteSpace(apiKey))
+            return services;
+
+        string model = configuration?["Anthropic:Model"]
+            ?? Environment.GetEnvironmentVariable("ANTHROPIC_MODEL")
+            ?? "claude-3-5-haiku-20241022";
+
+        services.TryAddKeyedSingleton<IChatClient>(
+            serviceKey,
+            (_sp, _key) => new AnthropicOfficialChatClient(new AnthropicChatModel(apiKey!, model)));
+
+        return services;
+    }
+
+    /// <summary>
     /// Resolves the appropriate <see cref="RequestOptions"/> preset and KeepAlive duration
     /// for a given Ollama model name. Returns <c>(null, null)</c> when no preset is recognized.
     /// </summary>
@@ -171,6 +213,9 @@ public static class ServiceCollectionExtensions
 
         if (n.Contains("mistral") && (n.Contains("7b") || !n.Contains("large")))
             return (OllamaPresets.Mistral7BGeneral, OllamaPresets.Mistral7BGeneralKeepAlive);
+
+        if (n.StartsWith("qwen3-coder", StringComparison.Ordinal) || n.Contains("qwen3-coder", StringComparison.Ordinal))
+            return (OllamaPresets.Qwen25_7B_General, OllamaPresets.Qwen25_7B_GeneralKeepAlive);
 
         if (n.StartsWith("qwen2.5") || n.Contains("qwen"))
             return (OllamaPresets.Qwen25_7B_General, OllamaPresets.Qwen25_7B_GeneralKeepAlive);

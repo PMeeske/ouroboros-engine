@@ -1,13 +1,15 @@
-﻿using System.Text;
+﻿using System.Net.Http;
+using System.Text;
+using Anthropic;
+using Anthropic.Exceptions;
+using Anthropic.Models.Messages;
 using R3;
-using Anthropic.SDK;
-using Anthropic.SDK.Messaging;
 
 namespace Ouroboros.Providers;
 
 /// <summary>
-/// Chat model adapter for Anthropic Claude API using the Anthropic.SDK package.
-/// Supports streaming, extended thinking, and all Claude models.
+/// Chat model adapter for Anthropic Claude API using the official Anthropic .NET SDK.
+/// Supports streaming, extended thinking, and Claude models referenced by string id.
 /// </summary>
 public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAwareChatModel, IDisposable
 {
@@ -31,14 +33,18 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
     /// <param name="thinkingBudgetTokens">Optional token budget for extended thinking (requires compatible model).</param>
     /// <param name="costTracker">Optional cost tracker for monitoring usage and costs.</param>
     public AnthropicChatModel(string apiKey, string model, ChatRuntimeSettings? settings = null, int? thinkingBudgetTokens = null, LlmCostTracker? costTracker = null)
+        : this(CreateClient(apiKey), model, settings, thinkingBudgetTokens, costTracker)
     {
-        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
+    }
 
-        _client = new AnthropicClient(apiKey);
-        _model = model;
-        _settings = settings ?? new ChatRuntimeSettings();
-        _thinkingBudgetTokens = thinkingBudgetTokens;
-        _costTracker = costTracker ?? new LlmCostTracker(model, "Anthropic");
+    private static AnthropicClient CreateClient(string apiKey)
+    {
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new ArgumentException("API key is required", nameof(apiKey));
+        }
+
+        return new AnthropicClient { ApiKey = apiKey };
     }
 
     /// <summary>
@@ -61,6 +67,19 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
         return new AnthropicChatModel(apiKey, model, settings, thinkingBudgetTokens, costTracker);
     }
 
+    /// <summary>
+    /// Internal constructor for tests that need a custom <see cref="AnthropicClient"/> (for example HTTP stubs).
+    /// </summary>
+    internal AnthropicChatModel(AnthropicClient client, string model, ChatRuntimeSettings? settings, int? thinkingBudgetTokens, LlmCostTracker? costTracker)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        _client = client;
+        _model = model;
+        _settings = settings ?? new ChatRuntimeSettings();
+        _thinkingBudgetTokens = thinkingBudgetTokens;
+        _costTracker = costTracker ?? new LlmCostTracker(model, "Anthropic");
+    }
+
     /// <inheritdoc/>
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
@@ -76,63 +95,38 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
         {
             string finalPrompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
 
-            List<Message> messages = new()
-            {
-                new Message(RoleType.User, finalPrompt)
-            };
+            MessageCreateParams parameters = BuildMessageCreateParams(finalPrompt, stream: false);
 
-            MessageParameters parameters = new()
-            {
-                Messages = messages,
-                MaxTokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : 128_000,
-                Model = _model,
-                Stream = false
-            };
+            Message result = await _client.Messages.Create(parameters, cancellationToken: ct).ConfigureAwait(false);
 
-            // Add thinking parameters if budget is specified
-            if (_thinkingBudgetTokens.HasValue && _thinkingBudgetTokens.Value > 0)
-            {
-                parameters.Thinking = new ThinkingParameters
-                {
-                    BudgetTokens = _thinkingBudgetTokens.Value
-                };
-            }
-
-            MessageResponse result = await _client.Messages.GetClaudeMessageAsync(parameters, ct).ConfigureAwait(false);
+            int inputTokens = (int)(result.Usage?.InputTokens ?? 0L);
+            int outputTokens = (int)(result.Usage?.OutputTokens ?? 0L);
+            _costTracker?.EndRequest(inputTokens, outputTokens);
 
             string? thinking = null;
             StringBuilder contentBuilder = new();
-            int inputTokens = result.Usage?.InputTokens ?? 0;
-            int outputTokens = result.Usage?.OutputTokens ?? 0;
-
-            // Record cost tracking
-            _costTracker?.EndRequest(inputTokens, outputTokens);
-
-            // Process content blocks - handle both text and thinking blocks
-            if (result.Content != null)
+            if (result.Content is not null)
             {
-                // Extract text content
-                foreach (TextContent textBlock in result.Content.OfType<TextContent>())
+                foreach (ContentBlock block in result.Content)
                 {
-                    contentBuilder.Append(textBlock.Text);
-                }
-
-                // Extract thinking content
-                foreach (ThinkingContent thinkingBlock in result.Content.OfType<ThinkingContent>())
-                {
-                    thinking = thinkingBlock.Thinking;
+                    if (block.TryPickThinking(out ThinkingBlock thinkingBlock))
+                    {
+                        thinking = thinkingBlock.Thinking;
+                    }
+                    else if (block.TryPickText(out TextBlock textBlock))
+                    {
+                        contentBuilder.Append(textBlock.Text);
+                    }
                 }
             }
 
             string content = contentBuilder.ToString();
 
-            // If we have explicit thinking content, return structured response
             if (!string.IsNullOrEmpty(thinking))
             {
                 return new ThinkingResponse(thinking, content, inputTokens, outputTokens);
             }
 
-            // Otherwise, try to parse thinking tags from content
             if (!string.IsNullOrEmpty(content))
             {
                 ThinkingResponse parsed = ThinkingResponse.FromRawText(content);
@@ -143,13 +137,18 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            throw; // propagate cleanly — let callers handle, don't return fallback
+            throw;
         }
         catch (HttpRequestException ex)
         {
             System.Diagnostics.Trace.TraceWarning("[AnthropicChatModel] Error: {0}: {1}", ex.GetType().Name, ex.Message);
             Console.Error.WriteLine($"  [AnthropicChatModel] API error ({_model}): {ex.Message}");
-            // Return a concise error message — never echo the prompt back as a "response"
+            return new ThinkingResponse(null, $"I'm having trouble reaching my thinking backend right now. ({ex.Message})");
+        }
+        catch (AnthropicException ex)
+        {
+            System.Diagnostics.Trace.TraceWarning("[AnthropicChatModel] Error: {0}: {1}", ex.GetType().Name, ex.Message);
+            Console.Error.WriteLine($"  [AnthropicChatModel] API error ({_model}): {ex.Message}");
             return new ThinkingResponse(null, $"I'm having trouble reaching my thinking backend right now. ({ex.Message})");
         }
     }
@@ -159,54 +158,45 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
     {
         return Observable.Create<(bool IsThinking, string Chunk)>(async (observer, token) =>
         {
+            using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct, token);
+            CancellationToken streamCt = linked.Token;
             try
             {
                 string finalPrompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
 
-                List<Message> messages = new()
-                {
-                    new Message(RoleType.User, finalPrompt)
-                };
+                MessageCreateParams parameters = BuildMessageCreateParams(finalPrompt, stream: true);
 
-                MessageParameters parameters = new()
+                IAsyncEnumerable<RawMessageStreamEvent> stream = _client.Messages.CreateStreaming(parameters, cancellationToken: streamCt);
+                await foreach (RawMessageStreamEvent rawEvent in stream.ConfigureAwait(false))
                 {
-                    Messages = messages,
-                    MaxTokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : 128_000,
-                    Model = _model,
-                    Stream = true
-                };
-
-                // Add thinking parameters if budget is specified
-                if (_thinkingBudgetTokens.HasValue && _thinkingBudgetTokens.Value > 0)
-                {
-                    parameters.Thinking = new ThinkingParameters
+                    if (!rawEvent.TryPickContentBlockDelta(out RawContentBlockDeltaEvent? deltaEvent))
                     {
-                        BudgetTokens = _thinkingBudgetTokens.Value
-                    };
-                }
-
-                await foreach (MessageResponse streamEvent in _client.Messages.StreamClaudeMessageAsync(parameters, token).ConfigureAwait(false))
-                {
-                    // Handle text delta
-                    if (streamEvent.Delta?.Text != null)
-                    {
-                        observer.OnNext((false, streamEvent.Delta.Text));
+                        continue;
                     }
-                    // Handle thinking delta (if supported by model)
-                    else if (streamEvent.Delta?.Thinking != null)
+
+                    if (deltaEvent.Delta.TryPickText(out TextDelta? textDelta) &&
+                        textDelta.Text is { Length: > 0 } t)
                     {
-                        observer.OnNext((true, streamEvent.Delta.Thinking));
+                        observer.OnNext((false, t));
+                    }
+                    else if (deltaEvent.Delta.TryPickThinking(out ThinkingDelta? thinkingDelta) &&
+                        thinkingDelta.Thinking is { Length: > 0 } th)
+                    {
+                        observer.OnNext((true, th));
                     }
                 }
 
                 observer.OnCompleted();
             }
-            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            catch (OperationCanceledException) when (streamCt.IsCancellationRequested)
             {
-                // Deliberate cancellation — complete cleanly
                 observer.OnCompleted();
             }
             catch (HttpRequestException ex)
+            {
+                observer.OnErrorResume(ex);
+            }
+            catch (AnthropicException ex)
             {
                 observer.OnErrorResume(ex);
             }
@@ -214,14 +204,48 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
     }
 
     /// <inheritdoc/>
-    public Observable<string> StreamReasoningContent(string prompt, CancellationToken ct = default)
+    public Observable<string> StreamReasoningContent(string prompt, CancellationToken ct = default) =>
+        StreamWithThinkingAsync(prompt, ct).Select(tuple => tuple.Chunk);
+
+    private MessageCreateParams BuildMessageCreateParams(string finalPrompt, bool stream)
     {
-        // Flatten the thinking stream to emit all chunks
-        return StreamWithThinkingAsync(prompt, ct).Select(tuple => tuple.Chunk);
+        _ = stream; // Streaming uses CreateStreaming with the same params shape (no Stream flag on params).
+
+        if (_thinkingBudgetTokens is > 0)
+        {
+            return new MessageCreateParams
+            {
+                Messages =
+                [
+                    new MessageParam
+                    {
+                        Role = Role.User,
+                        Content = finalPrompt,
+                    },
+                ],
+                MaxTokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : 128_000,
+                Model = _model,
+                Thinking = new ThinkingConfigEnabled { BudgetTokens = _thinkingBudgetTokens.Value },
+            };
+        }
+
+        return new MessageCreateParams
+        {
+            Messages =
+            [
+                new MessageParam
+                {
+                    Role = Role.User,
+                    Content = finalPrompt,
+                },
+            ],
+            MaxTokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : 128_000,
+            Model = _model,
+        };
     }
 
     public void Dispose()
     {
-        _client?.Dispose();
+        // Official AnthropicClient does not expose IDisposable; nothing to release.
     }
 }
