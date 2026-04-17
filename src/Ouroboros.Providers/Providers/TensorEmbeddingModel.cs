@@ -109,6 +109,9 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
     public bool IsGpuAccelerated => _onnxSession is not null;
 
     /// <inheritdoc/>
+    public int Dimension => _dimension;
+
+    /// <inheritdoc/>
     public async Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
