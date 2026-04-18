@@ -34,6 +34,8 @@
     <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.24.4" />
     <!-- DXGI for IVramLayoutProvider adapter auto-detect (Phase 188.1 AVA-07). Version MUST match Ouroboros.Application (Silk.NET.DXGI 2.23.0). -->
     <PackageReference Include="Silk.NET.DXGI" Version="2.23.0" />
+    <!-- D3D12 for SharedD3D12Device + HLSL compute-shader rasterizer (Phase 188.1.1 AVA-02-1). Version MUST match Silk.NET.DXGI 2.23.0 to keep ComPtr interop stable. -->
+    <PackageReference Include="Silk.NET.Direct3D12" Version="2.23.0" />
     <!-- IConfiguration for IVramLayoutProvider.Resolve + DxgiVramLayoutProvider Avatar:VramLayoutOverride lookup. -->
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.6" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.6" />
