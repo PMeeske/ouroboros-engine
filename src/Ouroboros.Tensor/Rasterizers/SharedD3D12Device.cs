@@ -123,8 +123,8 @@ public sealed class SharedD3D12Device : IDisposable
         {
             logger?.LogWarning(
                 ex,
-                "SharedD3D12Device: D3D12 device creation failed for layout '{Id}' (LUID=0x{Luid:X16}) — latching CPU fallback",
-                layout.Id, layout.AdapterLuid);
+                "SharedD3D12Device: D3D12 device creation failed for layout '{Id}' (LUID=0x{Luid:X16}) — {ExType}: {ExMessage} — latching CPU fallback",
+                layout.Id, layout.AdapterLuid, ex.GetType().Name, ex.Message);
             instance.ReleaseHandles();
             instance.IsAvailable = false;
         }
