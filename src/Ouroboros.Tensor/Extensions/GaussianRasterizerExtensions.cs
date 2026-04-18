@@ -31,4 +31,22 @@ public static class GaussianRasterizerExtensions
         services.TryAddSingleton<IGaussianRasterizer, CpuGaussianRasterizer>();
         return services;
     }
+
+    /// <summary>
+    /// Replaces the default <see cref="IGaussianRasterizer"/> with the HLSL
+    /// surface (<see cref="DirectComputeGaussianRasterizer"/>). Phase 188.1
+    /// plan 03 ships the adapter surface; the HLSL compute-shader dispatch
+    /// body is a follow-up (188.1.1) and the current implementation
+    /// delegates to the CPU baseline internally, so swapping in via this
+    /// extension is safe today and will pick up real GPU dispatch without
+    /// any caller-side changes.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns><paramref name="services"/>, for fluent chaining.</returns>
+    public static IServiceCollection AddDirectComputeGaussianRasterizer(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.AddSingleton<IGaussianRasterizer, DirectComputeGaussianRasterizer>();
+        return services;
+    }
 }
