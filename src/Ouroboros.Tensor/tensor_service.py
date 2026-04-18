@@ -257,10 +257,19 @@ def training_loss(request: TrainingLossRequest) -> TrainingLossResponse:
 
     total = 0.8 * l1 + 0.2 * (1.0 - ssim_val)
 
+    l1_f = float(l1)
+    ssim_f = float(ssim_val)
+    total_f = float(total)
+
+    # Release training-loss temporaries before returning to avoid VRAM fragmentation
+    del pred, gt, l1, ssim_val, total, window
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
     return TrainingLossResponse(
-        l1_loss=float(l1),
-        ssim_loss=float(ssim_val),
-        total_loss=float(total),
+        l1_loss=l1_f,
+        ssim_loss=ssim_f,
+        total_loss=total_f,
     )
 
 
@@ -352,7 +361,9 @@ def compute_fisher(request: FisherRequest) -> FisherResponse:
         pred = w @ x
         loss = F.mse_loss(pred, y)
         loss.backward()
-        fisher += w.grad ** 2
+        # Detach grad before squaring so the graph is freed each iteration
+        fisher += w.grad.detach() ** 2
+        del w, pred, loss
 
     sample_count = len(inputs)
     if sample_count > 0:
@@ -363,10 +374,18 @@ def compute_fisher(request: FisherRequest) -> FisherResponse:
     if fisher_max > 0:
         fisher = fisher / fisher.max()
 
+    # Release previous fisher before replacing (avoids VRAM double-alloc)
+    if _ewc_fisher is not None:
+        del _ewc_fisher
     _ewc_fisher = fisher.detach()
 
+    # Release transient tensors and reclaim cached VRAM
+    del weights, inputs, outputs
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
     return FisherResponse(
-        fisher_diagonal=fisher.flatten().tolist(),
+        fisher_diagonal=_ewc_fisher.flatten().tolist(),
         sample_count=sample_count,
     )
 
@@ -377,8 +396,15 @@ def store_anchor(request: AnchorRequest) -> dict:
     global _ewc_anchor
     logger.info("EWC store_anchor: %d weights", len(request.weights))
 
+    # Release previous anchor before replacing (avoids VRAM double-alloc)
+    if _ewc_anchor is not None:
+        del _ewc_anchor
+        _ewc_anchor = None
+
     anchor = torch.tensor(request.weights, dtype=torch.float32, device=_device).reshape(256, 256)
     _ewc_anchor = anchor
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     return {"status": "ok", "anchor_norm": float(anchor.norm())}
 
 
