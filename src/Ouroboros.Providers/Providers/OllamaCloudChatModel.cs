@@ -43,8 +43,8 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             || model.Contains("nomic", StringComparison.OrdinalIgnoreCase))
         {
             System.Diagnostics.Trace.TraceWarning(
-                "[OllamaCloudChatModel] Embedding model '{0}' used as chat model — reset to gemma4:e4b", model);
-            model = "gemma4:e4b";
+                "[OllamaCloudChatModel] Embedding model '{0}' used as chat model — reset to glm-5:cloud", model);
+            model = "glm-5:cloud";
         }
 
         _client = new HttpClient
