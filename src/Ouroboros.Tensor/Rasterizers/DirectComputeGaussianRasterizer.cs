@@ -96,6 +96,17 @@ public sealed partial class DirectComputeGaussianRasterizer : IGaussianRasterize
         _sharedDevice = sharedDevice;
         _shaderLoader = shaderLoader;
         _vramBudget = vramBudget;
+
+        // 188.1.1-03 diagnostic: construction log at INFO so operators can confirm
+        // the rasterizer is actually being resolved from DI. If this line is
+        // absent from startup logs, the DI graph is resolving CpuGaussianRasterizer
+        // (the TryAdd fallback) instead of this adapter — check that
+        // AddDirectComputeGaussianRasterizer ran AFTER AddGaussianRasterizer in
+        // AddOuroborosEngine. The actual init gate (GPU armed / CPU latched) fires
+        // on the FIRST RasterizeAsync call, not at construction.
+        _logger.LogInformation(
+            "[DirectComputeGaussianRasterizer] constructed — scheduler={HasScheduler}, sharedDevice={HasDevice}, shaderLoader={HasLoader}, vramBudget={HasVram}",
+            scheduler is not null, sharedDevice is not null, shaderLoader is not null, vramBudget is not null);
     }
 
     /// <summary>
