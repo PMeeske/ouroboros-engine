@@ -43,8 +43,8 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             || model.Contains("nomic", StringComparison.OrdinalIgnoreCase))
         {
             System.Diagnostics.Trace.TraceWarning(
-                "[OllamaCloudChatModel] Embedding model '{0}' used as chat model — reset to qwen2.5-vl:7b", model);
-            model = "qwen2.5-vl:7b";
+                "[OllamaCloudChatModel] Embedding model '{0}' used as chat model — reset to qwen2.5vl:7b", model);
+            model = "qwen2.5vl:7b";
         }
 
         _client = new HttpClient
