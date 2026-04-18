@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Ouroboros.Tensor.Abstractions;
 using Ouroboros.Tensor.Rasterizers;
 
@@ -46,6 +47,21 @@ public static class GaussianRasterizerExtensions
     public static IServiceCollection AddDirectComputeGaussianRasterizer(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+
+        // Register SharedD3D12Device as a singleton that resolves its adapter
+        // from the registered IVramLayout (Phase 188.1-01). TryCreate never
+        // throws — when the layout's AdapterLuid is 0UL (in-code preset) or
+        // device creation fails for any reason, the instance is returned with
+        // IsAvailable=false and DirectComputeGaussianRasterizer falls back to
+        // the CPU baseline. Registered BEFORE the rasterizer so its ctor can
+        // inject it via the standard DI resolution path.
+        services.TryAddSingleton<SharedD3D12Device>(sp =>
+        {
+            IVramLayout layout = sp.GetRequiredService<IVramLayout>();
+            ILogger<SharedD3D12Device>? logger = sp.GetService<ILogger<SharedD3D12Device>>();
+            return SharedD3D12Device.TryCreate(layout, logger);
+        });
+
         services.AddSingleton<IGaussianRasterizer, DirectComputeGaussianRasterizer>();
         return services;
     }
