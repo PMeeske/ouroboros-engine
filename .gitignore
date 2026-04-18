@@ -47,3 +47,6 @@ launchSettings.json
 *.p12
 *.pfx
 *.jks
+
+# Phase 188.1.1 DXC-compiled outputs — regenerated at build time
+src/Ouroboros.Tensor/Shaders/*.dxil
