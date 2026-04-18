@@ -2,7 +2,11 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ouroboros.Tensor.Abstractions;
+using Ouroboros.Tensor.Configuration;
 
 namespace Ouroboros.Tensor.Extensions;
 
@@ -60,6 +64,28 @@ public static class GpuOrchestrationExtensions
             var selector = sp.GetRequiredService<ITensorBackendSelector>();
             long vram = options.TotalVramOverrideBytes ?? EstimateVram(selector);
             return new GpuScheduler(vram);
+        });
+
+        // VRAM layout resolution (Phase 188.1 AVA-07) — DXGI adapter detect →
+        // preset registry, with Avatar:VramLayoutOverride config override. One
+        // IVramLayout singleton is resolved per process and reused by
+        // VramBudgetMonitor + (future) SharedD3D12Device (plan 03).
+        services.TryAddSingleton<IDxgiAdapterEnumerator>(sp =>
+            new DxgiAdapterEnumerator(sp.GetService<ILogger<DxgiAdapterEnumerator>>()));
+
+        services.TryAddSingleton<IVramLayoutProvider>(sp =>
+            new DxgiVramLayoutProvider(
+                sp.GetRequiredService<IDxgiAdapterEnumerator>(),
+                sp.GetService<ILogger<DxgiVramLayoutProvider>>()));
+
+        services.TryAddSingleton<IVramLayout>(sp =>
+        {
+            var provider = sp.GetRequiredService<IVramLayoutProvider>();
+            // Empty IConfiguration acceptable — DxgiVramLayoutProvider treats a
+            // missing override key as "auto-detect". Hosts that want to force a
+            // preset register their own IConfiguration before this callback runs.
+            var configuration = sp.GetService<IConfiguration>() ?? EmptyConfiguration.Instance;
+            return provider.Resolve(configuration);
         });
 
         return services;
