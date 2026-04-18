@@ -173,12 +173,21 @@ public sealed class SharedD3D12Device : IDisposable
             }
 
             d3d12 = D3D12.GetApi();
-            hr = d3d12.CreateDevice(adapter, D3DFeatureLevel.Level110, out _device);
-            if (hr < 0 || _device.Handle == null)
+
+            // Silk.NET has a CreateDevice<T>(adapter, level, out ComPtr<T>) overload that
+            // binds to D3D12's feature-level probe (ppDevice=null) and silently returns
+            // S_OK with a null device — matching what we saw in the field on the RX 9060 XT
+            // (hr=0x00000000, _device.Handle==null). Use the explicit IID + void** form
+            // that the queue/fence creation below already uses so we get the real device.
+            Guid deviceIid = ID3D12Device.Guid;
+            void* rawDevice;
+            hr = d3d12.CreateDevice((IUnknown*)adapter.Handle, D3DFeatureLevel.Level110, &deviceIid, &rawDevice);
+            if (hr < 0 || rawDevice == null)
             {
                 throw new InvalidOperationException(
-                    $"D3D12CreateDevice at FEATURE_LEVEL_11_0 failed (hr=0x{hr:X8}).");
+                    $"D3D12CreateDevice at FEATURE_LEVEL_11_0 failed (hr=0x{hr:X8}, device={(rawDevice == null ? "null" : "set")}).");
             }
+            _device = new ComPtr<ID3D12Device>((ID3D12Device*)rawDevice);
 
             CreateComputeQueue();
             CreateFence();
