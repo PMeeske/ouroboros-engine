@@ -48,4 +48,72 @@
     <PackageReference Include="R3" Version="1.3.0" />
   </ItemGroup>
 
+  <!-- Phase 188.1.1 AVA-02-4: DXC compilation of HLSL compute shaders. -->
+  <PropertyGroup>
+    <!-- Default to Windows 10 SDK 10.0.26100.0 x64 dxc.exe location when not overridden.
+         Devs with the SDK on PATH can ignore this; CI boxes that install the SDK
+         without adding it to PATH also just work. Override with /p:DxcExecutable=... -->
+    <DxcExecutable Condition="'$(DxcExecutable)' == '' AND Exists('$(ProgramFiles)\..\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\dxc.exe')">$(ProgramFiles)\..\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\dxc.exe</DxcExecutable>
+    <DxcExecutable Condition="'$(DxcExecutable)' == ''">dxc.exe</DxcExecutable>
+    <HlslShadersOutput>$(IntermediateOutputPath)Shaders\</HlslShadersOutput>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <HlslShader Include="Shaders\*.hlsl" />
+  </ItemGroup>
+
+  <!-- Fail fast when dxc is not on PATH: a clear, actionable message beats a
+       cryptic MSB3073. Developers need the CLI on PATH (or DxcExecutable set)
+       for compile-time DXIL. Runs only on Windows. -->
+  <Target Name="VerifyDxcOnPath"
+          BeforeTargets="CompileHlslShaders"
+          Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <Exec Command="&quot;$(DxcExecutable)&quot; --version" IgnoreExitCode="true" StandardOutputImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="DxcExitCode" />
+    </Exec>
+    <Error Condition="'$(DxcExitCode)' != '0'"
+           Text="[188.1.1] dxc.exe not resolvable ('$(DxcExecutable)' returned $(DxcExitCode)). Install DirectX Shader Compiler: https://github.com/microsoft/DirectXShaderCompiler/releases — this project embeds .dxil at build time. If you need a runtime-compile iteration loop, set Avatar:Rasterizer:UseRuntimeCompile=true in appsettings." />
+  </Target>
+
+  <Target Name="CompileHlslShaders"
+          BeforeTargets="BeforeCompile"
+          Inputs="@(HlslShader)"
+          Outputs="@(HlslShader->'$(HlslShadersOutput)%(Filename).dxil')"
+          Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <MakeDir Directories="$(HlslShadersOutput)" />
+    <Message Importance="high" Text="[188.1.1] Compiling HLSL: %(HlslShader.Identity) -&gt; $(HlslShadersOutput)%(HlslShader.Filename).dxil" />
+    <Exec Command="&quot;$(DxcExecutable)&quot; -T cs_6_0 -E CSMain -Fo &quot;$(HlslShadersOutput)%(HlslShader.Filename).dxil&quot; &quot;%(HlslShader.FullPath)&quot;"
+          ContinueOnError="false"
+          IgnoreExitCode="false"
+          CustomErrorRegularExpression="(?i)error"
+          StandardErrorImportance="high" />
+  </Target>
+
+  <!-- Non-Windows: surface a normal-importance message so devs understand why
+       there are no embedded shaders (runtime-compile fallback will kick in if
+       Avatar:Rasterizer:UseRuntimeCompile=true and dxc is locally available). -->
+  <Target Name="SkipHlslCompileOnNonWindows"
+          BeforeTargets="BeforeCompile"
+          Condition="!$([MSBuild]::IsOSPlatform('Windows'))">
+    <Message Importance="normal" Text="[188.1.1] Non-Windows host — skipping HLSL DXC compilation. Embedded .dxil resources will be absent; runtime-compile fallback or CPU latch will apply at runtime." />
+  </Target>
+
+  <!-- Expose compiled .dxil files as embedded resources with logical names
+       'Ouroboros.Tensor.Shaders.{filename}.dxil'. HlslShaderLoader uses those
+       names verbatim when pulling via Assembly.GetManifestResourceStream. -->
+  <Target Name="AttachCompiledHlslResources"
+          AfterTargets="CompileHlslShaders"
+          BeforeTargets="AssignTargetPaths"
+          Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <ItemGroup>
+      <_DxilFile Include="$(HlslShadersOutput)*.dxil" />
+    </ItemGroup>
+    <ItemGroup Condition="'@(_DxilFile)' != ''">
+      <EmbeddedResource Remove="@(_DxilFile)" />
+      <EmbeddedResource Include="@(_DxilFile)">
+        <LogicalName>Ouroboros.Tensor.Shaders.%(Filename).dxil</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
+
 </Project>
