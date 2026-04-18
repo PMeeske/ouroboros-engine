@@ -6,6 +6,8 @@
     <AssemblyName>Ouroboros.Tensor</AssemblyName>
     <Product>Ouroboros Tensor</Product>
     <Description>Backend-agnostic tensor processing pipeline with lazy vector materialization and streaming ingestion for Ouroboros</Description>
+    <!-- Required for Silk.NET.DXGI ComPtr + AdapterDesc1.Description fixed-buffer access in DxgiAdapterEnumerator (Phase 188.1 AVA-07). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <!-- GPU backend toggles -->
@@ -30,6 +32,11 @@
     <PackageReference Include="TorchSharp" Version="0.102.6" Condition="'$(EnableGpu)'=='true'" />
     <!-- ONNX Runtime: DirectML for GPU acceleration (AMD/NVIDIA via DirectX 12). -->
     <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.24.4" />
+    <!-- DXGI for IVramLayoutProvider adapter auto-detect (Phase 188.1 AVA-07). Version MUST match Ouroboros.Application (Silk.NET.DXGI 2.23.0). -->
+    <PackageReference Include="Silk.NET.DXGI" Version="2.23.0" />
+    <!-- IConfiguration for IVramLayoutProvider.Resolve + DxgiVramLayoutProvider Avatar:VramLayoutOverride lookup. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.6" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.6" />
     <!-- Qdrant client: concrete IHandleAwareVectorStore implementation. -->
     <PackageReference Include="Qdrant.Client" Version="1.17.0" />
     <!-- ILGPU: pure C# GPU kernels with OpenCL backend for AMD/ROCm. Optional. -->
