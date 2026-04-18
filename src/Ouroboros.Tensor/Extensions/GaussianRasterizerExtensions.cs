@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Tensor.Abstractions;
+using Ouroboros.Tensor.Orchestration;
 using Ouroboros.Tensor.Rasterizers;
 
 namespace Ouroboros.Tensor.Extensions;
@@ -62,7 +63,23 @@ public static class GaussianRasterizerExtensions
             return SharedD3D12Device.TryCreate(layout, logger);
         });
 
-        services.AddSingleton<IGaussianRasterizer, DirectComputeGaussianRasterizer>();
+        // Phase 188.1.1-03 — HlslShaderLoader provides embedded-resource DXIL
+        // access for the four compute shaders authored in plan 02. Loader is
+        // stateless + lazy; assembly lookup only runs when TryLoadAll is called
+        // from the rasterizer's init gate.
+        services.TryAddSingleton<HlslShaderLoader>(sp =>
+            new HlslShaderLoader(sp.GetService<ILogger<HlslShaderLoader>>()));
+
+        services.AddSingleton<IGaussianRasterizer>(sp =>
+        {
+            GpuScheduler? scheduler = sp.GetService<GpuScheduler>();
+            SharedD3D12Device? shared = sp.GetService<SharedD3D12Device>();
+            HlslShaderLoader? loader = sp.GetService<HlslShaderLoader>();
+            IRasterizerVramMonitor? vram = sp.GetService<IRasterizerVramMonitor>();
+            ILogger<DirectComputeGaussianRasterizer>? logger =
+                sp.GetService<ILogger<DirectComputeGaussianRasterizer>>();
+            return new DirectComputeGaussianRasterizer(scheduler, shared, loader, vram, logger);
+        });
         return services;
     }
 }
