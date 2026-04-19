@@ -137,6 +137,14 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
 
         async Task RunBoxed(CancellationToken ct)
         {
+            // Honor cancellation observed before dispatch — the dispatch loop gates
+            // on this to avoid running work whose caller has already given up.
+            if (ct.IsCancellationRequested)
+            {
+                tcs.TrySetCanceled(ct);
+                return;
+            }
+
             try
             {
                 var result = await work(ct).ConfigureAwait(false);
@@ -171,6 +179,18 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
         }
 
         _signal.Release();
+
+        // Link the caller's await to their CT so they give up waiting when cancelled
+        // even if the work remains queued behind a long-running tenant. RunBoxed still
+        // observes the same ct on dispatch and short-circuits to TrySetCanceled.
+        using var registration = cancellationToken.Register(
+            static state =>
+            {
+                var (typedTcs, ct) = ((TaskCompletionSource<T>, CancellationToken))state!;
+                typedTcs.TrySetCanceled(ct);
+            },
+            (tcs, cancellationToken));
+
         return await tcs.Task.ConfigureAwait(false);
     }
 
@@ -299,12 +319,8 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
         var sw = Stopwatch.StartNew();
         try
         {
-            if (work.Ct.IsCancellationRequested)
-            {
-                Interlocked.Increment(ref _failedCount);
-                return;
-            }
-
+            // RunBoxed honors cancellation internally (and completes the caller's tcs);
+            // we always invoke it so the caller's await never hangs.
             await work.Run(work.Ct).ConfigureAwait(false);
 
             sw.Stop();
