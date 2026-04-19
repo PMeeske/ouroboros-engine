@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Tensor.Abstractions;
+using Ouroboros.Tensor.Backends;
 using Ouroboros.Tensor.Orchestration;
 using Ouroboros.Tensor.Rasterizers;
 
@@ -69,6 +70,22 @@ public static class GaussianRasterizerExtensions
         // from the rasterizer's init gate.
         services.TryAddSingleton<HlslShaderLoader>(sp =>
             new HlslShaderLoader(sp.GetService<ILogger<HlslShaderLoader>>()));
+
+        // Phase 196.3-01 — ISharedOrtDmlSessionFactory is the single
+        // construction seam for ORT DirectML sessions across engine + app.
+        // Resolver is singleton so its per-LUID cache survives the process;
+        // factory is singleton so its Lazy<int> ordinal + one-shot binding
+        // log fire exactly once. TryAddSingleton lets a host override the
+        // resolver (e.g. test seam feeding AdapterInfo directly) without
+        // duplicating registrations.
+        services.TryAddSingleton<DxgiAdapterLuidResolver>(sp =>
+        {
+            IDxgiAdapterEnumerator? enumerator = sp.GetService<IDxgiAdapterEnumerator>();
+            return enumerator is null
+                ? new DxgiAdapterLuidResolver()
+                : new DxgiAdapterLuidResolver(enumerator);
+        });
+        services.TryAddSingleton<ISharedOrtDmlSessionFactory, SharedOrtDmlSessionFactory>();
 
         services.AddSingleton<IGaussianRasterizer>(sp =>
         {
