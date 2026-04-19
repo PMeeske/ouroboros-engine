@@ -21,7 +21,7 @@ public static class CollectiveMindFactory
         TryAddProvider(mind, "Groq", ChatEndpointType.Groq, "llama-3.1-70b-versatile", settings);
 
         // Always try local Ollama
-        mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, "llama3.2:3b", settings: settings);
+        mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, "llama3:latest", settings: settings);
 
         mind.ThinkingMode = CollectiveThinkingMode.Adaptive;
         return mind;
@@ -66,7 +66,7 @@ public static class CollectiveMindFactory
 
         TryAddProvider(mind, "DeepSeek", ChatEndpointType.DeepSeek, "deepseek-chat", settings);
         TryAddProvider(mind, "Groq", ChatEndpointType.Groq, "llama-3.1-8b-instant", settings);
-        mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, "llama3.2:3b", settings: settings);
+        mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, "llama3:latest", settings: settings);
 
         mind.ThinkingMode = CollectiveThinkingMode.Sequential;
         return mind;
@@ -76,7 +76,7 @@ public static class CollectiveMindFactory
     /// Creates a local-only collective using Ollama.
     /// Provides resilience features (circuit breaker, health tracking) for a single local provider.
     /// </summary>
-    public static CollectiveMind CreateLocal(string model = "llama3.2:3b", string endpoint = DefaultEndpoints.Ollama, ChatRuntimeSettings? settings = null)
+    public static CollectiveMind CreateLocal(string model = "llama3:latest", string endpoint = DefaultEndpoints.Ollama, ChatRuntimeSettings? settings = null)
     {
         var mind = new CollectiveMind();
         mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, model, endpoint, settings: settings);
@@ -117,7 +117,7 @@ public static class CollectiveMindFactory
         if (model.Contains("embed", StringComparison.OrdinalIgnoreCase)
             || model.Contains("nomic", StringComparison.OrdinalIgnoreCase))
         {
-            model = "llama3.2:3b";
+            model = "llama3:latest";
         }
 
         var (resolvedEndpoint, resolvedApiKey, resolvedType) = ChatConfig.ResolveWithOverrides(endpoint, apiKey, endpointType);
@@ -140,7 +140,7 @@ public static class CollectiveMindFactory
         var mind = new CollectiveMind();
 
         // Add mix of local and cloud providers for routing flexibility
-        mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, "llama3.2:3b", settings: settings);
+        mind.AddPathway("Ollama", ChatEndpointType.OllamaLocal, "llama3:latest", settings: settings);
         TryAddProvider(mind, "Groq", ChatEndpointType.Groq, "llama-3.1-70b-versatile", settings);
         TryAddProvider(mind, "DeepSeek", ChatEndpointType.DeepSeek, "deepseek-chat", settings);
         TryAddProvider(mind, "Anthropic", ChatEndpointType.Anthropic, "claude-sonnet-4-20250514", settings);
@@ -155,7 +155,7 @@ public static class CollectiveMindFactory
     /// Prefers local Ollama for simple tasks, escalates to cloud only when needed.
     /// </summary>
     public static CollectiveMind CreateLocalFirstDecomposed(
-        string localModel = "llama3.2:3b",
+        string localModel = "llama3:latest",
         string localEndpoint = DefaultEndpoints.Ollama,
         ChatRuntimeSettings? settings = null)
     {
