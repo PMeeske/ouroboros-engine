@@ -145,7 +145,7 @@ public sealed partial class CollectiveMind
         ChatEndpointType.Groq => "llama-3.1-70b-versatile",
         ChatEndpointType.Google => "gemini-2.0-flash",
         ChatEndpointType.Mistral => "mistral-large",
-        ChatEndpointType.OllamaLocal => "qwen2.5vl:7b",
+        ChatEndpointType.OllamaLocal => "qwen3.5:0.8b",
         _ => "gpt-4o"
     };
 
