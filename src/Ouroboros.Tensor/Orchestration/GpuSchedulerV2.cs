@@ -258,11 +258,22 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
                 return;
             }
 
-            // Drain every ready work item currently visible; re-scan from highest priority
-            // after every completion so newly-arrived Realtime work preempts Background.
+            // Drain every ready work item currently visible. Fire-and-forget execution:
+            // the dispatcher is a SCHEDULER, not a serialiser. Awaiting ExecuteAsync here
+            // would block the dispatch thread for the full duration of whatever task is
+            // currently executing (an LLM call can take 30+ seconds), starving every
+            // other queued tenant including Realtime rasterizer frames — observed as a
+            // combined avatar + chat freeze on 2026-04-19 when GpuSchedulerV2 first
+            // landed. Caller completion is signalled via the tcs in RunBoxed (see
+            // ScheduleAsync); failures are isolated inside ExecuteAsync. Priority
+            // ordering (Realtime drains before Normal) is preserved because
+            // TryDequeueHighestPriority picks the next task by class order.
+            //
+            // Plan 04 extends this with the per-tenant watchdog + preemption points;
+            // plan 03 adds cooperative eviction on VRAM pressure.
             while (!ct.IsCancellationRequested && TryDequeueHighestPriority(out var work))
             {
-                await ExecuteAsync(work).ConfigureAwait(false);
+                _ = ExecuteAsync(work);
             }
         }
     }
