@@ -105,3 +105,16 @@
 (: BlockedProvider (-> AgentProvider Type))
 (: BlockedModel (-> String Type))
 (: AgentErrorCount (-> AgentId Number Type))
+
+; --- Cognitive Pipeline Node Model Binding ---
+; Declarative override for the LLM that backs a cognitive pipeline node (e.g.
+; NeuralSymbolicNode → NeuralSymbolicBridge). The C# runtime resolves
+; (CognitiveNodeModel "<node-name>" ?provider ?model) to pick which chat client
+; to inject into the node's backing engine. When no atom matches, the runtime
+; falls back to IaretConfig.CognitiveModel, then to the main ChatModel.
+;
+; Default keeps cognitive reasoning local/fast so HybridReasonAsync does not
+; stall the pipeline on cloud latency when the user switches the main model to
+; OllamaCloud or OpenAI.
+(: CognitiveNodeModel (-> String AgentProvider String Type))
+(CognitiveNodeModel "NeuralSymbolic" Ollama "llama3:latest")
