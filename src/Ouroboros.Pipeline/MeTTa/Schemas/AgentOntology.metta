@@ -113,8 +113,11 @@
 ; to inject into the node's backing engine. When no atom matches, the runtime
 ; falls back to IaretConfig.CognitiveModel, then to the main ChatModel.
 ;
-; Default keeps cognitive reasoning local/fast so HybridReasonAsync does not
-; stall the pipeline on cloud latency when the user switches the main model to
-; OllamaCloud or OpenAI.
+; Default 2026-04-20: glm-5.1:cloud to match the main Model — unifies the chat
+; path on one cloud model so behavior is not split between local / cloud LLMs
+; at node boundaries. Previous local-default rationale (cloud-latency stalls in
+; HybridReasonAsync) is outweighed by the value of model-agnostic verification
+; of the memory + cognitive pipeline. Revert to "Ollama llama3:latest" if local
+; hot-path latency regresses in practice.
 (: CognitiveNodeModel (-> String AgentProvider String Type))
-(CognitiveNodeModel "NeuralSymbolic" Ollama "llama3:latest")
+(CognitiveNodeModel "NeuralSymbolic" OllamaCloud "glm-5.1:cloud")
