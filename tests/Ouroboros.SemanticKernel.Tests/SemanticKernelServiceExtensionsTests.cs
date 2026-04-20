@@ -4,9 +4,11 @@
 
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
 using Ouroboros.Abstractions.Core;
 using Ouroboros.SemanticKernel.Filters;
+using Ouroboros.SemanticKernel.VectorData;
 
 namespace Ouroboros.SemanticKernel.Tests;
 
@@ -197,5 +199,68 @@ public sealed class SemanticKernelServiceExtensionsTests
             .ToList();
 
         vsDescriptors.Should().HaveCount(1);
+    }
+
+    // ── AddSemanticKernel with bingApiKey ────────────────────────────────
+
+    [Fact]
+    public void AddSemanticKernel_WithBingApiKey_ReturnsSameServiceCollection()
+    {
+        var services = new ServiceCollection();
+
+        var result = services.AddSemanticKernel(bingApiKey: "test-bing-key");
+
+        result.Should().BeSameAs(services);
+    }
+
+    [Fact]
+    public void AddSemanticKernel_RegistersAgentFactory()
+    {
+        var services = new ServiceCollection();
+
+        services.AddSemanticKernel();
+
+        var descriptor = services
+            .FirstOrDefault(d => d.ServiceType == typeof(AgentFactory));
+
+        descriptor.Should().NotBeNull();
+        descriptor!.Lifetime.Should().Be(ServiceLifetime.Singleton);
+    }
+
+    // ── AddSkExpressionPatterns ─────────────────────────────────────────
+
+    [Fact]
+    public void AddSkExpressionPatterns_NullServices_ThrowsArgumentNullException()
+    {
+        IServiceCollection services = null!;
+
+        var act = () => services.AddSkExpressionPatterns();
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("services");
+    }
+
+    [Fact]
+    public void AddSkExpressionPatterns_ReturnsSameServiceCollection()
+    {
+        var services = new ServiceCollection();
+
+        var result = services.AddSkExpressionPatterns();
+
+        result.Should().BeSameAs(services);
+    }
+
+    [Fact]
+    public void AddSkExpressionPatterns_CalledTwice_DoesNotDuplicate()
+    {
+        var services = new ServiceCollection();
+
+        services.AddSkExpressionPatterns();
+        services.AddSkExpressionPatterns();
+
+        var descriptors = services
+            .Where(d => d.ServiceType == typeof(VectorStoreCollection<string, ExpressionPatternRecord>))
+            .ToList();
+
+        descriptors.Should().HaveCount(1);
     }
 }

@@ -194,6 +194,179 @@ public sealed class OuroborosAutoFunctionFilterTests
         capturedPlugin.Should().Be("(none)");
     }
 
+    // ── Permission gate ─────────────────────────────────────────────────
+
+    [Fact]
+    public void RequireConfirmation_DefaultIsFalse()
+    {
+        var filter = CreateFilter();
+        filter.RequireConfirmation.Should().BeFalse();
+    }
+
+    [Fact]
+    public void DangerousFunctionNames_DefaultIsEmpty()
+    {
+        var filter = CreateFilter();
+        filter.DangerousFunctionNames.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void OnPermissionRequired_DefaultIsNull()
+    {
+        var filter = CreateFilter();
+        filter.OnPermissionRequired.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task PermissionGate_RequireConfirmationFalse_DoesNotBlock()
+    {
+        var filter = CreateFilter();
+        filter.RequireConfirmation = false;
+        filter.DangerousFunctionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "TestFunction" };
+        var context = CreateMockContext();
+        bool nextCalled = false;
+
+        await filter.OnAutoFunctionInvocationAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        nextCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PermissionGate_FunctionNotInDangerousSet_DoesNotBlock()
+    {
+        var filter = CreateFilter();
+        filter.RequireConfirmation = true;
+        filter.DangerousFunctionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "SomeOtherFunction" };
+        var context = CreateMockContext();
+        bool nextCalled = false;
+
+        await filter.OnAutoFunctionInvocationAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        nextCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PermissionGate_Allowed_CallsNext()
+    {
+        var filter = CreateFilter();
+        filter.RequireConfirmation = true;
+        filter.DangerousFunctionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "TestFunction" };
+        filter.OnPermissionRequired = (_, _) => Task.FromResult(true);
+        var context = CreateMockContext();
+        bool nextCalled = false;
+
+        await filter.OnAutoFunctionInvocationAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        nextCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PermissionGate_Allowed_CaseInsensitiveMatch_CallsNext()
+    {
+        var filter = CreateFilter();
+        filter.RequireConfirmation = true;
+        filter.DangerousFunctionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "testfunction" };
+        filter.OnPermissionRequired = (_, _) => Task.FromResult(true);
+        var context = CreateMockContext();
+        bool nextCalled = false;
+
+        await filter.OnAutoFunctionInvocationAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        nextCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PermissionGate_Denied_BlocksExecution()
+    {
+        var filter = CreateFilter();
+        filter.RequireConfirmation = true;
+        filter.DangerousFunctionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "TestFunction" };
+        filter.OnPermissionRequired = (_, _) => Task.FromResult(false);
+        var context = CreateMockContext();
+        bool nextCalled = false;
+
+        await filter.OnAutoFunctionInvocationAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        nextCalled.Should().BeFalse();
+        context.Result.ToString().Should().Contain("Permission denied");
+        context.Result.ToString().Should().Contain("TestFunction");
+    }
+
+    [Fact]
+    public async Task PermissionGate_NoHandler_FailsClosed()
+    {
+        var filter = CreateFilter();
+        filter.RequireConfirmation = true;
+        filter.DangerousFunctionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "TestFunction" };
+        filter.OnPermissionRequired = null;
+        var context = CreateMockContext();
+        bool nextCalled = false;
+
+        await filter.OnAutoFunctionInvocationAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        nextCalled.Should().BeFalse();
+        context.Result.ToString().Should().Contain("no permission handler is registered");
+    }
+
+    [Fact]
+    public async Task PermissionGate_HandlerThrows_BlocksWithError()
+    {
+        var filter = CreateFilter();
+        filter.RequireConfirmation = true;
+        filter.DangerousFunctionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "TestFunction" };
+        filter.OnPermissionRequired = (_, _) => throw new InvalidOperationException("handler failed");
+        var context = CreateMockContext();
+        bool nextCalled = false;
+
+        await filter.OnAutoFunctionInvocationAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        nextCalled.Should().BeFalse();
+        context.Result.ToString().Should().Contain("Permission check failed");
+        context.Result.ToString().Should().Contain("handler failed");
+    }
+
+    [Fact]
+    public async Task PermissionGate_HandlerThrowsOperationCanceled_Rethrows()
+    {
+        var filter = CreateFilter();
+        filter.RequireConfirmation = true;
+        filter.DangerousFunctionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "TestFunction" };
+        filter.OnPermissionRequired = (_, _) => throw new OperationCanceledException();
+        var context = CreateMockContext();
+
+        var act = () => filter.OnAutoFunctionInvocationAsync(context, _ => Task.CompletedTask);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
     // ── Helper methods ───────────────────────────────────────────────────
 
     private static AutoFunctionInvocationContext CreateMockContext(string? pluginName = "TestPlugin")
