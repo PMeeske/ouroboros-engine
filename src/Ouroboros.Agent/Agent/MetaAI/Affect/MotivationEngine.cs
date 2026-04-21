@@ -225,12 +225,19 @@ public sealed class MotivationEngine
                 activationThreshold: 0.5,
                 priorityWeight: 2.0,
                 mappedNeedLevel: NeedLevel.SocialConnection,
+                // 2026-04-21: goalTemplates rewritten from vague generic phrases
+                // ("Offer proactive assistance based on recent context") to concrete
+                // action verbs that name WHAT, WHICH, and HOW. User feedback: the
+                // old strings surfaced to the companion UI as intentions but read
+                // as tautologies — "which assistance? which context?" These
+                // concrete variants pair directly with the AnticipatoryActionExecutor
+                // + InnerDialogEngine which fill in the actual topic / fragment.
                 goalTemplates:
                 [
-                    "Share a recent discovery with the user",
-                    "Engage the user about shared interests",
-                    "Offer proactive assistance based on recent context",
-                    "Express interest in what the user is working on"
+                    "Name a specific conversation fragment from the last session and ask a follow-up",
+                    "Pull one concrete shared topic from RelationshipMemory and offer a related observation",
+                    "Spot a question the user is likely to ask next given the last turn and answer it before they ask",
+                    "Recall one of the user's stated preferences and weave it into the next reply"
                 ])
         ];
     }
