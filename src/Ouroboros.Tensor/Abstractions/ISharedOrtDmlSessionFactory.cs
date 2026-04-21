@@ -61,4 +61,17 @@ public interface ISharedOrtDmlSessionFactory
     /// the shared device's resolved LUID.
     /// </exception>
     SessionOptions CreateSessionOptions();
+
+    /// <summary>
+    /// Attempts to return the resolved DXGI device ordinal (deviceId) that
+    /// the factory passes to <c>AppendExecutionProvider_DML</c>. This is
+    /// useful for consumers that must mutate an existing
+    /// <see cref="SessionOptions"/> rather than creating a fresh one.
+    /// </summary>
+    /// <param name="deviceId">The resolved ordinal on success.</param>
+    /// <returns>
+    /// <c>true</c> when the shared device is available and the LUID was
+    /// successfully matched to a DXGI adapter; otherwise <c>false</c>.
+    /// </returns>
+    bool TryGetResolvedDeviceId(out int deviceId);
 }

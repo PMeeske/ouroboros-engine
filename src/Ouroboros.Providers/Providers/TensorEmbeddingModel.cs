@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
+
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 
@@ -57,7 +58,8 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
         int dimension = DefaultDimension,
         int featureDim = DefaultFeatureDim,
         int seed = 42,
-        string cacheCollection = DefaultCacheCollection)
+        string cacheCollection = DefaultCacheCollection,
+        Func<SessionOptions>? createSessionOptions = null)
     {
         _dimension = dimension > 0 ? dimension : DefaultDimension;
         _featureDim = featureDim > 0 ? featureDim : DefaultFeatureDim;
@@ -65,19 +67,27 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
         _cacheCollection = cacheCollection;
         _logger = logger;
 
-        // Try ONNX + DirectML GPU path
+        // Try ONNX + DirectML GPU path via shared factory (Phase 196.3)
         if (!string.IsNullOrEmpty(onnxModelPath) && File.Exists(onnxModelPath))
         {
             try
             {
-                using var options = new SessionOptions();
-                options.AppendExecutionProvider_DML(0); // Device 0 = primary GPU
-                options.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
-                _onnxSession = new InferenceSession(onnxModelPath, options);
+                if (createSessionOptions is not null)
+                {
+                    using SessionOptions options = createSessionOptions();
+                    options.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
+                    _onnxSession = new InferenceSession(onnxModelPath, options);
+                }
+                else
+                {
+                    using SessionOptions options = new SessionOptions();
+                    options.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
+                    _onnxSession = new InferenceSession(onnxModelPath, options);
+                }
                 _onnxInputName = _onnxSession.InputMetadata.Keys.First();
                 _logger?.LogInformation(
-                    "TensorEmbeddingModel: DirectML GPU inference enabled via {Model}",
-                    Path.GetFileName(onnxModelPath));
+                    "TensorEmbeddingModel: ONNX inference enabled via {Model} (factory={Factory})",
+                    Path.GetFileName(onnxModelPath), createSessionOptions is not null ? "yes" : "cpu");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

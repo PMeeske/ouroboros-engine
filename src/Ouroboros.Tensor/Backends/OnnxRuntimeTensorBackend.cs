@@ -5,6 +5,7 @@
 using System.Runtime.InteropServices;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
+using Ouroboros.Tensor.Abstractions;
 
 namespace Ouroboros.Tensor.Backends;
 
@@ -26,16 +27,27 @@ namespace Ouroboros.Tensor.Backends;
 /// backend interface. Callers that need GPU-accelerated ONNX inference should use
 /// <c>ExecutionProviders</c> (CUDA EP) via <see cref="SessionOptions"/>.
 /// </para>
+/// <para>
+/// Phase 196.3: when constructed with an <see cref="ISharedOrtDmlSessionFactory"/>,
+/// the backend can produce factory-bound <see cref="SessionOptions"/> via
+/// <see cref="TryCreateSessionOptions"/> so that callers creating
+/// <see cref="InferenceSession"/> instances route through the shared D3D12 device.
+/// </para>
 /// </remarks>
 public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
 {
     private readonly CpuTensorBackend _cpuFallback = CpuTensorBackend.Instance;
+    private readonly ISharedOrtDmlSessionFactory? _sessionFactory;
 
     /// <summary>
-    /// Initializes a new <see cref="OnnxRuntimeTensorBackend"/> with optional session options.
-    /// Pass a configured <see cref="SessionOptions"/> to enable GPU execution providers.
+    /// Initializes a new <see cref="OnnxRuntimeTensorBackend"/> with optional session factory.
+    /// Pass a configured <see cref="ISharedOrtDmlSessionFactory"/> to enable shared D3D12
+    /// DirectML sessions.
     /// </summary>
-    public OnnxRuntimeTensorBackend() { }
+    public OnnxRuntimeTensorBackend(ISharedOrtDmlSessionFactory? sessionFactory = null)
+    {
+        _sessionFactory = sessionFactory;
+    }
 
     /// <inheritdoc/>
     /// <remarks>Returns <see cref="Abstractions.DeviceType.Cpu"/> for the CPU ONNX EP.</remarks>
@@ -124,6 +136,27 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
         {
             return Result<IReadOnlyDictionary<string, ITensor<float>>, string>.Failure(
                 $"Unexpected error during ONNX inference: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// When a factory was supplied at construction, returns a
+    /// <see cref="SessionOptions"/> bound to the shared D3D12 device.
+    /// Otherwise returns <c>null</c> so the caller can fall back to CPU.
+    /// </summary>
+    public SessionOptions? TryCreateSessionOptions()
+    {
+        if (_sessionFactory is null)
+            return null;
+
+        try
+        {
+            return _sessionFactory.CreateSessionOptions();
+        }
+        catch (InvalidOperationException)
+        {
+            // Shared device unavailable — caller must fall back to CPU EP
+            return null;
         }
     }
 
