@@ -8,7 +8,7 @@ namespace Ouroboros.Pipeline.Ingestion;
 
 /// <summary>
 /// Loads a single file into a document.
-/// Replaces LangChain.DocumentLoaders.FileLoader.
+/// Loads a single file into a document.
 /// </summary>
 public class FileLoader : IDocumentLoader
 {
