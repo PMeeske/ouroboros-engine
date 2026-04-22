@@ -71,6 +71,8 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
     private volatile bool _disposed;
     private string? _runningTenant;
 
+    private readonly EvictionCoordinator _evictionCoordinator = new();
+
     /// <summary>
     /// Initializes a new <see cref="GpuSchedulerV2"/>.
     /// </summary>
@@ -99,6 +101,14 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
         _lastLatency,
         Interlocked.Read(ref _completedCount),
         Interlocked.Read(ref _failedCount));
+
+    /// <inheritdoc/>
+    public void RegisterEvictionPolicy(IEvictionPolicy policy)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        ArgumentNullException.ThrowIfNull(policy);
+        _evictionCoordinator.RegisterPolicy(policy);
+    }
 
     /// <inheritdoc/>
     public IDisposable RegisterTenant(GpuTenantProfile profile)
@@ -412,6 +422,7 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
                             work = q.Dequeue();
                             Interlocked.Decrement(ref _queueDepth);
                             _runningTenant = tenantName;
+                            _evictionCoordinator.RecordUsage(tenantName);
                             return true;
                         }
                     }
@@ -472,6 +483,8 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
             _perTenantQueues.Remove(tenantName);
             _rrOrder[profile.BasePriority].Remove(tenantName);
         }
+
+        _evictionCoordinator.UnregisterPolicy(tenantName);
     }
 
     private readonly record struct PendingWork(
