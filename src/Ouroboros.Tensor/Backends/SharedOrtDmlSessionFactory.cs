@@ -103,4 +103,24 @@ public sealed class SharedOrtDmlSessionFactory : ISharedOrtDmlSessionFactory
 
         return opts;
     }
+
+    /// <inheritdoc/>
+    public bool TryGetResolvedDeviceId(out int deviceId)
+    {
+        if (!_sharedDevice.IsAvailable)
+        {
+            deviceId = 0;
+            return false;
+        }
+
+        deviceId = _deviceId.Value;
+        return true;
+    }
+
+    /// <summary>
+    /// Internal debug accessor for the resolved DXGI device ordinal.
+    /// Exposed to <c>Ouroboros.Tensor.Tests</c> via
+    /// <see cref="System.Runtime.CompilerServices.InternalsVisibleToAttribute"/>.
+    /// </summary>
+    internal int ResolvedDeviceId => _deviceId.Value;
 }
