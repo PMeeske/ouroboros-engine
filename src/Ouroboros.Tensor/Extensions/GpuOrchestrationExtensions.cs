@@ -58,12 +58,18 @@ public static class GpuOrchestrationExtensions
                 .Build();
         });
 
-        // GPU scheduler
-        services.AddSingleton<GpuScheduler>(sp =>
+        // GPU scheduler — v2 is the canonical instance; legacy adapter wraps it
+        services.AddSingleton<GpuSchedulerV2>(sp =>
         {
             var selector = sp.GetRequiredService<ITensorBackendSelector>();
             long vram = options.TotalVramOverrideBytes ?? EstimateVram(selector);
-            return new GpuScheduler(vram);
+            return new GpuSchedulerV2(vram);
+        });
+        services.AddSingleton<IGpuScheduler>(sp => sp.GetRequiredService<GpuSchedulerV2>());
+        services.AddSingleton<GpuScheduler>(sp =>
+        {
+            var v2 = sp.GetRequiredService<GpuSchedulerV2>();
+            return new GpuScheduler(v2);
         });
 
         // VRAM layout resolution (Phase 188.1 AVA-07) — DXGI adapter detect →
