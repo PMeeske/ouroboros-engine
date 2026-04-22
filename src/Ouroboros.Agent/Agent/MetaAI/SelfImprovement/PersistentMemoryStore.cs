@@ -5,9 +5,9 @@
 
 using System.Collections.Concurrent;
 using System.Text.Json;
-using LangChain.Databases;
 using Ouroboros.Abstractions;
 using Ouroboros.Agent.Json;
+using Ouroboros.Domain.Vectors;
 
 namespace Ouroboros.Agent.MetaAI;
 

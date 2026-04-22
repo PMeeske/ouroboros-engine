@@ -7,10 +7,6 @@ global using Ouroboros.Agent.ConsolidatedMind;
 global using Ouroboros.Agent.MetaAI;
 global using Ouroboros.Agent.NeuralSymbolic;
 
-// Application layer
-global using Ouroboros.Application.Autonomous;
-global using Ouroboros.Application.SelfAssembly;
-
 // Core layer
 global using Ouroboros.Core.EmbodiedInteraction;
 global using Ouroboros.Core.Ethics;

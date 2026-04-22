@@ -2,8 +2,8 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using LangChain.Databases;
-using LangChain.DocumentLoaders;
+using Ouroboros.Domain.DocumentLoaders;
+using Ouroboros.Domain.Vectors;
 using Microsoft.Extensions.VectorData;
 
 namespace Ouroboros.SemanticKernel.VectorData;
@@ -34,7 +34,7 @@ internal sealed class VectorStoreDocumentRecord
     public ReadOnlyMemory<float> Embedding { get; set; }
 
     /// <summary>
-    /// Converts a LangChain <see cref="Vector"/> into a <see cref="VectorStoreDocumentRecord"/>.
+    /// Converts an Ouroboros <see cref="Vector"/> into a <see cref="VectorStoreDocumentRecord"/>.
     /// </summary>
     internal static VectorStoreDocumentRecord FromLangChainVector(Vector vector)
     {
@@ -52,7 +52,7 @@ internal sealed class VectorStoreDocumentRecord
     }
 
     /// <summary>
-    /// Converts this record back to a LangChain <see cref="Document"/>.
+    /// Converts this record back to an Ouroboros <see cref="Document"/>.
     /// </summary>
     internal Document ToDocument()
     {

@@ -4,8 +4,8 @@
 // ==========================================================
 
 using System.Collections.Concurrent;
-using LangChain.Databases;
 using Ouroboros.Abstractions;
+using Ouroboros.Domain.Vectors;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -85,13 +85,13 @@ public sealed class MemoryStore : IMemoryStore
             // If vector store available and context similarity specified, use semantic search
             if (_embedding != null && _vectorStore != null && !string.IsNullOrEmpty(query.ContextSimilarity))
             {
-                IReadOnlyCollection<LangChain.DocumentLoaders.Document> similarDocs = await _vectorStore.GetSimilarDocuments(
+                IReadOnlyCollection<Document> similarDocs = await _vectorStore.GetSimilarDocuments(
                     _embedding,
                     query.ContextSimilarity,
                     amount: query.MaxResults).ConfigureAwait(false);
 
                 List<Experience> experiences = new List<Experience>();
-                foreach (LangChain.DocumentLoaders.Document doc in similarDocs)
+                foreach (Document doc in similarDocs)
                 {
                     if (doc.Metadata?.TryGetValue("id", out object? idObj) == true &&
                         idObj?.ToString() is string id &&

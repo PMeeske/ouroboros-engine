@@ -4,7 +4,7 @@
 
 namespace Ouroboros.Pipeline.Ingestion;
 
-using LangChain.Databases;
+using Ouroboros.Domain.Vectors;
 using Ouroboros.Pipeline.Extraction;
 using Ouroboros.Tools.MeTTa;
 

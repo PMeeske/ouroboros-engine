@@ -5,7 +5,7 @@
 
 namespace Ouroboros.Pipeline.Grammar;
 
-using LangChain.Providers;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -29,7 +29,7 @@ using Microsoft.Extensions.Logging;
 /// </remarks>
 public sealed partial class AdaptiveParserPipeline : IDisposable
 {
-    private readonly IChatModel _llm;
+    private readonly IChatClient _llm;
     private readonly IGrammarValidator _validator;
     private readonly DynamicParserFactory _compilerFactory;
     private readonly ILogger<AdaptiveParserPipeline>? _logger;
@@ -42,7 +42,7 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
     /// <param name="compilerFactory">The dynamic parser compiler.</param>
     /// <param name="logger">Optional logger.</param>
     public AdaptiveParserPipeline(
-        IChatModel llm,
+        IChatClient llm,
         IGrammarValidator validator,
         DynamicParserFactory compilerFactory,
         ILogger<AdaptiveParserPipeline>? logger = null)
@@ -248,13 +248,8 @@ public sealed partial class AdaptiveParserPipeline : IDisposable
     {
         string prompt = BuildMeTTaGenerationPrompt(description, sampleInput);
 
-        ChatResponse? response = null;
-        await foreach (var chunk in _llm.GenerateAsync(prompt, cancellationToken: ct).ConfigureAwait(false))
-        {
-            response = chunk;
-        }
-
-        string generated = response?.ToString() ?? string.Empty;
+        var response = await _llm.GetResponseAsync(new ChatMessage(ChatRole.User, prompt), cancellationToken: ct).ConfigureAwait(false);
+        string generated = response.Text ?? string.Empty;
 
         return ExtractMeTTaFromResponse(generated);
     }

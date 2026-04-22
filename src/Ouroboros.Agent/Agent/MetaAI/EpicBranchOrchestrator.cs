@@ -3,7 +3,7 @@
 // ==========================================================
 
 using System.Collections.Concurrent;
-using LangChain.DocumentLoaders;
+using Ouroboros.Domain.Vectors;
 
 namespace Ouroboros.Agent.MetaAI;
 

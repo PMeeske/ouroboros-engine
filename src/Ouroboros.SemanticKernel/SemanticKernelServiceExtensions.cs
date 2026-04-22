@@ -15,7 +15,7 @@ using SkQdrantVectorStore = Microsoft.SemanticKernel.Connectors.Qdrant.QdrantVec
 using Ouroboros.Domain.Vectors;
 using Ouroboros.Providers.Meai;
 using Ouroboros.SemanticKernel.Filters;
-using Ouroboros.SemanticKernel.VectorData;
+// using Ouroboros.SemanticKernel.VectorData; // excluded during LangChain migration (TEC-01)
 using Qdrant.Client;
 using SkVectorStore = Microsoft.Extensions.VectorData.VectorStore;
 
@@ -59,10 +59,10 @@ public static class SemanticKernelServiceExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // ── Auto-function invocation filter (logging + observability) ────────
+        // Auto-function invocation filter (logging + observability)
         services.TryAddSingleton<IAutoFunctionInvocationFilter, OuroborosAutoFunctionFilter>();
 
-        // ── AgentFactory (depends on Kernel — registered as singleton) ───────
+        // AgentFactory (depends on Kernel — registered as singleton)
         services.TryAddSingleton(sp =>
         {
             var kernel = sp.GetRequiredService<Kernel>();
@@ -106,6 +106,10 @@ public static class SemanticKernelServiceExtensions
         return services;
     }
 
+    // AddSkVectorStore excluded during LangChain migration (TEC-01).
+    // The VectorData bridge depends on LangChain types that are being removed.
+    // Re-enable after rewriting SkToOuroborosAdapter without LangChain dependencies.
+#if false
     /// <summary>
     /// Registers the SK Qdrant <see cref="SkVectorStore"/> and the
     /// <see cref="VectorDataBridge"/> so that Ouroboros code can consume
@@ -126,14 +130,14 @@ public static class SemanticKernelServiceExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(collectionName);
 
-        // ── SK Qdrant VectorStore (wraps QdrantClient) ───────────────────────
+        // SK Qdrant VectorStore (wraps QdrantClient)
         services.TryAddSingleton<SkVectorStore>(sp =>
         {
             var qdrantClient = sp.GetRequiredService<QdrantClient>();
             return new SkQdrantVectorStore(qdrantClient, ownsClient: false);
         });
 
-        // ── Bridge: SK VectorStore → Ouroboros IAdvancedVectorStore ──────────
+        // Bridge: SK VectorStore -> Ouroboros IAdvancedVectorStore
         services.TryAddSingleton<IAdvancedVectorStore>(sp =>
         {
             var skStore = sp.GetRequiredService<SkVectorStore>();
@@ -142,7 +146,11 @@ public static class SemanticKernelServiceExtensions
 
         return services;
     }
+#endif
 
+    // AddSkExpressionPatterns excluded during LangChain migration (TEC-01).
+    // Depends on ExpressionPatternRecord which is in the excluded VectorData files.
+#if false
     /// <summary>
     /// Registers an SK <see cref="VectorStoreCollection{TKey, TRecord}"/> for the
     /// expression-patterns collection used by NanoAtom grammar evolution.
@@ -181,4 +189,5 @@ public static class SemanticKernelServiceExtensions
 
         return services;
     }
+#endif
 }
