@@ -46,7 +46,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.3" />
     <!-- Phase 188.1-01: in-memory IConfiguration for DxgiVramLayoutProvider tests. -->
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.3" />
-    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
     <PackageReference Include="Xunit.SkippableFact" Version="1.5.23" />
   </ItemGroup>
