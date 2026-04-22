@@ -37,6 +37,10 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
     // Per-priority-class dispatch state. Access is serialised under _classLock.
     private readonly object _classLock = new();
 
+    // Plan 02: protects queue migration between priority classes so that
+    // BoostTenantPriority / RestoreTenantPriority are atomic w.r.t. dispatch.
+    private readonly object _queueMigrationLock = new();
+
     // Per-tenant FIFO queue of pending work.
     private readonly Dictionary<string, Queue<PendingWork>> _perTenantQueues = new(StringComparer.Ordinal);
 
@@ -219,6 +223,97 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
         }
     }
 
+    /// <summary>
+    /// Returns the registered profile for a tenant, or <see langword="null"/> if the tenant
+    /// is not registered.
+    /// </summary>
+    /// <param name="tenantName">Tenant to look up.</param>
+    /// <returns>The current <see cref="GpuTenantProfile"/>.</returns>
+    public GpuTenantProfile? GetTenantProfile(string tenantName)
+    {
+        _tenants.TryGetValue(tenantName, out var profile);
+        return profile;
+    }
+
+    /// <summary>
+    /// Temporarily raises a tenant's <see cref="GpuTenantProfile.EffectivePriority"/> to
+    /// <paramref name="targetPriority"/> and migrates its dispatch queue accordingly.
+    /// </summary>
+    /// <param name="tenantName">Tenant to boost.</param>
+    /// <param name="targetPriority">Priority to inherit.</param>
+    public void BoostTenantPriority(string tenantName, GpuPriorityClass targetPriority)
+    {
+        lock (_queueMigrationLock)
+        {
+            lock (_classLock)
+            {
+                if (!_tenants.TryGetValue(tenantName, out var profile))
+                {
+                    return;
+                }
+
+                var currentEffective = profile.EffectivePriority;
+                if (currentEffective == targetPriority)
+                {
+                    return;
+                }
+
+                var updated = profile.WithEffectivePriority(targetPriority);
+                _tenants[tenantName] = updated;
+
+                if (_rrOrder.TryGetValue(currentEffective, out var oldList))
+                {
+                    oldList.Remove(tenantName);
+                }
+
+                if (_rrOrder.TryGetValue(targetPriority, out var newList))
+                {
+                    newList.AddLast(tenantName);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Restores a tenant's <see cref="GpuTenantProfile.EffectivePriority"/> to its
+    /// <see cref="GpuTenantProfile.BasePriority"/> and migrates its dispatch queue back.
+    /// </summary>
+    /// <param name="tenantName">Tenant to restore.</param>
+    public void RestoreTenantPriority(string tenantName)
+    {
+        lock (_queueMigrationLock)
+        {
+            lock (_classLock)
+            {
+                if (!_tenants.TryGetValue(tenantName, out var profile))
+                {
+                    return;
+                }
+
+                var currentEffective = profile.EffectivePriority;
+                var basePriority = profile.BasePriority;
+
+                if (currentEffective == basePriority)
+                {
+                    return;
+                }
+
+                var updated = profile.WithEffectivePriority(basePriority);
+                _tenants[tenantName] = updated;
+
+                if (_rrOrder.TryGetValue(currentEffective, out var oldList))
+                {
+                    oldList.Remove(tenantName);
+                }
+
+                if (_rrOrder.TryGetValue(basePriority, out var newList))
+                {
+                    newList.AddLast(tenantName);
+                }
+            }
+        }
+    }
+
     /// <inheritdoc/>
     public void Dispose()
     {
@@ -280,48 +375,51 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
 
     private bool TryDequeueHighestPriority(out PendingWork work)
     {
-        lock (_classLock)
+        lock (_queueMigrationLock)
         {
-            foreach (var cls in PriorityOrderHighToLow)
+            lock (_classLock)
             {
-                var order = _rrOrder[cls];
-                if (order.Count == 0)
+                foreach (var cls in PriorityOrderHighToLow)
                 {
-                    continue;
-                }
-
-                // Scan the rotation order for the next tenant with queued work.
-                // Stop after one full lap so we don't spin.
-                var inspected = 0;
-                var total = order.Count;
-                while (inspected < total)
-                {
-                    var node = order.First;
-                    if (node is null)
+                    var order = _rrOrder[cls];
+                    if (order.Count == 0)
                     {
-                        break;
+                        continue;
                     }
 
-                    var tenantName = node.Value;
-
-                    // Rotate: move this tenant to the back regardless of whether we dispatch it,
-                    // so the next lookup starts with a different tenant (fair round-robin).
-                    order.RemoveFirst();
-                    order.AddLast(tenantName);
-                    inspected++;
-
-                    if (_perTenantQueues.TryGetValue(tenantName, out var q) && q.Count > 0)
+                    // Scan the rotation order for the next tenant with queued work.
+                    // Stop after one full lap so we don't spin.
+                    var inspected = 0;
+                    var total = order.Count;
+                    while (inspected < total)
                     {
-                        work = q.Dequeue();
-                        Interlocked.Decrement(ref _queueDepth);
-                        _runningTenant = tenantName;
-                        return true;
+                        var node = order.First;
+                        if (node is null)
+                        {
+                            break;
+                        }
+
+                        var tenantName = node.Value;
+
+                        // Rotate: move this tenant to the back regardless of whether we dispatch it,
+                        // so the next lookup starts with a different tenant (fair round-robin).
+                        order.RemoveFirst();
+                        order.AddLast(tenantName);
+                        inspected++;
+
+                        if (_perTenantQueues.TryGetValue(tenantName, out var q) && q.Count > 0)
+                        {
+                            work = q.Dequeue();
+                            Interlocked.Decrement(ref _queueDepth);
+                            _runningTenant = tenantName;
+                            return true;
+                        }
                     }
                 }
+
+                work = default!;
+                return false;
             }
-
-            work = default!;
-            return false;
         }
     }
 
