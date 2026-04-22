@@ -2,6 +2,8 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using Microsoft.Extensions.Logging;
+
 namespace Ouroboros.Tensor.Orchestration;
 
 /// <summary>
@@ -72,19 +74,29 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
     private string? _runningTenant;
 
     private readonly EvictionCoordinator _evictionCoordinator = new();
+    private readonly DispatchWatchdog? _watchdog;
+    private readonly ConcurrentDictionary<string, GpuPriorityClass> _originalBasePriorities = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initializes a new <see cref="GpuSchedulerV2"/>.
     /// </summary>
     /// <param name="totalVramBytes">Total VRAM in bytes (used for metrics reporting only in plan 01).</param>
     /// <param name="meter">Optional meter for OpenTelemetry integration.</param>
-    public GpuSchedulerV2(long totalVramBytes, Meter? meter = null)
+    /// <param name="timeProvider">Optional time provider for watchdog/testability; defaults to <see cref="TimeProvider.System"/>.</param>
+    /// <param name="logger">Optional logger for watchdog events; watchdog is disabled when null.</param>
+    public GpuSchedulerV2(long totalVramBytes, Meter? meter = null, TimeProvider? timeProvider = null, ILogger? logger = null)
     {
         _totalVramBytes = totalVramBytes;
         _meter = meter ?? new Meter("Ouroboros.Tensor.GpuSchedulerV2");
         _tasksCompletedCounter = _meter.CreateCounter<long>("gpu.tasks.completed");
         _tasksFailedCounter = _meter.CreateCounter<long>("gpu.tasks.failed");
         _latencyHistogram = _meter.CreateHistogram<double>("gpu.task.latency_ms");
+
+        var tp = timeProvider ?? TimeProvider.System;
+        if (logger is not null)
+        {
+            _watchdog = new DispatchWatchdog(this, tp, logger);
+        }
 
         _dispatchTask = Task.Run(() => RunDispatchLoopAsync(_shutdownCts.Token));
     }
@@ -355,6 +367,106 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
         }
     }
 
+    /// <summary>
+    /// Demotes a tenant's <see cref="GpuTenantProfile.BasePriority"/> to <paramref name="newBase"/>
+    /// and migrates its dispatch queue atomically. The original base priority is remembered so
+    /// that <see cref="RestoreTenantBasePriority"/> can revert the change.
+    /// </summary>
+    /// <param name="tenantName">Tenant to demote.</param>
+    /// <param name="newBase">New base priority class.</param>
+    internal void SetTenantBasePriority(string tenantName, GpuPriorityClass newBase)
+    {
+        lock (_queueMigrationLock)
+        {
+            lock (_classLock)
+            {
+                if (!_tenants.TryGetValue(tenantName, out var profile))
+                {
+                    return;
+                }
+
+                var currentBase = profile.BasePriority;
+                if (currentBase == newBase)
+                {
+                    return;
+                }
+
+                _originalBasePriorities.TryAdd(tenantName, currentBase);
+
+                var updated = profile with { BasePriority = newBase };
+                if (profile.EffectivePriority == currentBase)
+                {
+                    updated = updated with { EffectivePriority = newBase };
+                }
+
+                _tenants[tenantName] = updated;
+
+                if (_rrOrder.TryGetValue(currentBase, out var oldList))
+                {
+                    oldList.Remove(tenantName);
+                }
+
+                if (_rrOrder.TryGetValue(newBase, out var newList))
+                {
+                    newList.AddLast(tenantName);
+                }
+            }
+        }
+
+        _signal.Release();
+    }
+
+    /// <summary>
+    /// Restores a tenant's <see cref="GpuTenantProfile.BasePriority"/> to the value saved by
+    /// the most recent <see cref="SetTenantBasePriority"/> call, then removes the saved value.
+    /// </summary>
+    /// <param name="tenantName">Tenant to restore.</param>
+    internal void RestoreTenantBasePriority(string tenantName)
+    {
+        lock (_queueMigrationLock)
+        {
+            lock (_classLock)
+            {
+                if (!_tenants.TryGetValue(tenantName, out var profile))
+                {
+                    _originalBasePriorities.TryRemove(tenantName, out _);
+                    return;
+                }
+
+                if (!_originalBasePriorities.TryRemove(tenantName, out var originalBase))
+                {
+                    return;
+                }
+
+                var currentBase = profile.BasePriority;
+                if (currentBase == originalBase)
+                {
+                    return;
+                }
+
+                var updated = profile with { BasePriority = originalBase };
+                if (profile.EffectivePriority == currentBase)
+                {
+                    updated = updated with { EffectivePriority = originalBase };
+                }
+
+                _tenants[tenantName] = updated;
+
+                if (_rrOrder.TryGetValue(currentBase, out var oldList))
+                {
+                    oldList.Remove(tenantName);
+                }
+
+                if (_rrOrder.TryGetValue(originalBase, out var newList))
+                {
+                    newList.AddLast(tenantName);
+                }
+            }
+        }
+
+        _signal.Release();
+    }
+
     /// <inheritdoc/>
     public void Dispose()
     {
@@ -376,6 +488,7 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
             // Expected during cancellation.
         }
 
+        _watchdog?.Dispose();
         _signal.Dispose();
         _shutdownCts.Dispose();
         _meter.Dispose();
@@ -492,6 +605,8 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
 #pragma warning restore CA1031
         finally
         {
+            sw.Stop();
+            _watchdog?.RecordDispatch(work.TenantName, sw.Elapsed);
             lock (_classLock)
             {
                 if (_runningTenant == work.TenantName)
