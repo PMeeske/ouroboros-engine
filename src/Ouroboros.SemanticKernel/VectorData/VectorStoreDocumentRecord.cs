@@ -9,7 +9,7 @@ using Microsoft.Extensions.VectorData;
 namespace Ouroboros.SemanticKernel.VectorData;
 
 /// <summary>
-/// SK-compatible record model that maps to/from LangChain's <see cref="Document"/>
+/// SK-compatible record model that maps to/from domain <see cref="Document"/>
 /// and <see cref="Vector"/> types used by Ouroboros' vector store interfaces.
 /// </summary>
 internal sealed class VectorStoreDocumentRecord
@@ -36,7 +36,7 @@ internal sealed class VectorStoreDocumentRecord
     /// <summary>
     /// Converts an Ouroboros <see cref="Vector"/> into a <see cref="VectorStoreDocumentRecord"/>.
     /// </summary>
-    internal static VectorStoreDocumentRecord FromLangChainVector(Vector vector)
+    internal static VectorStoreDocumentRecord FromVector(Vector vector)
     {
         ArgumentNullException.ThrowIfNull(vector);
 

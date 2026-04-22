@@ -15,7 +15,7 @@ using SkQdrantVectorStore = Microsoft.SemanticKernel.Connectors.Qdrant.QdrantVec
 using Ouroboros.Domain.Vectors;
 using Ouroboros.Providers.Meai;
 using Ouroboros.SemanticKernel.Filters;
-// using Ouroboros.SemanticKernel.VectorData; // excluded during LangChain migration (TEC-01)
+// using Ouroboros.SemanticKernel.VectorData; // excluded during TEC-01 migration
 using Qdrant.Client;
 using SkVectorStore = Microsoft.Extensions.VectorData.VectorStore;
 
@@ -106,9 +106,8 @@ public static class SemanticKernelServiceExtensions
         return services;
     }
 
-    // AddSkVectorStore excluded during LangChain migration (TEC-01).
-    // The VectorData bridge depends on LangChain types that are being removed.
-    // Re-enable after rewriting SkToOuroborosAdapter without LangChain dependencies.
+    // AddSkVectorStore excluded during TEC-01 migration.
+    // Re-enable after VectorData bridge is rewritten without external dependencies.
 #if false
     /// <summary>
     /// Registers the SK Qdrant <see cref="SkVectorStore"/> and the
@@ -148,7 +147,7 @@ public static class SemanticKernelServiceExtensions
     }
 #endif
 
-    // AddSkExpressionPatterns excluded during LangChain migration (TEC-01).
+    // AddSkExpressionPatterns excluded during TEC-01 migration.
     // Depends on ExpressionPatternRecord which is in the excluded VectorData files.
 #if false
     /// <summary>

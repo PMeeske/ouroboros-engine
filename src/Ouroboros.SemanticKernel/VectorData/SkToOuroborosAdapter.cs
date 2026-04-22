@@ -44,7 +44,7 @@ internal sealed class SkToOuroborosAdapter : IAdvancedVectorStore
         var collection = GetCollection();
         await collection.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
 
-        var records = vectors.Select(VectorStoreDocumentRecord.FromLangChainVector);
+        var records = vectors.Select(VectorStoreDocumentRecord.FromVector);
         await collection.UpsertAsync(records, cancellationToken).ConfigureAwait(false);
     }
 
