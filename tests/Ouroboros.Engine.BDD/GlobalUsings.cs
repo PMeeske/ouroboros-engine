@@ -13,5 +13,5 @@ global using Ouroboros.Diagnostics;
 global using Ouroboros.Infrastructure.FeatureEngineering;
 
 // Domain libraries
-global using Ouroboros.Domain.DocumentLoaders;
+global using Ouroboros.Domain.Vectors;
 global using Ouroboros.Domain.Vectors;

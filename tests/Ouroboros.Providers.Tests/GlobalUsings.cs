@@ -14,9 +14,6 @@ global using Ouroboros.Core.Learning;
 // Domain sub-namespaces
 global using Ouroboros.Domain.Learning;
 
-// Application layer
-global using Ouroboros.Application.GitHub;
-
 // Provider sub-namespaces
 global using Ouroboros.Providers.LoadBalancing;
 global using Ouroboros.Providers.Routing;

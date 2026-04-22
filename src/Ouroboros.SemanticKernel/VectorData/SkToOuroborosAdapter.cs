@@ -3,10 +3,8 @@
 // </copyright>
 
 using System.Runtime.CompilerServices;
-using Ouroboros.Domain.DocumentLoaders;
 using Ouroboros.Domain.Vectors;
 using Microsoft.Extensions.VectorData;
-using Ouroboros.Domain.Vectors;
 using SkVectorStore = Microsoft.Extensions.VectorData.VectorStore;
 
 namespace Ouroboros.SemanticKernel.VectorData;

@@ -137,7 +137,7 @@ public class SelfCritiqueResultTests
     private static PipelineBranch CreateBranch()
     {
         var store = new TrackedVectorStore();
-        var dataSource = Ouroboros.Domain.DocumentLoaders.DataSource.FromPath(Environment.CurrentDirectory);
+        var dataSource = Ouroboros.Domain.Vectors.DataSource.FromPath(Environment.CurrentDirectory);
         return new PipelineBranch("test-branch", store, dataSource);
     }
 }

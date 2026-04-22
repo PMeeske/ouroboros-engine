@@ -1,4 +1,4 @@
-using Ouroboros.Domain.DocumentLoaders;
+using Ouroboros.Domain.Vectors;
 using Ouroboros.Domain.Vectors;
 
 namespace Ouroboros.Tests;

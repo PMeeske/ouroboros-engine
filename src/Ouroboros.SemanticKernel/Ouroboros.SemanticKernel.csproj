@@ -21,9 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="VectorData\SkToOuroborosAdapter.cs" />
-    <Compile Remove="VectorData\VectorDataBridge.cs" />
-    <Compile Remove="VectorData\VectorStoreDocumentRecord.cs" />
+    <!-- VectorData files re-enabled after TEC-01 migration completion -->
   </ItemGroup>
 
   <ItemGroup>

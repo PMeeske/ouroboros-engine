@@ -15,7 +15,7 @@ using SkQdrantVectorStore = Microsoft.SemanticKernel.Connectors.Qdrant.QdrantVec
 using Ouroboros.Domain.Vectors;
 using Ouroboros.Providers.Meai;
 using Ouroboros.SemanticKernel.Filters;
-// using Ouroboros.SemanticKernel.VectorData; // excluded during TEC-01 migration
+using Ouroboros.SemanticKernel.VectorData;
 using Qdrant.Client;
 using SkVectorStore = Microsoft.Extensions.VectorData.VectorStore;
 
@@ -106,9 +106,6 @@ public static class SemanticKernelServiceExtensions
         return services;
     }
 
-    // AddSkVectorStore excluded during TEC-01 migration.
-    // Re-enable after VectorData bridge is rewritten without external dependencies.
-#if false
     /// <summary>
     /// Registers the SK Qdrant <see cref="SkVectorStore"/> and the
     /// <see cref="VectorDataBridge"/> so that Ouroboros code can consume
@@ -145,11 +142,7 @@ public static class SemanticKernelServiceExtensions
 
         return services;
     }
-#endif
 
-    // AddSkExpressionPatterns excluded during TEC-01 migration.
-    // Depends on ExpressionPatternRecord which is in the excluded VectorData files.
-#if false
     /// <summary>
     /// Registers an SK <see cref="VectorStoreCollection{TKey, TRecord}"/> for the
     /// expression-patterns collection used by NanoAtom grammar evolution.
@@ -188,5 +181,4 @@ public static class SemanticKernelServiceExtensions
 
         return services;
     }
-#endif
 }

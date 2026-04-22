@@ -27,7 +27,7 @@ public class IngestionArrowsTests
         var source = DataSource.FromPath("/test/path");
         var branch = new PipelineBranch("test", store, source);
 
-        var splitter = new CharacterTextSplitter(chunkSize: 100, chunkOverlap: 0);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 100, chunkOverlap: 0);
         var arrow = IngestionArrows.IngestArrow<SingleDocumentLoader>(_mockEmbedding.Object, splitter);
 
         // Act
@@ -64,7 +64,7 @@ public class IngestionArrowsTests
         var source = DataSource.FromPath("/test/path");
         var branch = new PipelineBranch("test", store, source);
 
-        var splitter = new CharacterTextSplitter(chunkSize: 100, chunkOverlap: 0);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 100, chunkOverlap: 0);
         var arrow = IngestionArrows.IngestArrow<SingleDocumentLoader>(
             _mockEmbedding.Object, 
             splitter, 
@@ -86,7 +86,7 @@ public class IngestionArrowsTests
         var source = DataSource.FromPath("/test/path");
         var branch = new PipelineBranch("test", store, source);
 
-        var splitter = new CharacterTextSplitter(chunkSize: 100, chunkOverlap: 0);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 100, chunkOverlap: 0);
         var arrow = IngestionArrows.IngestArrow<SingleDocumentLoader>(
             _mockEmbedding.Object, 
             splitter, 
@@ -111,7 +111,7 @@ public class IngestionArrowsTests
         originalBranch = originalBranch.WithReasoning(new Draft("Existing"), "prompt");
         var originalEventCount = originalBranch.Events.Count;
 
-        var splitter = new CharacterTextSplitter(chunkSize: 100, chunkOverlap: 0);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 100, chunkOverlap: 0);
         var arrow = IngestionArrows.IngestArrow<SingleDocumentLoader>(_mockEmbedding.Object, splitter);
 
         // Act
@@ -130,7 +130,7 @@ public class IngestionArrowsTests
         var source = DataSource.FromPath("/test/path");
         var branch = new PipelineBranch("test", store, source);
 
-        var smallChunkSplitter = new CharacterTextSplitter(chunkSize: 10, chunkOverlap: 2);
+        var smallChunkSplitter = new RecursiveCharacterTextSplitter(chunkSize: 10, chunkOverlap: 2);
         var arrow = IngestionArrows.IngestArrow<SingleDocumentLoader>(_mockEmbedding.Object, smallChunkSplitter);
 
         // Act

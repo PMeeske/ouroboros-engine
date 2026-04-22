@@ -26,9 +26,6 @@ public interface IGpuScheduler : IDisposable
     /// <summary>Gets a snapshot of current scheduler metrics.</summary>
     GpuSchedulerMetrics CurrentMetrics { get; }
 
-    /// <summary>Gets snapshots of all registered tenants.</summary>
-    IReadOnlyList<GpuTenantSnapshot> GetTenantSnapshots();
-
     /// <summary>
     /// Returns a snapshot of every registered tenant's current state.
     /// </summary>

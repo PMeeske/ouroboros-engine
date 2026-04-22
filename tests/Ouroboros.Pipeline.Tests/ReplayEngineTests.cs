@@ -5,7 +5,7 @@
 namespace Ouroboros.Tests.Pipeline;
 
 using FluentAssertions;
-using Ouroboros.Domain.DocumentLoaders;
+using Ouroboros.Domain.Vectors;
 using Ouroboros.Pipeline.Branches;
 using Xunit;
 

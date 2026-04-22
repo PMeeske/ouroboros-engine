@@ -4,6 +4,7 @@
 
 #pragma warning disable CA2000 // Test file - ownership is managed by test lifecycle
 
+using Microsoft.Extensions.AI;
 using Moq;
 using Ouroboros.Pipeline.Grammar;
 
@@ -11,13 +12,13 @@ namespace Ouroboros.Tests.Grammar;
 
 public class AdaptiveParserPipelineTests
 {
-    private readonly Mock<IChatModel> _llmMock;
+    private readonly Mock<IChatClient> _llmMock;
     private readonly Mock<IGrammarValidator> _validatorMock;
     private readonly Mock<DynamicParserFactory> _factoryMock;
 
     public AdaptiveParserPipelineTests()
     {
-        _llmMock = new Mock<IChatModel>();
+        _llmMock = new Mock<IChatClient>();
         _validatorMock = new Mock<IGrammarValidator>();
         _factoryMock = new Mock<DynamicParserFactory>();
     }
