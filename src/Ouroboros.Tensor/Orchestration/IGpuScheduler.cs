@@ -36,6 +36,13 @@ public interface IGpuScheduler : IDisposable
     IDisposable RegisterTenant(GpuTenantProfile profile);
 
     /// <summary>
+    /// Registers a tenant-specific eviction policy with the scheduler. The policy is
+    /// consulted when VRAM pressure requires cooperative unloading.
+    /// </summary>
+    /// <param name="policy">Eviction policy implementation.</param>
+    void RegisterEvictionPolicy(IEvictionPolicy policy);
+
+    /// <summary>
     /// Enqueues GPU work against a registered tenant. Work runs inside the scheduler's
     /// dispatch loop according to the tenant's current effective priority.
     /// </summary>
