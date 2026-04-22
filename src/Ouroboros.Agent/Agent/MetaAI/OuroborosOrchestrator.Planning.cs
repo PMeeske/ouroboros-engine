@@ -5,6 +5,7 @@
 
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 
@@ -50,9 +51,53 @@ public sealed partial class OuroborosOrchestrator
                 }
             }
 
-            string prompt = BuildPlanPrompt(goal, selfReflection, confidence);
+            string planText;
 
-            string planText = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
+            // v54.0: Check skill registry before falling back to LLM planning
+            if (_skillRegistry is not null)
+            {
+                try
+                {
+                    var matchingSkills = await _skillRegistry.FindMatchingSkillsAsync(goal, ct: ct).ConfigureAwait(false);
+                    if (matchingSkills is { Count: > 0 })
+                    {
+                        var sb = new StringBuilder();
+                        sb.AppendLine($"Plan for: {goal}");
+                        sb.AppendLine();
+                        int stepNum = 1;
+                        foreach (var skill in matchingSkills.OrderByDescending(s => s.SuccessRate).Take(5))
+                        {
+                            sb.AppendLine($"{stepNum}. {skill.Name}: {skill.Description}");
+                            foreach (var step in skill.Steps)
+                            {
+                                sb.AppendLine($"   - {step.ExpectedOutcome}");
+                            }
+                            stepNum++;
+                        }
+                        planText = sb.ToString();
+                        _logger.LogInformation(
+                            "Planning via SkillRegistry: {SkillCount} skills matched for goal '{Goal}'",
+                            matchingSkills.Count, goal);
+                    }
+                    else
+                    {
+                        string prompt = BuildPlanPrompt(goal, selfReflection, confidence);
+                        planText = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
+                    }
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogWarning(ex, "SkillRegistry lookup failed for goal '{Goal}' — falling back to LLM", goal);
+                    string prompt = BuildPlanPrompt(goal, selfReflection, confidence);
+                    planText = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                string prompt = BuildPlanPrompt(goal, selfReflection, confidence);
+                planText = await _llm.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
+            }
 
             sw.Stop();
             RecordPhaseMetric("plan", sw.ElapsedMilliseconds, true);

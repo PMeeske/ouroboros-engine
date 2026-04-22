@@ -24,6 +24,7 @@ public sealed class OuroborosOrchestratorBuilder
     private OuroborosAtom? _atom;
     private OrchestratorConfig? _config;
     private bool _enableStrategyEvolution;
+    private ISkillRegistry? _skillRegistry;
 
     /// <summary>
     /// Sets the language model for the orchestrator.
@@ -123,6 +124,19 @@ public sealed class OuroborosOrchestratorBuilder
     }
 
     /// <summary>
+    /// Sets the skill registry for goal-decomposition skill lookup.
+    /// When provided, the planner checks the registry before falling back to LLM-based planning.
+    /// </summary>
+    /// <param name="skillRegistry">The skill registry.</param>
+    /// <returns>This builder for chaining.</returns>
+    public OuroborosOrchestratorBuilder WithSkillRegistry(ISkillRegistry skillRegistry)
+    {
+        ArgumentNullException.ThrowIfNull(skillRegistry);
+        _skillRegistry = skillRegistry;
+        return this;
+    }
+
+    /// <summary>
     /// Builds the OuroborosOrchestrator instance.
     /// </summary>
     /// <returns>Configured OuroborosOrchestrator instance.</returns>
@@ -183,7 +197,8 @@ public sealed class OuroborosOrchestratorBuilder
             mettaEngine,
             _atom,
             _config,
-            strategyEvolver);
+            strategyEvolver,
+            skillRegistry: _skillRegistry);
     }
 
     /// <summary>
