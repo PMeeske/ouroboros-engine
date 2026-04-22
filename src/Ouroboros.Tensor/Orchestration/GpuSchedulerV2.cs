@@ -246,6 +246,37 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
     }
 
     /// <summary>
+    /// Returns a snapshot of every registered tenant's current state.
+    /// Suitable for CLI <c>status</c> rendering and telemetry dashboards.
+    /// </summary>
+    /// <returns>Immutable list of tenant snapshots.</returns>
+    public IReadOnlyList<GpuTenantSnapshot> GetTenantSnapshots()
+    {
+        var snapshots = new List<GpuTenantSnapshot>(_tenants.Count);
+
+        lock (_classLock)
+        {
+            foreach (var kvp in _tenants)
+            {
+                var profile = kvp.Value;
+                var state = GetTenantState(kvp.Key);
+                int queueDepth = _perTenantQueues.TryGetValue(kvp.Key, out var q) ? q.Count : 0;
+
+                snapshots.Add(new GpuTenantSnapshot(
+                    profile.TenantName,
+                    profile.BasePriority,
+                    profile.EffectivePriority,
+                    state,
+                    profile.VramBytes,
+                    queueDepth,
+                    profile.Eviction));
+            }
+        }
+
+        return snapshots;
+    }
+
+    /// <summary>
     /// Returns the registered profile for a tenant, or <see langword="null"/> if the tenant
     /// is not registered.
     /// </summary>

@@ -30,6 +30,12 @@ public interface IGpuScheduler : IDisposable
     IReadOnlyList<GpuTenantSnapshot> GetTenantSnapshots();
 
     /// <summary>
+    /// Returns a snapshot of every registered tenant's current state.
+    /// </summary>
+    /// <returns>Immutable list of tenant snapshots.</returns>
+    IReadOnlyList<GpuTenantSnapshot> GetTenantSnapshots();
+
+    /// <summary>
     /// Registers a tenant with the scheduler. The returned <see cref="IDisposable"/>
     /// unregisters the tenant on dispose; any subsequent <see cref="ScheduleAsync{T}"/>
     /// call for that tenant throws <see cref="InvalidOperationException"/>.

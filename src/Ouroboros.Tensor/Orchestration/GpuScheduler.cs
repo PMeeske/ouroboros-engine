@@ -100,12 +100,14 @@ public sealed class GpuScheduler : IDisposable
 
     /// <summary>
     /// Wraps an existing <see cref="GpuSchedulerV2"/> instance. Used by DI wiring
-    /// so the legacy adapter and v2 share a single scheduler.
+    /// so the legacy adapter and the v2 scheduler share the same dispatch loop.
     /// </summary>
+    /// <param name="v2">Existing v2 scheduler instance.</param>
     public GpuScheduler(GpuSchedulerV2 v2)
     {
-        _totalVramBytes = v2.CurrentMetrics.TotalVramBytes;
+        ArgumentNullException.ThrowIfNull(v2);
         _v2 = v2;
+        _totalVramBytes = v2.CurrentMetrics.TotalVramBytes;
     }
 
     /// <summary>Gets estimated available VRAM in bytes.</summary>
