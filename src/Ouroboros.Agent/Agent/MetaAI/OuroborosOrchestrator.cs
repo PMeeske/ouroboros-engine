@@ -77,6 +77,7 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
     private readonly Affect.SpreadingActivation? _spreading;
     private readonly ISkillExtractor? _skillExtractor;
     private readonly ICuriosityEngine? _curiosityEngine;
+    private readonly ISkillRegistry? _skillRegistry;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OuroborosOrchestrator"/> class.
@@ -96,7 +97,8 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
         Affect.IUrgeSystem? urgeSystem = null,
         Affect.SpreadingActivation? spreading = null,
         ISkillExtractor? skillExtractor = null,
-        ICuriosityEngine? curiosityEngine = null)
+        ICuriosityEngine? curiosityEngine = null,
+        ISkillRegistry? skillRegistry = null)
         : base("OuroborosOrchestrator", configuration ?? OrchestratorConfig.Default(), safety)
     {
         ArgumentNullException.ThrowIfNull(llm);
@@ -119,6 +121,7 @@ public sealed partial class OuroborosOrchestrator : OrchestratorBase<string, Our
         _spreading = spreading;
         _skillExtractor = skillExtractor;
         _curiosityEngine = curiosityEngine;
+        _skillRegistry = skillRegistry;
     }
 
     /// <summary>

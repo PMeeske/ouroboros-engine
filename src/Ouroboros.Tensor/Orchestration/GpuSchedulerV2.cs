@@ -602,6 +602,26 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
         _evictionCoordinator.UnregisterPolicy(tenantName);
     }
 
+    /// <inheritdoc/>
+    public IReadOnlyList<GpuTenantSnapshot> GetTenantSnapshots()
+    {
+        var snapshots = new List<GpuTenantSnapshot>();
+        foreach (var (name, profile) in _tenants)
+        {
+            int queueDepth = _perTenantQueues.TryGetValue(name, out var queue) ? queue.Count : 0;
+            snapshots.Add(new GpuTenantSnapshot(
+                name,
+                profile.BasePriority,
+                profile.EffectivePriority,
+                queueDepth > 0 ? GpuTaskState.Ready : GpuTaskState.Suspended,
+                profile.VramBytes,
+                queueDepth,
+                profile.Eviction));
+        }
+
+        return snapshots;
+    }
+
     private readonly record struct PendingWork(
         string TenantName,
         Func<CancellationToken, Task> Run,
