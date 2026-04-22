@@ -45,7 +45,9 @@ public static class VramLayoutPresets
     /// RX 9060 XT 16 GB preset — byte-identical to legacy
     /// <c>VramBudgetMonitor</c> defaults for TTS / Avatar / Training / Total;
     /// Rasterizer = 128 MiB (Minimum = 64 MiB) carved out of the legacy
-    /// 4 GiB headroom, leaving 3 GiB + 896 MiB as <see cref="VramBucket.Headroom"/>.
+    /// 4 GiB headroom. External-tenant buckets (LlmInference=512 MiB,
+    /// Embed=128 MiB, Stt=128 MiB) are carved from headroom, leaving
+    /// 3 GiB + 128 MiB as <see cref="VramBucket.Headroom"/>.
     /// </summary>
     public static VramLayout RX9060XT_16GB { get; } = new(
         Id: RX9060XT_16GB_Id,
@@ -59,13 +61,17 @@ public static class VramLayoutPresets
             [VramBucket.Avatar] = new(Minimum: 4L * OneGib, Budget: 4L * OneGib, Priority: 80),
             [VramBucket.Rasterizer] = new(Minimum: 64L * OneMib, Budget: 128L * OneMib, Priority: 90),
             [VramBucket.Training] = new(Minimum: 0L, Budget: 6L * OneGib, Priority: 20),
-            [VramBucket.Headroom] = new(Minimum: 0L, Budget: (3L * OneGib) + (896L * OneMib), Priority: 0),
+            [VramBucket.LlmInference] = new(Minimum: 0L, Budget: 512L * OneMib, Priority: 30),
+            [VramBucket.Embed] = new(Minimum: 0L, Budget: 128L * OneMib, Priority: 10),
+            [VramBucket.Stt] = new(Minimum: 0L, Budget: 128L * OneMib, Priority: 10),
+            [VramBucket.Headroom] = new(Minimum: 0L, Budget: (3L * OneGib) + (128L * OneMib), Priority: 0),
         });
 
     /// <summary>
     /// Generic 8 GB-class preset (DXGI fallback default). Splits:
     /// TTS 1 GiB / Avatar 2 GiB / Rasterizer 128 MiB / Training 2 GiB /
-    /// Headroom 2 GiB + 896 MiB.
+    /// LlmInference 256 MiB / Embed 64 MiB / Stt 64 MiB /
+    /// Headroom 2 GiB + 512 MiB.
     /// </summary>
     public static VramLayout Generic_8GB { get; } = new(
         Id: Generic_8GB_Id,
@@ -79,13 +85,17 @@ public static class VramLayoutPresets
             [VramBucket.Avatar] = new(Minimum: 2L * OneGib, Budget: 2L * OneGib, Priority: 80),
             [VramBucket.Rasterizer] = new(Minimum: 64L * OneMib, Budget: 128L * OneMib, Priority: 90),
             [VramBucket.Training] = new(Minimum: 0L, Budget: 2L * OneGib, Priority: 20),
-            [VramBucket.Headroom] = new(Minimum: 0L, Budget: (2L * OneGib) + (896L * OneMib), Priority: 0),
+            [VramBucket.LlmInference] = new(Minimum: 0L, Budget: 256L * OneMib, Priority: 30),
+            [VramBucket.Embed] = new(Minimum: 0L, Budget: 64L * OneMib, Priority: 10),
+            [VramBucket.Stt] = new(Minimum: 0L, Budget: 64L * OneMib, Priority: 10),
+            [VramBucket.Headroom] = new(Minimum: 0L, Budget: (2L * OneGib) + (512L * OneMib), Priority: 0),
         });
 
     /// <summary>
     /// Generic 24 GB+ preset for workstation-class GPUs. Splits:
     /// TTS 3 GiB / Avatar 6 GiB / Rasterizer 256 MiB / Training 10 GiB /
-    /// Headroom 4 GiB + 768 MiB.
+    /// LlmInference 1 GiB / Embed 256 MiB / Stt 256 MiB /
+    /// Headroom 3 GiB + 256 MiB.
     /// </summary>
     public static VramLayout Generic_24GB_Plus { get; } = new(
         Id: Generic_24GB_Plus_Id,
@@ -99,7 +109,10 @@ public static class VramLayoutPresets
             [VramBucket.Avatar] = new(Minimum: 6L * OneGib, Budget: 6L * OneGib, Priority: 80),
             [VramBucket.Rasterizer] = new(Minimum: 128L * OneMib, Budget: 256L * OneMib, Priority: 90),
             [VramBucket.Training] = new(Minimum: 0L, Budget: 10L * OneGib, Priority: 20),
-            [VramBucket.Headroom] = new(Minimum: 0L, Budget: (4L * OneGib) + (768L * OneMib), Priority: 0),
+            [VramBucket.LlmInference] = new(Minimum: 0L, Budget: 1L * OneGib, Priority: 30),
+            [VramBucket.Embed] = new(Minimum: 0L, Budget: 256L * OneMib, Priority: 10),
+            [VramBucket.Stt] = new(Minimum: 0L, Budget: 256L * OneMib, Priority: 10),
+            [VramBucket.Headroom] = new(Minimum: 0L, Budget: (3L * OneGib) + (256L * OneMib), Priority: 0),
         });
 
     /// <summary>Enumerates all built-in presets (stable order: RX9060XT_16GB, Generic_8GB, Generic_24GB_Plus).</summary>

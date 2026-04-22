@@ -35,6 +35,15 @@ public readonly record struct VramBucket(string Id)
     /// <summary>Online / background training workloads.</summary>
     public static readonly VramBucket Training = new("Training");
 
+    /// <summary>LLM inference workloads (external runtime, e.g. Ollama).</summary>
+    public static readonly VramBucket LlmInference = new("LlmInference");
+
+    /// <summary>Text embedding models (external runtime, e.g. Ollama embed).</summary>
+    public static readonly VramBucket Embed = new("Embed");
+
+    /// <summary>Speech-to-text models (external runtime, e.g. Whisper via Ollama).</summary>
+    public static readonly VramBucket Stt = new("Stt");
+
     /// <summary>Unallocated headroom reserved for the OS compositor + transient spikes.</summary>
     public static readonly VramBucket Headroom = new("Headroom");
 
