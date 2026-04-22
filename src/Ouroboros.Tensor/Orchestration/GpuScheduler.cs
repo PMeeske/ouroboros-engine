@@ -98,6 +98,16 @@ public sealed class GpuScheduler : IDisposable
         _v2 = new GpuSchedulerV2(totalVramBytes, meter);
     }
 
+    /// <summary>
+    /// Wraps an existing <see cref="GpuSchedulerV2"/> instance. Used by DI wiring
+    /// so the legacy adapter and v2 share a single scheduler.
+    /// </summary>
+    public GpuScheduler(GpuSchedulerV2 v2)
+    {
+        _totalVramBytes = v2.CurrentMetrics.TotalVramBytes;
+        _v2 = v2;
+    }
+
     /// <summary>Gets estimated available VRAM in bytes.</summary>
     public long EstimatedAvailableVram => _totalVramBytes - Interlocked.Read(ref _estimatedUsedVram);
 
