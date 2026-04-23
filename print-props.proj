@@ -1,0 +1,8 @@
+<Project>
+  <Target Name="Print">
+    <Message Text="OuroborosFoundation='$(OuroborosFoundation)'" Importance="high" />
+    <Message Text="OuroborosEngine='$(OuroborosEngine)'" Importance="high" />
+    <Message Text="OuroborosApp='$(OuroborosApp)'" Importance="high" />
+    <Message Text="MSBuildThisFileDirectory='$(MSBuildThisFileDirectory)'" Importance="high" />
+  </Target>
+</Project>
