@@ -203,9 +203,14 @@ public sealed partial class PersistentNetworkStateProjector
         }
     }
 
+    private bool _disposed;
+
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
+        if (_disposed) return;
+        _disposed = true;
+
         await _initLock.WaitAsync().ConfigureAwait(false);
         try
         {
