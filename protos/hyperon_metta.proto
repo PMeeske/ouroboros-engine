@@ -1,0 +1,135 @@
+syntax = "proto3";
+
+package ouroboros.metta;
+
+option csharp_namespace = "Ouroboros.Pipeline.MeTTa.Grpc";
+
+// General-purpose MeTTa reasoning service backed by the upstream Hyperon sidecar.
+// Routes advanced queries (complex pattern matching, PLN inference, cross-domain
+// reasoning) to a full Hyperon/MeTTa engine while simple queries stay local.
+service HyperonMeTTaService {
+  // Executes a MeTTa query expression and returns serialized results.
+  rpc ExecuteQuery (ExecuteQueryRequest) returns (ExecuteQueryResponse);
+
+  // Adds a fact atom to the remote AtomSpace.
+  rpc AddFact (AddFactRequest) returns (AddFactResponse);
+
+  // Applies a rule to the remote knowledge base.
+  rpc ApplyRule (ApplyRuleRequest) returns (ApplyRuleResponse);
+
+  // Verifies a plan using symbolic reasoning on the remote engine.
+  rpc VerifyPlan (VerifyPlanRequest) returns (VerifyPlanResponse);
+
+  // Resets the remote engine state.
+  rpc Reset (ResetRequest) returns (ResetResponse);
+
+  // Runs a complex pattern-match query that may involve nested distinctions.
+  rpc PatternMatch (PatternMatchRequest) returns (PatternMatchResponse);
+
+  // Performs Probabilistic Logic Network (PLN) inference.
+  rpc PlnInfer (PlnInferRequest) returns (PlnInferResponse);
+
+  // Health check for sidecar availability.
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// --- Query Execution ---
+
+message ExecuteQueryRequest {
+  string query = 1;
+  // Optional context atoms to inject before query execution.
+  repeated string context_atoms = 2;
+}
+
+message ExecuteQueryResponse {
+  bool success = 1;
+  // Serialized query results (MeTTa s-expression strings).
+  repeated string results = 2;
+  // Error message if success == false.
+  string error = 3;
+}
+
+// --- Fact Management ---
+
+message AddFactRequest {
+  string fact = 1;
+}
+
+message AddFactResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+// --- Rule Application ---
+
+message ApplyRuleRequest {
+  string rule = 1;
+}
+
+message ApplyRuleResponse {
+  bool success = 1;
+  string result = 2;
+  string error = 3;
+}
+
+// --- Plan Verification ---
+
+message VerifyPlanRequest {
+  string plan = 1;
+}
+
+message VerifyPlanResponse {
+  bool valid = 1;
+  string explanation = 2;
+  string error = 3;
+}
+
+// --- Reset ---
+
+message ResetRequest {}
+
+message ResetResponse {
+  bool success = 1;
+}
+
+// --- Pattern Matching ---
+
+message PatternMatchRequest {
+  string pattern = 1;
+  string against = 2;
+  // Optional max number of bindings to return.
+  int32 limit = 3;
+}
+
+message PatternMatchResponse {
+  bool success = 1;
+  // Each binding is a serialized MeTTa expression.
+  repeated string bindings = 2;
+  string error = 3;
+}
+
+// --- PLN Inference ---
+
+message PlnInferRequest {
+  string premise = 1;
+  string rule = 2;
+  // Optional confidence threshold (0.0–1.0).
+  double min_confidence = 3;
+}
+
+message PlnInferResponse {
+  bool success = 1;
+  string conclusion = 2;
+  double confidence = 3;
+  string error = 4;
+}
+
+// --- Health ---
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  string version = 2;
+  int32 atoms_count = 3;
+}

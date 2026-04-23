@@ -90,6 +90,13 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGenerato
         {
             // Transport-level failure — fall through to fallback
         }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Ollama may throw on 503 "loading model" or other non-HTTP errors (e.g. OllamaException)
+            System.Diagnostics.Trace.TraceWarning(
+                "[OllamaEmbeddingAdapter] Embedding failed ({0}) — falling back to deterministic embeddings.",
+                ex.GetType().Name);
+        }
 
         // Use deterministic fallback (hash-based embedding)
         return await _fallback.CreateEmbeddingsAsync(safeInput, ct).ConfigureAwait(false);

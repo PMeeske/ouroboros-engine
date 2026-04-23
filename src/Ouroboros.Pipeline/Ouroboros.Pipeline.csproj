@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <Protobuf Include="..\..\protos\hyperon_grammar.proto" GrpcServices="Client" />
+    <Protobuf Include="..\..\protos\hyperon_metta.proto" GrpcServices="Client" />
   </ItemGroup>
 
   <ItemGroup>
