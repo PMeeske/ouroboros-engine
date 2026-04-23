@@ -22,6 +22,22 @@ public sealed partial class MetacognitiveReasoner : IReflectiveReasoner
             .Add("Confirmation Bias Pattern", HasConfirmationBiasPattern)
             .Add("Hasty Generalization", HasHastyGeneralization);
 
+    /// <summary>
+    /// Gets the currently active reasoning trace, if any.
+    /// </summary>
+    public ReasoningTrace? GetCurrentTrace()
+    {
+        lock (traceLock)
+        {
+            if (!_currentTraceId.HasValue || !activeTraces.TryGetValue(_currentTraceId.Value, out var trace))
+            {
+                return null;
+            }
+
+            return trace;
+        }
+    }
+
     /// <inheritdoc/>
     public Guid StartTrace()
     {

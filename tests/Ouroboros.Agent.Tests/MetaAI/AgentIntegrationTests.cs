@@ -1,4 +1,4 @@
-// <copyright file="AGIIntegrationTests.cs" company="Ouroboros">
+// <copyright file="AgentIntegrationTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -15,12 +15,12 @@ using Skill = Ouroboros.Agent.MetaAI.Skill;
 namespace Ouroboros.Agent.Tests.MetaAI;
 
 /// <summary>
-/// End-to-end integration tests proving the full AGI metacognition loop works together.
+/// End-to-end integration tests proving the full agent metacognition loop works together.
 /// Verifies that GlobalWorkspace, PredictiveMonitor, IdentityGraph, EthicsFramework,
 /// InterpretabilityEngine, and ExperienceReplay collaborate correctly in concert.
 /// </summary>
 [Trait("Category", "Integration")]
-public class AGIIntegrationTests
+public class AgentIntegrationTests
 {
     [Fact]
     public async Task FullMetacognitionLoop_AllComponentsCollaborate()
@@ -397,7 +397,7 @@ public class AGIIntegrationTests
     }
 
     [Fact]
-    public async Task AGIComponents_GracefulDegradation_WorksWithPartialComponents()
+    public async Task AgentComponents_GracefulDegradation_WorksWithPartialComponents()
     {
         // ================================================================
         // Test 1: InterpretabilityEngine with no components (all null)

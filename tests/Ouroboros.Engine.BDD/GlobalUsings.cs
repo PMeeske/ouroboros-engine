@@ -12,6 +12,6 @@ global using Ouroboros.Core.Configuration;
 global using Ouroboros.Diagnostics;
 global using Ouroboros.Infrastructure.FeatureEngineering;
 
-// LangChain libraries
-global using LangChain.Databases;
-global using LangChain.DocumentLoaders;
+// Domain libraries
+global using Ouroboros.Domain.Vectors;
+global using Ouroboros.Domain.Vectors;

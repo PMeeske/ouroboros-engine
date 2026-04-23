@@ -36,7 +36,7 @@ public class CouncilOrchestratorArrowsTests
     private static PipelineBranch CreateTestBranch()
     {
         var store = new TrackedVectorStore();
-        var dataSource = LangChain.DocumentLoaders.DataSource.FromPath(Environment.CurrentDirectory);
+        var dataSource = Ouroboros.Domain.Vectors.DataSource.FromPath(Environment.CurrentDirectory);
         return new PipelineBranch("test", store, dataSource);
     }
 

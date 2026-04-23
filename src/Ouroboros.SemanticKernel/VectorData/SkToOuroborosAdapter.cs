@@ -3,10 +3,8 @@
 // </copyright>
 
 using System.Runtime.CompilerServices;
-using LangChain.Databases;
-using LangChain.DocumentLoaders;
-using Microsoft.Extensions.VectorData;
 using Ouroboros.Domain.Vectors;
+using Microsoft.Extensions.VectorData;
 using SkVectorStore = Microsoft.Extensions.VectorData.VectorStore;
 
 namespace Ouroboros.SemanticKernel.VectorData;
@@ -44,7 +42,7 @@ internal sealed class SkToOuroborosAdapter : IAdvancedVectorStore
         var collection = GetCollection();
         await collection.EnsureCollectionExistsAsync(cancellationToken).ConfigureAwait(false);
 
-        var records = vectors.Select(VectorStoreDocumentRecord.FromLangChainVector);
+        var records = vectors.Select(VectorStoreDocumentRecord.FromVector);
         await collection.UpsertAsync(records, cancellationToken).ConfigureAwait(false);
     }
 

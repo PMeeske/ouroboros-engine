@@ -2,7 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using LangChain.Databases;
+using Ouroboros.Domain.Vectors;
 using Microsoft.Extensions.VectorData;
 using Ouroboros.SemanticKernel.VectorData;
 
@@ -50,17 +50,17 @@ public sealed class VectorStoreDocumentRecordTests
         record.Embedding.ToArray().Should().BeEquivalentTo(new[] { 0.1f, 0.2f, 0.3f });
     }
 
-    // ── FromLangChainVector ───────────────────────────────────────────────
+    // ── FromVector ───────────────────────────────────────────────
 
     [Fact]
-    public void FromLangChainVector_NullVector_ThrowsArgumentNullException()
+    public void FromVector_NullVector_ThrowsArgumentNullException()
     {
-        var act = () => VectorStoreDocumentRecord.FromLangChainVector(null!);
+        var act = () => VectorStoreDocumentRecord.FromVector(null!);
         act.Should().Throw<ArgumentNullException>().WithParameterName("vector");
     }
 
     [Fact]
-    public void FromLangChainVector_WithAllFields_MapsCorrectly()
+    public void FromVector_WithAllFields_MapsCorrectly()
     {
         var embedding = new float[] { 1.0f, 2.0f };
         var vector = new Vector
@@ -70,7 +70,7 @@ public sealed class VectorStoreDocumentRecordTests
             Embedding = embedding,
         };
 
-        var record = VectorStoreDocumentRecord.FromLangChainVector(vector);
+        var record = VectorStoreDocumentRecord.FromVector(vector);
 
         record.Id.Should().Be("vec-1");
         record.Content.Should().Be("hello world");
@@ -78,32 +78,32 @@ public sealed class VectorStoreDocumentRecordTests
     }
 
     [Fact]
-    public void FromLangChainVector_NullId_GeneratesGuid()
+    public void FromVector_NullId_GeneratesGuid()
     {
         var vector = new Vector { Id = null, Text = "content" };
 
-        var record = VectorStoreDocumentRecord.FromLangChainVector(vector);
+        var record = VectorStoreDocumentRecord.FromVector(vector);
 
         record.Id.Should().NotBeNullOrWhiteSpace();
         Guid.TryParse(record.Id, out _).Should().BeTrue("a GUID should be generated for null ID");
     }
 
     [Fact]
-    public void FromLangChainVector_NullText_DefaultsToEmpty()
+    public void FromVector_NullText_DefaultsToEmpty()
     {
         var vector = new Vector { Id = "id", Text = null };
 
-        var record = VectorStoreDocumentRecord.FromLangChainVector(vector);
+        var record = VectorStoreDocumentRecord.FromVector(vector);
 
         record.Content.Should().BeEmpty();
     }
 
     [Fact]
-    public void FromLangChainVector_NullEmbedding_DefaultsToEmpty()
+    public void FromVector_NullEmbedding_DefaultsToEmpty()
     {
         var vector = new Vector { Id = "id", Text = "text", Embedding = null };
 
-        var record = VectorStoreDocumentRecord.FromLangChainVector(vector);
+        var record = VectorStoreDocumentRecord.FromVector(vector);
 
         record.Embedding.Length.Should().Be(0);
     }
@@ -191,7 +191,7 @@ public sealed class VectorStoreDocumentRecordTests
             Embedding = new float[] { 0.5f },
         };
 
-        var record = VectorStoreDocumentRecord.FromLangChainVector(vector);
+        var record = VectorStoreDocumentRecord.FromVector(vector);
         var doc = record.ToDocument();
 
         doc.PageContent.Should().Be("roundtrip content");

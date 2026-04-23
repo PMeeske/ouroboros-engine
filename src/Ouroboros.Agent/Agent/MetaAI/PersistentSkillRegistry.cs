@@ -7,8 +7,8 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using LangChain.Databases;
 using Ouroboros.Abstractions;
+using Ouroboros.Domain.Vectors;
 
 namespace Ouroboros.Agent.MetaAI;
 

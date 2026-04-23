@@ -1,4 +1,4 @@
-﻿using LangChain.DocumentLoaders;
+﻿using Ouroboros.Domain.Vectors;
 
 namespace Ouroboros.Pipeline.Retrieval;
 
@@ -25,7 +25,7 @@ public sealed record HybridRetrievalResult(
     /// <summary>
     /// Extracts the document ID from a Document, falling back to a content preview.
     /// </summary>
-    private static string GetDocumentId(LangChain.DocumentLoaders.Document doc)
+    private static string GetDocumentId(Document doc)
     {
         string fallback = doc.PageContent[..Math.Min(50, doc.PageContent.Length)];
         return doc.Metadata.TryGetValue("id", out var id) ? id?.ToString() ?? fallback : fallback;

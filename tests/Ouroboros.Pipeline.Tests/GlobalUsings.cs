@@ -12,10 +12,10 @@ global using Ouroboros.Core.Synthesis;
 global using Ouroboros.Pipeline.Ingestion;
 global using Ouroboros.Pipeline.Memory;
 
-// LangChain libraries (used extensively across ingestion/branch/replay tests)
-global using LangChain.Databases;
-global using LangChain.DocumentLoaders;
-global using LangChain.Splitters.Text;
+// Domain libraries (used extensively across ingestion/branch/replay tests)
+global using Ouroboros.Domain.Vectors;
+global using Ouroboros.Domain.Vectors;
+global using Ouroboros.Domain.TextSplitters;
 
 // Third-party test libraries
 global using Moq;

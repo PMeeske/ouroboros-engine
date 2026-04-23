@@ -2,14 +2,13 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using LangChain.Databases;
-using LangChain.DocumentLoaders;
+using Ouroboros.Domain.Vectors;
 using Microsoft.Extensions.VectorData;
 
 namespace Ouroboros.SemanticKernel.VectorData;
 
 /// <summary>
-/// SK-compatible record model that maps to/from LangChain's <see cref="Document"/>
+/// SK-compatible record model that maps to/from domain <see cref="Document"/>
 /// and <see cref="Vector"/> types used by Ouroboros' vector store interfaces.
 /// </summary>
 internal sealed class VectorStoreDocumentRecord
@@ -34,9 +33,9 @@ internal sealed class VectorStoreDocumentRecord
     public ReadOnlyMemory<float> Embedding { get; set; }
 
     /// <summary>
-    /// Converts a LangChain <see cref="Vector"/> into a <see cref="VectorStoreDocumentRecord"/>.
+    /// Converts an Ouroboros <see cref="Vector"/> into a <see cref="VectorStoreDocumentRecord"/>.
     /// </summary>
-    internal static VectorStoreDocumentRecord FromLangChainVector(Vector vector)
+    internal static VectorStoreDocumentRecord FromVector(Vector vector)
     {
         ArgumentNullException.ThrowIfNull(vector);
 
@@ -52,7 +51,7 @@ internal sealed class VectorStoreDocumentRecord
     }
 
     /// <summary>
-    /// Converts this record back to a LangChain <see cref="Document"/>.
+    /// Converts this record back to an Ouroboros <see cref="Document"/>.
     /// </summary>
     internal Document ToDocument()
     {

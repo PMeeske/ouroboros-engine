@@ -4,8 +4,8 @@
 // ==========================================================
 
 using System.Text.Json;
-using LangChain.Databases;
 using Ouroboros.Agent.Json;
+using Ouroboros.Domain.Vectors;
 
 namespace Ouroboros.Agent.MetaAI;
 
@@ -149,13 +149,13 @@ public sealed partial class PersistentMemoryStore
 
         try
         {
-            IReadOnlyCollection<LangChain.DocumentLoaders.Document> searchResults = await _vectorStore.GetSimilarDocuments(
+            IReadOnlyCollection<Document> searchResults = await _vectorStore.GetSimilarDocuments(
                 _embedding,
                 query.ContextSimilarity,
                 amount: query.MaxResults).ConfigureAwait(false);
 
             List<Experience> experiences = new List<Experience>();
-            foreach (LangChain.DocumentLoaders.Document doc in searchResults)
+            foreach (Document doc in searchResults)
             {
                 if (doc.Metadata?.TryGetValue("id", out object? idObj) == true &&
                     idObj?.ToString() is string id &&

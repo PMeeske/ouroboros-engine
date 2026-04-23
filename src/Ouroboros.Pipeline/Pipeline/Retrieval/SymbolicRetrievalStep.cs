@@ -4,7 +4,7 @@
 
 namespace Ouroboros.Pipeline.Retrieval;
 
-using LangChain.DocumentLoaders;
+using Ouroboros.Domain.Vectors;
 using Ouroboros.Tools.MeTTa;
 
 /// <summary>

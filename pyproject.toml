@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ouroboros-engine-tests"
+version = "0.1.0"
+description = "Python test infrastructure for Ouroboros engine services"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests/python"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "gpu: marks tests that require GPU/CUDA/ROCm",
+    "integration: marks tests that require external services",
+]
+
+[tool.coverage.run]
+source = [
+    "src/Ouroboros.Tensor",
+    "tools/hyperon-sidecar",
+    "tools/tapo_gateway",
+]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+]
+
+[tool.coverage.report]
+fail_under = 60
+show_missing = true
+skip_covered = false

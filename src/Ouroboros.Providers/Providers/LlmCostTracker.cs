@@ -7,7 +7,7 @@ namespace Ouroboros.Providers;
 /// Tracks usage, costs, and timing for LLM API calls across multiple providers.
 /// Pricing based on published rates (USD per 1M tokens).
 /// </summary>
-public sealed class LlmCostTracker
+public sealed class LlmCostTracker : ICostTracker
 {
     /// <summary>
     /// Pricing tier for a model.

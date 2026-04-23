@@ -21,6 +21,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Excluded: reference removed GitHub MCP types post-TEC-01 -->
+    <Compile Remove="EthicsEnforcedGitHubMcpClientTests.cs" />
+    <Compile Remove="GitHubMcpClientTests.cs" />
+    <Compile Remove="GitHubSelfModificationWorkflowTests.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Anthropic" Version="12.11.0" />
     <PackageReference Include="coverlet.collector" Version="8.0.0" PrivateAssets="all">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

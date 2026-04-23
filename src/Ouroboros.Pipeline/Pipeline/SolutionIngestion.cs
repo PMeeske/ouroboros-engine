@@ -1,6 +1,6 @@
 ﻿using System.Xml.Linq;
-using LangChain.Databases;
-using LangChain.Splitters.Text;
+using Ouroboros.Domain.Vectors;
+using Ouroboros.Domain.TextSplitters;
 
 // TrackedVectorStore
 
@@ -141,7 +141,7 @@ public static class SolutionIngestion
                     try
                     {
                         float[] embResp = await embed.CreateEmbeddingsAsync(chunk).ConfigureAwait(false);
-                        Dictionary<string, object?> meta = new Dictionary<string, object?>
+                        Dictionary<string, object> meta = new Dictionary<string, object>
                         {
                             ["path"] = file,
                             ["chunkIndex"] = ci,
@@ -151,7 +151,7 @@ public static class SolutionIngestion
                         {
                             Id = file + "#chunk" + ci,
                             Text = chunk,
-                            Metadata = (IDictionary<string, object>)(object)meta,
+                            Metadata = meta,
                             Embedding = embResp
                         });
                         ci++;
@@ -175,19 +175,19 @@ public static class SolutionIngestion
         try
         {
             float[] emb = await embed.CreateEmbeddingsAsync(content).ConfigureAwait(false);
-            Dictionary<string, object?> meta = new Dictionary<string, object?> { ["type"] = "meta" };
+            Dictionary<string, object> meta = new Dictionary<string, object> { ["type"] = "meta" };
             vectors.Add(new Vector
             {
                 Id = id,
                 Text = content,
-                Metadata = (IDictionary<string, object>)(object)meta,
+                Metadata = meta,
                 Embedding = emb
             });
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Fallback deterministic embedding so downstream logic & tests still have a vector even without a live model.
-            Dictionary<string, object?> meta = new Dictionary<string, object?> { ["type"] = "meta", ["fallback"] = true };
+            Dictionary<string, object> meta = new Dictionary<string, object> { ["type"] = "meta", ["fallback"] = true };
             int seed = content.Length;
             float[] arr = new float[16];
             for (int i = 0; i < arr.Length; i++) arr[i] = (float)((seed * (i + 31)) % 100) / 100f;
@@ -195,7 +195,7 @@ public static class SolutionIngestion
             {
                 Id = id,
                 Text = content,
-                Metadata = (IDictionary<string, object>)(object)meta,
+                Metadata = meta,
                 Embedding = arr
             });
         }

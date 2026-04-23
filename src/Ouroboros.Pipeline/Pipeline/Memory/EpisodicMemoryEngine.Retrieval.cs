@@ -161,7 +161,7 @@ public sealed partial class EpisodicMemoryEngine
 
             // Note: We're not deserializing the full PipelineBranch here for performance
             // It can be reconstructed from the JSON when needed
-            var dataSource = LangChain.DocumentLoaders.DataSource.FromPath(Environment.CurrentDirectory);
+            var dataSource = DataSource.FromPath(Environment.CurrentDirectory);
             var emptyBranch = new PipelineBranch("deserialized", new TrackedVectorStore(), dataSource);
 
             // For deserialized episodes, embedding is not critical since already stored in Qdrant

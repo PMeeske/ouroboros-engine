@@ -27,7 +27,7 @@ public class InMemoryIngestionTests
         // Arrange
         var store = new TrackedVectorStore();
         var source = DataSource.FromPath("/test/path");
-        var splitter = new CharacterTextSplitter(chunkSize: 20, chunkOverlap: 0);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 20, chunkOverlap: 0);
 
         // Act
         var vectors = await InMemoryIngestion.LoadToMemory<SingleDocumentLoader>(
@@ -52,7 +52,7 @@ public class InMemoryIngestionTests
         // Arrange
         var store = new TrackedVectorStore();
         var source = DataSource.FromPath("/test/path");
-        var splitter = new CharacterTextSplitter(chunkSize: 50, chunkOverlap: 0);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 50, chunkOverlap: 0);
 
         // Act
         await InMemoryIngestion.LoadToMemory<SingleDocumentLoader>(
@@ -73,7 +73,7 @@ public class InMemoryIngestionTests
         var store = new TrackedVectorStore();
         var source = DataSource.FromPath("/test/path");
         // Use a small chunk size that will definitely split the long document
-        var splitter = new CharacterTextSplitter(chunkSize: 100, chunkOverlap: 10);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 100, chunkOverlap: 10);
 
         // Act
         var vectors = await InMemoryIngestion.LoadToMemory<SingleDocumentLoader>(
@@ -109,7 +109,7 @@ public class InMemoryIngestionTests
         // Arrange
         var store = new TrackedVectorStore();
         var source = DataSource.FromPath("/test/path");
-        var splitter = new CharacterTextSplitter(chunkSize: 100, chunkOverlap: 5);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 100, chunkOverlap: 5);
 
         // Act
         var vectors = await InMemoryIngestion.LoadToMemory<SingleDocumentLoader>(
@@ -137,7 +137,7 @@ public class InMemoryIngestionTests
         // Arrange
         var store = new TrackedVectorStore();
         var source = DataSource.FromPath("/test/path");
-        var splitter = new CharacterTextSplitter(chunkSize: 100, chunkOverlap: 5);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 100, chunkOverlap: 5);
 
         // Act
         var vectors = await InMemoryIngestion.LoadToMemory<SingleDocumentLoader>(
@@ -160,7 +160,7 @@ public class InMemoryIngestionTests
         // Arrange
         var store = new TrackedVectorStore();
         var source = DataSource.FromPath("/test/path");
-        var splitter = new CharacterTextSplitter(chunkSize: 200, chunkOverlap: 0);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 200, chunkOverlap: 0);
 
         // Act
         var vectors = await InMemoryIngestion.LoadToMemory<SingleDocumentLoader>(
@@ -182,7 +182,7 @@ public class InMemoryIngestionTests
         // Arrange
         var store = new TrackedVectorStore();
         var source = DataSource.FromPath("/test/path");
-        var splitter = new CharacterTextSplitter(chunkSize: 200, chunkOverlap: 0);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 200, chunkOverlap: 0);
         var cts = new CancellationTokenSource();
 
         // Act
@@ -205,7 +205,7 @@ public class InMemoryIngestionTests
         // Arrange
         var store = new TrackedVectorStore();
         var source = DataSource.FromPath("/test/path");
-        var splitter = new CharacterTextSplitter(chunkSize: 200, chunkOverlap: 20);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 200, chunkOverlap: 20);
 
         // Act
         var vectors = await InMemoryIngestion.LoadToMemory<SingleDocumentLoader>(
@@ -229,7 +229,7 @@ public class InMemoryIngestionTests
         // Arrange
         var store = new TrackedVectorStore();
         var source = DataSource.FromPath("/test/path");
-        var splitter = new CharacterTextSplitter(chunkSize: 50, chunkOverlap: 0);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 50, chunkOverlap: 0);
 
         // Act
         var vectors = await InMemoryIngestion.LoadToMemory<SingleDocumentLoader>(
@@ -260,7 +260,7 @@ public class InMemoryIngestionTests
         // it should pass through whatever the document loader provides
         var store = new TrackedVectorStore();
         var source = DataSource.FromPath("/test/path");
-        var splitter = new CharacterTextSplitter(chunkSize: 100, chunkOverlap: 0);
+        var splitter = new RecursiveCharacterTextSplitter(chunkSize: 100, chunkOverlap: 0);
 
         // Act
         var vectors = await InMemoryIngestion.LoadToMemory<SingleDocumentLoader>(

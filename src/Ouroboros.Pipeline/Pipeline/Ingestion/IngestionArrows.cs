@@ -1,6 +1,5 @@
-﻿using LangChain.Databases;
-using LangChain.DocumentLoaders;
-using LangChain.Splitters.Text;
+﻿using Ouroboros.Domain.Vectors;
+using Ouroboros.Domain.TextSplitters;
 
 namespace Ouroboros.Pipeline.Ingestion;
 

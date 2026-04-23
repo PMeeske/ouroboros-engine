@@ -59,10 +59,10 @@ public static class SemanticKernelServiceExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // ── Auto-function invocation filter (logging + observability) ────────
+        // Auto-function invocation filter (logging + observability)
         services.TryAddSingleton<IAutoFunctionInvocationFilter, OuroborosAutoFunctionFilter>();
 
-        // ── AgentFactory (depends on Kernel — registered as singleton) ───────
+        // AgentFactory (depends on Kernel — registered as singleton)
         services.TryAddSingleton(sp =>
         {
             var kernel = sp.GetRequiredService<Kernel>();
@@ -126,14 +126,14 @@ public static class SemanticKernelServiceExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(collectionName);
 
-        // ── SK Qdrant VectorStore (wraps QdrantClient) ───────────────────────
+        // SK Qdrant VectorStore (wraps QdrantClient)
         services.TryAddSingleton<SkVectorStore>(sp =>
         {
             var qdrantClient = sp.GetRequiredService<QdrantClient>();
             return new SkQdrantVectorStore(qdrantClient, ownsClient: false);
         });
 
-        // ── Bridge: SK VectorStore → Ouroboros IAdvancedVectorStore ──────────
+        // Bridge: SK VectorStore -> Ouroboros IAdvancedVectorStore
         services.TryAddSingleton<IAdvancedVectorStore>(sp =>
         {
             var skStore = sp.GetRequiredService<SkVectorStore>();
