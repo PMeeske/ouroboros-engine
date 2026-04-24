@@ -17,7 +17,7 @@ namespace Ouroboros.Tensor.Adapters;
 /// </summary>
 /// <remarks>
 /// The ORT session is shared across calls (singleton lifetime). Inference
-/// failures are converted to <see cref="Result{T}.Failure(string)"/>; only
+/// failures return an empty <see cref="Engram{T}"/>; only
 /// <see cref="OperationCanceledException"/> is allowed to propagate. Disposes
 /// its <see cref="InferenceSession"/>, <see cref="SessionOptions"/>, and
 /// <see cref="RunOptions"/> exactly once on
@@ -87,31 +87,29 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
     }
 
     /// <inheritdoc/>
-    public async Task<Result<AffectiveVector>> ClassifyAsync(
+    public async Task<Engram<AffectiveVector>> ClassifyAsync(
         FrameBuffer frame,
         CancellationToken cancellationToken)
     {
         if (Volatile.Read(ref _disposed) != 0)
         {
-            return Result<AffectiveVector>.Failure("classifier disposed");
+            return Engram<AffectiveVector>.Empty();
         }
 
         if (frame is null)
         {
-            return Result<AffectiveVector>.Failure("frame null");
+            return Engram<AffectiveVector>.Empty();
         }
 
         if (frame.Rgba is null || frame.Width <= 0 || frame.Height <= 0)
         {
-            return Result<AffectiveVector>.Failure(
-                $"invalid frame (W={frame.Width}, H={frame.Height}, rgba={frame.Rgba?.Length ?? 0})");
+            return Engram<AffectiveVector>.Empty();
         }
 
         int expected = frame.Width * frame.Height * 4;
         if (frame.Rgba.Length != expected)
         {
-            return Result<AffectiveVector>.Failure(
-                $"rgba length mismatch (got {frame.Rgba.Length}, expected {expected})");
+            return Engram<AffectiveVector>.Empty();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -133,7 +131,7 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
 #pragma warning restore CA1031
         {
             _logger?.LogDebug(ex, "OnnxExpressionClassifier preprocessing failed");
-            return Result<AffectiveVector>.Failure("preprocess: " + ex.Message);
+            return Engram<AffectiveVector>.Empty();
         }
 
         var requirements = new GpuResourceRequirements(
@@ -149,7 +147,17 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
                 () => RunInferenceCore(inputBuffer),
                 cancellationToken).ConfigureAwait(false);
 
-            return Result<AffectiveVector>.Success(vector);
+            // TemporalContext is the moment inference COMPLETED (post-await), not
+            // the moment classification was scheduled. This matters because the
+            // scheduler at Background priority can hold work for tens of ms under
+            // GPU contention; the engram should record when the perception became
+            // available, not when it entered the queue.
+            return Engram<AffectiveVector>.Create(
+                vector,
+                temporalContext: DateTimeOffset.UtcNow,
+                somaticValence: Math.Clamp(vector.Valence, -1f, 1f),
+                associativeLinks: Array.Empty<Guid>(),
+                identityWeight: Math.Clamp(vector.Confidence, 0f, 1f));
         }
         catch (OperationCanceledException)
         {
@@ -160,25 +168,25 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
             // GpuScheduler signals MaxLatency exhaustion as TimeoutException —
             // expected back-pressure under heavy GPU load, log Debug only.
             _logger?.LogDebug(ex, "OnnxExpressionClassifier scheduler latency exceeded");
-            return Result<AffectiveVector>.Failure("scheduler timeout");
+            return Engram<AffectiveVector>.Empty();
         }
         catch (InvalidOperationException ex)
         {
             // GpuScheduler raises this when paused under VRAM pressure.
             _logger?.LogDebug(ex, "OnnxExpressionClassifier scheduler paused");
-            return Result<AffectiveVector>.Failure("scheduler paused");
+            return Engram<AffectiveVector>.Empty();
         }
         catch (InsufficientMemoryException ex)
         {
             _logger?.LogDebug(ex, "OnnxExpressionClassifier vram overcommit");
-            return Result<AffectiveVector>.Failure("vram overcommit");
+            return Engram<AffectiveVector>.Empty();
         }
 #pragma warning disable CA1031 // Inference failure is recoverable
         catch (Exception ex)
 #pragma warning restore CA1031
         {
             _logger?.LogDebug(ex, "OnnxExpressionClassifier inference failed");
-            return Result<AffectiveVector>.Failure("infer: " + ex.Message);
+            return Engram<AffectiveVector>.Empty();
         }
     }
 

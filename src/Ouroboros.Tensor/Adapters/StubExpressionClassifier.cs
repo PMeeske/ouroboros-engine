@@ -35,26 +35,25 @@ public sealed class StubExpressionClassifier : IExpressionClassifier
     }
 
     /// <inheritdoc/>
-    public Task<Result<AffectiveVector>> ClassifyAsync(
+    public Task<Engram<AffectiveVector>> ClassifyAsync(
         FrameBuffer frame,
         CancellationToken cancellationToken)
     {
         if (frame is null)
         {
-            return Task.FromResult(Result<AffectiveVector>.Failure("frame null"));
+            return Task.FromResult(Engram<AffectiveVector>.Empty());
         }
 
         if (frame.Rgba is null || frame.Rgba.Length < MinRgbaLength)
         {
-            return Task.FromResult(Result<AffectiveVector>.Failure(
-                $"rgba buffer too small (length={frame.Rgba?.Length ?? 0}, min={MinRgbaLength})"));
+            return Task.FromResult(Engram<AffectiveVector>.Empty());
         }
 
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
             AffectiveVector vector = ClassifyCore(frame.Rgba);
-            return Task.FromResult(Result<AffectiveVector>.Success(vector));
+            return Task.FromResult(BuildEngram(vector));
         }
         catch (OperationCanceledException)
         {
@@ -65,7 +64,7 @@ public sealed class StubExpressionClassifier : IExpressionClassifier
 #pragma warning restore CA1031
         {
             _logger?.LogDebug(ex, "Stub expression classification failed");
-            return Task.FromResult(Result<AffectiveVector>.Failure($"stub classify: {ex.Message}"));
+            return Task.FromResult(Engram<AffectiveVector>.Empty());
         }
     }
 
@@ -80,6 +79,16 @@ public sealed class StubExpressionClassifier : IExpressionClassifier
         float stress = ((hash >> 8) & 0xFFFFUL) / 65535f;                // [0, 1]
 
         return new AffectiveVector(valence, arousal, confidence, curiosity, stress);
+    }
+
+    private static Engram<AffectiveVector> BuildEngram(AffectiveVector vector)
+    {
+        return Engram<AffectiveVector>.Create(
+            vector,
+            temporalContext: DateTimeOffset.UtcNow,
+            somaticValence: Math.Clamp(vector.Valence, -1f, 1f),
+            associativeLinks: Array.Empty<Guid>(),
+            identityWeight: Math.Clamp(vector.Confidence, 0f, 1f));
     }
 
     private static ulong HashFold(byte[] buffer)
