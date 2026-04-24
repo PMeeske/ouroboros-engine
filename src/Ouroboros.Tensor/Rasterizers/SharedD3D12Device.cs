@@ -243,15 +243,34 @@ public sealed class SharedD3D12Device : IDisposable
         _fence = new ComPtr<ID3D12Fence>((ID3D12Fence*)raw);
     }
 
-    private void ReleaseHandles()
+    private unsafe void ReleaseHandles()
     {
+        // During process exit D3D12.dll may already be unloaded; releasing COM
+        // objects at that point causes an AV inside Silk.NET. Skip cleanup — the
+        // OS reclaims all handles on termination anyway.
+        if (Environment.HasShutdownStarted)
+        {
+            return;
+        }
+
         // Reverse creation order: fence, queue, device.
-        _fence.Dispose();
-        _fence = default;
-        _computeQueue.Dispose();
-        _computeQueue = default;
-        _device.Dispose();
-        _device = default;
+        if (_fence.Handle != null)
+        {
+            _fence.Dispose();
+            _fence = default;
+        }
+
+        if (_computeQueue.Handle != null)
+        {
+            _computeQueue.Dispose();
+            _computeQueue = default;
+        }
+
+        if (_device.Handle != null)
+        {
+            _device.Dispose();
+            _device = default;
+        }
     }
 
     private void ThrowIfUnavailable()
