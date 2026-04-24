@@ -4,6 +4,7 @@
 
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
+using Ouroboros.Tensor.Orchestration;
 
 namespace Ouroboros.Tensor.Adapters;
 
@@ -16,41 +17,40 @@ namespace Ouroboros.Tensor.Adapters;
 /// <see cref="FerClassMapping"/>.
 /// </summary>
 /// <remarks>
-/// The ORT session is shared across calls (singleton lifetime). Inference
-/// failures return an empty <see cref="Engram{T}"/>; only
-/// <see cref="OperationCanceledException"/> is allowed to propagate. Disposes
-/// its <see cref="InferenceSession"/>, <see cref="SessionOptions"/>, and
-/// <see cref="RunOptions"/> exactly once on
-/// <see cref="DisposeAsync"/>.
+/// The ORT session is created lazily on first inference. If the model file is
+/// missing or session creation fails, all calls degrade to
+/// <see cref="Engram{T}.Empty"/>.
 /// </remarks>
 public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisposable
 {
-    private const int InputDim = 64; // FER+ accepts 64x64 grayscale.
-    private const long WorkingSetBytes = 32L * 1024 * 1024; // ~32MB activation working set.
+    private const int InputDim = 64;
+    private const long WorkingSetBytes = 32L * 1024 * 1024;
     private static readonly TimeSpan ScheduleMaxLatency = TimeSpan.FromMilliseconds(150);
 
-    private readonly InferenceSession _session;
-    private readonly SessionOptions _sessionOptions;
-    private readonly RunOptions _runOptions;
+    private readonly string _modelPath;
     private readonly GpuScheduler _scheduler;
     private readonly ILogger<OnnxExpressionClassifier>? _logger;
-    private readonly string _inputName;
-    private readonly string _outputName;
-    private readonly long _modelFileSizeBytes;
     private readonly long _estimatedVramBytes;
-    private int _disposed;
+
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private InferenceSession? _session;
+    private SessionOptions? _sessionOptions;
+    private RunOptions? _runOptions;
+    private string? _inputName;
+    private string? _outputName;
+    private int _state; // 0 = uninitialised, 1 = ready, -1 = fallback
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OnnxExpressionClassifier"/>
-    /// class by loading an FER+ ONNX model from disk and configuring an ORT
-    /// DirectML session.
+    /// class. The model file is NOT loaded eagerly — first inference triggers
+    /// lazy initialisation so missing files degrade gracefully.
     /// </summary>
-    /// <param name="modelPath">Absolute path to the FER+ <c>emotion-ferplus-8.onnx</c> model file.</param>
+    /// <param name="modelPath">Absolute path to the FER+ ONNX model file.</param>
     /// <param name="scheduler">GPU scheduler used to mediate every inference dispatch.</param>
     /// <param name="logger">Optional logger for startup + diagnostic output.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="modelPath"/> is null/empty/whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="scheduler"/> is null.</exception>
-    /// <exception cref="FileNotFoundException">Thrown when the ONNX model file is missing.</exception>
     public OnnxExpressionClassifier(
         string modelPath,
         GpuScheduler scheduler,
@@ -59,31 +59,11 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         ArgumentException.ThrowIfNullOrWhiteSpace(modelPath);
         ArgumentNullException.ThrowIfNull(scheduler);
 
-        if (!File.Exists(modelPath))
-        {
-            throw new FileNotFoundException(
-                $"FER+ ONNX model not found at '{modelPath}'", modelPath);
-        }
-
+        _modelPath = modelPath;
         _scheduler = scheduler;
         _logger = logger;
-        _modelFileSizeBytes = new FileInfo(modelPath).Length;
-        _estimatedVramBytes = _modelFileSizeBytes + WorkingSetBytes;
-
-        _sessionOptions = CreateSessionOptions(logger);
-        _session = new InferenceSession(modelPath, _sessionOptions);
-        _runOptions = new RunOptions();
-
-        _inputName = _session.InputMetadata.Keys.First();
-        _outputName = _session.OutputMetadata.Keys.First();
-
-        logger?.LogInformation(
-            "OnnxExpressionClassifier loaded: path={ModelPath} sizeMB={SizeMB:F1} input={Input} output={Output} vramEstMB={VramMB:F1}",
-            modelPath,
-            _modelFileSizeBytes / (1024.0 * 1024.0),
-            _inputName,
-            _outputName,
-            _estimatedVramBytes / (1024.0 * 1024.0));
+        long fileSize = File.Exists(modelPath) ? new FileInfo(modelPath).Length : 0L;
+        _estimatedVramBytes = fileSize + WorkingSetBytes;
     }
 
     /// <inheritdoc/>
@@ -91,17 +71,7 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         FrameBuffer frame,
         CancellationToken cancellationToken)
     {
-        if (Volatile.Read(ref _disposed) != 0)
-        {
-            return Engram<AffectiveVector>.Empty();
-        }
-
-        if (frame is null)
-        {
-            return Engram<AffectiveVector>.Empty();
-        }
-
-        if (frame.Rgba is null || frame.Width <= 0 || frame.Height <= 0)
+        if (_disposed || frame is null || frame.Rgba is null || frame.Width <= 0 || frame.Height <= 0)
         {
             return Engram<AffectiveVector>.Empty();
         }
@@ -114,9 +84,16 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Preprocessing is CPU-cheap (64x64 = 4096 destination samples); do it
-        // outside the scheduler delegate so the GPU slice contains only the
-        // ORT.Run call.
+        if (_state == 0)
+        {
+            await EnsureInitialisedAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        if (_state != 1 || _session is null)
+        {
+            return Engram<AffectiveVector>.Empty();
+        }
+
         float[] inputBuffer;
         try
         {
@@ -126,11 +103,11 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         {
             throw;
         }
-#pragma warning disable CA1031 // Preprocessing failure is recoverable
+#pragma warning disable CA1031
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            _logger?.LogDebug(ex, "OnnxExpressionClassifier preprocessing failed");
+            _logger?.LogDebug(ex, "[FER+] preprocessing failed");
             return Engram<AffectiveVector>.Empty();
         }
 
@@ -144,14 +121,9 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
             AffectiveVector vector = await _scheduler.ScheduleAsync(
                 GpuTaskPriority.Background,
                 requirements,
-                () => RunInferenceCore(inputBuffer),
+                () => Task.FromResult(RunInferenceCore(inputBuffer)),
                 cancellationToken).ConfigureAwait(false);
 
-            // TemporalContext is the moment inference COMPLETED (post-await), not
-            // the moment classification was scheduled. This matters because the
-            // scheduler at Background priority can hold work for tens of ms under
-            // GPU contention; the engram should record when the perception became
-            // available, not when it entered the queue.
             return Engram<AffectiveVector>.Create(
                 vector,
                 temporalContext: DateTimeOffset.UtcNow,
@@ -165,65 +137,118 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         }
         catch (TimeoutException ex)
         {
-            // GpuScheduler signals MaxLatency exhaustion as TimeoutException —
-            // expected back-pressure under heavy GPU load, log Debug only.
-            _logger?.LogDebug(ex, "OnnxExpressionClassifier scheduler latency exceeded");
+            _logger?.LogDebug(ex, "[FER+] scheduler latency exceeded");
             return Engram<AffectiveVector>.Empty();
         }
         catch (InvalidOperationException ex)
         {
-            // GpuScheduler raises this when paused under VRAM pressure.
-            _logger?.LogDebug(ex, "OnnxExpressionClassifier scheduler paused");
+            _logger?.LogDebug(ex, "[FER+] scheduler paused");
             return Engram<AffectiveVector>.Empty();
         }
         catch (InsufficientMemoryException ex)
         {
-            _logger?.LogDebug(ex, "OnnxExpressionClassifier vram overcommit");
+            _logger?.LogDebug(ex, "[FER+] vram overcommit");
             return Engram<AffectiveVector>.Empty();
         }
-#pragma warning disable CA1031 // Inference failure is recoverable
+#pragma warning disable CA1031
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            _logger?.LogDebug(ex, "OnnxExpressionClassifier inference failed");
+            _logger?.LogDebug(ex, "[FER+] inference failed");
             return Engram<AffectiveVector>.Empty();
         }
     }
 
-    /// <summary>
-    /// Disposes the underlying ORT session, session options, and run options
-    /// exactly once. Subsequent calls are no-ops.
-    /// </summary>
-    /// <returns>A completed <see cref="ValueTask"/>.</returns>
-    public ValueTask DisposeAsync()
+    /// <inheritdoc/>
+    public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
-        {
-            return ValueTask.CompletedTask;
-        }
+        if (_disposed) return;
+        _disposed = true;
 
-        _runOptions.Dispose();
-        _session.Dispose();
-        _sessionOptions.Dispose();
-        return ValueTask.CompletedTask;
+        _runOptions?.Dispose();
+        _session?.Dispose();
+        _sessionOptions?.Dispose();
+        _initLock.Dispose();
+    }
+
+    private async Task EnsureInitialisedAsync(CancellationToken ct)
+    {
+        await _initLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            if (_state != 0) return;
+
+            if (!File.Exists(_modelPath))
+            {
+                _logger?.LogInformation(
+                    "[FER+] model '{Path}' not found; classifier degrades to empty engrams",
+                    _modelPath);
+                Interlocked.Exchange(ref _state, -1);
+                return;
+            }
+
+            SessionOptions opts = CreateSessionOptions(_logger);
+            try
+            {
+                _session = new InferenceSession(_modelPath, opts);
+                _sessionOptions = opts;
+                _runOptions = new RunOptions();
+                _inputName = _session.InputMetadata.Keys.First();
+                _outputName = _session.OutputMetadata.Keys.First();
+
+                _logger?.LogInformation(
+                    "[FER+] session ready: input={Input} output={Output} vramEstMB={VramMB:F1}",
+                    _inputName,
+                    _outputName,
+                    _estimatedVramBytes / (1024.0 * 1024.0));
+                Interlocked.Exchange(ref _state, 1);
+            }
+#pragma warning disable CA1031
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                opts.Dispose();
+                _logger?.LogWarning(ex, "[FER+] session creation failed; degrading to empty engrams");
+                Interlocked.Exchange(ref _state, -1);
+            }
+        }
+#pragma warning disable CA1031
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger?.LogWarning(ex, "[FER+] init failed; degrading to empty engrams");
+            Interlocked.Exchange(ref _state, -1);
+        }
+        finally
+        {
+            _initLock.Release();
+        }
     }
 
     private AffectiveVector RunInferenceCore(float[] inputBuffer)
     {
+        InferenceSession? session = _session;
+        string? inputName = _inputName;
+        string? outputName = _outputName;
+        if (session is null || inputName is null || outputName is null)
+        {
+            return AffectiveVector.Neutral;
+        }
+
         var inputTensor = new DenseTensor<float>(
             inputBuffer, new[] { 1, 1, InputDim, InputDim });
 
         var inputs = new List<NamedOnnxValue>
         {
-            NamedOnnxValue.CreateFromTensor(_inputName, inputTensor),
+            NamedOnnxValue.CreateFromTensor(inputName, inputTensor),
         };
 
         using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> outputs =
-            _session.Run(inputs);
+            session.Run(inputs);
 
         foreach (DisposableNamedOnnxValue output in outputs)
         {
-            if (output.Name != _outputName)
+            if (output.Name != outputName)
             {
                 continue;
             }
@@ -248,9 +273,6 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         return AffectiveVector.Neutral;
     }
 
-    // Bilinear-resampled 64x64 grayscale. RGBA in [0,255] uint8 → grayscale via
-    // luma weights → output float32 in [0,255] (FER+ takes raw pixel values, NOT
-    // normalized to [0,1]).
     private static float[] PreprocessGrayscale64(FrameBuffer frame)
     {
         int srcW = frame.Width;
@@ -258,10 +280,6 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         byte[] rgba = frame.Rgba;
         var output = new float[InputDim * InputDim];
 
-        // Map each destination pixel to its source pixel via nearest-neighbor.
-        // Bilinear would be marginally higher quality but the avatar render is
-        // already a clean face crop — nearest is fine and cheap. Swap in
-        // bilinear later if FER+ accuracy looks poor in production.
         float xScale = (float)srcW / InputDim;
         float yScale = (float)srcH / InputDim;
 
@@ -277,9 +295,8 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
                 byte g = rgba[srcIdx + 1];
                 byte b = rgba[srcIdx + 2];
 
-                // BT.601 luma — standard grayscale conversion.
                 float luma = (0.299f * r) + (0.587f * g) + (0.114f * b);
-                output[(dy * InputDim) + dx] = luma; // already in [0,255]
+                output[(dy * InputDim) + dx] = luma;
             }
         }
 
@@ -291,10 +308,7 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         float max = float.NegativeInfinity;
         for (int i = 0; i < logits.Length; i++)
         {
-            if (logits[i] > max)
-            {
-                max = logits[i];
-            }
+            if (logits[i] > max) max = logits[i];
         }
 
         float sum = 0f;
@@ -304,10 +318,7 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
             sum += probabilities[i];
         }
 
-        if (sum <= 0f)
-        {
-            sum = 1f;
-        }
+        if (sum <= 0f) sum = 1f;
 
         for (int i = 0; i < probabilities.Length; i++)
         {
@@ -327,13 +338,13 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         {
             opts.AppendExecutionProvider_DML(0);
             opts.AddSessionConfigEntry("session.disable_mem_pattern", "1");
-            logger?.LogInformation("OnnxExpressionClassifier: DirectML EP enabled");
+            logger?.LogInformation("[FER+] DirectML EP enabled");
         }
-#pragma warning disable CA1031 // DirectML availability is opaque
+#pragma warning disable CA1031
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            logger?.LogWarning(ex, "OnnxExpressionClassifier: DirectML unavailable — using CPU EP");
+            logger?.LogWarning(ex, "[FER+] DirectML unavailable — using CPU EP");
         }
 
         return opts;
