@@ -10,9 +10,21 @@ namespace Ouroboros.Tensor.Orchestration;
 /// round-robin within their class.
 /// </summary>
 /// <remarks>
-/// Phase 196.5 introduces a four-class priority model that replaces the advisory
-/// <see cref="GpuTaskPriority"/> hints. The mapping is
-/// <c>Idle &lt; Background &lt; Normal &lt; Realtime</c>.
+/// <para>
+/// Phase 196.5 introduced a four-class priority model that replaced the advisory
+/// <see cref="GpuTaskPriority"/> hints. Phase 235 inserted the <see cref="Perception"/>
+/// tier between <see cref="Background"/> and <see cref="Normal"/> so sensory capture
+/// work (webcam FER, gaze, pose) is always preempted by interactive inference and by
+/// the realtime rasterizer. The final ordering is
+/// <c>Idle &lt; Background &lt; Perception &lt; Normal &lt; Realtime</c>.
+/// </para>
+/// <para>
+/// Scheduler dispatch is strictly priority-preemptive: work registered at
+/// <see cref="Perception"/> is never selected while any ready work exists at
+/// <see cref="Normal"/> or <see cref="Realtime"/>. This is the structural guarantee
+/// that closes requirement GPU-03 — the 3DGS rasterizer (Realtime) is never
+/// interleaved behind perception capture.
+/// </para>
 /// </remarks>
 public enum GpuPriorityClass
 {
@@ -22,11 +34,19 @@ public enum GpuPriorityClass
     /// <summary>Batch / background jobs (pre-computation, warm-up).</summary>
     Background = 1,
 
+    /// <summary>
+    /// Live sensory capture (webcam FER, face identity, pose, gaze). Phase 235.
+    /// Strictly below <see cref="Normal"/>: perception work never preempts interactive
+    /// inference or the rasterizer. Use with <see cref="IPerceptionVramBudget"/> so
+    /// model loads declare their VRAM footprint before allocating.
+    /// </summary>
+    Perception = 2,
+
     /// <summary>Standard interactive inference (LLM generation, tool calls).</summary>
-    Normal = 2,
+    Normal = 3,
 
     /// <summary>Real-time, deadline-sensitive work (avatar rasterizer, audio synthesis).</summary>
-    Realtime = 3,
+    Realtime = 4,
 }
 
 /// <summary>

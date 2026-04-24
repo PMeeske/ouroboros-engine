@@ -29,6 +29,7 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
     {
         GpuPriorityClass.Realtime,
         GpuPriorityClass.Normal,
+        GpuPriorityClass.Perception,
         GpuPriorityClass.Background,
         GpuPriorityClass.Idle,
     };
@@ -52,6 +53,7 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
     {
         [GpuPriorityClass.Realtime] = new LinkedList<string>(),
         [GpuPriorityClass.Normal] = new LinkedList<string>(),
+        [GpuPriorityClass.Perception] = new LinkedList<string>(),
         [GpuPriorityClass.Background] = new LinkedList<string>(),
         [GpuPriorityClass.Idle] = new LinkedList<string>(),
     };
