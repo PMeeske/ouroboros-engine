@@ -65,7 +65,9 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
                     $"Vector '{handle.VectorId}' not found in collection '{handle.CollectionName}'.");
             }
 
+#pragma warning disable CS0612 // ExtractVector uses legacy Qdrant.Vector.Data API (TODO: migrate to named vectors)
             return ExtractVector(point, handle);
+#pragma warning restore CS0612
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -120,7 +122,9 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
                         continue;
                     }
 
+#pragma warning disable CS0612 // ExtractVector uses legacy Qdrant.Vector.Data API (TODO: migrate to named vectors)
                     var vectorResult = ExtractVector(point, handle);
+#pragma warning restore CS0612
                     if (vectorResult.IsSuccess)
                     {
                         results.Add((handle, vectorResult.Value));
