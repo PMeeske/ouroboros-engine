@@ -1,11 +1,7 @@
 <Project>
   <!-- v56.0: import shared Directory.Build.targets from ouroboros-build for the
        per-test-project CS86xx strip (NULL-04). Mirrors the props import chain
-<<<<<<< HEAD
        defined in Directory.Build.props at this layer. -->
-=======
-       defined in Directory.Build.props. -->
->>>>>>> 19d5190fd0c439bca07b4395f2410b6c55b37fd2
   <Import Project="$(MSBuildThisFileDirectory)..\.build\build\Directory.Build.targets"
           Condition="Exists('$(MSBuildThisFileDirectory)..\.build\build\Directory.Build.targets')" />
   <Import Project="$(MSBuildThisFileDirectory)libs\foundation\.build\build\Directory.Build.targets"
