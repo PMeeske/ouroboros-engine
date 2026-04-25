@@ -79,6 +79,7 @@ public sealed partial class CuriosityEngine : ICuriosityEngine
 
             foreach (Experience exp in experiences)
             {
+                if (exp.Plan is null) continue;
                 double similarity = CalculateActionSimilarity(plan, exp.Plan);
                 similarities.Add(similarity);
             }

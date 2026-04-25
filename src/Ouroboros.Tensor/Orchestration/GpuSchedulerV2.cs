@@ -69,7 +69,7 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
 
     private long _completedCount;
     private long _failedCount;
-    private long _estimatedUsedVram;
+    private long _estimatedUsedVram = 0;
     private int _queueDepth;
     private TimeSpan _lastLatency;
     private volatile bool _disposed;

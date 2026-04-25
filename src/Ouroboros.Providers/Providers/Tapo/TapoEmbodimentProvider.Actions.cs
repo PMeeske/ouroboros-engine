@@ -297,6 +297,11 @@ public sealed partial class TapoEmbodimentProvider
     private async Task InitializeSinglePtzClientAsync(
         string cameraName, string cameraIp, CancellationToken ct)
     {
+        if (string.IsNullOrEmpty(_username) || string.IsNullOrEmpty(_password))
+        {
+            return;
+        }
+
         TapoCameraPtzClient? ptzClient = new TapoCameraPtzClient(
             cameraIp,
             _username,

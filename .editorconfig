@@ -71,11 +71,11 @@ dotnet_diagnostic.CS1570.severity = none
 dotnet_diagnostic.CS1573.severity = none
 dotnet_diagnostic.CS1574.severity = none
 dotnet_diagnostic.CS1587.severity = none
-dotnet_diagnostic.CS8601.severity = suggestion
-dotnet_diagnostic.CS8602.severity = suggestion
-dotnet_diagnostic.CS8603.severity = suggestion
-dotnet_diagnostic.CS8604.severity = suggestion
-dotnet_diagnostic.CS8618.severity = suggestion
+# dotnet_diagnostic.CS8601.severity = suggestion  # REMOVED for v56.0 Phase 248 ratchet
+# dotnet_diagnostic.CS8602.severity = suggestion  # REMOVED for v56.0 Phase 248 ratchet
+# dotnet_diagnostic.CS8603.severity = suggestion  # REMOVED for v56.0 Phase 248 ratchet
+# dotnet_diagnostic.CS8604.severity = suggestion  # REMOVED for v56.0 Phase 248 ratchet
+# dotnet_diagnostic.CS8618.severity = suggestion  # REMOVED for v56.0 Phase 248 ratchet
 
 # Sonar: naming / style (not bugs)
 dotnet_diagnostic.S101.severity = suggestion

@@ -120,7 +120,7 @@ public sealed partial class ConsolidatedMind : Ouroboros.Abstractions.Core.IChat
             ? OllamaCloudDefaults.GetHighQualityConfigs()
             : OllamaCloudDefaults.GetAllDefaultConfigs();
 
-        RegisterFromConfigs(configs, endpoint, apiKey);
+        RegisterFromConfigs(configs, endpoint, apiKey ?? string.Empty);
     }
 
     /// <summary>
@@ -138,7 +138,7 @@ public sealed partial class ConsolidatedMind : Ouroboros.Abstractions.Core.IChat
                 $"Environment variable {OllamaCloudDefaults.ApiKeyEnvVar} is not set.");
         }
 
-        RegisterFromConfigs(OllamaCloudDefaults.GetMinimalConfigs(), endpoint, apiKey);
+        RegisterFromConfigs(OllamaCloudDefaults.GetMinimalConfigs(), endpoint, apiKey ?? string.Empty);
     }
 
     /// <summary>

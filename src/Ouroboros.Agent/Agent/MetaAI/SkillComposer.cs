@@ -193,7 +193,7 @@ public sealed class SkillComposer : ISkillComposer
         foreach (Skill skill in allSkills)
         {
             HashSet<string> skillActions = skill.Steps.Select(s => s.Action).ToHashSet();
-            HashSet<string> planActions = experience.Plan.Steps.Select(s => s.Action).ToHashSet();
+            HashSet<string> planActions = experience.Plan?.Steps.Select(s => s.Action).ToHashSet() ?? new HashSet<string>();
 
             // If skill actions are subset of plan actions, the skill was likely used
             if (skillActions.IsSubsetOf(planActions))

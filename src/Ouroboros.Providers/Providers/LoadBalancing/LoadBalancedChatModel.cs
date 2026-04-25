@@ -45,6 +45,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
         ArgumentNullException.ThrowIfNull(loadBalancer);
         _loadBalancer = loadBalancer;
         _retryPolicy = CreateRetryPolicy();
+        _logger = NullLogger<LoadBalancedChatModel>.Instance;
     }
 
     /// <summary>

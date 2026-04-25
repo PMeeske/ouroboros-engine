@@ -110,6 +110,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
             {
                 foreach (ContentBlock block in result.Content)
                 {
+#pragma warning disable CS8600 // Anthropic SDK out params lack nullable annotations
                     if (block.TryPickThinking(out ThinkingBlock thinkingBlock))
                     {
                         thinking = thinkingBlock.Thinking;
@@ -118,6 +119,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
                     {
                         contentBuilder.Append(textBlock.Text);
                     }
+#pragma warning restore CS8600
                 }
             }
 

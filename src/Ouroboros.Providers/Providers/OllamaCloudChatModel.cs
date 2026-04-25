@@ -166,6 +166,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                     },
                 }, innerCt).ConfigureAwait(false))
                 {
+                    if (chunk is null) continue;
                     response += chunk.Response;
 
                     // Extract token counts from the final (done=true) chunk.
@@ -250,6 +251,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                         },
                     }, innerToken).ConfigureAwait(false))
                     {
+                        if (chunk is null) continue;
                         string? content = chunk.Response;
                         if (!string.IsNullOrEmpty(content))
                         {
@@ -353,6 +355,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                         },
                     }, innerToken).ConfigureAwait(false))
                     {
+                        if (chunk is null) continue;
                         string? content = chunk.Response;
                         if (!string.IsNullOrEmpty(content))
                         {

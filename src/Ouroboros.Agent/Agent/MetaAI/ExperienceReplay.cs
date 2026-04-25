@@ -200,7 +200,7 @@ public sealed class ExperienceReplay : IExperienceReplay
     {
         // Find actions that appear in all successful experiences
         List<List<string>> actionLists = experiences
-            .Select(e => e.Plan.Steps.Select(s => s.Action).ToList())
+            .Select(e => e.Plan?.Steps.Select(s => s.Action).ToList() ?? new List<string>())
             .ToList();
 
         if (!actionLists.Any())
@@ -224,7 +224,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         foreach (Experience? exp in experiences.Take(5))
         {
             sb.Append($"Goal: {exp.Goal}\n");
-            sb.Append($"Steps: {string.Join(" -> ", exp.Plan.Steps.Select(s => s.Action))}\n");
+            sb.Append($"Steps: {string.Join(" -> ", exp.Plan?.Steps.Select(s => s.Action) ?? [])}\n");
             sb.Append($"Quality: {exp.Verification.QualityScore:P0}\n\n");
         }
 

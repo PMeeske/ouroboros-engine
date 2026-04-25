@@ -16,7 +16,7 @@ namespace Ouroboros.Agent.MetaLearning;
 public partial class MetaLearningEngine : IMetaLearningEngine
 {
     private readonly IEmbeddingModel _embeddingModel;
-    private readonly IRandomProvider? _random;
+    private readonly IRandomProvider _random;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MetaLearningEngine"/> class.
@@ -190,7 +190,7 @@ public partial class MetaLearningEngine : IMetaLearningEngine
     private SynthesisTask SampleTask(List<TaskFamily> taskFamilies)
     {
         var family = taskFamilies[_random.Next(taskFamilies.Count)];
-        return family.SampleTrainingBatch(1, _random)[0];
+        return family!.SampleTrainingBatch(1, _random).First();
     }
 
     /// <summary>

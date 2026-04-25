@@ -222,7 +222,7 @@ PLAN:
 
 EXECUTION RESULTS:
 {string.Join("\n", execution.StepResults.Select((r, i) =>
-    $"{i + 1}. {(r.Success ? "\u2713" : "\u2717")} {r.Output.Substring(0, Math.Min(100, r.Output.Length))}"))}
+    $"{i + 1}. {(r.Success ? "\u2713" : "\u2717")} {r.Output?[..Math.Min(100, r.Output?.Length ?? 0)] ?? ""}"))}
 
 FINAL OUTPUT:
 {execution.FinalOutput}
