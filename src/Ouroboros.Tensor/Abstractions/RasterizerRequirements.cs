@@ -35,7 +35,7 @@ public static class RasterizerRequirements
     /// <summary>
     /// CPU baseline raster — reports zero VRAM so the scheduler's overcommit
     /// guard passes unconditionally. The CPU path still goes through
-    /// <see cref="GpuScheduler.ScheduleAsync"/> for latency/queue telemetry
+    /// <see cref="GpuScheduler.ScheduleAsync{T}(GpuTaskPriority, GpuResourceRequirements, Func{Task{T}}, CancellationToken)"/> for latency/queue telemetry
     /// so the fallback and the realtime path share observability.
     /// </summary>
     public static readonly GpuResourceRequirements Cpu =
