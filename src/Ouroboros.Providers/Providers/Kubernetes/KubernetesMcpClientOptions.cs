@@ -56,15 +56,21 @@ public sealed record KubernetesMcpClientOptions
     {
         // In-cluster: env vars are set automatically
         if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST")))
+        {
             return true;
+        }
 
         // Explicit API server + token
         if (!string.IsNullOrWhiteSpace(BaseUrl) && !string.IsNullOrWhiteSpace(Token))
+        {
             return true;
+        }
 
         // Kubeconfig path
         if (!string.IsNullOrWhiteSpace(KubeConfigPath))
+        {
             return true;
+        }
 
         // Default kubeconfig
         var defaultConfig = Path.Combine(

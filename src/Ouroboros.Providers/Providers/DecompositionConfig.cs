@@ -6,28 +6,28 @@
 /// </summary>
 public sealed record DecompositionConfig
 {
-    /// <summary>Maximum number of sub-goals to create.</summary>
+    /// <summary>Gets maximum number of sub-goals to create.</summary>
     public int MaxSubGoals { get; init; } = 10;
 
-    /// <summary>Whether to parallelize independent sub-goals.</summary>
+    /// <summary>Gets a value indicating whether whether to parallelize independent sub-goals.</summary>
     public bool ParallelizeIndependent { get; init; } = true;
 
-    /// <summary>Prefer local models for simple tasks.</summary>
+    /// <summary>Gets a value indicating whether prefer local models for simple tasks.</summary>
     public bool PreferLocalForSimple { get; init; } = true;
 
-    /// <summary>Always use premium for final synthesis.</summary>
+    /// <summary>Gets a value indicating whether always use premium for final synthesis.</summary>
     public bool PremiumForSynthesis { get; init; } = true;
 
-    /// <summary>Minimum complexity to warrant decomposition.</summary>
+    /// <summary>Gets minimum complexity to warrant decomposition.</summary>
     public SubGoalComplexity DecompositionThreshold { get; init; } = SubGoalComplexity.Moderate;
 
     /// <summary>
-    /// Use existing Pipeline.Planning.GoalDecomposer instead of inline decomposition.
+    /// Gets a value indicating whether use existing Pipeline.Planning.GoalDecomposer instead of inline decomposition.
     /// Requires a PipelineBranch to be provided for full integration.
     /// </summary>
     public bool UsePipelineGoalDecomposer { get; init; } = false;
 
-    /// <summary>Custom routing rules by goal type.</summary>
+    /// <summary>Gets custom routing rules by goal type.</summary>
     public Dictionary<SubGoalType, PathwayTier> TypeRouting { get; init; } = new()
     {
         [SubGoalType.Retrieval] = PathwayTier.Local,
@@ -36,7 +36,7 @@ public sealed record DecompositionConfig
         [SubGoalType.Creative] = PathwayTier.CloudPremium,
         [SubGoalType.Coding] = PathwayTier.Specialized,
         [SubGoalType.Math] = PathwayTier.Specialized,
-        [SubGoalType.Synthesis] = PathwayTier.CloudPremium
+        [SubGoalType.Synthesis] = PathwayTier.CloudPremium,
     };
 
     public static DecompositionConfig Default { get; } = new();
@@ -54,7 +54,7 @@ public sealed record DecompositionConfig
             [SubGoalType.Coding] = PathwayTier.Local,
             [SubGoalType.Math] = PathwayTier.Local,
             [SubGoalType.Synthesis] = PathwayTier.CloudLight
-        }
+        },
     };
 
     public static DecompositionConfig QualityFirst { get; } = new()
@@ -70,17 +70,17 @@ public sealed record DecompositionConfig
             [SubGoalType.Coding] = PathwayTier.CloudPremium,
             [SubGoalType.Math] = PathwayTier.CloudPremium,
             [SubGoalType.Synthesis] = PathwayTier.CloudPremium
-        }
+        },
     };
 
     /// <summary>
-    /// Configuration that uses the existing Pipeline GoalDecomposer.
+    /// Gets configuration that uses the existing Pipeline GoalDecomposer.
     /// Best for integration with existing goal hierarchies.
     /// </summary>
     public static DecompositionConfig PipelineIntegrated { get; } = new()
     {
         UsePipelineGoalDecomposer = true,
         PreferLocalForSimple = true,
-        PremiumForSynthesis = true
+        PremiumForSynthesis = true,
     };
 }

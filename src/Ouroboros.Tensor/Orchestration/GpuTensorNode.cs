@@ -55,13 +55,14 @@ public abstract class GpuTensorNode : IDisposable
     private DisposableBag _subscriptions;
     private GpuNodeState _state = GpuNodeState.Idle;
 
-    /// <summary>The shared GPU scheduler for priority and VRAM management.</summary>
+    /// <summary>Gets the shared GPU scheduler for priority and VRAM management.</summary>
     protected GpuScheduler Scheduler { get; }
 
-    /// <summary>The tensor backend to use for GPU operations.</summary>
+    /// <summary>Gets the tensor backend to use for GPU operations.</summary>
     protected ITensorBackend Backend { get; }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GpuTensorNode"/> class.
     /// Initializes a new <see cref="GpuTensorNode"/>.
     /// </summary>
     /// <param name="nodeId">Unique identifier for this node in the graph.</param>
@@ -101,17 +102,17 @@ public abstract class GpuTensorNode : IDisposable
         }
     }
 
-    /// <summary>Gets the VRAM requirements for this node (override in subclasses).</summary>
+    /// <summary>Gets or sets the VRAM requirements for this node (override in subclasses).</summary>
     public virtual GpuResourceRequirements ResourceRequirements { get; protected set; }
         = new(EstimatedVramBytes: 64 * 1024 * 1024); // 64 MB default
 
     /// <summary>
-    /// Observable output stream. Downstream nodes subscribe to this.
+    /// Gets observable output stream. Downstream nodes subscribe to this.
     /// </summary>
     public Observable<ITensor<float>> Output => _output;
 
     /// <summary>
-    /// Observable state changes for monitoring/UI.
+    /// Gets observable state changes for monitoring/UI.
     /// </summary>
     public Observable<GpuNodeState> StateChanges => _stateChanges;
 
@@ -130,7 +131,11 @@ public abstract class GpuTensorNode : IDisposable
 
         var sub = source.Subscribe(
             tensor => _ = ProcessInputAsync(tensor),
-            result => { if (result.IsSuccess) _output.OnCompleted(); });
+            result => { if (result.IsSuccess)
+{
+    _output.OnCompleted();
+}
+            });
 
         sub.AddTo(ref _subscriptions);
         return sub;
@@ -139,6 +144,7 @@ public abstract class GpuTensorNode : IDisposable
     /// <summary>
     /// Pushes a single tensor into this node for processing (imperative API).
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task ProcessAsync(ITensor<float> input, CancellationToken ct = default)
         => ProcessInputAsync(input, ct);
 
@@ -214,6 +220,7 @@ public sealed class MatMulNode : GpuTensorNode
     private readonly ITensor<float> _weights;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="MatMulNode"/> class.
     /// Creates a MatMul node with fixed weights (e.g. a model layer).
     /// </summary>
     /// <param name="nodeId">Unique node identifier.</param>
@@ -256,6 +263,7 @@ public sealed class OnnxInferenceNode : GpuTensorNode
     private readonly string _outputName;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="OnnxInferenceNode"/> class.
     /// Creates an ONNX inference node.
     /// </summary>
     /// <param name="nodeId">Unique node identifier.</param>
@@ -278,6 +286,7 @@ public sealed class OnnxInferenceNode : GpuTensorNode
         _outputName = outputName;
 
         using var opts = new Microsoft.ML.OnnxRuntime.SessionOptions();
+
         // AMD ROCm: use MIGraphX or DirectML EP depending on platform
         // opts.AppendExecutionProvider_MIGraphX();
         _session = new Microsoft.ML.OnnxRuntime.InferenceSession(modelPath, opts);
@@ -294,10 +303,14 @@ public sealed class OnnxInferenceNode : GpuTensorNode
 
         var result = _onnxBackend.RunInference(_session, inputs, [_outputName]);
         if (result.IsFailure)
+        {
             return Result<ITensor<float>, string>.Failure(result.Error);
+        }
 
         if (result.Value.TryGetValue(_outputName, out var output))
+        {
             return Result<ITensor<float>, string>.Success(output);
+        }
 
         return Result<ITensor<float>, string>.Failure(
             $"Output '{_outputName}' not found in ONNX inference results.");

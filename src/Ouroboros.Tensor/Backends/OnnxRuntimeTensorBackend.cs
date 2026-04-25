@@ -48,7 +48,7 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
     private const int FailureThreshold = 10;
     private const int CooldownSeconds = 30;
 
-    private static readonly ConditionalWeakTable<InferenceSession, CircuitState> s_circuits = new();
+    private static readonly ConditionalWeakTable<InferenceSession, CircuitState> S_circuits = new();
 
     private sealed class CircuitState
     {
@@ -61,6 +61,7 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
     private readonly ISharedOrtDmlSessionFactory? _sessionFactory;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="OnnxRuntimeTensorBackend"/> class.
     /// Initializes a new <see cref="OnnxRuntimeTensorBackend"/> with optional session factory.
     /// Pass a configured <see cref="ISharedOrtDmlSessionFactory"/> to enable shared D3D12
     /// DirectML sessions.
@@ -117,7 +118,7 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(inputs);
 
-        CircuitState circuit = s_circuits.GetValue(session, _ => new CircuitState());
+        CircuitState circuit = S_circuits.GetValue(session, _ => new CircuitState());
 
         long openUntil = Volatile.Read(ref circuit.OpenUntilTicks);
         if (openUntil != 0)
@@ -184,6 +185,7 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
         if (count >= FailureThreshold)
         {
             long until = DateTime.UtcNow.AddSeconds(CooldownSeconds).Ticks;
+
             // Only the first thread that trips the breaker emits the trace, to avoid log spam.
             if (Interlocked.CompareExchange(ref circuit.OpenUntilTicks, until, 0L) == 0L)
             {
@@ -201,10 +203,13 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
     /// <see cref="SessionOptions"/> bound to the shared D3D12 device.
     /// Otherwise returns <c>null</c> so the caller can fall back to CPU.
     /// </summary>
+    /// <returns></returns>
     public SessionOptions? TryCreateSessionOptions()
     {
         if (_sessionFactory is null)
+        {
             return null;
+        }
 
         try
         {
@@ -218,5 +223,7 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
     }
 
     /// <inheritdoc/>
-    public void Dispose() { }
+    public void Dispose()
+    {
+    }
 }

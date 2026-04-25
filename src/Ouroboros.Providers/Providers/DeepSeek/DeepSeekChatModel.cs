@@ -3,8 +3,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
-using R3;
 using OllamaSharp;
+using R3;
 
 namespace Ouroboros.Providers.DeepSeek;
 
@@ -21,27 +21,27 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
     /// <summary>
     /// Model identifier for DeepSeek R1 distilled 7B (local).
     /// </summary>
-    public const string ModelDeepSeekR1_7B = "deepseek-r1:7b";
+    public const string ModelDeepSeekR17B = "deepseek-r1:7b";
 
     /// <summary>
     /// Model identifier for DeepSeek R1 distilled 8B (local).
     /// </summary>
-    public const string ModelDeepSeekR1_8B = "deepseek-r1:8b";
+    public const string ModelDeepSeekR18B = "deepseek-r1:8b";
 
     /// <summary>
     /// Model identifier for DeepSeek R1 distilled 14B (local).
     /// </summary>
-    public const string ModelDeepSeekR1_14B = "deepseek-r1:14b";
+    public const string ModelDeepSeekR114B = "deepseek-r1:14b";
 
     /// <summary>
     /// Model identifier for DeepSeek R1 32B (local/cloud).
     /// </summary>
-    public const string ModelDeepSeekR1_32B = "deepseek-r1:32b";
+    public const string ModelDeepSeekR132B = "deepseek-r1:32b";
 
     /// <summary>
     /// Model identifier for DeepSeek R1 70B (cloud).
     /// </summary>
-    public const string ModelDeepSeekR1_70B = "deepseek-r1:70b";
+    public const string ModelDeepSeekR170B = "deepseek-r1:70b";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DeepSeekChatModel"/> class for local Ollama.
@@ -67,9 +67,20 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
         string model,
         ChatRuntimeSettings? settings = null)
     {
-        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
-        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
-        if (string.IsNullOrWhiteSpace(model)) throw new ArgumentException("Model is required", nameof(model));
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        }
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new ArgumentException("API key is required", nameof(apiKey));
+        }
+
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            throw new ArgumentException("Model is required", nameof(model));
+        }
 
         _underlyingModel = new OllamaCloudChatModel(endpoint, apiKey, model, settings);
     }
@@ -82,7 +93,7 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
     /// <returns>Configured DeepSeek chat model for local inference.</returns>
     public static DeepSeekChatModel CreateLocal(
         string? ollamaEndpoint = null,
-        string model = ModelDeepSeekR1_8B)
+        string model = ModelDeepSeekR18B)
     {
         string endpoint = ollamaEndpoint ?? Configuration.DefaultEndpoints.Ollama;
         var client = new OllamaApiClient(new Uri(endpoint), model);
@@ -98,7 +109,7 @@ public sealed class DeepSeekChatModel : IStreamingThinkingChatModel
     /// <returns>Configured DeepSeek chat model for Ollama Cloud.</returns>
     /// <exception cref="InvalidOperationException">Thrown when required environment variables are not set.</exception>
     public static DeepSeekChatModel FromEnvironment(
-        string model = ModelDeepSeekR1_32B,
+        string model = ModelDeepSeekR132B,
         ChatRuntimeSettings? settings = null)
     {
         string? endpoint = Environment.GetEnvironmentVariable("OLLAMA_CLOUD_ENDPOINT")

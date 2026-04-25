@@ -17,9 +17,10 @@ namespace Ouroboros.Providers.Meai;
 public sealed class AnthropicOfficialChatClient : IChatClient
 {
     private readonly CompletionModelChatClientAdapter _inner;
-    private static readonly ChatClientMetadata s_metadata = new(nameof(AnthropicOfficialChatClient));
+    private static readonly ChatClientMetadata MetadataValue = new(nameof(AnthropicOfficialChatClient));
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="AnthropicOfficialChatClient"/> class.
     /// Initializes a new instance wrapping <paramref name="model"/>.
     /// </summary>
     /// <param name="model">Configured Anthropic chat model.</param>
@@ -30,7 +31,7 @@ public sealed class AnthropicOfficialChatClient : IChatClient
     }
 
     /// <inheritdoc/>
-    public ChatClientMetadata Metadata => s_metadata;
+    public ChatClientMetadata Metadata => MetadataValue;
 
     /// <inheritdoc/>
     public Task<ChatResponse> GetResponseAsync(
@@ -50,7 +51,9 @@ public sealed class AnthropicOfficialChatClient : IChatClient
     public object? GetService(Type serviceType, object? key = null)
     {
         if (key is null && serviceType == typeof(IChatClient))
+        {
             return this;
+        }
 
         return _inner.GetService(serviceType, key);
     }

@@ -12,7 +12,7 @@ namespace Ouroboros.Providers.Tapo;
 /// </summary>
 public sealed partial class TapoEmbodimentProvider
 {
-    private Task RefreshRtspCameraInventoryAsync(CancellationToken ct)
+    private Task RefreshRtspCameraInventoryAsync()
     {
         _sensors.Clear();
         _actuators.Clear();
@@ -25,7 +25,10 @@ public sealed partial class TapoEmbodimentProvider
         foreach (var cameraName in _rtspClientFactory.GetCameraNames())
         {
             var rtspClient = _rtspClientFactory.GetClient(cameraName);
-            if (rtspClient == null) continue;
+            if (rtspClient == null)
+            {
+                continue;
+            }
 
             var sensorCapabilities = EmbodimentCapabilities.VideoCapture | EmbodimentCapabilities.VisionAnalysis;
             _sensors[cameraName] = new SensorInfo(
@@ -39,7 +42,7 @@ public sealed partial class TapoEmbodimentProvider
                     ["deviceType"] = "RTSP Camera",
                     ["ipAddress"] = rtspClient.CameraIp,
                     ["rtspUrl"] = rtspClient.RtspUrl,
-                    ["visionModel"] = _visionConfig.VisionModel
+                    ["visionModel"] = _visionConfig.VisionModel,
                 });
 
             var ptzActuatorId = $"{cameraName}-ptz";
@@ -49,7 +52,7 @@ public sealed partial class TapoEmbodimentProvider
                 {
                     "pan_left", "pan_right", "tilt_up", "tilt_down",
                     "ptz_move", "ptz_stop", "ptz_home",
-                    "ptz_go_to_preset", "ptz_set_preset", "ptz_patrol_sweep"
+                    "ptz_go_to_preset", "ptz_set_preset", "ptz_patrol_sweep",
                 };
 
                 _actuators[ptzActuatorId] = new ActuatorInfo(
@@ -64,7 +67,7 @@ public sealed partial class TapoEmbodimentProvider
                         ["deviceType"] = "RTSP Camera PTZ",
                         ["ipAddress"] = rtspClient.CameraIp,
                         ["panRange"] = "360°",
-                        ["tiltRange"] = "114°"
+                        ["tiltRange"] = "114°",
                     });
 
                 _logger?.LogInformation(
@@ -72,7 +75,8 @@ public sealed partial class TapoEmbodimentProvider
                     cameraName, rtspClient.CameraIp);
             }
 
-            _logger?.LogInformation("Registered RTSP camera: {CameraName} at {Ip}",
+            _logger?.LogInformation(
+                "Registered RTSP camera: {CameraName} at {Ip}",
                 cameraName, rtspClient.CameraIp);
         }
 
@@ -112,7 +116,7 @@ public sealed partial class TapoEmbodimentProvider
                     {
                         ["deviceType"] = device.DeviceType.ToString(),
                         ["ipAddress"] = device.IpAddress,
-                        ["visionModel"] = _visionConfig.VisionModel
+                        ["visionModel"] = _visionConfig.VisionModel,
                     });
 
                 _sensors[$"{deviceId}-mic"] = new SensorInfo(
@@ -124,7 +128,7 @@ public sealed partial class TapoEmbodimentProvider
                     new Dictionary<string, object>
                     {
                         ["deviceType"] = device.DeviceType.ToString(),
-                        ["ipAddress"] = device.IpAddress
+                        ["ipAddress"] = device.IpAddress,
                     });
 
                 _actuators[$"{deviceId}-speaker"] = new ActuatorInfo(
@@ -136,7 +140,7 @@ public sealed partial class TapoEmbodimentProvider
                     ["speak"],
                     new Dictionary<string, object>
                     {
-                        ["deviceType"] = device.DeviceType.ToString()
+                        ["deviceType"] = device.DeviceType.ToString(),
                     });
             }
             else if (IsLightDevice(device.DeviceType))
@@ -158,7 +162,7 @@ public sealed partial class TapoEmbodimentProvider
                     new Dictionary<string, object>
                     {
                         ["deviceType"] = device.DeviceType.ToString(),
-                        ["ipAddress"] = device.IpAddress
+                        ["ipAddress"] = device.IpAddress,
                     });
             }
             else if (IsPlugDevice(device.DeviceType))
@@ -173,7 +177,7 @@ public sealed partial class TapoEmbodimentProvider
                     new Dictionary<string, object>
                     {
                         ["deviceType"] = device.DeviceType.ToString(),
-                        ["ipAddress"] = device.IpAddress
+                        ["ipAddress"] = device.IpAddress,
                     });
             }
         }
@@ -246,7 +250,9 @@ public sealed partial class TapoEmbodimentProvider
     private bool IsCameraNamePtzCapable(string cameraName)
     {
         if (_ptzClients.ContainsKey(cameraName))
+        {
             return true;
+        }
 
         var upperName = cameraName.ToUpperInvariant();
         return upperName.Contains("C200") || upperName.Contains("C210") ||

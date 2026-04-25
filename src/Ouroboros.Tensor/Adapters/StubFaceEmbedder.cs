@@ -78,17 +78,27 @@ public sealed class StubFaceEmbedder : IFaceEmbedder
             float magLane = ((hash >> 32) & 0xFFFFUL) / 65535f;
             output[i] = signLane * magLane;
 
-            if (p >= rgba.Length) { p = 0; }
+            if (p >= rgba.Length)
+            {
+                p = 0;
+            }
         }
 
         // L2-normalize so cosine == dot.
         double normSq = 0;
-        for (int i = 0; i < output.Length; i++) normSq += output[i] * output[i];
+        for (int i = 0; i < output.Length; i++)
+        {
+            normSq += output[i] * output[i];
+        }
+
         float norm = (float)Math.Sqrt(normSq);
         if (norm > 1e-9f)
         {
             float inv = 1f / norm;
-            for (int i = 0; i < output.Length; i++) output[i] *= inv;
+            for (int i = 0; i < output.Length; i++)
+            {
+                output[i] *= inv;
+            }
         }
 
         return output;

@@ -1,9 +1,9 @@
-﻿using R3;
-using System.Text;
+﻿using System.Text;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OllamaSharp.Models;
 using Ouroboros.Abstractions.Core;
+using R3;
 
 namespace Ouroboros.Providers;
 
@@ -80,7 +80,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
                 Model = _modelName,
                 Prompt = finalPrompt,
                 Stream = true,
-                Options = _options
+                Options = _options,
             };
 
             if (KeepAlive is not null)
@@ -131,7 +131,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
                     Model = _modelName,
                     Prompt = finalPrompt,
                     Stream = true,
-                    Options = _options
+                    Options = _options,
                 };
 
                 if (KeepAlive is not null)
@@ -145,7 +145,10 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
                 await foreach (GenerateResponseStream? chunk in _client.GenerateAsync(request, token).ConfigureAwait(false))
                 {
                     string text = chunk?.Response ?? string.Empty;
-                    if (string.IsNullOrEmpty(text)) continue;
+                    if (string.IsNullOrEmpty(text))
+                    {
+                        continue;
+                    }
 
                     buffer.Append(text);
                     string bufferStr = buffer.ToString();
@@ -156,7 +159,9 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
                         int idx = bufferStr.IndexOf("<think>", StringComparison.OrdinalIgnoreCase);
                         string beforeTag = bufferStr[..idx];
                         if (!string.IsNullOrEmpty(beforeTag))
+                        {
                             observer.OnNext((false, beforeTag));
+                        }
 
                         buffer.Clear();
                         buffer.Append(bufferStr[(idx + 7)..]);
@@ -169,7 +174,9 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
                         int idx = bufferStr.IndexOf("</think>", StringComparison.OrdinalIgnoreCase);
                         string thinkingContent = bufferStr[..idx];
                         if (!string.IsNullOrEmpty(thinkingContent))
+                        {
                             observer.OnNext((true, thinkingContent));
+                        }
 
                         buffer.Clear();
                         buffer.Append(bufferStr[(idx + 8)..]);
@@ -184,11 +191,16 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
 
                 // Flush any remaining buffer
                 if (buffer.Length > 0)
+                {
                     observer.OnNext((inThinking, buffer.ToString()));
+                }
 
                 observer.OnCompleted();
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 observer.OnErrorResume(ex);
@@ -210,7 +222,7 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
                     Model = _modelName,
                     Prompt = finalPrompt,
                     Stream = true,
-                    Options = _options
+                    Options = _options,
                 };
 
                 if (KeepAlive is not null)
@@ -226,9 +238,13 @@ public sealed class OllamaChatAdapter : IStreamingThinkingChatModel, IChatClient
                         observer.OnNext(text);
                     }
                 }
+
                 observer.OnCompleted();
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 observer.OnErrorResume(ex);

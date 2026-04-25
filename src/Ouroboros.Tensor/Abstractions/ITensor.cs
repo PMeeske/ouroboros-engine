@@ -20,7 +20,8 @@ namespace Ouroboros.Tensor.Abstractions;
 /// conversions occur. Decorators can intercept these calls for metrics and logging (R03, R18).
 /// </para>
 /// </remarks>
-public interface ITensor<T> : IDisposable where T : unmanaged
+public interface ITensor<T> : IDisposable
+    where T : unmanaged
 {
     /// <summary>Gets the shape (rank and dimension extents) of this tensor.</summary>
     TensorShape Shape { get; }
@@ -33,6 +34,7 @@ public interface ITensor<T> : IDisposable where T : unmanaged
     /// </summary>
     /// <exception cref="NotSupportedException">Thrown when the tensor is GPU-resident.</exception>
     /// <exception cref="ObjectDisposedException">Thrown after the tensor has been disposed.</exception>
+    /// <returns></returns>
     ReadOnlyMemory<T> AsMemory();
 
     /// <summary>
@@ -40,12 +42,14 @@ public interface ITensor<T> : IDisposable where T : unmanaged
     /// </summary>
     /// <exception cref="NotSupportedException">Thrown when the tensor is GPU-resident.</exception>
     /// <exception cref="ObjectDisposedException">Thrown after the tensor has been disposed.</exception>
+    /// <returns></returns>
     ReadOnlySpan<T> AsSpan();
 
     /// <summary>
     /// Returns a CPU-resident copy of this tensor. If already on CPU, returns
     /// <see langword="this"/> without allocation.
     /// </summary>
+    /// <returns></returns>
     ITensor<T> ToCpu();
 
     /// <summary>
@@ -55,5 +59,6 @@ public interface ITensor<T> : IDisposable where T : unmanaged
     /// Thrown when no GPU backend is available. The caller must use a GPU-capable
     /// <see cref="ITensorBackend"/> to create GPU tensors.
     /// </exception>
+    /// <returns></returns>
     ITensor<T> ToGpu();
 }

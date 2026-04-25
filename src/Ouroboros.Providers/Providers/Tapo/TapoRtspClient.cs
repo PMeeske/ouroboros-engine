@@ -72,7 +72,7 @@ public sealed class TapoRtspClient : IDisposable
         {
             CameraStreamQuality.Low => "stream2",
             CameraStreamQuality.Standard => "stream2",
-            _ => "stream1" // HD, FullHD, QHD all use stream1
+            _ => "stream1", // HD, FullHD, QHD all use stream1
         };
 
         // URL encode special characters in password
@@ -89,7 +89,10 @@ public sealed class TapoRtspClient : IDisposable
     /// <returns>Result containing the captured frame or error.</returns>
     public async Task<Result<TapoCameraFrame>> CaptureFrameAsync(CancellationToken ct = default)
     {
-        if (_disposed) return Result<TapoCameraFrame>.Failure("Client is disposed");
+        if (_disposed)
+        {
+            return Result<TapoCameraFrame>.Failure("Client is disposed");
+        }
 
         try
         {
@@ -103,7 +106,7 @@ public sealed class TapoRtspClient : IDisposable
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             };
             startInfo.ArgumentList.Add("-rtsp_transport");
             startInfo.ArgumentList.Add("tcp");
@@ -149,7 +152,7 @@ public sealed class TapoRtspClient : IDisposable
                 CameraStreamQuality.HD => (1280, 720),
                 CameraStreamQuality.FullHD => (1920, 1080),
                 CameraStreamQuality.QHD => (2560, 1440),
-                _ => (1920, 1080)
+                _ => (1920, 1080),
             };
 
             var frame = new TapoCameraFrame(
@@ -163,7 +166,6 @@ public sealed class TapoRtspClient : IDisposable
             _logger?.LogDebug("Captured frame {FrameNumber}, {Size} bytes", _frameCount, frameData.Length);
             return Result<TapoCameraFrame>.Success(frame);
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             _logger?.LogError(ex, "Failed to capture frame from {CameraIp}", _cameraIp);
@@ -196,7 +198,7 @@ public sealed class TapoRtspClient : IDisposable
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
         };
         startInfo.ArgumentList.Add("-rtsp_transport");
         startInfo.ArgumentList.Add("tcp");
@@ -239,7 +241,7 @@ public sealed class TapoRtspClient : IDisposable
                     CameraStreamQuality.HD => (1280, 720),
                     CameraStreamQuality.FullHD => (1920, 1080),
                     CameraStreamQuality.QHD => (2560, 1440),
-                    _ => (1920, 1080)
+                    _ => (1920, 1080),
                 };
 
                 var frame = new TapoCameraFrame(
@@ -271,7 +273,10 @@ public sealed class TapoRtspClient : IDisposable
         while (!ct.IsCancellationRequested)
         {
             var b = stream.ReadByte();
-            if (b == -1) break;
+            if (b == -1)
+            {
+                break;
+            }
 
             if (!headerFound)
             {
@@ -282,6 +287,7 @@ public sealed class TapoRtspClient : IDisposable
                     buffer.Add(0xFF);
                     buffer.Add((byte)b);
                 }
+
                 prev = b;
                 continue;
             }
@@ -319,7 +325,10 @@ public sealed class TapoRtspClient : IDisposable
                 _ffmpegProcess.Kill(entireProcessTree: true);
                 _ffmpegProcess.Dispose();
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger?.LogWarning(ex, "Error stopping FFmpeg process");
@@ -349,7 +358,7 @@ public sealed class TapoRtspClient : IDisposable
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             };
             startInfo.ArgumentList.Add("-rtsp_transport");
             startInfo.ArgumentList.Add("tcp");
@@ -390,7 +399,10 @@ public sealed class TapoRtspClient : IDisposable
                 return Result<string>.Failure($"Connection failed: {error}");
             }
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<string>.Failure($"Connection test failed: {ex.Message}");
@@ -400,7 +412,11 @@ public sealed class TapoRtspClient : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
 
         StopStreaming();

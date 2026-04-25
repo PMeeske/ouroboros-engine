@@ -45,19 +45,22 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
         {
             var url = $"/api/v1/namespaces/{ns}/pods";
             if (!string.IsNullOrWhiteSpace(labelSelector))
+            {
                 url += $"?labelSelector={Uri.EscapeDataString(labelSelector)}";
+            }
 
             var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<IReadOnlyList<KubernetesPodInfo>, string>.Failure(
                     $"Failed to list pods: {response.StatusCode} — {await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false)}");
+            }
 
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json);
             var pods = ParsePodList(doc.RootElement);
             return Result<IReadOnlyList<KubernetesPodInfo>, string>.Success(pods);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<IReadOnlyList<KubernetesPodInfo>, string>.Failure($"ListPods failed: {ex.Message}");
@@ -78,14 +81,15 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
         {
             var response = await _httpClient.GetAsync($"/api/v1/namespaces/{ns}/pods/{name}", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<KubernetesPodInfo, string>.Failure(
                     $"Failed to get pod '{name}': {response.StatusCode}");
+            }
 
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json);
             return Result<KubernetesPodInfo, string>.Success(ParsePod(doc.RootElement));
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<KubernetesPodInfo, string>.Failure($"GetPod failed: {ex.Message}");
@@ -108,17 +112,20 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
         {
             var url = $"/api/v1/namespaces/{ns}/pods/{podName}/log?tailLines={tailLines}";
             if (!string.IsNullOrWhiteSpace(container))
+            {
                 url += $"&container={Uri.EscapeDataString(container)}";
+            }
 
             var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<string, string>.Failure(
                     $"Failed to get logs for pod '{podName}': {response.StatusCode}");
+            }
 
             var logs = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return Result<string, string>.Success(logs);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"GetPodLogs failed: {ex.Message}");
@@ -135,19 +142,22 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
         {
             var url = $"/apis/apps/v1/namespaces/{ns}/deployments";
             if (!string.IsNullOrWhiteSpace(labelSelector))
+            {
                 url += $"?labelSelector={Uri.EscapeDataString(labelSelector)}";
+            }
 
             var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<IReadOnlyList<KubernetesDeploymentInfo>, string>.Failure(
                     $"Failed to list deployments: {response.StatusCode}");
+            }
 
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json);
             var deployments = ParseDeploymentList(doc.RootElement);
             return Result<IReadOnlyList<KubernetesDeploymentInfo>, string>.Success(deployments);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<IReadOnlyList<KubernetesDeploymentInfo>, string>.Failure($"ListDeployments failed: {ex.Message}");
@@ -167,28 +177,31 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
     {
         try
         {
-            var patch = JsonSerializer.Serialize(new
+            var patch = JsonSerializer.Serialize(
+                new
             {
-                spec = new { replicas }
+                spec = new { replicas },
             }, _jsonOptions);
 
             using var content = new StringContent(patch, Encoding.UTF8, "application/strategic-merge-patch+json");
-            using var request = new HttpRequestMessage(HttpMethod.Patch,
+            using var request = new HttpRequestMessage(
+                HttpMethod.Patch,
                 $"/apis/apps/v1/namespaces/{ns}/deployments/{deploymentName}")
             {
-                Content = content
+                Content = content,
             };
 
             var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<KubernetesDeploymentInfo, string>.Failure(
                     $"Failed to scale deployment '{deploymentName}': {response.StatusCode}");
+            }
 
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json);
             return Result<KubernetesDeploymentInfo, string>.Success(ParseDeployment(doc.RootElement));
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<KubernetesDeploymentInfo, string>.Failure($"ScaleDeployment failed: {ex.Message}");
@@ -208,15 +221,16 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
         {
             var response = await _httpClient.GetAsync($"/api/v1/namespaces/{ns}/services", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<IReadOnlyList<KubernetesServiceInfo>, string>.Failure(
                     $"Failed to list services: {response.StatusCode}");
+            }
 
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json);
             var services = ParseServiceList(doc.RootElement);
             return Result<IReadOnlyList<KubernetesServiceInfo>, string>.Success(services);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<IReadOnlyList<KubernetesServiceInfo>, string>.Failure($"ListServices failed: {ex.Message}");
@@ -235,8 +249,10 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
         {
             var response = await _httpClient.GetAsync("/api/v1/namespaces", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<IReadOnlyList<string>, string>.Failure(
                     $"Failed to list namespaces: {response.StatusCode}");
+            }
 
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json);
@@ -249,7 +265,6 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
 
             return Result<IReadOnlyList<string>, string>.Success(names);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<IReadOnlyList<string>, string>.Failure($"ListNamespaces failed: {ex.Message}");
@@ -286,12 +301,13 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
             }
 
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<string, string>.Failure(
                     $"Failed to apply manifest: {response.StatusCode}");
+            }
 
             return Result<string, string>.Success($"{kind}/{name} applied successfully");
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"ApplyManifest failed: {ex.Message}");
@@ -316,18 +332,19 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
                 "deployment" or "statefulset" or "daemonset" or "replicaset" => "apps/v1",
                 "ingress" => "networking.k8s.io/v1",
                 "cronjob" or "job" => "batch/v1",
-                _ => "v1"
+                _ => "v1",
             };
 
             var url = BuildResourceUrl(apiVersion, kind.ToLowerInvariant(), ns, name);
             var response = await _httpClient.DeleteAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<string, string>.Failure(
                     $"Failed to delete {kind}/{name}: {response.StatusCode}");
+            }
 
             return Result<string, string>.Success($"{kind}/{name} deleted");
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"DeleteResource failed: {ex.Message}");
@@ -343,5 +360,4 @@ public sealed partial class KubernetesMcpClient : IKubernetesMcpClient, IDisposa
             _disposed = true;
         }
     }
-
 }

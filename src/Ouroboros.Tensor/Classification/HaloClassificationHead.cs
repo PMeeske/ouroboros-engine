@@ -45,21 +45,22 @@ public sealed class HaloClassificationHead
     private readonly bool _includeOriginSink;
 
     /// <summary>
-    /// Number of classes (centroids) in the head.
+    /// Gets number of classes (centroids) in the head.
     /// </summary>
     public int ClassCount => _centroids.Length;
 
     /// <summary>
-    /// Embedding dimension (length of each centroid vector).
+    /// Gets embedding dimension (length of each centroid vector).
     /// </summary>
     public int EmbeddingDim => _centroids.Length > 0 ? _centroids[0].Length : 0;
 
     /// <summary>
-    /// Whether the origin sink is included for OOD detection.
+    /// Gets a value indicating whether whether the origin sink is included for OOD detection.
     /// </summary>
     public bool HasOriginSink => _includeOriginSink;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="HaloClassificationHead"/> class.
     /// Creates a HALO classification head with the given centroids and configuration.
     /// </summary>
     /// <param name="centroids">
@@ -159,8 +160,8 @@ public sealed class HaloClassificationHead
                 nameof(embedding));
         }
 
-        int K = _centroids.Length;
-        int totalLogits = K + (_includeOriginSink ? 1 : 0);
+        int k1 = _centroids.Length;
+        int totalLogits = k1 + (_includeOriginSink ? 1 : 0);
 
         // Use stack allocation for logits and probs (typically < 20 classes)
         Span<float> logits = stackalloc float[totalLogits];
@@ -170,17 +171,17 @@ public sealed class HaloClassificationHead
         // logit_k = (h . w_k - ||w_k||^2 / 2) / sigma^2
         // This is equivalent to -||h - w_k||^2 / (2 * sigma^2) minus the shift ||h||^2 / (2 * sigma^2)
         // which cancels in softmax.
-        for (int k = 0; k < K; k++)
+        for (int k = 0; k < k1; k++)
         {
             float dot = TensorPrimitives.Dot(embedding, _centroids[k]);
-            logits[k] = (dot - _centroidNormsSq[k] / 2f) / _sigmaSquared;
+            logits[k] = (dot - (_centroidNormsSq[k] / 2f)) / _sigmaSquared;
         }
 
         // Origin sink: logit = 0 (after shift-invariant cancellation)
         // The origin has dot(h, 0) = 0 and ||0||^2 = 0, so logit = (0 - 0) / sigma^2 = 0
         if (_includeOriginSink)
         {
-            logits[K] = 0f;
+            logits[k1] = 0f;
         }
 
         // Step 2: Numerically stable softmax (subtract max before exp to prevent overflow)
@@ -188,7 +189,9 @@ public sealed class HaloClassificationHead
         for (int i = 0; i < totalLogits; i++)
         {
             if (logits[i] > maxLogit)
+            {
                 maxLogit = logits[i];
+            }
         }
 
         float sumExp = 0f;
@@ -217,8 +220,8 @@ public sealed class HaloClassificationHead
         }
 
         // Step 4: Determine if OOD (sink wins) and populate result
-        bool isOod = _includeOriginSink && winnerIndex == K;
-        float sinkProbability = _includeOriginSink ? probs[K] : 0f;
+        bool isOod = _includeOriginSink && winnerIndex == k1;
+        float sinkProbability = _includeOriginSink ? probs[k1] : 0f;
 
         // Copy probabilities to heap-allocated array for the result
         var allProbabilities = new float[totalLogits];
@@ -251,7 +254,8 @@ public sealed class HaloClassificationHead
     {
         if (classIndex < 0 || classIndex >= _centroids.Length)
         {
-            throw new ArgumentOutOfRangeException(nameof(classIndex),
+            throw new ArgumentOutOfRangeException(
+                nameof(classIndex),
                 $"Class index {classIndex} is out of range [0, {_centroids.Length}).");
         }
 

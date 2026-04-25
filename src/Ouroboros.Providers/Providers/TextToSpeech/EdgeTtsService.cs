@@ -53,7 +53,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
     private static volatile bool _isCircuitOpen;
 
     /// <summary>
-    /// Gets whether the Edge TTS circuit breaker is open (service blocked/unavailable).
+    /// Gets a value indicating whether gets whether the Edge TTS circuit breaker is open (service blocked/unavailable).
     /// </summary>
     public static bool IsCircuitOpen => _isCircuitOpen;
 
@@ -153,7 +153,10 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
                 ct).ConfigureAwait(false);
             return Result<SpeechResult, string>.Success(new SpeechResult(audioData, "mp3"));
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<SpeechResult, string>.Failure($"Edge TTS error: {ex.Message}");
@@ -182,7 +185,6 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
                 await File.WriteAllBytesAsync(outputPath, result.Value.AudioData, ct).ConfigureAwait(false);
                 return Result<string, string>.Success(outputPath);
             }
-            catch (OperationCanceledException) { throw; }
             catch (IOException ex)
             {
                 return Result<string, string>.Failure($"Failed to save audio: {ex.Message}");
@@ -248,7 +250,8 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
         ws.Options.SetRequestHeader("Origin", "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold");
         ws.Options.SetRequestHeader("Accept-Encoding", "gzip, deflate, br, zstd");
         ws.Options.SetRequestHeader("Accept-Language", "en-US,en;q=0.9");
-        ws.Options.SetRequestHeader("User-Agent",
+        ws.Options.SetRequestHeader(
+            "User-Agent",
             $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{ChromiumMajorVersion}.0.0.0 Safari/537.36 Edg/{ChromiumMajorVersion}.0.0.0");
         ws.Options.SetRequestHeader("Cookie", $"muid={GenerateMuid()};");
 
@@ -274,7 +277,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
                             outputFormat = _outputFormat
                         }
                     }
-                }
+                },
             });
 
         await ws.SendAsync(
@@ -339,6 +342,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
     /// Edge TTS doesn't support &lt;mstts:express-as&gt;, so we approximate
     /// emotional styles with rate/pitch/volume adjustments.
     /// </summary>
+    /// <returns></returns>
     public static (int RatePercent, string Pitch, string Volume) MapStyleToProsody(string? style)
     {
         return style?.ToLowerInvariant() switch
@@ -352,7 +356,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             "lyrical" or "poetry-reading" => (-8, "+6%", "0%"),
             "chat" => (0, "+3%", "0%"),
             "newscast-formal" => (-3, "-2%", "+5%"),
-            _ => (0, "+5%", "0%")
+            _ => (0, "+5%", "0%"),
         };
     }
 
@@ -360,6 +364,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
     /// Builds multi-segment SSML where each segment can have its own prosody.
     /// Edge TTS doesn't support mstts:express-as, so styles are approximated via rate/pitch/volume.
     /// </summary>
+    /// <returns></returns>
     public string BuildMultiSegmentSsml(
         IReadOnlyList<(string Text, string? Style, float? PitchOffset, float? RateMultiplier)> segments)
     {
@@ -374,7 +379,10 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
             }
 
             var escaped = System.Security.SecurityElement.Escape(text);
-            if (string.IsNullOrWhiteSpace(escaped)) continue;
+            if (string.IsNullOrWhiteSpace(escaped))
+            {
+                continue;
+            }
 
             // Map voice marker style to Edge-compatible prosody
             var (baseRate, basePitch, baseVolume) = MapStyleToProsody(style);
@@ -384,7 +392,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
                 ? (int)(((rateMul.Value - 1.0f) * 100) + baseRate)
                 : baseRate;
             string pitchString = pitchOff.HasValue
-                ? $"{(int)(pitchOff.Value * 100) + int.Parse(basePitch.Replace("%", "").Replace("+", ""))}%"
+                ? $"{(int)(pitchOff.Value * 100) + int.Parse(basePitch.Replace("%", string.Empty).Replace("+", string.Empty))}%"
                 : basePitch;
 
             string rateString = ratePercent >= 0 ? $"+{ratePercent}%" : $"{ratePercent}%";
@@ -404,12 +412,15 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
     /// <summary>
     /// Synthesizes voice-annotated segments with per-segment prosody.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<SpeechResult, string>> SynthesizeSegmentsAsync(
         IReadOnlyList<(string Text, string? Style, float? PitchOffset, float? RateMultiplier)> segments,
         CancellationToken ct = default)
     {
         if (segments.Count == 0)
+        {
             return Result<SpeechResult, string>.Failure("No segments to synthesize");
+        }
 
         try
         {
@@ -430,7 +441,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
     ///   2. Round down to nearest 300 seconds
     ///   3. Convert to 100-nanosecond intervals (×1e7)
     ///   4. SHA-256("{ticks}{token}").hex().upper()
-    /// See: https://github.com/rany2/edge-tts
+    /// See: https://github.com/rany2/edge-tts.
     /// </summary>
     private static string GenerateSecMsGec()
     {
@@ -438,7 +449,7 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
 
         // Get current Unix timestamp in seconds, add Windows epoch offset
         double unixSeconds = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
-        long ticks = (long)(unixSeconds) + winEpochSeconds;
+        long ticks = (long)unixSeconds + winEpochSeconds;
 
         // Round down to nearest 5-minute (300 second) boundary
         ticks -= ticks % 300;
@@ -489,7 +500,11 @@ public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
     }
 }

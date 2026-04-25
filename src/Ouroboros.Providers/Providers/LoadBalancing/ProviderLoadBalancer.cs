@@ -50,7 +50,10 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
     public void RegisterProvider(string providerId, T provider)
     {
         if (string.IsNullOrWhiteSpace(providerId))
+        {
             throw new ArgumentException("Provider ID cannot be empty", nameof(providerId));
+        }
+
         ArgumentNullException.ThrowIfNull(provider);
 
         _providers[providerId] = provider;
@@ -92,7 +95,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
                 {
                     IsHealthy = true,
                     ConsecutiveFailures = 0,
-                    CooldownUntil = null
+                    CooldownUntil = null,
                 };
             }
         }
@@ -165,7 +168,9 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
     public void RecordExecution(string providerId, double latencyMs, bool success, bool wasRateLimited = false)
     {
         if (!_healthStatus.TryGetValue(providerId, out ProviderHealthStatus? currentHealth))
+        {
             return;
+        }
 
         int newTotalRequests = currentHealth.TotalRequests + 1;
         int newSuccessfulRequests = currentHealth.SuccessfulRequests + (success ? 1 : 0);
@@ -218,14 +223,16 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
     public void MarkProviderUnhealthy(string providerId, TimeSpan? cooldownDuration = null)
     {
         if (!_healthStatus.TryGetValue(providerId, out ProviderHealthStatus? currentHealth))
+        {
             return;
+        }
 
         TimeSpan cooldown = cooldownDuration ?? DefaultCooldownDuration;
         ProviderHealthStatus updatedHealth = currentHealth with
         {
             IsHealthy = false,
             CooldownUntil = DateTime.UtcNow.Add(cooldown),
-            LastChecked = DateTime.UtcNow
+            LastChecked = DateTime.UtcNow,
         };
 
         _healthStatus[providerId] = updatedHealth;
@@ -236,14 +243,16 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
     public void MarkProviderHealthy(string providerId)
     {
         if (!_healthStatus.TryGetValue(providerId, out ProviderHealthStatus? currentHealth))
+        {
             return;
+        }
 
         ProviderHealthStatus updatedHealth = currentHealth with
         {
             IsHealthy = true,
             ConsecutiveFailures = 0,
             CooldownUntil = null,
-            LastChecked = DateTime.UtcNow
+            LastChecked = DateTime.UtcNow,
         };
 
         _healthStatus[providerId] = updatedHealth;
@@ -262,7 +271,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
         return DefaultCooldownDuration;
     }
 
-    private string GenerateSelectionReason(string providerId, ProviderHealthStatus health)
+    private string GenerateSelectionReason(ProviderHealthStatus health)
     {
         return $"Strategy: {_strategy.Name}, Health Score: {health.HealthScore:F2}, " +
                $"Success Rate: {health.SuccessRate:P0}, Avg Latency: {health.AverageLatencyMs:F0}ms";

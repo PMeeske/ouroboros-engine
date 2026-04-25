@@ -110,7 +110,10 @@ public sealed class TextToSpeechTool : ITool
                 path => Result<string, string>.Success($"Audio saved to: {path}"),
                 error => Result<string, string>.Failure(error));
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<string, string>.Failure($"Speech synthesis failed: {ex.Message}");

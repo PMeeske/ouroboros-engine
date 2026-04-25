@@ -32,7 +32,9 @@ public static class TensorToBackendAdapter
         ArgumentNullException.ThrowIfNull(backend);
 
         if (tensor.Device == backend.Device)
+        {
             return (tensor, Transferred: false);
+        }
 
         // Explicit cross-device transfer
         var transferred = backend.Device == DeviceType.Cpu
@@ -55,6 +57,7 @@ public static class TensorToBackendAdapter
     /// When <see langword="false"/>, only device residency is verified (e.g. for MatMul,
     /// where shape validation is the backend's responsibility).
     /// </param>
+    /// <returns></returns>
     public static Result<(ITensor<float> A, ITensor<float> B), string> PrepareOperands(
         ITensor<float> a,
         ITensor<float> b,
@@ -66,18 +69,24 @@ public static class TensorToBackendAdapter
         ArgumentNullException.ThrowIfNull(backend);
 
         if (requireSameShape && !a.Shape.IsCompatibleWith(b.Shape))
+        {
             return Result<(ITensor<float>, ITensor<float>), string>.Failure(
                 $"Shape mismatch: {a.Shape} vs {b.Shape}.");
+        }
 
         if (a.Device != backend.Device)
+        {
             return Result<(ITensor<float>, ITensor<float>), string>.Failure(
                 $"Tensor A is on {a.Device} but backend targets {backend.Device}. " +
                 $"Call TensorToBackendAdapter.EnsureDevice() before dispatching.");
+        }
 
         if (b.Device != backend.Device)
+        {
             return Result<(ITensor<float>, ITensor<float>), string>.Failure(
                 $"Tensor B is on {b.Device} but backend targets {backend.Device}. " +
                 $"Call TensorToBackendAdapter.EnsureDevice() before dispatching.");
+        }
 
         return Result<(ITensor<float>, ITensor<float>), string>.Success((a, b));
     }

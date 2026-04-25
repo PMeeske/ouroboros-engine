@@ -22,7 +22,9 @@ public static class TextToSpeechPlaybackExtensions
         Result<SpeechResult, string> synthesisResult = await service.SynthesizeAsync(text, options, ct).ConfigureAwait(false);
 
         if (synthesisResult.IsSuccess)
+        {
             return await AudioPlayer.PlayAsync(synthesisResult.Value, ct).ConfigureAwait(false);
+        }
 
         return Result<bool, string>.Failure(synthesisResult.Error ?? "Synthesis failed");
     }

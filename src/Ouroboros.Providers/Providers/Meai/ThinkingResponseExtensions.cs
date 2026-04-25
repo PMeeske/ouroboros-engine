@@ -10,6 +10,7 @@ public static class ThinkingResponseExtensions
     /// <summary>
     /// Extracts a ThinkingResponse from a ChatResponse that may contain ThinkingAIContent.
     /// </summary>
+    /// <returns></returns>
     public static ThinkingResponse ToThinkingResponse(this ChatResponse response)
     {
         string thinking = string.Empty;
@@ -20,9 +21,13 @@ public static class ThinkingResponseExtensions
             foreach (var c in msg.Contents)
             {
                 if (c is ThinkingAIContent tc)
+                {
                     thinking += tc.Text;
+                }
                 else if (c is TextContent text)
+                {
                     content += text.Text;
+                }
             }
         }
 
@@ -34,6 +39,7 @@ public static class ThinkingResponseExtensions
     /// <summary>
     /// Determines if a ChatResponseUpdate contains thinking content.
     /// </summary>
+    /// <returns></returns>
     public static bool HasThinkingContent(this ChatResponseUpdate update)
     {
         return update.Contents.OfType<ThinkingAIContent>().Any();
@@ -42,6 +48,7 @@ public static class ThinkingResponseExtensions
     /// <summary>
     /// Extracts the thinking text from a ChatResponseUpdate, if any.
     /// </summary>
+    /// <returns></returns>
     public static string? GetThinkingText(this ChatResponseUpdate update)
     {
         var thinking = update.Contents.OfType<ThinkingAIContent>().FirstOrDefault();

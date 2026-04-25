@@ -20,7 +20,7 @@ public sealed class PerceptionGpuOptions
     public const string SectionName = "Perception:GpuBudget";
 
     /// <summary>
-    /// Total perception-tier VRAM budget in megabytes. Every ONNX session loaded
+    /// Gets or sets total perception-tier VRAM budget in megabytes. Every ONNX session loaded
     /// at the <see cref="GpuPriorityClass.Perception"/> tier reserves against
     /// this cap via <see cref="IPerceptionVramBudget.TryReserveAsync"/> before
     /// creation. Default <c>200</c>.
@@ -28,7 +28,7 @@ public sealed class PerceptionGpuOptions
     public int MaxVramMb { get; set; } = 200;
 
     /// <summary>
-    /// When <see langword="true"/>, perception capture throttles its sample rate
+    /// Gets or sets a value indicating whether when <see langword="true"/>, perception capture throttles its sample rate
     /// between <see cref="MinSampleRateHz"/> and <see cref="MaxSampleRateHz"/>
     /// based on VRAM pressure. When <see langword="false"/>, the pipeline stays
     /// at <see cref="MaxSampleRateHz"/> unless it is paused externally.
@@ -37,18 +37,18 @@ public sealed class PerceptionGpuOptions
     public bool AdaptiveRateEnabled { get; set; } = true;
 
     /// <summary>
-    /// Minimum sample rate in Hz when the pipeline is throttled by VRAM pressure
+    /// Gets or sets minimum sample rate in Hz when the pipeline is throttled by VRAM pressure
     /// but not fully paused. Default <c>1</c>.
     /// </summary>
     public double MinSampleRateHz { get; set; } = 1.0;
 
     /// <summary>
-    /// Maximum sample rate in Hz when no pressure is present. Default <c>5</c>.
+    /// Gets or sets maximum sample rate in Hz when no pressure is present. Default <c>5</c>.
     /// </summary>
     public double MaxSampleRateHz { get; set; } = 5.0;
 
     /// <summary>
-    /// Reserved-bytes threshold (in megabytes) above which the pipeline drops
+    /// Gets or sets reserved-bytes threshold (in megabytes) above which the pipeline drops
     /// from <see cref="MaxSampleRateHz"/> to <see cref="MinSampleRateHz"/>.
     /// Once reservations reach <see cref="MaxVramMb"/>, the rate drops to 0
     /// (paused). Default <c>150</c>.

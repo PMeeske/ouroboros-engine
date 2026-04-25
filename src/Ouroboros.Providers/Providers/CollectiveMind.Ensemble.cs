@@ -24,7 +24,9 @@ public sealed partial class CollectiveMind
         }
 
         if (workerPathways.Count == 0)
+        {
             throw new InvalidOperationException("No healthy neural pathways available");
+        }
 
         // Query all worker pathways in parallel
         var tasks = workerPathways.Select(async pathway =>
@@ -39,7 +41,10 @@ public sealed partial class CollectiveMind
 
                 return ResponseCandidate<ThinkingResponse>.Create(result, pathway.Name, sw.Elapsed);
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 pathway.RecordInhibition();
@@ -51,7 +56,9 @@ public sealed partial class CollectiveMind
         var validCandidates = candidates.Where(c => c.IsValid && !string.IsNullOrEmpty(c.Value.Content)).ToList();
 
         if (validCandidates.Count == 0)
+        {
             throw new InvalidOperationException("No pathways returned valid responses");
+        }
 
         // Single valid response - return directly
         if (validCandidates.Count == 1)
@@ -73,7 +80,10 @@ public sealed partial class CollectiveMind
             foreach (var c in validCandidates)
             {
                 var pathway = _pathways.FirstOrDefault(p => p.Name == c.Source);
-                if (pathway != null) AggregateCosts(pathway);
+                if (pathway != null)
+                {
+                    AggregateCosts(pathway);
+                }
             }
 
             // Build thinking trace with election details
@@ -101,7 +111,10 @@ public sealed partial class CollectiveMind
         foreach (var c in validCandidates)
         {
             var pathway = _pathways.FirstOrDefault(p => p.Name == c.Source);
-            if (pathway != null) AggregateCosts(pathway);
+            if (pathway != null)
+            {
+                AggregateCosts(pathway);
+            }
         }
 
         return best.Candidate.Value;

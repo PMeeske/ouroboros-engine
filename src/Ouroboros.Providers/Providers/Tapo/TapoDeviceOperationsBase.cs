@@ -31,16 +31,17 @@ public abstract class TapoDeviceOperationsBase
     /// <summary>
     /// Executes an action that doesn't return data.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     protected async Task<Result<Unit>> ExecuteActionAsync(string action, string deviceName, CancellationToken ct)
     {
         try
         {
             var separator = action.Contains('?') ? '&' : '?';
             var url = $"/actions/{action}{separator}device={Uri.EscapeDataString(deviceName)}";
-            
+
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             AddAuthorizationHeader(request);
-            
+
             var response = await HttpClient.SendAsync(request, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
@@ -71,16 +72,17 @@ public abstract class TapoDeviceOperationsBase
     /// <summary>
     /// Executes an action that returns JSON data.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     protected async Task<Result<JsonDocument>> GetJsonResponseAsync(string action, string deviceName, CancellationToken ct)
     {
         try
         {
             var separator = action.Contains('?') ? '&' : '?';
             var url = $"/actions/{action}{separator}device={Uri.EscapeDataString(deviceName)}";
-            
+
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             AddAuthorizationHeader(request);
-            
+
             var response = await HttpClient.SendAsync(request, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
@@ -94,10 +96,6 @@ public abstract class TapoDeviceOperationsBase
             return json != null
                 ? Result<JsonDocument>.Success(json)
                 : Result<JsonDocument>.Failure("Empty response");
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (HttpRequestException ex)
         {

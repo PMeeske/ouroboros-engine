@@ -58,7 +58,6 @@ public sealed partial class LocalWhisperService
 
             return ParseWhisperOutput(output, options.ResponseFormat);
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Failed to run Whisper: {ex.Message}");
@@ -110,7 +109,7 @@ public sealed partial class LocalWhisperService
         else
         {
             string task = options.Prompt?.Contains("--translate") == true ? "translate" : "transcribe";
-            string langArg = string.IsNullOrEmpty(options.Language) ? "" : $", language='{options.Language}'";
+            string langArg = string.IsNullOrEmpty(options.Language) ? string.Empty : $", language='{options.Language}'";
 
             string pythonCode = $@"
 import json
@@ -155,7 +154,6 @@ print(json.dumps(output, ensure_ascii=False))
 
             return ParseWhisperOutput(output, "json");
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Failed to run Python Whisper: {ex.Message}");

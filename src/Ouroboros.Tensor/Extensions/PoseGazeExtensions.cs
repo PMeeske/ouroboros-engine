@@ -52,7 +52,8 @@ public static class PoseGazeExtensions
                 catch (Exception ex)
 #pragma warning restore CA1031
                 {
-                    factoryLogger?.LogWarning(ex,
+                    factoryLogger?.LogWarning(
+                        ex,
                         "IPoseEstimator → MoveNetOnnxPoseEstimator init failed; falling back");
                 }
             }
@@ -109,7 +110,8 @@ public static class PoseGazeExtensions
                 catch (Exception ex)
 #pragma warning restore CA1031
                 {
-                    factoryLogger?.LogWarning(ex,
+                    factoryLogger?.LogWarning(
+                        ex,
                         "IGazeEstimator → MobileGazeOnnxEstimator init failed; falling back");
                 }
             }

@@ -147,7 +147,6 @@ public sealed class TrainingStepClient
     }
 
     // ── Internal DTOs ────────────────────────────────────────────────────────
-
     private sealed record StepResponseDto(float[] UpdatedWeights);
 }
 

@@ -32,6 +32,7 @@ public sealed class LazyVector : IAsyncDisposable
     private bool _disposed;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="LazyVector"/> class.
     /// Initializes a new <see cref="LazyVector"/> referencing the given handle in the given store.
     /// </summary>
     public LazyVector(VectorHandle handle, IHandleAwareVectorStore store)
@@ -45,7 +46,7 @@ public sealed class LazyVector : IAsyncDisposable
     public VectorHandle Handle { get; }
 
     /// <summary>
-    /// Gets whether the vector data has been loaded and cached locally.
+    /// Gets a value indicating whether gets whether the vector data has been loaded and cached locally.
     /// </summary>
     public bool IsLoaded => _loaded;
 
@@ -64,14 +65,18 @@ public sealed class LazyVector : IAsyncDisposable
 
         // Fast path: already loaded
         if (_loaded)
+        {
             return Result<float[], string>.Success(_cached!);
+        }
 
         await _fetchLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             // Double-check after acquiring the lock
             if (_loaded)
+            {
                 return Result<float[], string>.Success(_cached!);
+            }
 
             var result = await _store.FetchAsync(Handle, cancellationToken).ConfigureAwait(false);
             if (result.IsSuccess)
@@ -92,6 +97,7 @@ public sealed class LazyVector : IAsyncDisposable
     /// Clears the cached data and releases the semaphore. The vector can be re-fetched after
     /// disposal if the instance is reused (though this is unusual).
     /// </summary>
+    /// <returns></returns>
     public ValueTask DisposeAsync()
     {
         if (!_disposed)

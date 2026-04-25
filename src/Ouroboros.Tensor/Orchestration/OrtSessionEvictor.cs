@@ -28,6 +28,7 @@ public sealed class OrtSessionEvictor : IEvictionPolicy
     public TimeSpan EstimatedReloadLatency => TimeSpan.FromSeconds(2);
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="OrtSessionEvictor"/> class.
     /// Initializes a new <see cref="OrtSessionEvictor"/>.
     /// </summary>
     /// <param name="tenantName">Tenant name.</param>

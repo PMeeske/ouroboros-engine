@@ -9,7 +9,7 @@ namespace Ouroboros.Providers;
 /// keep it permissive – if the call fails we simply echo the prompt with context.
 /// Uses Polly for exponential backoff retry policy to handle rate limiting.
 /// </summary>
-public sealed class HttpOpenAiCompatibleChatModel : Ouroboros.Abstractions.Core.IChatCompletionModel, ICostAwareChatModel
+public sealed class HttpOpenAiCompatibleChatModel : ICostAwareChatModel
 {
     private readonly HttpClient _client;
     private readonly string _model;
@@ -22,12 +22,19 @@ public sealed class HttpOpenAiCompatibleChatModel : Ouroboros.Abstractions.Core.
 
     public HttpOpenAiCompatibleChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null, LlmCostTracker? costTracker = null)
     {
-        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
-        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        }
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new ArgumentException("API key is required", nameof(apiKey));
+        }
 
         _client = new HttpClient
         {
-            BaseAddress = new Uri(endpoint, UriKind.Absolute)
+            BaseAddress = new Uri(endpoint, UriKind.Absolute),
         };
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;
@@ -38,7 +45,7 @@ public sealed class HttpOpenAiCompatibleChatModel : Ouroboros.Abstractions.Core.
         _retryPolicy = Policy
             .HandleResult<HttpResponseMessage>(r =>
                 (int)r.StatusCode == 429 || // Too Many Requests
-                (int)r.StatusCode >= 500)   // Server errors
+                (int)r.StatusCode >= 500) // Server errors
             .WaitAndRetryAsync(
                 retryCount: 3,
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
@@ -58,10 +65,13 @@ public sealed class HttpOpenAiCompatibleChatModel : Ouroboros.Abstractions.Core.
             {
                 ["model"] = _model,
                 ["temperature"] = _settings.Temperature,
-                ["input"] = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt
+                ["input"] = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt,
             };
             if (_settings.MaxTokens > 0)
+            {
                 body["max_output_tokens"] = _settings.MaxTokens;
+            }
+
             using JsonContent payload = JsonContent.Create(body);
 
             HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
@@ -78,10 +88,16 @@ public sealed class HttpOpenAiCompatibleChatModel : Ouroboros.Abstractions.Core.
                 if (json.TryGetValue("usage", out var usage) && usage is System.Text.Json.JsonElement usageEl)
                 {
                     if (usageEl.TryGetProperty("prompt_tokens", out var pt))
+                    {
                         inputTokens = pt.GetInt32();
+                    }
+
                     if (usageEl.TryGetProperty("completion_tokens", out var ct2))
+                    {
                         outputTokens = ct2.GetInt32();
+                    }
                 }
+
                 _costTracker?.EndRequest(inputTokens, outputTokens);
                 return s;
             }
@@ -92,6 +108,7 @@ public sealed class HttpOpenAiCompatibleChatModel : Ouroboros.Abstractions.Core.
             _costTracker?.EndRequest(0, 0);
             return $"I'm having trouble reaching the remote model right now. ({ex.Message})";
         }
+
         _costTracker?.EndRequest(0, 0);
         return string.Empty;
     }

@@ -6,7 +6,8 @@ namespace Ouroboros.Providers;
 /// </summary>
 public sealed class ProviderStats
 {
-    public string Name { get; init; } = "";
+    public string Name { get; init; } = string.Empty;
+
     public int TotalRequests;
     public int SuccessfulRequests;
     public int FailedRequests;
@@ -21,6 +22,7 @@ public sealed class ProviderStats
             long ticks = Interlocked.Read(ref _lastSuccessTicks);
             return ticks == 0 ? null : new DateTime(ticks, DateTimeKind.Utc);
         }
+
         set
         {
             Interlocked.Exchange(ref _lastSuccessTicks, value?.Ticks ?? 0);
@@ -34,12 +36,15 @@ public sealed class ProviderStats
             long ticks = Interlocked.Read(ref _lastFailureTicks);
             return ticks == 0 ? null : new DateTime(ticks, DateTimeKind.Utc);
         }
+
         set
         {
             Interlocked.Exchange(ref _lastFailureTicks, value?.Ticks ?? 0);
         }
     }
+
     public bool IsHealthy => Volatile.Read(ref ConsecutiveFailures) < 3;
+
     public double SuccessRate => Volatile.Read(ref TotalRequests) > 0
         ? (double)Volatile.Read(ref SuccessfulRequests) / Volatile.Read(ref TotalRequests)
         : 1.0;

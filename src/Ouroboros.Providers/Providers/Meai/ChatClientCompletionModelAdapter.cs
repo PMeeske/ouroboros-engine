@@ -32,7 +32,7 @@ public sealed class ChatClientCompletionModelAdapter : IChatCompletionModel
     {
         var messages = new List<ChatMessage>
         {
-            new(ChatRole.User, prompt)
+            new(ChatRole.User, prompt),
         };
 
         ChatResponse response = await _client.GetResponseAsync(messages, cancellationToken: ct)

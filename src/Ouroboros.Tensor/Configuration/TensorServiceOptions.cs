@@ -56,7 +56,7 @@ public sealed class TensorServiceOptions
     public int RetryDelayMs { get; init; } = 100;
 
     /// <summary>
-    /// Gets whether GPU acceleration is preferred.
+    /// Gets a value indicating whether gets whether GPU acceleration is preferred.
     /// </summary>
     /// <remarks>
     /// Default: true. If GPU unavailable, falls back to CPU in the remote service.
@@ -70,19 +70,29 @@ public sealed class TensorServiceOptions
     public Result<TensorServiceOptions, string> Validate()
     {
         if (BaseUrl is null)
+        {
             return Result<TensorServiceOptions, string>.Failure("BaseUrl is required.");
+        }
 
         if (!BaseUrl.IsAbsoluteUri)
+        {
             return Result<TensorServiceOptions, string>.Failure("BaseUrl must be an absolute URI.");
+        }
 
         if (TimeoutSeconds < 1 || TimeoutSeconds > 300)
+        {
             return Result<TensorServiceOptions, string>.Failure("TimeoutSeconds must be between 1 and 300.");
+        }
 
         if (MaxRetryAttempts < 0 || MaxRetryAttempts > 10)
+        {
             return Result<TensorServiceOptions, string>.Failure("MaxRetryAttempts must be between 0 and 10.");
+        }
 
         if (RetryDelayMs < 10 || RetryDelayMs > 10000)
+        {
             return Result<TensorServiceOptions, string>.Failure("RetryDelayMs must be between 10 and 10000.");
+        }
 
         return Result<TensorServiceOptions, string>.Success(this);
     }

@@ -94,6 +94,7 @@ public sealed class GpuScheduler : IDisposable
     private volatile bool _disposed;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GpuScheduler"/> class.
     /// Initializes a new <see cref="GpuScheduler"/>.
     /// </summary>
     /// <param name="totalVramBytes">
@@ -107,6 +108,7 @@ public sealed class GpuScheduler : IDisposable
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GpuScheduler"/> class.
     /// Wraps an existing <see cref="GpuSchedulerV2"/> instance. Used by DI wiring
     /// so the legacy adapter and the v2 scheduler share the same dispatch loop.
     /// </summary>

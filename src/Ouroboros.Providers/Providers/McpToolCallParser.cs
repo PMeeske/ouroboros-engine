@@ -66,15 +66,14 @@ public sealed partial class McpToolCallParser
         }
 
         string result = llmOutput;
-        result = XmlToolCallRegex().Replace(result, "");
-        result = JsonToolCallsRegex().Replace(result, "");
-        result = MarkdownToolCallRegex().Replace(result, "");
-        result = BracketToolCallRegex().Replace(result, "");
+        result = XmlToolCallRegex().Replace(result, string.Empty);
+        result = JsonToolCallsRegex().Replace(result, string.Empty);
+        result = MarkdownToolCallRegex().Replace(result, string.Empty);
+        result = BracketToolCallRegex().Replace(result, string.Empty);
         return result.Trim();
     }
 
     // ── XML format: <tool_call>{...}</tool_call> ─────────────────────────────
-
     private static List<ToolCallIntent> ParseXmlToolCalls(string text)
     {
         var results = new List<ToolCallIntent>();
@@ -92,7 +91,6 @@ public sealed partial class McpToolCallParser
     }
 
     // ── JSON format: {"tool_calls":[...]} ────────────────────────────────────
-
     private static List<ToolCallIntent> ParseJsonToolCalls(string text)
     {
         var results = new List<ToolCallIntent>();
@@ -127,7 +125,6 @@ public sealed partial class McpToolCallParser
     }
 
     // ── Markdown format: ```tool_call\n{...}\n``` ────────────────────────────
-
     private static List<ToolCallIntent> ParseMarkdownToolCalls(string text)
     {
         var results = new List<ToolCallIntent>();
@@ -145,7 +142,6 @@ public sealed partial class McpToolCallParser
     }
 
     // ── Bracket format: [TOOL:name args] ─────────────────────────────────────
-
     private static List<ToolCallIntent> ParseBracketToolCalls(string text)
     {
         var results = new List<ToolCallIntent>();
@@ -164,7 +160,6 @@ public sealed partial class McpToolCallParser
     }
 
     // ── JSON parsing helpers ─────────────────────────────────────────────────
-
     private static ToolCallIntent? ParseToolCallJson(string json, ToolCallFormat format)
     {
         try
@@ -214,7 +209,6 @@ public sealed partial class McpToolCallParser
     }
 
     // ── Compiled regex patterns ──────────────────────────────────────────────
-
     [GeneratedRegex(@"<tool_call>\s*(.*?)\s*</tool_call>", RegexOptions.Singleline | RegexOptions.Compiled)]
     private static partial Regex XmlToolCallRegex();
 
@@ -241,18 +235,18 @@ public sealed record ToolCallIntent(string ToolName, string ArgumentsJson, ToolC
 /// </summary>
 public enum ToolCallFormat
 {
-    /// <summary>XML tag: &lt;tool_call&gt;{...}&lt;/tool_call&gt;</summary>
+    /// <summary>XML tag: &lt;tool_call&gt;{...}&lt;/tool_call&gt.</summary>
     XmlTag,
 
-    /// <summary>JSON array: {"tool_calls":[...]}</summary>
+    /// <summary>JSON array: {"tool_calls":[...]}.</summary>
     JsonToolCalls,
 
-    /// <summary>Bracket: [TOOL:name args]</summary>
+    /// <summary>Bracket: [TOOL:name args].</summary>
     BracketLegacy,
 
     /// <summary>Ollama /api/chat native tool response.</summary>
     NativeApi,
 
-    /// <summary>Markdown code block: ```tool_call\n{...}\n```</summary>
-    MarkdownBlock
+    /// <summary>Markdown code block: ```tool_call\n{...}\n```.</summary>
+    MarkdownBlock,
 }

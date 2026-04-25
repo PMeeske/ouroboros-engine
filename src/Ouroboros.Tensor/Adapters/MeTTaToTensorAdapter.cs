@@ -56,6 +56,7 @@ public sealed class MeTTaToTensorAdapter
     private readonly IEmbeddingProvider? _embeddingProvider;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="MeTTaToTensorAdapter"/> class.
     /// Creates a new MeTTa-to-tensor adapter.
     /// </summary>
     /// <param name="backend">The tensor backend to use for creating tensors.</param>
@@ -70,7 +71,9 @@ public sealed class MeTTaToTensorAdapter
     {
         ArgumentNullException.ThrowIfNull(backend);
         if (embeddingDim <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(embeddingDim), "Embedding dimension must be positive.");
+        }
 
         _backend = backend;
         _embeddingDim = embeddingDim;
@@ -81,7 +84,7 @@ public sealed class MeTTaToTensorAdapter
     }
 
     /// <summary>
-    /// Gets whether a semantic embedding provider is configured.
+    /// Gets a value indicating whether gets whether a semantic embedding provider is configured.
     /// When true, SymbolToVector and VariableToVector will attempt semantic lookup before falling back to hash.
     /// </summary>
     public bool HasSemanticProvider => _embeddingProvider != null;
@@ -111,7 +114,7 @@ public sealed class MeTTaToTensorAdapter
             Variable var => VariableToVector(var),
             Expression expr => ExpressionToVector(expr),
             GroundedAtom grounded => GroundedToVector(grounded),
-            _ => UnknownAtomToVector(atom)
+            _ => UnknownAtomToVector(atom),
         };
     }
 
@@ -136,7 +139,9 @@ public sealed class MeTTaToTensorAdapter
     {
         var atomList = atoms.ToList();
         if (atomList.Count == 0)
+        {
             throw new ArgumentException("Cannot create batch from empty atom collection.", nameof(atoms));
+        }
 
         var batch = new float[atomList.Count * _embeddingDim];
 
@@ -182,7 +187,9 @@ public sealed class MeTTaToTensorAdapter
     {
         var allSymbols = FlattenSymbols(root);
         if (allSymbols.Count == 0)
+        {
             return _backend.Create(TensorShape.Of(_embeddingDim), new float[_embeddingDim]);
+        }
 
         var result = new float[_embeddingDim];
 
@@ -199,7 +206,9 @@ public sealed class MeTTaToTensorAdapter
         {
             var scale = 1.0f / allSymbols.Count;
             for (int i = 0; i < _embeddingDim; i++)
+            {
                 result[i] *= scale;
+            }
         }
         else if (aggregation == AggregationMode.Max)
         {
@@ -211,14 +220,19 @@ public sealed class MeTTaToTensorAdapter
                 for (int i = 0; i < _embeddingDim; i++)
                 {
                     if (MathF.Abs(vec[i]) > MathF.Abs(temp[i]))
+                    {
                         temp[i] = vec[i];
+                    }
                 }
             }
+
             Array.Copy(temp, result, _embeddingDim);
         }
 
         if (_normalize)
+        {
             Normalize(result);
+        }
 
         return _backend.FromMemory(result, TensorShape.Of(_embeddingDim));
     }
@@ -239,6 +253,7 @@ public sealed class MeTTaToTensorAdapter
             if (atom is Symbol sym)
             {
                 var vec = SymbolToVector(sym);
+
                 // Weight by depth (deeper = less influence)
                 var weight = MathF.Pow(0.8f, depth);
                 var posWeight = 1.0f / (1.0f + position);
@@ -261,17 +276,20 @@ public sealed class MeTTaToTensorAdapter
         Traverse(expression, 0);
 
         if (_normalize)
+        {
             Normalize(result);
+        }
 
         return _backend.FromMemory(result, TensorShape.Of(_embeddingDim));
     }
 
     // --- Private helpers ---
-
     private float[] SymbolToVector(Symbol sym)
     {
         if (_symbolCache.TryGetValue(sym.Name, out var cached))
+        {
             return cached;
+        }
 
         // Try semantic embedding provider first
         if (_embeddingProvider is not null)
@@ -296,7 +314,9 @@ public sealed class MeTTaToTensorAdapter
         // Use a consistent embedding based on variable name
         var key = "$" + var.Name;
         if (_symbolCache.TryGetValue(key, out var cached))
+        {
             return cached;
+        }
 
         // Try semantic embedding provider first
         if (_embeddingProvider is not null)
@@ -321,7 +341,9 @@ public sealed class MeTTaToTensorAdapter
         var result = new float[_embeddingDim];
 
         if (expr.Children.Count == 0)
+        {
             return result;
+        }
 
         foreach (var child in expr.Children)
         {
@@ -334,10 +356,14 @@ public sealed class MeTTaToTensorAdapter
 
         var scale = 1.0f / expr.Children.Count;
         for (int i = 0; i < _embeddingDim; i++)
+        {
             result[i] *= scale;
+        }
 
         if (_normalize)
+        {
             Normalize(result);
+        }
 
         return result;
     }
@@ -347,7 +373,9 @@ public sealed class MeTTaToTensorAdapter
         var result = new float[_embeddingDim];
 
         if (expr.Children.Count == 0)
+        {
             return result;
+        }
 
         var useWeights = weights != null && weights.Length == expr.Children.Count;
         var totalWeight = 0f;
@@ -368,11 +396,15 @@ public sealed class MeTTaToTensorAdapter
         {
             var scale = 1.0f / totalWeight;
             for (int i = 0; i < _embeddingDim; i++)
+            {
                 result[i] *= scale;
+            }
         }
 
         if (_normalize)
+        {
             Normalize(result);
+        }
 
         return result;
     }
@@ -400,11 +432,15 @@ public sealed class MeTTaToTensorAdapter
             // String values get hashed
             var strVec = HashToVector(s, offset: 0.25f);
             for (int i = 0; i < _embeddingDim; i++)
+            {
                 result[i] = (result[i] + strVec[i]) * 0.5f;
+            }
         }
 
         if (_normalize)
+        {
             Normalize(result);
+        }
 
         return result;
     }
@@ -440,7 +476,9 @@ public sealed class MeTTaToTensorAdapter
         }
 
         if (_normalize)
+        {
             Normalize(result);
+        }
 
         return result;
     }
@@ -461,7 +499,10 @@ public sealed class MeTTaToTensorAdapter
                 break;
             case Expression expr:
                 foreach (var child in expr.Children)
+                {
                     FlattenSymbolsInto(child, result);
+                }
+
                 break;
         }
     }
@@ -470,13 +511,17 @@ public sealed class MeTTaToTensorAdapter
     {
         float norm = 0;
         for (int i = 0; i < vector.Length; i++)
+        {
             norm += vector[i] * vector[i];
+        }
 
         if (norm > 0)
         {
             var scale = 1.0f / MathF.Sqrt(norm);
             for (int i = 0; i < vector.Length; i++)
+            {
                 vector[i] *= scale;
+            }
         }
     }
 
@@ -488,6 +533,7 @@ public sealed class MeTTaToTensorAdapter
     /// <summary>
     /// Gets statistics about the adapter's cache.
     /// </summary>
+    /// <returns></returns>
     public (int CachedSymbols, int EmbeddingDim) GetStats()
         => (_symbolCache.Count, _embeddingDim);
 }
@@ -504,7 +550,7 @@ public enum AggregationMode
     Mean,
 
     /// <summary>Max pooling (preserves strongest features).</summary>
-    Max
+    Max,
 }
 
 /// <summary>
@@ -513,12 +559,12 @@ public enum AggregationMode
 public abstract record GroundedAtom : Atom
 {
     /// <summary>
-    /// The name of the grounded operation.
+    /// Gets the name of the grounded operation.
     /// </summary>
     public abstract string OperationName { get; }
 
     /// <summary>
-    /// Optional value associated with this grounded atom.
+    /// Gets optional value associated with this grounded atom.
     /// </summary>
     public virtual object? Value => null;
 

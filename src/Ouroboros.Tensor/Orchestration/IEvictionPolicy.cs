@@ -14,13 +14,13 @@ namespace Ouroboros.Tensor.Orchestration;
 /// </remarks>
 public interface IEvictionPolicy
 {
-    /// <summary>Stable tenant identifier matching the <see cref="GpuTenantProfile.TenantName"/>.</summary>
+    /// <summary>Gets stable tenant identifier matching the <see cref="GpuTenantProfile.TenantName"/>.</summary>
     string TenantName { get; }
 
-    /// <summary>Expected wall time to evict (dispose session, unload model, etc.).</summary>
+    /// <summary>Gets expected wall time to evict (dispose session, unload model, etc.).</summary>
     TimeSpan EstimatedEvictionLatency { get; }
 
-    /// <summary>Expected wall time to reload the evicted state back into VRAM.</summary>
+    /// <summary>Gets expected wall time to reload the evicted state back into VRAM.</summary>
     TimeSpan EstimatedReloadLatency { get; }
 
     /// <summary>
@@ -28,6 +28,7 @@ public interface IEvictionPolicy
     /// when the tenant has no resident state (e.g. session not yet created) or must not be
     /// disturbed (e.g. a Realtime rasterizer frame is in flight).
     /// </summary>
+    /// <returns></returns>
     bool CanEvictNow();
 
     /// <summary>

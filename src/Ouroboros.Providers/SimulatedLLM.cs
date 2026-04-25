@@ -15,7 +15,9 @@
             await Task.Delay(10).ConfigureAwait(false); // Simulate async operation
 
             if (prompt.Contains("suggestions"))
+            {
                 return "[{\"step\":\"UseDraft\",\"explanation\":\"Generate draft\",\"confidence\":0.9}]";
+            }
 
             return "Simulated response";
         }

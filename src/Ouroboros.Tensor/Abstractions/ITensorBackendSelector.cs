@@ -12,7 +12,7 @@ namespace Ouroboros.Tensor.Abstractions;
 public interface ITensorBackendSelector
 {
     /// <summary>
-    /// Gets whether a GPU device is available on the current system.
+    /// Gets a value indicating whether gets whether a GPU device is available on the current system.
     /// </summary>
     bool IsGpuAvailable { get; }
 

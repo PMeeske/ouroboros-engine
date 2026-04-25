@@ -52,7 +52,10 @@ public sealed class StubPoseEstimator : IPoseEstimator
             return Task.FromResult<PoseEstimate?>(
                 new PoseEstimate(keypoints, StubConfidence));
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
 #pragma warning disable CA1031
         catch (Exception ex)
 #pragma warning restore CA1031

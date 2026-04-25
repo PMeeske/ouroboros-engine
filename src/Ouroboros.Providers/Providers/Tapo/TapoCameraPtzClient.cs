@@ -60,7 +60,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
 
         _httpClient = new HttpClient
         {
-            Timeout = TimeSpan.FromSeconds(10)
+            Timeout = TimeSpan.FromSeconds(10),
         };
     }
 
@@ -81,7 +81,10 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// <returns>Result indicating success or failure.</returns>
     public async Task<Result<PtzCapabilities>> InitializeAsync(CancellationToken ct = default)
     {
-        if (_disposed) return Result<PtzCapabilities>.Failure("Client is disposed");
+        if (_disposed)
+        {
+            return Result<PtzCapabilities>.Failure("Client is disposed");
+        }
 
         try
         {
@@ -117,12 +120,12 @@ public sealed partial class TapoCameraPtzClient : IDisposable
                 SupportsPresets: true,
                 MaxPresets: 8);
 
-            _logger?.LogInformation("PTZ initialized for {CameraIp}: Pan={Pan}, Tilt={Tilt}",
+            _logger?.LogInformation(
+                "PTZ initialized for {CameraIp}: Pan={Pan}, Tilt={Tilt}",
                 _cameraIp, Capabilities.CanPan, Capabilities.CanTilt);
 
             return Result<PtzCapabilities>.Success(Capabilities);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Failed to initialize PTZ for {CameraIp}", _cameraIp);
@@ -136,6 +139,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// <param name="speed">Pan speed (0.0 to 1.0).</param>
     /// <param name="durationMs">Duration of movement in ms.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<PtzMoveResult>> PanLeftAsync(
         float speed = 0.5f,
         int durationMs = DefaultMoveDurationMs,
@@ -150,6 +154,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// <param name="speed">Pan speed (0.0 to 1.0).</param>
     /// <param name="durationMs">Duration of movement in ms.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<PtzMoveResult>> PanRightAsync(
         float speed = 0.5f,
         int durationMs = DefaultMoveDurationMs,
@@ -164,6 +169,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// <param name="speed">Tilt speed (0.0 to 1.0).</param>
     /// <param name="durationMs">Duration of movement in ms.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<PtzMoveResult>> TiltUpAsync(
         float speed = 0.5f,
         int durationMs = DefaultMoveDurationMs,
@@ -178,6 +184,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// <param name="speed">Tilt speed (0.0 to 1.0).</param>
     /// <param name="durationMs">Duration of movement in ms.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<PtzMoveResult>> TiltDownAsync(
         float speed = 0.5f,
         int durationMs = DefaultMoveDurationMs,
@@ -193,6 +200,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// <param name="tiltSpeed">Tilt speed (-1.0 down to 1.0 up).</param>
     /// <param name="durationMs">Duration of movement in ms.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<PtzMoveResult>> MoveAsync(
         float panSpeed,
         float tiltSpeed,
@@ -206,9 +214,13 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// Stops all PTZ movement immediately.
     /// </summary>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<PtzMoveResult>> StopAsync(CancellationToken ct = default)
     {
-        if (_disposed) return Result<PtzMoveResult>.Failure("Client is disposed");
+        if (_disposed)
+        {
+            return Result<PtzMoveResult>.Failure("Client is disposed");
+        }
 
         try
         {
@@ -224,7 +236,6 @@ public sealed partial class TapoCameraPtzClient : IDisposable
 
             return Result<PtzMoveResult>.Failure($"Stop failed: {result.Error}");
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Failed to stop PTZ on {CameraIp}", _cameraIp);
@@ -236,9 +247,13 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// Moves the camera to its home position (factory default center).
     /// </summary>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<PtzMoveResult>> GoToHomeAsync(CancellationToken ct = default)
     {
-        if (_disposed) return Result<PtzMoveResult>.Failure("Client is disposed");
+        if (_disposed)
+        {
+            return Result<PtzMoveResult>.Failure("Client is disposed");
+        }
 
         try
         {
@@ -254,7 +269,6 @@ public sealed partial class TapoCameraPtzClient : IDisposable
 
             return Result<PtzMoveResult>.Failure($"Go home failed: {result.Error}");
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Failed to go home on {CameraIp}", _cameraIp);
@@ -267,11 +281,15 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// </summary>
     /// <param name="presetName">Name for the preset.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<PtzMoveResult>> SetPresetAsync(
         string presetName,
         CancellationToken ct = default)
     {
-        if (_disposed) return Result<PtzMoveResult>.Failure("Client is disposed");
+        if (_disposed)
+        {
+            return Result<PtzMoveResult>.Failure("Client is disposed");
+        }
 
         try
         {
@@ -287,7 +305,6 @@ public sealed partial class TapoCameraPtzClient : IDisposable
 
             return Result<PtzMoveResult>.Failure($"Set preset failed: {result.Error}");
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Failed to set preset on {CameraIp}", _cameraIp);
@@ -300,11 +317,15 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// </summary>
     /// <param name="presetToken">Preset token or number.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<PtzMoveResult>> GoToPresetAsync(
         string presetToken,
         CancellationToken ct = default)
     {
-        if (_disposed) return Result<PtzMoveResult>.Failure("Client is disposed");
+        if (_disposed)
+        {
+            return Result<PtzMoveResult>.Failure("Client is disposed");
+        }
 
         try
         {
@@ -320,7 +341,6 @@ public sealed partial class TapoCameraPtzClient : IDisposable
 
             return Result<PtzMoveResult>.Failure($"Go to preset failed: {result.Error}");
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Failed to go to preset on {CameraIp}", _cameraIp);
@@ -334,11 +354,15 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// </summary>
     /// <param name="speed">Sweep speed (0.0 to 1.0).</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<PtzMoveResult>> PatrolSweepAsync(
         float speed = 0.3f,
         CancellationToken ct = default)
     {
-        if (_disposed) return Result<PtzMoveResult>.Failure("Client is disposed");
+        if (_disposed)
+        {
+            return Result<PtzMoveResult>.Failure("Client is disposed");
+        }
 
         try
         {
@@ -347,15 +371,24 @@ public sealed partial class TapoCameraPtzClient : IDisposable
 
             // Pan left for 3 seconds
             var leftResult = await ContinuousMoveAsync(-speed, 0, 0, 3000, ct).ConfigureAwait(false);
-            if (leftResult.IsFailure) return leftResult;
+            if (leftResult.IsFailure)
+            {
+                return leftResult;
+            }
 
             // Pan right for 6 seconds (left + center + right)
             var rightResult = await ContinuousMoveAsync(speed, 0, 0, 6000, ct).ConfigureAwait(false);
-            if (rightResult.IsFailure) return rightResult;
+            if (rightResult.IsFailure)
+            {
+                return rightResult;
+            }
 
             // Return to center
             var centerResult = await ContinuousMoveAsync(-speed, 0, 0, 3000, ct).ConfigureAwait(false);
-            if (centerResult.IsFailure) return centerResult;
+            if (centerResult.IsFailure)
+            {
+                return centerResult;
+            }
 
             sw.Stop();
             _logger?.LogInformation("Patrol sweep completed in {Duration}ms", sw.ElapsedMilliseconds);
@@ -363,7 +396,6 @@ public sealed partial class TapoCameraPtzClient : IDisposable
             return Result<PtzMoveResult>.Success(
                 new PtzMoveResult(true, "patrol_sweep", sw.Elapsed, "Patrol sweep completed"));
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             _logger?.LogError(ex, "Patrol sweep failed on {CameraIp}", _cameraIp);
@@ -375,6 +407,7 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// Tests PTZ connectivity by sending a stop command.
     /// </summary>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<string>> TestConnectionAsync(CancellationToken ct = default)
     {
         try
@@ -384,7 +417,6 @@ public sealed partial class TapoCameraPtzClient : IDisposable
                 ? Result<string>.Success($"PTZ control available at {_cameraIp}")
                 : Result<string>.Failure($"PTZ not responding: {stopResult.Error}");
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<string>.Failure($"PTZ connection test failed: {ex.Message}");
@@ -394,7 +426,11 @@ public sealed partial class TapoCameraPtzClient : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
         _httpClient.Dispose();
         _logger?.LogDebug("TapoCameraPtzClient disposed for {CameraIp}", _cameraIp);

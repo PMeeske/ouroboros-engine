@@ -81,10 +81,21 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
     /// <inheritdoc/>
     public async Task<GazeEstimate?> EstimateAsync(FrameBuffer face, CancellationToken cancellationToken)
     {
-        if (_disposed || face is null || face.Rgba is null) return null;
-        if (face.Width <= 0 || face.Height <= 0) return null;
+        if (_disposed || face is null || face.Rgba is null)
+        {
+            return null;
+        }
+
+        if (face.Width <= 0 || face.Height <= 0)
+        {
+            return null;
+        }
+
         int expected = face.Width * face.Height * 4;
-        if (face.Rgba.Length != expected) return null;
+        if (face.Rgba.Length != expected)
+        {
+            return null;
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -103,7 +114,10 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
         {
             inputBuffer = PreprocessToChw448(face);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
 #pragma warning disable CA1031
         catch (Exception ex)
 #pragma warning restore CA1031
@@ -127,7 +141,10 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
 
             return estimate ?? await _fallback.EstimateAsync(face, cancellationToken).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (TimeoutException ex)
         {
             _logger?.LogDebug(ex, "[MobileGazeOnnx] scheduler latency exceeded");
@@ -155,7 +172,11 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
 
         _runOptions?.Dispose();
@@ -165,9 +186,15 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
         IVramReservation? reservation = Interlocked.Exchange(ref _reservation, null);
         if (reservation is not null)
         {
-            try { await reservation.DisposeAsync().ConfigureAwait(false); }
+            try
+            {
+                await reservation.DisposeAsync().ConfigureAwait(false);
+            }
 #pragma warning disable CA1031
-            catch (Exception ex) { _logger?.LogDebug(ex, "[MobileGazeOnnx] reservation dispose failed"); }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "[MobileGazeOnnx] reservation dispose failed");
+            }
 #pragma warning restore CA1031
         }
 
@@ -179,7 +206,10 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
         await _initLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (_state != 0) return;
+            if (_state != 0)
+            {
+                return;
+            }
 
             if (!File.Exists(_modelPath))
             {
@@ -310,7 +340,10 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
         float max = float.NegativeInfinity;
         for (int i = 0; i < logits.Length; i++)
         {
-            if (logits[i] > max) max = logits[i];
+            if (logits[i] > max)
+            {
+                max = logits[i];
+            }
         }
 
         Span<float> probs = stackalloc float[BinCount];
@@ -321,7 +354,10 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
             sum += probs[i];
         }
 
-        if (sum <= 0f) sum = 1f;
+        if (sum <= 0f)
+        {
+            sum = 1f;
+        }
 
         float expected = 0f;
         float peak = 0f;
@@ -330,7 +366,10 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
             float p = probs[i] / sum;
             probs[i] = p;
             expected += p * i;
-            if (p > peak) peak = p;
+            if (p > peak)
+            {
+                peak = p;
+            }
         }
 
         float degrees = (expected * BinDegrees) + BinOriginDegrees;

@@ -28,7 +28,7 @@ public sealed record PtzCapabilities(
     int MaxPresets)
 {
     /// <summary>
-    /// Default capabilities for a Tapo C200 camera.
+    /// Gets default capabilities for a Tapo C200 camera.
     /// </summary>
     public static PtzCapabilities Default => new(
         CanPan: true,

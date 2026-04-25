@@ -34,7 +34,7 @@ public sealed record AffectiveVector(
     float Stress)
 {
     /// <summary>
-    /// Canonical neutral baseline — mirrors <c>EmotionalContext.Neutral</c>
+    /// Gets canonical neutral baseline — mirrors <c>EmotionalContext.Neutral</c>
     /// (Valence=0, Arousal=0.5, Confidence=0.5, Curiosity=0.3, Stress=0).
     /// </summary>
     public static AffectiveVector Neutral => new(0f, 0.5f, 0.5f, 0.3f, 0f);

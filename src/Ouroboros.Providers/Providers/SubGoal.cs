@@ -16,6 +16,7 @@ public sealed partial record SubGoal(
     /// <summary>
     /// Creates a SubGoal with inferred routing metadata from a description.
     /// </summary>
+    /// <returns></returns>
     public static SubGoal FromDescription(string description, int index = 0)
     {
         return new SubGoal(
@@ -32,9 +33,21 @@ public sealed partial record SubGoal(
         var length = text.Length;
         var hasMultipleSteps = MultipleStepsRegex().IsMatch(text);
 
-        if (length < 50) return SubGoalComplexity.Simple;
-        if (length < 200 && !hasMultipleSteps) return SubGoalComplexity.Moderate;
-        if (length < 500) return SubGoalComplexity.Complex;
+        if (length < 50)
+        {
+            return SubGoalComplexity.Simple;
+        }
+
+        if (length < 200 && !hasMultipleSteps)
+        {
+            return SubGoalComplexity.Moderate;
+        }
+
+        if (length < 500)
+        {
+            return SubGoalComplexity.Complex;
+        }
+
         return SubGoalComplexity.Expert;
     }
 
@@ -43,17 +56,34 @@ public sealed partial record SubGoal(
         var lower = text.ToLowerInvariant();
 
         if (CodingKeywordsRegex().IsMatch(lower))
+        {
             return SubGoalType.Coding;
+        }
+
         if (MathKeywordsRegex().IsMatch(lower))
+        {
             return SubGoalType.Math;
+        }
+
         if (CreativeKeywordsRegex().IsMatch(lower))
+        {
             return SubGoalType.Creative;
+        }
+
         if (ReasoningKeywordsRegex().IsMatch(lower))
+        {
             return SubGoalType.Reasoning;
+        }
+
         if (TransformKeywordsRegex().IsMatch(lower))
+        {
             return SubGoalType.Transform;
+        }
+
         if (RetrievalKeywordsRegex().IsMatch(lower))
+        {
             return SubGoalType.Retrieval;
+        }
 
         return SubGoalType.Reasoning;
     }
@@ -64,7 +94,9 @@ public sealed partial record SubGoal(
         var complexity = InferComplexity(text);
 
         if (complexity <= SubGoalComplexity.Simple)
+        {
             return PathwayTier.Local;
+        }
 
         return type switch
         {
@@ -74,7 +106,7 @@ public sealed partial record SubGoal(
             SubGoalType.Math => PathwayTier.Specialized,
             SubGoalType.Creative => PathwayTier.CloudPremium,
             SubGoalType.Synthesis => PathwayTier.CloudPremium,
-            _ => PathwayTier.CloudLight
+            _ => PathwayTier.CloudLight,
         };
     }
 

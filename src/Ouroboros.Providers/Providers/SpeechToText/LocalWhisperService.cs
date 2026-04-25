@@ -74,7 +74,6 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
         {
             return await RunWhisperAsync(filePath, options, ct).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Transcription failed: {ex.Message}");
@@ -381,5 +380,4 @@ public sealed partial class LocalWhisperService : ISpeechToTextService
         return Result<TranscriptionResult, string>.Success(
             new TranscriptionResult(output.Trim()));
     }
-
 }

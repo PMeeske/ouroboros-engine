@@ -8,6 +8,7 @@ public sealed partial class CollectiveMind
     /// <summary>
     /// Adds a neural pathway (provider connection) to the collective.
     /// </summary>
+    /// <returns></returns>
     public CollectiveMind AddPathway(
         string name,
         ChatEndpointType endpointType,
@@ -45,7 +46,7 @@ public sealed partial class CollectiveMind
                     _thoughtStream.OnNext($"🔶 Probing pathway '{name}'...");
                 });
 
-        Ouroboros.Abstractions.Core.IChatCompletionModel chatModel = CreateModel(endpointType, resolvedEndpoint ?? "", resolvedApiKey ?? "", model, settings, costTracker);
+        Ouroboros.Abstractions.Core.IChatCompletionModel chatModel = CreateModel(endpointType, resolvedEndpoint ?? string.Empty, resolvedApiKey ?? string.Empty, model, settings, costTracker);
 
         // Auto-detect tier based on endpoint type
         var tier = InferTier(endpointType, model);
@@ -58,7 +59,7 @@ public sealed partial class CollectiveMind
             CostTracker = costTracker,
             CircuitBreaker = circuitBreaker,
             Tier = tier,
-            Specializations = InferSpecializations(model)
+            Specializations = InferSpecializations(model),
         };
 
         lock (_lock)
@@ -73,6 +74,7 @@ public sealed partial class CollectiveMind
     /// <summary>
     /// Sets the tier and specializations for a pathway.
     /// </summary>
+    /// <returns></returns>
     public CollectiveMind ConfigurePathway(string pathwayName, PathwayTier tier, params SubGoalType[] specializations)
     {
         lock (_lock)
@@ -85,16 +87,20 @@ public sealed partial class CollectiveMind
                 {
                     pathway.Specializations.Add(spec);
                 }
+
                 _thoughtStream.OnNext($"⚙️ Configured pathway '{pathwayName}' tier={tier} with {specializations.Length} specializations");
             }
         }
+
         return this;
     }
 
     private static PathwayTier InferTier(ChatEndpointType endpointType, string model)
     {
         if (endpointType == ChatEndpointType.OllamaLocal)
+        {
             return PathwayTier.Local;
+        }
 
         var modelLower = model.ToLowerInvariant();
 
@@ -104,20 +110,26 @@ public sealed partial class CollectiveMind
             modelLower.Contains("claude-sonnet-4") ||
             modelLower.Contains("gemini-1.5-pro") ||
             modelLower.Contains("gemini-2.0"))
+        {
             return PathwayTier.CloudPremium;
+        }
 
         if (modelLower.Contains("codex") ||
             modelLower.Contains("deepseek-coder") ||
             modelLower.Contains("codellama") ||
             modelLower.Contains("starcoder"))
+        {
             return PathwayTier.Specialized;
+        }
 
         if (modelLower.Contains("mini") ||
             modelLower.Contains("haiku") ||
             modelLower.Contains("flash") ||
             modelLower.Contains("instant") ||
             modelLower.Contains("turbo"))
+        {
             return PathwayTier.CloudLight;
+        }
 
         return PathwayTier.CloudLight;
     }
@@ -128,11 +140,19 @@ public sealed partial class CollectiveMind
         var modelLower = model.ToLowerInvariant();
 
         if (modelLower.Contains("code") || modelLower.Contains("coder"))
+        {
             specs.Add(SubGoalType.Coding);
+        }
+
         if (modelLower.Contains("math") || modelLower.Contains("wizard"))
+        {
             specs.Add(SubGoalType.Math);
+        }
+
         if (modelLower.Contains("creative") || modelLower.Contains("writer"))
+        {
             specs.Add(SubGoalType.Creative);
+        }
 
         return specs;
     }
@@ -146,7 +166,7 @@ public sealed partial class CollectiveMind
         ChatEndpointType.Google => "gemini-2.0-flash",
         ChatEndpointType.Mistral => "mistral-large",
         ChatEndpointType.OllamaLocal => "llama3:latest",
-        _ => "gpt-4o"
+        _ => "gpt-4o",
     };
 
     private static Ouroboros.Abstractions.Core.IChatCompletionModel CreateModel(
@@ -163,7 +183,7 @@ public sealed partial class CollectiveMind
             ChatEndpointType.OllamaCloud => new OllamaCloudChatModel(endpoint, apiKey, model, settings, costTracker),
             ChatEndpointType.OllamaLocal => new OllamaCloudChatModel(endpoint, "ollama", model, settings, costTracker),
             ChatEndpointType.GitHubModels => new GitHubModelsChatModel(apiKey, model, endpoint, settings, costTracker),
-            _ => new LiteLLMChatModel(endpoint, apiKey, model, settings, costTracker)
+            _ => new LiteLLMChatModel(endpoint, apiKey, model, settings, costTracker),
         };
     }
 
@@ -184,7 +204,7 @@ public sealed partial class CollectiveMind
             CollectiveThinkingMode.Ensemble => await ThinkWithEnsemble(prompt, ct).ConfigureAwait(false),
             CollectiveThinkingMode.Adaptive => await ThinkAdaptively(prompt, ct).ConfigureAwait(false),
             CollectiveThinkingMode.Decomposed => await ThinkWithDecomposition(prompt, ct).ConfigureAwait(false),
-            _ => await ThinkSequentially(prompt, ct).ConfigureAwait(false)
+            _ => await ThinkSequentially(prompt, ct).ConfigureAwait(false),
         };
     }
 
@@ -197,7 +217,9 @@ public sealed partial class CollectiveMind
 
         var healthyPathways = _pathways.Where(p => p.IsHealthy).ToList();
         if (healthyPathways.Count == 0)
+        {
             throw new InvalidOperationException("No healthy neural pathways available");
+        }
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         var tasks = healthyPathways.Select(async pathway =>
@@ -218,7 +240,7 @@ public sealed partial class CollectiveMind
             {
                 pathway.RecordInhibition();
                 _thoughtStream.OnNext($"✗ '{pathway.Name}' failed: {ex.Message}");
-                return (Pathway: pathway, Result: new ThinkingResponse(null, ""), Success: false);
+                return (Pathway: pathway, Result: new ThinkingResponse(null, string.Empty), Success: false);
             }
         }).ToList();
 
@@ -252,7 +274,10 @@ public sealed partial class CollectiveMind
         while (triedPathways.Count < _pathways.Count)
         {
             var pathway = GetNextPathway(triedPathways);
-            if (pathway == null) break;
+            if (pathway == null)
+            {
+                break;
+            }
 
             triedPathways.Add(pathway);
             var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -283,7 +308,10 @@ public sealed partial class CollectiveMind
                 errors.Add($"{pathway.Name}: circuit open");
                 _thoughtStream.OnNext($"⏸️ '{pathway.Name}' circuit is open, skipping...");
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: circuit-breaker fallback across provider types
             {
                 pathway.RecordInhibition();
@@ -292,7 +320,7 @@ public sealed partial class CollectiveMind
             }
         }
 
-        var detail = errors.Count > 0 ? " (" + string.Join("; ", errors) + ")" : "";
+        var detail = errors.Count > 0 ? " (" + string.Join("; ", errors) + ")" : string.Empty;
         throw new InvalidOperationException($"All neural pathways exhausted without successful response{detail}");
     }
 
@@ -304,7 +332,9 @@ public sealed partial class CollectiveMind
         int healthyCount = HealthyPathwayCount;
 
         if (healthyCount == 0)
+        {
             throw new InvalidOperationException("No healthy neural pathways available");
+        }
 
         if (healthyCount == 1)
         {

@@ -8,11 +8,13 @@ public interface ICostRepository
     /// <summary>
     /// Save a cost audit entry.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task SaveAsync(CostAuditEntry entry, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get entries for a specific session.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<IReadOnlyList<CostAuditEntry>> GetBySessionAsync(
         Guid sessionId,
         CancellationToken cancellationToken = default);
@@ -20,6 +22,7 @@ public interface ICostRepository
     /// <summary>
     /// Get entries within a date range.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<IReadOnlyList<CostAuditEntry>> GetByDateRangeAsync(
         DateTime from,
         DateTime to,
@@ -28,6 +31,7 @@ public interface ICostRepository
     /// <summary>
     /// Get aggregated daily costs.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     Task<IReadOnlyList<DailyCostAggregate>> GetDailyAggregatesAsync(
         DateTime from,
         DateTime to,

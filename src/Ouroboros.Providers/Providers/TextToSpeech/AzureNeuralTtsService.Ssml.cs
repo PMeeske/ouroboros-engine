@@ -2,10 +2,10 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using R3;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Retry;
+using R3;
 
 namespace Ouroboros.Providers.TextToSpeech;
 
@@ -30,7 +30,7 @@ public sealed partial class AzureNeuralTtsService
             "ECHO" => isGerman ? "de-DE-LouisaNeural" : "en-GB-SoniaNeural",
             "SAGE" => isGerman ? "de-DE-ElkeNeural" : "en-US-SaraNeural",
             "ATLAS" => isGerman ? "de-DE-ConradNeural" : "en-US-GuyNeural",
-            _ => isGerman ? "de-DE-KatjaNeural" : "en-US-JennyNeural"
+            _ => isGerman ? "de-DE-KatjaNeural" : "en-US-JennyNeural",
         };
     }
 
@@ -59,7 +59,7 @@ public sealed partial class AzureNeuralTtsService
     }
 
     /// <summary>
-    /// The voice's primary locale for the SSML &lt;speak&gt; element.
+    /// Gets the voice's primary locale for the SSML &lt;speak&gt; element.
     /// For cross-lingual synthesis the &lt;speak&gt; element must carry the voice's
     /// OWN locale (e.g. en-US for AvaMultilingualNeural); the target language is
     /// declared on the inner &lt;lang&gt; element instead.
@@ -82,15 +82,15 @@ public sealed partial class AzureNeuralTtsService
     /// <param name="rate">Speed multiplier (1.0 = normal).</param>
     private string BuildSsml(string text, bool isWhisper, string? cultureOverride = null, double rate = 1.0)
     {
-        var escaped     = System.Security.SecurityElement.Escape(text);
-        string culture  = cultureOverride ?? _culture;
+        var escaped = System.Security.SecurityElement.Escape(text);
+        string culture = cultureOverride ?? _culture;
         string voiceLoc = SpeakLang;                              // voice's own primary locale
 
-        bool isEnglish     = culture.StartsWith("en", StringComparison.OrdinalIgnoreCase);
+        bool isEnglish = culture.StartsWith("en", StringComparison.OrdinalIgnoreCase);
         bool isCrossLingual = voiceLoc.Length >= 2 && culture.Length >= 2
             && !string.Equals(voiceLoc[..2], culture[..2], StringComparison.OrdinalIgnoreCase);
 
-        int normalRate  = SelfVectorRateMultiplier.HasValue
+        int normalRate = SelfVectorRateMultiplier.HasValue
             ? (int)((SelfVectorRateMultiplier.Value - 1.0f) * 50)
             : -5 + (int)((rate - 1.0) * 50);
         int whisperRate = -8 + (int)((rate - 1.0) * 50);
@@ -142,11 +142,12 @@ public sealed partial class AzureNeuralTtsService
     /// </summary>
     /// <param name="segments">Voice segments with per-segment style/prosody overrides.</param>
     /// <param name="cultureOverride">Override culture for this utterance only.</param>
+    /// <returns></returns>
     public string BuildMultiSegmentSsml(
         IReadOnlyList<(string Text, string? Style, float? PitchOffset, float? RateMultiplier)> segments,
         string? cultureOverride = null)
     {
-        string culture  = cultureOverride ?? _culture;
+        string culture = cultureOverride ?? _culture;
         string voiceLoc = SpeakLang;
         bool isCrossLingual = voiceLoc.Length >= 2 && culture.Length >= 2
             && !string.Equals(voiceLoc[..2], culture[..2], StringComparison.OrdinalIgnoreCase);
@@ -162,7 +163,10 @@ public sealed partial class AzureNeuralTtsService
             }
 
             var escaped = System.Security.SecurityElement.Escape(text);
-            if (string.IsNullOrWhiteSpace(escaped)) continue;
+            if (string.IsNullOrWhiteSpace(escaped))
+            {
+                continue;
+            }
 
             var inner = isCrossLingual ? $"<lang xml:lang='{culture}'>{escaped}</lang>" : escaped;
 
@@ -200,6 +204,6 @@ public sealed partial class AzureNeuralTtsService
         "gentle" or "tender" => "friendly",
         "emphasis" => "chat",
         "sing" or "lyrical" => "poetry-reading",
-        _ => null
+        _ => null,
     };
 }

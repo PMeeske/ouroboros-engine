@@ -37,7 +37,8 @@ public static class AudioPlayer
         finally
         {
             // Clean up temp file after a delay to ensure playback started
-            _ = Task.Run(async () =>
+            _ = Task.Run(
+                async () =>
             {
                 await Task.Delay(30000, CancellationToken.None).ConfigureAwait(false); // Wait 30 seconds
                 try
@@ -89,7 +90,6 @@ public static class AudioPlayer
             await process.WaitForExitAsync(ct).ConfigureAwait(false);
             return Result<bool, string>.Success(true);
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             return Result<bool, string>.Failure($"Playback failed: {ex.Message}");
@@ -167,7 +167,10 @@ public static class AudioPlayer
             string[] players = ["mpv", "ffplay", "paplay", "aplay"];
 
             var availablePlayer = players.FirstOrDefault(IsCommandAvailable);
-            if (availablePlayer == null) return null;
+            if (availablePlayer == null)
+            {
+                return null;
+            }
 
             var linuxPsi = new ProcessStartInfo
             {

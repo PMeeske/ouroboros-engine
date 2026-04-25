@@ -24,8 +24,15 @@ public sealed class LiteLLMEmbeddingModel : IEmbeddingModel
     /// <param name="model">Model name (e.g., text-embedding-ada-002, nomic-embed-text).</param>
     public LiteLLMEmbeddingModel(string endpoint, string apiKey, string model)
     {
-        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
-        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        }
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new ArgumentException("API key is required", nameof(apiKey));
+        }
 
         _client = new HttpClient
         {

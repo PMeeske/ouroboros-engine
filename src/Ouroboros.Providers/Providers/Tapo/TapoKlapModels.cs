@@ -37,11 +37,11 @@ public sealed record TapoDeviceInfo
     [JsonPropertyName("rssi")]
     public int? Rssi { get; init; }
 
-    /// <summary>Device nickname is base64-encoded UTF-8 on the wire. Use <see cref="Nickname"/>.</summary>
+    /// <summary>Gets device nickname is base64-encoded UTF-8 on the wire. Use <see cref="Nickname"/>.</summary>
     [JsonPropertyName("nickname")]
     public string? NicknameBase64 { get; init; }
 
-    /// <summary>Decoded nickname, or null if the device hasn't set one.</summary>
+    /// <summary>Gets decoded nickname, or null if the device hasn't set one.</summary>
     [JsonIgnore]
     public string? Nickname => string.IsNullOrEmpty(NicknameBase64)
         ? null

@@ -19,10 +19,13 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
     /// <summary>
     /// Turns the plug on.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<Unit>> TurnOnAsync(string deviceName, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
+        {
             return Result<Unit>.Failure("Device name is required");
+        }
 
         return await ExecuteActionAsync("p110/on", deviceName, ct).ConfigureAwait(false);
     }
@@ -30,10 +33,13 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
     /// <summary>
     /// Turns the plug off.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<Unit>> TurnOffAsync(string deviceName, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
+        {
             return Result<Unit>.Failure("Device name is required");
+        }
 
         return await ExecuteActionAsync("p110/off", deviceName, ct).ConfigureAwait(false);
     }
@@ -41,10 +47,13 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
     /// <summary>
     /// Gets device information.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<JsonDocument>> GetDeviceInfoAsync(string deviceName, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
+        {
             return Result<JsonDocument>.Failure("Device name is required");
+        }
 
         return await GetJsonResponseAsync("p110/get-device-info", deviceName, ct).ConfigureAwait(false);
     }
@@ -52,10 +61,13 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
     /// <summary>
     /// Gets device usage information.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<JsonDocument>> GetDeviceUsageAsync(string deviceName, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
+        {
             return Result<JsonDocument>.Failure("Device name is required");
+        }
 
         return await GetJsonResponseAsync("p110/get-device-usage", deviceName, ct).ConfigureAwait(false);
     }
@@ -63,10 +75,13 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
     /// <summary>
     /// Gets energy usage information.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<JsonDocument>> GetEnergyUsageAsync(string deviceName, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
+        {
             return Result<JsonDocument>.Failure("Device name is required");
+        }
 
         return await GetJsonResponseAsync("p110/get-energy-usage", deviceName, ct).ConfigureAwait(false);
     }
@@ -74,10 +89,13 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
     /// <summary>
     /// Gets current power consumption.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<JsonDocument>> GetCurrentPowerAsync(string deviceName, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
+        {
             return Result<JsonDocument>.Failure("Device name is required");
+        }
 
         return await GetJsonResponseAsync("p110/get-current-power", deviceName, ct).ConfigureAwait(false);
     }
@@ -85,6 +103,7 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
     /// <summary>
     /// Gets hourly energy data between two dates.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<JsonDocument>> GetHourlyEnergyDataAsync(
         string deviceName,
         DateOnly startDate,
@@ -92,7 +111,9 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
+        {
             return Result<JsonDocument>.Failure("Device name is required");
+        }
 
         var endDateParam = endDate.HasValue ? $"&end_date={endDate.Value:yyyy-MM-dd}" : string.Empty;
         return await GetJsonResponseAsync(
@@ -104,13 +125,16 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
     /// <summary>
     /// Gets daily energy data from a start date.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<JsonDocument>> GetDailyEnergyDataAsync(
         string deviceName,
         DateOnly startDate,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
+        {
             return Result<JsonDocument>.Failure("Device name is required");
+        }
 
         return await GetJsonResponseAsync(
             $"p110/get-daily-energy-data?start_date={startDate:yyyy-MM-dd}",
@@ -121,19 +145,20 @@ public sealed class TapoEnergyPlugOperations : TapoDeviceOperationsBase
     /// <summary>
     /// Gets monthly energy data from a start date.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<JsonDocument>> GetMonthlyEnergyDataAsync(
         string deviceName,
         DateOnly startDate,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
+        {
             return Result<JsonDocument>.Failure("Device name is required");
+        }
 
         return await GetJsonResponseAsync(
             $"p110/get-monthly-energy-data?start_date={startDate:yyyy-MM-dd}",
             deviceName,
             ct).ConfigureAwait(false);
     }
-
-
 }

@@ -10,7 +10,6 @@ public sealed partial class MasterModelElection
     // ===============================================================================
     // ELECTION ALGORITHMS (Pure Functions)
     // ===============================================================================
-
     private static (ResponseCandidate<ThinkingResponse> Winner, Dictionary<string, double> Votes, string Rationale)
         ElectByMajority(List<ResponseCandidate<ThinkingResponse>> candidates)
     {
@@ -27,7 +26,7 @@ public sealed partial class MasterModelElection
         {
             var perf = _performanceHistory.GetValueOrDefault(c.Source);
             double reliability = perf?.ReliabilityScore ?? 0.5;
-            double weightedScore = c.Score * (0.5 + reliability * 0.5);
+            double weightedScore = c.Score * (0.5 + (reliability * 0.5));
             return (Candidate: c, WeightedScore: weightedScore);
         }).ToList();
 
@@ -54,7 +53,7 @@ public sealed partial class MasterModelElection
     }
 
     private static async Task<(ResponseCandidate<ThinkingResponse> Winner, Dictionary<string, double> Votes, string Rationale)>
-        ElectByCondorcetAsync(List<ResponseCandidate<ThinkingResponse>> candidates, string prompt, CancellationToken ct)
+        ElectByCondorcetAsync(List<ResponseCandidate<ThinkingResponse>> candidates)
     {
         // Simplified Condorcet: use scores for pairwise comparison
         var wins = candidates.ToDictionary(c => c.Source, _ => 0);
@@ -64,9 +63,13 @@ public sealed partial class MasterModelElection
             for (int j = i + 1; j < candidates.Count; j++)
             {
                 if (candidates[i].Score > candidates[j].Score)
+                {
                     wins[candidates[i].Source]++;
+                }
                 else if (candidates[j].Score > candidates[i].Score)
+                {
                     wins[candidates[j].Source]++;
+                }
             }
         }
 
@@ -137,7 +140,11 @@ public sealed partial class MasterModelElection
             for (int i = 0; i < candidates.Count; i++)
             {
                 var preview = candidates[i].Value.Content;
-                if (preview.Length > 200) preview = preview.Substring(0, 200) + "...";
+                if (preview.Length > 200)
+                {
+                    preview = preview.Substring(0, 200) + "...";
+                }
+
                 decisionPrompt.AppendLine($"{i + 1}. [{candidates[i].Source}]: {preview}");
             }
 
@@ -165,7 +172,6 @@ public sealed partial class MasterModelElection
     // ===============================================================================
     // PERFORMANCE TRACKING & OPTIMIZATION
     // ===============================================================================
-
     private void UpdatePerformanceHistory(ResponseCandidate<ThinkingResponse> candidate, bool wasWinner)
     {
         _performanceHistory.AddOrUpdate(
@@ -177,15 +183,19 @@ public sealed partial class MasterModelElection
                 Wins = wasWinner ? 1 : 0,
                 AverageScore = candidate.Score,
                 AverageLatency = candidate.Latency,
-                LastUsed = DateTime.UtcNow
+                LastUsed = DateTime.UtcNow,
             },
             (_, perf) =>
             {
                 perf.TotalElections++;
-                if (wasWinner) perf.Wins++;
-                perf.AverageScore = perf.AverageScore * 0.9 + candidate.Score * 0.1;
+                if (wasWinner)
+                {
+                    perf.Wins++;
+                }
+
+                perf.AverageScore = (perf.AverageScore * 0.9) + (candidate.Score * 0.1);
                 perf.AverageLatency = TimeSpan.FromMilliseconds(
-                    perf.AverageLatency.TotalMilliseconds * 0.9 + candidate.Latency.TotalMilliseconds * 0.1);
+                    (perf.AverageLatency.TotalMilliseconds * 0.9) + (candidate.Latency.TotalMilliseconds * 0.1));
                 perf.LastUsed = DateTime.UtcNow;
                 return perf;
             });
@@ -194,6 +204,7 @@ public sealed partial class MasterModelElection
     /// <summary>
     /// Gets optimization suggestions based on performance history.
     /// </summary>
+    /// <returns></returns>
     public IReadOnlyList<OptimizationSuggestion> GetOptimizationSuggestions()
     {
         var suggestions = new List<OptimizationSuggestion>();
@@ -234,15 +245,20 @@ public sealed partial class MasterModelElection
     // ===============================================================================
     // HEURISTIC SCORING FUNCTIONS (Pure)
     // ===============================================================================
-
     private static double CalculateRelevance(string response, string prompt)
     {
-        if (string.IsNullOrEmpty(response)) return 0;
+        if (string.IsNullOrEmpty(response))
+        {
+            return 0;
+        }
 
         var promptWords = ExtractWords(prompt);
         var responseWords = ExtractWords(response);
 
-        if (promptWords.Count == 0) return 0.5;
+        if (promptWords.Count == 0)
+        {
+            return 0.5;
+        }
 
         int overlap = promptWords.Intersect(responseWords).Count();
         return Math.Min(1.0, (double)overlap / promptWords.Count);
@@ -250,11 +266,17 @@ public sealed partial class MasterModelElection
 
     private static double CalculateCoherence(string text)
     {
-        if (string.IsNullOrEmpty(text)) return 0;
+        if (string.IsNullOrEmpty(text))
+        {
+            return 0;
+        }
 
         // Heuristics: sentence count, average length, punctuation
         var sentences = SentenceSplitRegex().Split(text).Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-        if (sentences.Count == 0) return 0.3;
+        if (sentences.Count == 0)
+        {
+            return 0.3;
+        }
 
         double avgLength = sentences.Average(s => s.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length);
 
@@ -265,18 +287,21 @@ public sealed partial class MasterModelElection
             < 10 => 0.7,
             <= 25 => 1.0,
             <= 40 => 0.8,
-            _ => 0.6
+            _ => 0.6,
         };
 
         // More sentences = more coherent structure (up to a point)
         double structureScore = Math.Min(1.0, sentences.Count / 5.0);
 
-        return (lengthScore * 0.6 + structureScore * 0.4);
+        return (lengthScore * 0.6) + (structureScore * 0.4);
     }
 
     private static double CalculateCompleteness(string response, string prompt)
     {
-        if (string.IsNullOrEmpty(response)) return 0;
+        if (string.IsNullOrEmpty(response))
+        {
+            return 0;
+        }
 
         // Heuristic: response length relative to prompt complexity
         int promptComplexity = prompt.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
@@ -292,7 +317,7 @@ public sealed partial class MasterModelElection
             < 2 => 0.7,
             <= 5 => 1.0,
             <= 10 => 0.9,
-            _ => 0.7
+            _ => 0.7,
         };
     }
 

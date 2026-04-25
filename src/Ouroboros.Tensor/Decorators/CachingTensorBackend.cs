@@ -36,6 +36,7 @@ public sealed class CachingTensorBackend : ITensorBackend
     private readonly object _evictionLock = new();
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="CachingTensorBackend"/> class.
     /// Initializes a new <see cref="CachingTensorBackend"/> wrapping <paramref name="inner"/>.
     /// </summary>
     public CachingTensorBackend(ITensorBackend inner)
@@ -57,7 +58,9 @@ public sealed class CachingTensorBackend : ITensorBackend
         var key = CacheKey.From(shape, data);
 
         if (_cache.TryGetValue(key, out var cached))
+        {
             return cached;
+        }
 
         var tensor = _inner.Create(shape, data);
         AddToCache(key, tensor);
@@ -90,7 +93,9 @@ public sealed class CachingTensorBackend : ITensorBackend
             }
 
             if (_cache.TryAdd(key, tensor))
+            {
                 _insertionOrder.Enqueue(key);
+            }
         }
     }
 
@@ -107,7 +112,10 @@ public sealed class CachingTensorBackend : ITensorBackend
             var hash = FnvOffset;
             var bytes = MemoryMarshal.AsBytes(data);
             foreach (var b in bytes)
+            {
                 hash = (hash ^ b) * FnvPrime;
+            }
+
             return hash;
         }
     }

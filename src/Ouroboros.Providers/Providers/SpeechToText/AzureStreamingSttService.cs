@@ -2,10 +2,10 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using R3;
 using System.Text;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.CognitiveServices.Speech.Audio;
+using R3;
 
 namespace Ouroboros.Providers.SpeechToText;
 
@@ -36,6 +36,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
     public bool SupportsVoiceActivityDetection => true;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="AzureStreamingSttService"/> class.
     /// Creates a new Azure streaming STT service.
     /// </summary>
     /// <param name="subscriptionKey">Azure Speech subscription key.</param>
@@ -78,7 +79,11 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
                 // Interim results (Recognizing event)
                 recognizer.Recognizing += (_, e) =>
                 {
-                    if (string.IsNullOrWhiteSpace(e.Result.Text)) return;
+                    if (string.IsNullOrWhiteSpace(e.Result.Text))
+                    {
+                        return;
+                    }
+
                     observer.OnNext(new TranscriptionEvent(
                         e.Result.Text,
                         IsFinal: false,
@@ -199,7 +204,6 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
                 ? new TranscriptionResult(result.Text, _config.SpeechRecognitionLanguage, result.Duration.TotalSeconds)
                 : Result<TranscriptionResult, string>.Failure($"Recognition failed: {result.Reason}");
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             return Result<TranscriptionResult, string>.Failure(ex.Message);
@@ -235,7 +239,6 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
                 ? new TranscriptionResult(result.Text, _config.SpeechRecognitionLanguage, result.Duration.TotalSeconds)
                 : Result<TranscriptionResult, string>.Failure($"Recognition failed: {result.Reason}");
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             return Result<TranscriptionResult, string>.Failure(ex.Message);
@@ -254,14 +257,17 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
     }
 
     // ════════════════════════════════════════════════════════════════
     // Streaming Session
     // ════════════════════════════════════════════════════════════════
-
     private sealed class AzureStreamingSession : IStreamingTranscriptionSession
     {
         private readonly SpeechConfig _config;
@@ -282,11 +288,14 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
         }
 
         public Observable<TranscriptionEvent> Results => _results;
+
         public Observable<VoiceActivityEvent> VoiceActivity => _voiceActivity;
+
         public string AccumulatedText => _accumulated.ToString();
+
         public bool IsActive => _isActive;
 
-        public async Task InitializeAsync(CancellationToken ct)
+        public async Task InitializeAsync()
         {
             _pushStream = AudioInputStream.CreatePushStream(
                 AudioStreamFormat.GetWaveFormatPCM(16000, 16, 1));
@@ -301,7 +310,11 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
 
             _recognizer.Recognizing += (_, e) =>
             {
-                if (string.IsNullOrWhiteSpace(e.Result.Text)) return;
+                if (string.IsNullOrWhiteSpace(e.Result.Text))
+                {
+                    return;
+                }
+
                 _results.OnNext(new TranscriptionEvent(
                     e.Result.Text, false, 0.5,
                     TimeSpan.FromTicks(e.Result.OffsetInTicks),
@@ -378,8 +391,13 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
 
             if (_recognizer != null)
             {
-                try { await _recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false); }
-                catch (InvalidOperationException) { /* Best effort */ }
+                try
+                {
+                    await _recognizer.StopContinuousRecognitionAsync().ConfigureAwait(false);
+                }
+                catch (InvalidOperationException)
+                { /* Best effort */
+                }
                 _recognizer.Dispose();
             }
 

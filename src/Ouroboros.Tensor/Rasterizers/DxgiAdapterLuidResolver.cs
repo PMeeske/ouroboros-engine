@@ -39,6 +39,7 @@ public sealed class DxgiAdapterLuidResolver
     private readonly ConcurrentDictionary<ulong, int> _cache = new();
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DxgiAdapterLuidResolver"/> class.
     /// Production ctor — walks real DXGI via
     /// <see cref="DxgiAdapterEnumerator"/>.
     /// </summary>
@@ -48,6 +49,7 @@ public sealed class DxgiAdapterLuidResolver
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DxgiAdapterLuidResolver"/> class.
     /// Test-seam ctor — accepts any <see cref="IDxgiAdapterEnumerator"/>
     /// so unit tests can drive deterministic adapter lists.
     /// </summary>
@@ -107,13 +109,15 @@ public sealed class DxgiAdapterLuidResolver
         for (int i = 0; i < adapters.Count; i++)
         {
             AdapterInfo a = adapters[i];
-            sb.Append(CultureInfo.InvariantCulture,
+            sb.Append(
+                CultureInfo.InvariantCulture,
                 $" [{i}] LUID=0x{a.AdapterLuid:X16} vendor=0x{a.VendorId:X4} '{a.Description}'");
             if (i < adapters.Count - 1)
             {
                 sb.Append(';');
             }
         }
+
         sb.Append('.');
         return sb.ToString();
     }

@@ -18,8 +18,15 @@ public sealed partial class TapoEmbodimentProvider
         ActuatorAction action,
         CancellationToken ct = default)
     {
-        if (_disposed) return Result<ActionOutcome>.Failure("Provider is disposed");
-        if (!_isConnected) return Result<ActionOutcome>.Failure("Not connected");
+        if (_disposed)
+        {
+            return Result<ActionOutcome>.Failure("Provider is disposed");
+        }
+
+        if (!_isConnected)
+        {
+            return Result<ActionOutcome>.Failure("Not connected");
+        }
 
         if (!_actuators.ContainsKey(actuatorId))
         {
@@ -66,7 +73,7 @@ public sealed partial class TapoEmbodimentProvider
                     if (_ttsModel != null && action.Parameters?.TryGetValue("text", out var text) == true)
                     {
                         var emotion = action.Parameters.TryGetValue("emotion", out var e) ? e?.ToString() : null;
-                        var speechResult = await SynthesizeSpeechAsync(text?.ToString() ?? "", emotion, ct).ConfigureAwait(false);
+                        var speechResult = await SynthesizeSpeechAsync(text?.ToString() ?? string.Empty, emotion, ct).ConfigureAwait(false);
 
                         var duration = DateTime.UtcNow - startTime;
                         return Result<ActionOutcome>.Success(new ActionOutcome(
@@ -142,7 +149,10 @@ public sealed partial class TapoEmbodimentProvider
                 elapsed,
                 Error: result?.Error ?? "Unknown error"));
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var elapsed = DateTime.UtcNow - startTime;
@@ -161,10 +171,16 @@ public sealed partial class TapoEmbodimentProvider
     private async Task<Result<Unit>> ExecuteTurnOnAsync(string deviceId, CancellationToken ct)
     {
         Result<Unit> colorResult = await _tapoClient!.ColorLightBulbs.TurnOnAsync(deviceId, ct).ConfigureAwait(false);
-        if (colorResult.IsSuccess) return colorResult;
+        if (colorResult.IsSuccess)
+        {
+            return colorResult;
+        }
 
         Result<Unit> bulbResult = await _tapoClient!.LightBulbs.TurnOnAsync(deviceId, ct).ConfigureAwait(false);
-        if (bulbResult.IsSuccess) return bulbResult;
+        if (bulbResult.IsSuccess)
+        {
+            return bulbResult;
+        }
 
         return await _tapoClient!.Plugs.TurnOnAsync(deviceId, ct).ConfigureAwait(false);
     }
@@ -172,10 +188,16 @@ public sealed partial class TapoEmbodimentProvider
     private async Task<Result<Unit>> ExecuteTurnOffAsync(string deviceId, CancellationToken ct)
     {
         Result<Unit> colorResult = await _tapoClient!.ColorLightBulbs.TurnOffAsync(deviceId, ct).ConfigureAwait(false);
-        if (colorResult.IsSuccess) return colorResult;
+        if (colorResult.IsSuccess)
+        {
+            return colorResult;
+        }
 
         Result<Unit> bulbResult = await _tapoClient!.LightBulbs.TurnOffAsync(deviceId, ct).ConfigureAwait(false);
-        if (bulbResult.IsSuccess) return bulbResult;
+        if (bulbResult.IsSuccess)
+        {
+            return bulbResult;
+        }
 
         return await _tapoClient!.Plugs.TurnOffAsync(deviceId, ct).ConfigureAwait(false);
     }
@@ -243,13 +265,17 @@ public sealed partial class TapoEmbodimentProvider
             "ptz_set_preset" => await ptzClient.SetPresetAsync(
                 GetStringParam(action, "preset_name", "preset_1"), ct).ConfigureAwait(false),
             "ptz_patrol_sweep" => await ptzClient.PatrolSweepAsync(speed, ct).ConfigureAwait(false),
-            _ => Result<PtzMoveResult>.Failure($"Unknown PTZ action: {action.ActionType}")
+            _ => Result<PtzMoveResult>.Failure($"Unknown PTZ action: {action.ActionType}"),
         };
     }
 
     private async Task InitializePtzClientsAsync(CancellationToken ct)
     {
-        if (_rtspClientFactory == null) return;
+        if (_rtspClientFactory == null)
+        {
+            return;
+        }
+
         if (string.IsNullOrEmpty(_username) || string.IsNullOrEmpty(_password))
         {
             _logger?.LogWarning("PTZ credentials not provided, skipping PTZ initialization");
@@ -259,7 +285,10 @@ public sealed partial class TapoEmbodimentProvider
         foreach (var cameraName in _rtspClientFactory.GetCameraNames())
         {
             var rtspClient = _rtspClientFactory.GetClient(cameraName);
-            if (rtspClient == null) continue;
+            if (rtspClient == null)
+            {
+                continue;
+            }
 
             await InitializeSinglePtzClientAsync(cameraName, rtspClient.CameraIp, ct).ConfigureAwait(false);
         }
@@ -290,10 +319,14 @@ public sealed partial class TapoEmbodimentProvider
                     cameraName, initResult.Error);
             }
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger?.LogWarning(ex,
+            _logger?.LogWarning(
+                ex,
                 "Failed to initialize PTZ for camera {CameraName}", cameraName);
         }
         finally

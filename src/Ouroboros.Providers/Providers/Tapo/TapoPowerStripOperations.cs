@@ -19,10 +19,13 @@ public sealed class TapoPowerStripOperations : TapoDeviceOperationsBase
     /// <summary>
     /// Gets device information.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<JsonDocument>> GetDeviceInfoAsync(string deviceName, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
+        {
             return Result<JsonDocument>.Failure("Device name is required");
+        }
 
         return await GetJsonResponseAsync("p300/get-device-info", deviceName, ct).ConfigureAwait(false);
     }
@@ -30,12 +33,14 @@ public sealed class TapoPowerStripOperations : TapoDeviceOperationsBase
     /// <summary>
     /// Gets the list of child devices (plugs) on the power strip.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<JsonDocument>> GetChildDeviceListAsync(string deviceName, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(deviceName))
+        {
             return Result<JsonDocument>.Failure("Device name is required");
+        }
 
         return await GetJsonResponseAsync("p300/get-child-device-list", deviceName, ct).ConfigureAwait(false);
     }
-
 }

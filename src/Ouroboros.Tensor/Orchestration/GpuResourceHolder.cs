@@ -20,6 +20,7 @@ public sealed class GpuResourceHolder : IGpuResourceLock
     private record Waiter(string TenantName, TaskCompletionSource<object?> Tcs, CancellationTokenRegistration CtReg);
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GpuResourceHolder"/> class.
     /// Initializes a new <see cref="GpuResourceHolder"/>.
     /// </summary>
     /// <param name="scheduler">Scheduler used for priority boost / restore.</param>

@@ -39,7 +39,9 @@ public static class NpyHeader
     public static HeaderInfo Read(ReadOnlySpan<byte> buffer)
     {
         if (buffer.Length < 10)
+        {
             throw new InvalidDataException("Buffer too small to contain an .npy header.");
+        }
 
         // Magic: \x93NUMPY
         if (buffer[0] != 0x93 || buffer[1] != (byte)'N' || buffer[2] != (byte)'U'
@@ -66,7 +68,9 @@ public static class NpyHeader
         }
 
         if (headerStart + headerLen > buffer.Length)
+        {
             throw new InvalidDataException("Header length exceeds buffer.");
+        }
 
         string header = Encoding.ASCII.GetString(buffer.Slice(headerStart, headerLen));
 
@@ -75,17 +79,27 @@ public static class NpyHeader
         string shapeStr = ExtractField(header, "shape");
 
         if (fortran.Contains("True", StringComparison.Ordinal))
+        {
             throw new InvalidDataException("Fortran-ordered .npy not supported.");
+        }
 
         DType dtype;
         if (dtypeStr.Contains("<f4", StringComparison.Ordinal))
+        {
             dtype = DType.Float32;
+        }
         else if (dtypeStr.Contains("<i8", StringComparison.Ordinal))
+        {
             dtype = DType.Int64;
+        }
         else if (dtypeStr.Contains("|O", StringComparison.Ordinal))
+        {
             throw new InvalidDataException("Pickled object-array .npy is not supported — use .npz with primitive arrays.");
+        }
         else
+        {
             throw new InvalidDataException($"Unsupported dtype '{dtypeStr}'. Only <f4 and <i8 are accepted.");
+        }
 
         int[] shape = ParseShape(shapeStr);
         int bodyOffset = headerStart + headerLen;
@@ -93,30 +107,42 @@ public static class NpyHeader
     }
 
     /// <summary>Reads a primitive float32 array out of a decoded header.</summary>
+    /// <returns></returns>
     public static float[] ReadFloat32Body(ReadOnlySpan<byte> buffer, HeaderInfo info)
     {
         if (info.DType != DType.Float32)
+        {
             throw new InvalidDataException($"Expected float32 body, got {info.DType}.");
+        }
 
         int count = TotalElements(info.Shape);
         ReadOnlySpan<byte> body = buffer.Slice(info.BodyOffset, count * 4);
         float[] result = new float[count];
         for (int i = 0; i < count; i++)
+        {
             result[i] = BinaryPrimitives.ReadSingleLittleEndian(body.Slice(i * 4, 4));
+        }
+
         return result;
     }
 
     /// <summary>Reads a primitive int64 array out of a decoded header.</summary>
+    /// <returns></returns>
     public static long[] ReadInt64Body(ReadOnlySpan<byte> buffer, HeaderInfo info)
     {
         if (info.DType != DType.Int64)
+        {
             throw new InvalidDataException($"Expected int64 body, got {info.DType}.");
+        }
 
         int count = TotalElements(info.Shape);
         ReadOnlySpan<byte> body = buffer.Slice(info.BodyOffset, count * 8);
         long[] result = new long[count];
         for (int i = 0; i < count; i++)
+        {
             result[i] = BinaryPrimitives.ReadInt64LittleEndian(body.Slice(i * 8, 8));
+        }
+
         return result;
     }
 
@@ -126,27 +152,42 @@ public static class NpyHeader
         for (int i = 0; i < shape.Length; i++)
         {
             if (shape[i] < 0)
+            {
                 throw new InvalidDataException($"Negative dimension {shape[i]} at axis {i}.");
+            }
+
             count *= shape[i];
         }
+
         return count;
     }
 
     private static string ExtractField(string header, string field)
     {
         int idx = header.IndexOf($"'{field}'", StringComparison.Ordinal);
-        if (idx < 0) return string.Empty;
+        if (idx < 0)
+        {
+            return string.Empty;
+        }
 
         int colon = header.IndexOf(':', idx);
         int start = colon + 1;
-        while (start < header.Length && header[start] == ' ') start++;
-        if (start >= header.Length) return string.Empty;
+        while (start < header.Length && header[start] == ' ')
+        {
+            start++;
+        }
+
+        if (start >= header.Length)
+        {
+            return string.Empty;
+        }
 
         if (header[start] == '\'')
         {
             int end = header.IndexOf('\'', start + 1);
             return end < 0 ? string.Empty : header[(start + 1)..end];
         }
+
         if (header[start] == '(')
         {
             int end = header.IndexOf(')', start);
@@ -160,11 +201,18 @@ public static class NpyHeader
     private static int[] ParseShape(string shapeStr)
     {
         string inner = shapeStr.Trim('(', ')', ' ');
-        if (string.IsNullOrEmpty(inner)) return [1];
+        if (string.IsNullOrEmpty(inner))
+        {
+            return [1];
+        }
+
         string[] parts = inner.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         int[] result = new int[parts.Length];
         for (int i = 0; i < parts.Length; i++)
+        {
             result[i] = int.Parse(parts[i], System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         return result;
     }
 }

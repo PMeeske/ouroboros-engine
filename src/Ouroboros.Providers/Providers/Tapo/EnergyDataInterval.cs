@@ -10,10 +10,10 @@ public enum EnergyDataInterval
 {
     /// <summary>Hourly data.</summary>
     Hourly,
-    
+
     /// <summary>Daily data.</summary>
     Daily,
-    
+
     /// <summary>Monthly data.</summary>
-    Monthly
+    Monthly,
 }

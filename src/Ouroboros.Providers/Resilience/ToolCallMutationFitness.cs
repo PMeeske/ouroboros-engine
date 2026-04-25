@@ -59,7 +59,7 @@ public sealed class ToolCallMutationFitness
     {
         // Success component: 1.0 if succeeded on first try, decreasing with more generations
         double successScore = succeeded
-            ? 1.0 / (1.0 + (totalGenerations - 1) * 0.3) // Penalty for needing retries
+            ? 1.0 / (1.0 + ((totalGenerations - 1) * 0.3)) // Penalty for needing retries
             : 0.0;
 
         // Cost component: normalized inverse cost (cheaper is better)
@@ -69,7 +69,7 @@ public sealed class ToolCallMutationFitness
         // Speed component: normalized inverse latency
         // Reference: 5 seconds per generation is "normal"
         double referenceSeconds = 5.0 * Math.Max(1, totalGenerations);
-        double speedScore = 1.0 / (1.0 + totalLatency.TotalSeconds / referenceSeconds);
+        double speedScore = 1.0 / (1.0 + (totalLatency.TotalSeconds / referenceSeconds));
 
         // Gene-modulated scoring: chromosome genes influence how scores are weighted
         double formatHintAggression = chromosome.GetGene("FormatHintAggression")?.Weight ?? 0.5;
@@ -81,9 +81,9 @@ public sealed class ToolCallMutationFitness
         // More aggressive simplification hurts if the right tool was removed
         double simplificationPenalty = !succeeded && simplificationRate > 0.7 ? 0.9 : 1.0;
 
-        double fitness = (_successWeight * successScore +
-                         _costWeight * costScore +
-                         _speedWeight * speedScore) *
+        double fitness = ((_successWeight * successScore) +
+                         (_costWeight * costScore) +
+                         (_speedWeight * speedScore)) *
                          promptOverheadPenalty *
                          simplificationPenalty;
 
@@ -93,6 +93,7 @@ public sealed class ToolCallMutationFitness
     /// <summary>
     /// Evaluates fitness asynchronously (for compatibility with <c>IFitnessFunction{T}</c> pattern).
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task<double> EvaluateAsync(
         ToolCallMutationChromosome chromosome,
         IReadOnlyList<MutationHistoryEntry> history,

@@ -18,6 +18,7 @@ public sealed class StreamingPipeline
     /// <summary>
     /// Starts streaming from a prompt.
     /// </summary>
+    /// <returns></returns>
     public StreamingPipeline From(string prompt)
     {
         return this;
@@ -26,6 +27,7 @@ public sealed class StreamingPipeline
     /// <summary>
     /// Filters thinking chunks only.
     /// </summary>
+    /// <returns></returns>
     public StreamingPipeline OnlyThinking()
     {
         _transformations.Add(stream => stream.Where(t => t.IsThinking));
@@ -35,6 +37,7 @@ public sealed class StreamingPipeline
     /// <summary>
     /// Filters content chunks only.
     /// </summary>
+    /// <returns></returns>
     public StreamingPipeline OnlyContent()
     {
         _transformations.Add(stream => stream.Where(t => !t.IsThinking));
@@ -44,6 +47,7 @@ public sealed class StreamingPipeline
     /// <summary>
     /// Transforms chunks.
     /// </summary>
+    /// <returns></returns>
     public StreamingPipeline Transform(Func<string, string> transform)
     {
         _transformations.Add(stream =>
@@ -54,6 +58,7 @@ public sealed class StreamingPipeline
     /// <summary>
     /// Buffers chunks by time.
     /// </summary>
+    /// <returns></returns>
     public StreamingPipeline Buffer(TimeSpan window)
     {
         _transformations.Add(stream =>
@@ -66,6 +71,7 @@ public sealed class StreamingPipeline
     /// <summary>
     /// Throttles the stream.
     /// </summary>
+    /// <returns></returns>
     public StreamingPipeline Throttle(TimeSpan interval)
     {
         _transformations.Add(stream => stream.Debounce(interval));
@@ -75,6 +81,7 @@ public sealed class StreamingPipeline
     /// <summary>
     /// Executes the pipeline and returns the observable.
     /// </summary>
+    /// <returns></returns>
     public Observable<(bool IsThinking, string Chunk)> Execute(string prompt, CancellationToken ct = default)
     {
         Observable<(bool IsThinking, string Chunk)> stream = _mind.StreamWithThinkingAsync(prompt, ct);
@@ -90,17 +97,23 @@ public sealed class StreamingPipeline
     /// <summary>
     /// Executes and collects the final result.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<ThinkingResponse> ExecuteAndCollectAsync(string prompt, CancellationToken ct = default)
     {
         var thinkingBuilder = new StringBuilder();
         var contentBuilder = new StringBuilder();
 
-        await Execute(prompt, ct).ForEachAsync(chunk =>
+        await Execute(prompt, ct).ForEachAsync(
+            chunk =>
         {
             if (chunk.IsThinking)
+            {
                 thinkingBuilder.Append(chunk.Chunk);
+            }
             else
+            {
                 contentBuilder.Append(chunk.Chunk);
+            }
         }, cancellationToken: ct).ConfigureAwait(false);
 
         return new ThinkingResponse(

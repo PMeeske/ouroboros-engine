@@ -30,13 +30,13 @@ public sealed class HlslShaderLoader
     private readonly Assembly _assembly;
     private readonly ILogger _logger;
 
-    /// <summary>Creates a loader bound to <see cref="HlslShaderLoader"/>'s own assembly.</summary>
+    /// <summary>Initializes a new instance of the <see cref="HlslShaderLoader"/> class.Creates a loader bound to <see cref="HlslShaderLoader"/>'s own assembly.</summary>
     public HlslShaderLoader(ILogger<HlslShaderLoader>? logger = null)
         : this(typeof(HlslShaderLoader).Assembly, logger)
     {
     }
 
-    /// <summary>Creates a loader bound to an arbitrary assembly (test seam).</summary>
+    /// <summary>Initializes a new instance of the <see cref="HlslShaderLoader"/> class.Creates a loader bound to an arbitrary assembly (test seam).</summary>
     public HlslShaderLoader(Assembly assembly, ILogger<HlslShaderLoader>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(assembly);
@@ -79,6 +79,7 @@ public sealed class HlslShaderLoader
     /// to decide availability in one atomic check before allocating D3D12
     /// resources.
     /// </summary>
+    /// <returns></returns>
     public bool TryLoadAll(IReadOnlyList<string> required, out IReadOnlyDictionary<string, byte[]> loaded)
     {
         ArgumentNullException.ThrowIfNull(required);
@@ -92,6 +93,7 @@ public sealed class HlslShaderLoader
                 loaded = result;
                 return false;
             }
+
             result[name] = dxil;
         }
 

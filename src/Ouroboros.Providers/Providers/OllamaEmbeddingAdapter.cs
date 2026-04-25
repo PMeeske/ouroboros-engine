@@ -46,6 +46,7 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGenerato
         {
             results[i] = await CreateEmbeddingsAsync(inputs[i], ct).ConfigureAwait(false);
         }
+
         return results;
     }
 
@@ -59,10 +60,11 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGenerato
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             timeoutCts.CancelAfter(EmbedTimeout);
 
-            EmbedResponse response = await _client.EmbedAsync(new EmbedRequest
+            EmbedResponse response = await _client.EmbedAsync(
+                new EmbedRequest
             {
                 Model = _modelName,
-                Input = [safeInput]
+                Input = [safeInput],
             }, timeoutCts.Token).ConfigureAwait(false);
 
             if (response?.Embeddings is { Count: > 0 } embeddings
@@ -107,46 +109,82 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGenerato
     /// </summary>
     private static string SanitizeForEmbedding(string? text, int maxLength = 6000)
     {
-        if (string.IsNullOrEmpty(text)) return "empty";
+        if (string.IsNullOrEmpty(text))
+        {
+            return "empty";
+        }
 
         // First pass: build clean string, skipping problematic characters
         var sb = new System.Text.StringBuilder(Math.Min(text.Length, maxLength));
         foreach (char c in text)
         {
-            if (sb.Length >= maxLength) break;
+            if (sb.Length >= maxLength)
+            {
+                break;
+            }
 
             // Skip control characters (except newline/tab), surrogates, and null
-            if (c == '\0') continue;
-            if (char.IsSurrogate(c)) continue;
-            if (char.IsControl(c) && c != '\n' && c != '\r' && c != '\t') continue;
+            if (c == '\0')
+            {
+                continue;
+            }
+
+            if (char.IsSurrogate(c))
+            {
+                continue;
+            }
+
+            if (char.IsControl(c) && c != '\n' && c != '\r' && c != '\t')
+            {
+                continue;
+            }
 
             // Skip BMP symbols that commonly cause encoding issues with embedding APIs
-            if (c >= 0x2600 && c <= 0x26FF) continue;   // Misc symbols
-            if (c >= 0x2700 && c <= 0x27BF) continue;   // Dingbats
+            if (c >= 0x2600 && c <= 0x26FF)
+            {
+                continue;   // Misc symbols
+            }
+
+            if (c >= 0x2700 && c <= 0x27BF)
+            {
+                continue;   // Dingbats
+            }
 
             sb.Append(c);
         }
 
-        if (sb.Length == 0) return "empty";
+        if (sb.Length == 0)
+        {
+            return "empty";
+        }
 
         // Second pass: ensure valid UTF-8 round-trip
         try
         {
             var utf8 = System.Text.Encoding.UTF8;
             byte[] bytes = utf8.GetBytes(sb.ToString());
+
             // Limit byte size to prevent buffer overflow (4KB safe limit)
             if (bytes.Length > 4000)
             {
                 // Truncate at byte level, then decode back
                 bytes = bytes[..4000];
+
                 // Find last valid UTF-8 sequence
                 int lastValid = 4000;
                 while (lastValid > 0 && (bytes[lastValid - 1] & 0xC0) == 0x80)
+                {
                     lastValid--;
+                }
+
                 if (lastValid > 0 && lastValid < 4000)
+                {
                     bytes = bytes[..lastValid];
+                }
+
                 return utf8.GetString(bytes);
             }
+
             return sb.ToString();
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -156,8 +194,11 @@ public sealed class OllamaEmbeddingAdapter : IEmbeddingModel, IEmbeddingGenerato
             foreach (char c in sb.ToString())
             {
                 if (c < 128 && ascii.Length < 2000)
+                {
                     ascii.Append(c);
+                }
             }
+
             return ascii.Length > 0 ? ascii.ToString() : "empty";
         }
     }

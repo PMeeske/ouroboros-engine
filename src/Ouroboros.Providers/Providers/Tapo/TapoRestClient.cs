@@ -34,7 +34,7 @@ public sealed class TapoRestClient : IDisposable
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         };
 
         // Initialize device operation helpers
@@ -93,7 +93,9 @@ public sealed class TapoRestClient : IDisposable
     public async Task<Result<string>> LoginAsync(string password, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(password))
+        {
             return Result<string>.Failure("Password is required");
+        }
 
         try
         {
@@ -108,13 +110,9 @@ public sealed class TapoRestClient : IDisposable
             }
 
             _sessionId = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            
+
             _logger?.LogInformation("Successfully authenticated with Tapo REST API");
             return Result<string>.Success(_sessionId);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (HttpRequestException ex)
         {
@@ -136,13 +134,15 @@ public sealed class TapoRestClient : IDisposable
     public async Task<Result<List<TapoDevice>>> GetDevicesAsync(CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_sessionId))
+        {
             return Result<List<TapoDevice>>.Failure("Not authenticated. Call LoginAsync first.");
+        }
 
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, "/devices");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
-            
+
             var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
@@ -155,10 +155,6 @@ public sealed class TapoRestClient : IDisposable
             return devices != null
                 ? Result<List<TapoDevice>>.Success(devices)
                 : Result<List<TapoDevice>>.Failure("No devices returned");
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (HttpRequestException ex)
         {
@@ -180,13 +176,15 @@ public sealed class TapoRestClient : IDisposable
     public async Task<Result<List<string>>> GetActionsAsync(CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_sessionId))
+        {
             return Result<List<string>>.Failure("Not authenticated. Call LoginAsync first.");
+        }
 
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, "/actions");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
-            
+
             var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
@@ -199,10 +197,6 @@ public sealed class TapoRestClient : IDisposable
             return actions != null
                 ? Result<List<string>>.Success(actions)
                 : Result<List<string>>.Failure("No actions returned");
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (HttpRequestException ex)
         {
@@ -225,16 +219,20 @@ public sealed class TapoRestClient : IDisposable
     public async Task<Result<Unit>> RefreshSessionAsync(string deviceName, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_sessionId))
+        {
             return Result<Unit>.Failure("Not authenticated. Call LoginAsync first.");
+        }
 
         if (string.IsNullOrWhiteSpace(deviceName))
+        {
             return Result<Unit>.Failure("Device name is required");
+        }
 
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, $"/refresh-session?device={Uri.EscapeDataString(deviceName)}");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
-            
+
             var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
@@ -246,10 +244,6 @@ public sealed class TapoRestClient : IDisposable
 
             _logger?.LogInformation("Session refreshed for device {Device}", deviceName);
             return Result<Unit>.Success(Unit.Value);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (HttpRequestException ex)
         {
@@ -271,13 +265,15 @@ public sealed class TapoRestClient : IDisposable
     public async Task<Result<Unit>> ReloadConfigAsync(CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_sessionId))
+        {
             return Result<Unit>.Failure("Not authenticated. Call LoginAsync first.");
+        }
 
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, "/reload-config");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _sessionId);
-            
+
             var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
@@ -289,10 +285,6 @@ public sealed class TapoRestClient : IDisposable
 
             _logger?.LogInformation("Configuration reloaded successfully");
             return Result<Unit>.Success(Unit.Value);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (HttpRequestException ex)
         {
@@ -314,7 +306,9 @@ public sealed class TapoRestClient : IDisposable
     public async Task<Result<List<TapoDevice>>> DiscoverDevicesAsync(CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_sessionId))
+        {
             return Result<List<TapoDevice>>.Failure("Not authenticated. Call LoginAsync first.");
+        }
 
         try
         {
@@ -333,10 +327,6 @@ public sealed class TapoRestClient : IDisposable
             return devices != null
                 ? Result<List<TapoDevice>>.Success(devices)
                 : Result<List<TapoDevice>>.Failure("No devices returned from discovery");
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (HttpRequestException ex)
         {
@@ -361,14 +351,12 @@ public sealed class TapoRestClient : IDisposable
         {
             var response = await _httpClient.GetAsync("/health", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<string>.Failure($"Health check failed: {response.StatusCode}");
+            }
 
             var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return Result<string>.Success(body);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (HttpRequestException ex)
         {

@@ -37,7 +37,10 @@ public sealed class StubGazeEstimator : IGazeEstimator
             return Task.FromResult<GazeEstimate?>(
                 new GazeEstimate(0f, 0f, StubConfidence));
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
 #pragma warning disable CA1031
         catch (Exception ex)
 #pragma warning restore CA1031

@@ -18,8 +18,12 @@ public sealed class IITPhiCalculator
     // Shannon entropy of a Bernoulli variable with success probability p.
     private static double BinaryEntropy(double p)
     {
-        if (p <= 0.0 || p >= 1.0) return 0.0;
-        return -(p * Math.Log2(p) + (1.0 - p) * Math.Log2(1.0 - p));
+        if (p <= 0.0 || p >= 1.0)
+        {
+            return 0.0;
+        }
+
+        return -((p * Math.Log2(p)) + ((1.0 - p) * Math.Log2(1.0 - p)));
     }
 
     // Mutual information between two Bernoulli variables i, j given coupling c in [0,1].
@@ -31,19 +35,22 @@ public sealed class IITPhiCalculator
         double h_i = BinaryEntropy(p_i);
         double h_j = BinaryEntropy(p_j);
 
-        if (h_i < 1e-9 || h_j < 1e-9) return 0.0;
+        if (h_i < 1e-9 || h_j < 1e-9)
+        {
+            return 0.0;
+        }
 
         // Joint probability approximated via correlation
         double cov = coupling * Math.Sqrt(p_i * (1.0 - p_i) * p_j * (1.0 - p_j));
-        double p11 = Math.Clamp(p_i * p_j + cov, 1e-9, 1.0 - 1e-9);
+        double p11 = Math.Clamp((p_i * p_j) + cov, 1e-9, 1.0 - 1e-9);
         double p10 = Math.Clamp(p_i - p11, 1e-9, 1.0 - 1e-9);
         double p01 = Math.Clamp(p_j - p11, 1e-9, 1.0 - 1e-9);
         double p00 = Math.Clamp(1.0 - p11 - p10 - p01, 1e-9, 1.0 - 1e-9);
 
-        double h_joint = -(p11 * Math.Log2(p11)
-                         + p10 * Math.Log2(p10)
-                         + p01 * Math.Log2(p01)
-                         + p00 * Math.Log2(p00));
+        double h_joint = -((p11 * Math.Log2(p11))
+                         + (p10 * Math.Log2(p10))
+                         + (p01 * Math.Log2(p01))
+                         + (p00 * Math.Log2(p00)));
 
         return Math.Max(0.0, h_i + h_j - h_joint);
     }
@@ -62,9 +69,9 @@ public sealed class IITPhiCalculator
 
         // Weight similarity → pathways with similar adaptive weights often activate together
         double maxW = Math.Max(a.Weight, b.Weight);
-        double weightSimilarity = maxW > 0 ? 1.0 - Math.Abs(a.Weight - b.Weight) / maxW : 0.0;
+        double weightSimilarity = maxW > 0 ? 1.0 - (Math.Abs(a.Weight - b.Weight) / maxW) : 0.0;
 
-        return (tierAffinity + specAffinity * 0.3 + weightSimilarity * 0.1) / 1.4;
+        return (tierAffinity + (specAffinity * 0.3) + (weightSimilarity * 0.1)) / 1.4;
     }
 
     // Effective information flowing from partition A to partition B.
@@ -75,7 +82,10 @@ public sealed class IITPhiCalculator
         IReadOnlyList<NeuralPathway> pathways,
         double[,] couplingMatrix)
     {
-        if (partA.Count == 0 || partB.Count == 0) return 0.0;
+        if (partA.Count == 0 || partB.Count == 0)
+        {
+            return 0.0;
+        }
 
         double totalMI = 0.0;
         foreach (int i in partA)
@@ -102,18 +112,27 @@ public sealed class IITPhiCalculator
     public PhiResult Compute(IReadOnlyList<NeuralPathway> pathways)
     {
         int n = pathways.Count;
-        if (n == 0) return PhiResult.Empty;
-        if (n == 1) return new PhiResult(0.0, [0], [], pathways[0].Name, "single-pathway");
+        if (n == 0)
+        {
+            return PhiResult.Empty;
+        }
+
+        if (n == 1)
+        {
+            return new PhiResult(0.0, [0], [], pathways[0].Name, "single-pathway");
+        }
 
         // ── 1. Build coupling matrix ─────────────────────────────────────────
         var coupling = new double[n, n];
         for (int i = 0; i < n; i++)
+        {
             for (int j = i + 1; j < n; j++)
             {
                 double c = ComputeCoupling(pathways[i], pathways[j]);
                 coupling[i, j] = c;
                 coupling[j, i] = c;
             }
+        }
 
         // ── 2. Search all non-trivial bipartitions ───────────────────────────
         // The number of bipartitions is 2^(n-1) - 1.  For n ≤ 20 this is feasible.
@@ -126,18 +145,30 @@ public sealed class IITPhiCalculator
         for (int mask = 1; mask < partitions; mask++)
         {
             // Skip mirror images (only count each bipartition once)
-            if ((mask & 1) == 0) continue;
+            if ((mask & 1) == 0)
+            {
+                continue;
+            }
 
             var setA = new List<int>();
             var setB = new List<int>();
 
             for (int bit = 0; bit < n; bit++)
             {
-                if ((mask & (1 << bit)) != 0) setA.Add(bit);
-                else setB.Add(bit);
+                if ((mask & (1 << bit)) != 0)
+                {
+                    setA.Add(bit);
+                }
+                else
+                {
+                    setB.Add(bit);
+                }
             }
 
-            if (setA.Count == 0 || setB.Count == 0) continue;
+            if (setA.Count == 0 || setB.Count == 0)
+            {
+                continue;
+            }
 
             // Integrated effective information = min(EI(A→B), EI(B→A))
             double eiAB = EffectiveInformation(setA, setB, pathways, coupling);
@@ -172,9 +203,9 @@ public sealed class IITPhiCalculator
         {
             < 0.01 => $"Φ≈0: system of {n} pathways is functionally decomposable — no integration detected.",
             < 0.25 => $"Φ={phi:F3}: weakly integrated — pathways share limited causal information.",
-            < 0.5  => $"Φ={phi:F3}: moderately integrated collective — meaningful causal coupling.",
+            < 0.5 => $"Φ={phi:F3}: moderately integrated collective — meaningful causal coupling.",
             < 0.75 => $"Φ={phi:F3}: strongly integrated — pathways form a cohesive causal structure.",
-            _      => $"Φ={phi:F3}: maximally integrated — collective behaves as a unified causal whole."
+            _ => $"Φ={phi:F3}: maximally integrated — collective behaves as a unified causal whole.",
         };
 }
 

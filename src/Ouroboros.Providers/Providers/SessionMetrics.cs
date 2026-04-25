@@ -20,7 +20,10 @@ public sealed record SessionMetrics(
     public string ToCostString()
     {
         if (TotalCost == 0)
+        {
             return $"{TotalTokens.ToString("N0", CultureInfo.InvariantCulture)} tokens";
+        }
+
         return $"{TotalTokens.ToString("N0", CultureInfo.InvariantCulture)} tokens (${TotalCost.ToString("F4", CultureInfo.InvariantCulture)})";
     }
 }

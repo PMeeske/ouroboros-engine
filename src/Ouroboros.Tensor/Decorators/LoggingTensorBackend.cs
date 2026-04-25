@@ -14,6 +14,7 @@ public sealed class LoggingTensorBackend : ITensorBackend
     private readonly ILogger _logger;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="LoggingTensorBackend"/> class.
     /// Initializes a new <see cref="LoggingTensorBackend"/>.
     /// </summary>
     /// <param name="inner">The backend to wrap.</param>
@@ -59,11 +60,17 @@ public sealed class LoggingTensorBackend : ITensorBackend
         sw.Stop();
 
         if (result.IsSuccess)
-            _logger.LogDebug("MatMul completed in {ElapsedMs}ms → {Shape}",
+        {
+            _logger.LogDebug(
+                "MatMul completed in {ElapsedMs}ms → {Shape}",
                 sw.ElapsedMilliseconds, result.Value.Shape);
+        }
         else
-            _logger.LogWarning("MatMul failed in {ElapsedMs}ms: {Error}",
+        {
+            _logger.LogWarning(
+                "MatMul failed in {ElapsedMs}ms: {Error}",
                 sw.ElapsedMilliseconds, result.Error);
+        }
 
         return result;
     }
@@ -77,11 +84,17 @@ public sealed class LoggingTensorBackend : ITensorBackend
         sw.Stop();
 
         if (result.IsSuccess)
-            _logger.LogDebug("Add completed in {ElapsedMs}ms → {Shape}",
+        {
+            _logger.LogDebug(
+                "Add completed in {ElapsedMs}ms → {Shape}",
                 sw.ElapsedMilliseconds, result.Value.Shape);
+        }
         else
-            _logger.LogWarning("Add failed in {ElapsedMs}ms: {Error}",
+        {
+            _logger.LogWarning(
+                "Add failed in {ElapsedMs}ms: {Error}",
                 sw.ElapsedMilliseconds, result.Error);
+        }
 
         return result;
     }

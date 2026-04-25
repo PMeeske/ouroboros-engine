@@ -99,13 +99,20 @@ internal static class TapoKlapCipher
         int total = salt.Length + localSeed.Length + remoteSeed.Length + authHash.Length;
         byte[] buf = new byte[total];
         int offset = 0;
-        salt.CopyTo(buf.AsSpan(offset)); offset += salt.Length;
-        localSeed.CopyTo(buf.AsSpan(offset)); offset += localSeed.Length;
-        remoteSeed.CopyTo(buf.AsSpan(offset)); offset += remoteSeed.Length;
+        salt.CopyTo(buf.AsSpan(offset));
+        offset += salt.Length;
+        localSeed.CopyTo(buf.AsSpan(offset));
+        offset += localSeed.Length;
+        remoteSeed.CopyTo(buf.AsSpan(offset));
+        offset += remoteSeed.Length;
         authHash.CopyTo(buf.AsSpan(offset));
 
         byte[] hash = SHA256.HashData(buf);
-        if (hash.Length == truncateTo) return hash;
+        if (hash.Length == truncateTo)
+        {
+            return hash;
+        }
+
         byte[] result = new byte[truncateTo];
         Buffer.BlockCopy(hash, 0, result, 0, truncateTo);
         return result;
@@ -197,6 +204,7 @@ internal static class TapoKlapCipher
         {
             throw new ArgumentException("KLAP base IV must be 12 bytes", nameof(baseIv));
         }
+
         byte[] iv = new byte[16];
         baseIv.CopyTo(iv);
         BinaryPrimitives.WriteInt32BigEndian(iv.AsSpan(12), seq);

@@ -20,6 +20,7 @@ public interface ICostTracker
     /// <summary>
     /// Get aggregated metrics for the current session.
     /// </summary>
+    /// <returns></returns>
     SessionMetrics GetSessionMetrics();
 
     /// <summary>
@@ -30,10 +31,12 @@ public interface ICostTracker
     /// <summary>
     /// Format a human-readable session summary.
     /// </summary>
+    /// <returns></returns>
     string FormatSessionSummary();
 
     /// <summary>
     /// Get a brief cost string for inline display.
     /// </summary>
+    /// <returns></returns>
     string GetCostString();
 }

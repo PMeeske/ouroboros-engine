@@ -41,7 +41,7 @@ public sealed class FormatHintMutation : IMutationStrategy<ToolCallContext>
             ToolCallFormat.BracketLegacy =>
                 "\n\nWhen you need to call a tool, use: [TOOL:tool_name arguments]",
             _ =>
-                "\n\nWhen you need to call a tool, use this exact format:\n<tool_call>{\"name\":\"tool_name\",\"arguments\":{...}}</tool_call>"
+                "\n\nWhen you need to call a tool, use this exact format:\n<tool_call>{\"name\":\"tool_name\",\"arguments\":{...}}</tool_call>",
         };
 
         context.Prompt += formatInstruction;
@@ -173,7 +173,7 @@ public sealed class TemperatureMutation : IMutationStrategy<ToolCallContext>
     {
         // Alternate between lowering and raising temperature
         context.Temperature = generation % 2 == 0
-            ? Math.Max(0.1f, context.Temperature * 0.5f)  // More deterministic
+            ? Math.Max(0.1f, context.Temperature * 0.5f) // More deterministic
             : Math.Min(1.5f, context.Temperature * 1.5f); // More creative
 
         context.Generation = generation;

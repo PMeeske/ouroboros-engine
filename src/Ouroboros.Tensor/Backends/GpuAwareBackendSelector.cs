@@ -29,6 +29,7 @@ public sealed class GpuAwareBackendSelector : ITensorBackendSelector
     private readonly ILogger? _logger;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GpuAwareBackendSelector"/> class.
     /// Initializes the selector, probing for available GPU backends.
     /// </summary>
     /// <param name="logger">Optional logger for reporting detected devices.</param>
@@ -44,9 +45,15 @@ public sealed class GpuAwareBackendSelector : ITensorBackendSelector
         _cudaBackend = TryCreateCudaBackend();
 
         if (_openClBackend is not null)
+        {
             _logger?.LogInformation("GPU detected: OpenCL/ILGPU backend available");
+        }
+
         if (_cudaBackend is not null)
+        {
             _logger?.LogInformation("GPU detected: CUDA/TorchSharp backend available");
+        }
+
         if (!IsGpuAvailable)
         {
             _logger?.LogInformation(
@@ -55,6 +62,7 @@ public sealed class GpuAwareBackendSelector : ITensorBackendSelector
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GpuAwareBackendSelector"/> class.
     /// Initializes with explicit backend instances (for testing).
     /// </summary>
     public GpuAwareBackendSelector(
@@ -71,10 +79,10 @@ public sealed class GpuAwareBackendSelector : ITensorBackendSelector
     /// <inheritdoc/>
     public bool IsGpuAvailable => _openClBackend is not null || _cudaBackend is not null;
 
-    /// <summary>Gets whether an OpenCL/ILGPU (AMD) backend is available.</summary>
+    /// <summary>Gets a value indicating whether gets whether an OpenCL/ILGPU (AMD) backend is available.</summary>
     public bool IsOpenClAvailable => _openClBackend is not null;
 
-    /// <summary>Gets whether a CUDA/TorchSharp (NVIDIA) backend is available.</summary>
+    /// <summary>Gets a value indicating whether gets whether a CUDA/TorchSharp (NVIDIA) backend is available.</summary>
     public bool IsCudaAvailable => _cudaBackend is not null;
 
     /// <inheritdoc/>
@@ -108,6 +116,7 @@ public sealed class GpuAwareBackendSelector : ITensorBackendSelector
     /// Returns the best available GPU backend regardless of vendor preference.
     /// Useful when you just want "any GPU".
     /// </summary>
+    /// <returns></returns>
     public ITensorBackend SelectBestGpu()
         => _openClBackend ?? _cudaBackend ?? _cpuBackend;
 

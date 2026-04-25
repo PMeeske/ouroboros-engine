@@ -45,6 +45,7 @@ public sealed class SharedOrtDmlSessionFactory : ISharedOrtDmlSessionFactory
     private int _loggedBinding;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="SharedOrtDmlSessionFactory"/> class.
     /// Constructs the factory from the shared D3D12 device (Phase 188.1.1)
     /// and the DXGI LUID resolver.
     /// </summary>
@@ -118,7 +119,7 @@ public sealed class SharedOrtDmlSessionFactory : ISharedOrtDmlSessionFactory
     }
 
     /// <summary>
-    /// Internal debug accessor for the resolved DXGI device ordinal.
+    /// Gets internal debug accessor for the resolved DXGI device ordinal.
     /// Exposed to <c>Ouroboros.Tensor.Tests</c> via
     /// <see cref="System.Runtime.CompilerServices.InternalsVisibleToAttribute"/>.
     /// </summary>

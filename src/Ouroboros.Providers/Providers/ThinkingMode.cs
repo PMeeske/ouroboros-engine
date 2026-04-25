@@ -20,5 +20,5 @@ public enum ThinkingMode
     /// Auto-detect based on model response. If reasoning_content or thinking tags are present,
     /// extract them; otherwise treat as normal response.
     /// </summary>
-    Auto = 2
+    Auto = 2,
 }

@@ -14,6 +14,7 @@ public sealed class VectorToTensorAdapter
     private readonly ITensorBackend _backend;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="VectorToTensorAdapter"/> class.
     /// Initializes a new <see cref="VectorToTensorAdapter"/> using the given backend.
     /// </summary>
     public VectorToTensorAdapter(ITensorBackend backend)
@@ -34,9 +35,12 @@ public sealed class VectorToTensorAdapter
     {
         ArgumentNullException.ThrowIfNull(vector);
         if (vector.Length == 0)
+        {
             throw new ArgumentException("Vector must not be empty.", nameof(vector));
+        }
 
         var shape = TensorShape.Of(vector.Length);
+
         // Zero-copy path: wrap existing managed array as ReadOnlyMemory
         return _backend.FromMemory(vector.AsMemory(), shape);
     }
@@ -53,15 +57,19 @@ public sealed class VectorToTensorAdapter
     {
         ArgumentNullException.ThrowIfNull(vectors);
         if (vectors.Count == 0)
+        {
             throw new ArgumentException("Batch must not be empty.", nameof(vectors));
+        }
 
         var dim = vectors[0].Length;
         foreach (var v in vectors)
         {
             if (v.Length != dim)
+            {
                 throw new ArgumentException(
                     $"All vectors in a batch must have the same dimension. " +
                     $"Expected {dim}, got {v.Length}.", nameof(vectors));
+            }
         }
 
         var shape = TensorShape.Of(vectors.Count, dim);
@@ -69,7 +77,9 @@ public sealed class VectorToTensorAdapter
         try
         {
             for (var i = 0; i < vectors.Count; i++)
+            {
                 vectors[i].AsSpan().CopyTo(buffer.AsSpan(i * dim, dim));
+            }
 
             // Create copies buffer content into pooled tensor storage
             return _backend.Create(shape, buffer.AsSpan(0, vectors.Count * dim));

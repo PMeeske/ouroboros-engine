@@ -12,7 +12,11 @@ public sealed class MultiModelRouter : Ouroboros.Abstractions.Core.IChatCompleti
 
     public MultiModelRouter(IReadOnlyDictionary<string, Ouroboros.Abstractions.Core.IChatCompletionModel> models, string fallbackKey)
     {
-        if (models.Count == 0) throw new ArgumentException("At least one model is required", nameof(models));
+        if (models.Count == 0)
+        {
+            throw new ArgumentException("At least one model is required", nameof(models));
+        }
+
         _models = models;
         _fallbackKey = fallbackKey;
     }
@@ -26,13 +30,26 @@ public sealed class MultiModelRouter : Ouroboros.Abstractions.Core.IChatCompleti
 
     private Ouroboros.Abstractions.Core.IChatCompletionModel SelectModel(string prompt)
     {
-        if (string.IsNullOrWhiteSpace(prompt)) return _models[_fallbackKey];
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            return _models[_fallbackKey];
+        }
+
         if (prompt.Contains("code", StringComparison.OrdinalIgnoreCase) && _models.TryGetValue("coder", out Ouroboros.Abstractions.Core.IChatCompletionModel? coder))
+        {
             return coder;
+        }
+
         if (prompt.Length > 600 && _models.TryGetValue("summarize", out Ouroboros.Abstractions.Core.IChatCompletionModel? summarize))
+        {
             return summarize;
+        }
+
         if (prompt.Contains("reason", StringComparison.OrdinalIgnoreCase) && _models.TryGetValue("reason", out Ouroboros.Abstractions.Core.IChatCompletionModel? reason))
+        {
             return reason;
+        }
+
         return _models.TryGetValue(_fallbackKey, out Ouroboros.Abstractions.Core.IChatCompletionModel? fallback) ? fallback : _models.Values.First();
     }
 }

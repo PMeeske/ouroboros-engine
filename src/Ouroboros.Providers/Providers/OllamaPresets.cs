@@ -5,7 +5,7 @@ namespace Ouroboros.Providers;
 public static class OllamaPresets
 {
     /// <summary>
-    /// Preset for DeepSeek Coder 33B with conservative defaults optimized for code generation.
+    /// Gets preset for DeepSeek Coder 33B with conservative defaults optimized for code generation.
     /// Automatically adapts threads, context window, and GPU usage based on <see cref="MachineCapabilities"/>.
     /// </summary>
     public static RequestOptions DeepSeekCoder33B
@@ -29,7 +29,7 @@ public static class OllamaPresets
                 TopK = 40,
                 RepeatPenalty = 1.1f,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
         }
     }
@@ -41,7 +41,7 @@ public static class OllamaPresets
     public const string DeepSeekCoder33BKeepAlive = "10m";
 
     /// <summary>
-    /// Preset for Llama 3 (general conversation). Balanced temperature and retrieval-friendly settings.
+    /// Gets preset for Llama 3 (general conversation). Balanced temperature and retrieval-friendly settings.
     /// Adapts to available CPU cores, memory size and GPU count.
     /// </summary>
     public static RequestOptions Llama3General
@@ -64,7 +64,7 @@ public static class OllamaPresets
                 TopK = 40,
                 RepeatPenalty = 1.1f,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
         }
     }
@@ -75,7 +75,7 @@ public static class OllamaPresets
     public const string Llama3GeneralKeepAlive = "10m";
 
     /// <summary>
-    /// Preset for Llama 3 summarization. Lower temperature and slightly stronger repeat penalty
+    /// Gets preset for Llama 3 summarization. Lower temperature and slightly stronger repeat penalty
     /// to encourage concise, deterministic output.
     /// </summary>
     public static RequestOptions Llama3Summarize
@@ -98,7 +98,7 @@ public static class OllamaPresets
                 TopK = 40,
                 RepeatPenalty = 1.15f,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
         }
     }
@@ -109,7 +109,7 @@ public static class OllamaPresets
     public const string Llama3SummarizeKeepAlive = "10m";
 
     /// <summary>
-    /// Preset for DeepSeek R1 14B (reasoning). Larger context window and exploratory temperature
+    /// Gets preset for DeepSeek R1 14B (reasoning). Larger context window and exploratory temperature
     /// for deeper chains-of-thought, within conservative system limits.
     /// </summary>
     public static RequestOptions DeepSeekR1_14B_Reason
@@ -132,7 +132,7 @@ public static class OllamaPresets
                 TopK = 50,
                 RepeatPenalty = 1.05f,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
         }
     }
@@ -140,10 +140,10 @@ public static class OllamaPresets
     /// <summary>
     /// KeepAlive duration in seconds for DeepSeek R1 14B.
     /// </summary>
-    public const string DeepSeekR1_14B_ReasonKeepAlive = "10m";
+    public const string DeepSeekR114BReasonKeepAlive = "10m";
 
     /// <summary>
-    /// Preset for DeepSeek R1 32B (reasoning). Tries to leverage up to 2 GPUs if present
+    /// Gets preset for DeepSeek R1 32B (reasoning). Tries to leverage up to 2 GPUs if present
     /// and expands context window with sufficient host memory.
     /// </summary>
     public static RequestOptions DeepSeekR1_32B_Reason
@@ -166,7 +166,7 @@ public static class OllamaPresets
                 TopK = 50,
                 RepeatPenalty = 1.05f,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
         }
     }
@@ -174,10 +174,10 @@ public static class OllamaPresets
     /// <summary>
     /// KeepAlive duration in seconds for DeepSeek R1 32B.
     /// </summary>
-    public const string DeepSeekR1_32B_ReasonKeepAlive = "10m";
+    public const string DeepSeekR132BReasonKeepAlive = "10m";
 
     /// <summary>
-    /// Preset for Mistral 7B (general). Light-weight, suitable for CPU-only or single-GPU setups,
+    /// Gets preset for Mistral 7B (general). Light-weight, suitable for CPU-only or single-GPU setups,
     /// with a modest context window for RAG tasks.
     /// </summary>
     public static RequestOptions Mistral7BGeneral
@@ -200,7 +200,7 @@ public static class OllamaPresets
                 TopK = 40,
                 RepeatPenalty = 1.1f,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
         }
     }
@@ -211,7 +211,7 @@ public static class OllamaPresets
     public const string Mistral7BGeneralKeepAlive = "10m";
 
     /// <summary>
-    /// Preset for Qwen2.5 7B (general). Balanced configuration for mixed tasks and RAG.
+    /// Gets preset for Qwen2.5 7B (general). Balanced configuration for mixed tasks and RAG.
     /// </summary>
     public static RequestOptions Qwen25_7B_General
     {
@@ -233,7 +233,7 @@ public static class OllamaPresets
                 TopK = 40,
                 RepeatPenalty = 1.1f,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
         }
     }
@@ -241,10 +241,10 @@ public static class OllamaPresets
     /// <summary>
     /// KeepAlive duration in seconds for Qwen2.5 7B General.
     /// </summary>
-    public const string Qwen25_7B_GeneralKeepAlive = "10m";
+    public const string Qwen257BGeneralKeepAlive = "10m";
 
     /// <summary>
-    /// Preset for Phi-3 Mini (general). Small footprint model preset for quick local runs.
+    /// Gets preset for Phi-3 Mini (general). Small footprint model preset for quick local runs.
     /// </summary>
     public static RequestOptions Phi3MiniGeneral
     {
@@ -265,7 +265,7 @@ public static class OllamaPresets
                 TopK = 40,
                 RepeatPenalty = 1.1f,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
         }
     }
@@ -276,7 +276,7 @@ public static class OllamaPresets
     public const string Phi3MiniGeneralKeepAlive = "10m";
 
     /// <summary>
-    /// Preset for TinyLlama optimized for high-performance parallel execution.
+    /// Gets preset for TinyLlama optimized for high-performance parallel execution.
     /// Designed for divide-and-conquer strategies where multiple instances run concurrently.
     /// Ultra-low context window and aggressive threading for maximum throughput.
     /// </summary>
@@ -303,7 +303,7 @@ public static class OllamaPresets
                 TopK = 30,
                 RepeatPenalty = 1.1f,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
         }
     }
@@ -314,7 +314,7 @@ public static class OllamaPresets
     public const string TinyLlamaFastKeepAlive = "5m";
 
     /// <summary>
-    /// Preset for Qwen 3.5 0.8B optimized for MeTTa symbolic reasoning.
+    /// Gets preset for Qwen 3.5 0.8B optimized for MeTTa symbolic reasoning.
     /// Ultra-fast, tiny footprint — ideal for atom space queries, pattern matching,
     /// and neural-symbolic bridge operations. Runs entirely in VRAM on any GPU.
     /// </summary>
@@ -337,7 +337,7 @@ public static class OllamaPresets
                 TopK = 20,
                 RepeatPenalty = 1.15f,
                 UseMmap = true,
-                UseMlock = false
+                UseMlock = false,
             };
         }
     }
@@ -345,5 +345,5 @@ public static class OllamaPresets
     /// <summary>
     /// KeepAlive duration for Qwen 3.5 0.8B Symbolic. Kept warm for fast atom space queries.
     /// </summary>
-    public const string Qwen35_08B_SymbolicKeepAlive = "10m";
+    public const string Qwen3508BSymbolicKeepAlive = "10m";
 }

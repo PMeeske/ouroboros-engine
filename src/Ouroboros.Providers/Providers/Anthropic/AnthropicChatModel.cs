@@ -68,6 +68,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="AnthropicChatModel"/> class.
     /// Internal constructor for tests that need a custom <see cref="AnthropicClient"/> (for example HTTP stubs).
     /// </summary>
     internal AnthropicChatModel(AnthropicClient client, string model, ChatRuntimeSettings? settings, int? thinkingBudgetTokens, LlmCostTracker? costTracker)

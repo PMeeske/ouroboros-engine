@@ -73,7 +73,7 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
             "large" or "large-v1" => GgmlType.LargeV1,
             "large-v2" => GgmlType.LargeV2,
             "large-v3" => GgmlType.LargeV3,
-            _ => GgmlType.Base
+            _ => GgmlType.Base,
         };
 
         return new WhisperNetService(type, modelDirectory);
@@ -103,6 +103,7 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
             {
                 return Result<TranscriptionResult, string>.Failure(convertResult.Error!);
             }
+
             wavPath = convertResult.Value!;
             needsCleanup = true;
         }
@@ -128,7 +129,7 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
 
             await foreach (var segment in _processor!.ProcessAsync(samples, ct).ConfigureAwait(false))
             {
-                string text = segment.Text?.Trim() ?? "";
+                string text = segment.Text?.Trim() ?? string.Empty;
                 if (!string.IsNullOrEmpty(text))
                 {
                     fullText.Append(text).Append(' ');
@@ -148,7 +149,6 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
                 Duration: durationSeconds,
                 Segments: segments));
         }
-        catch (OperationCanceledException) { throw; }
         catch (IOException ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Transcription failed: {ex.Message}");
@@ -161,7 +161,13 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
         {
             if (needsCleanup && File.Exists(wavPath))
             {
-                try { File.Delete(wavPath); } catch (IOException) { /* Intentional: best-effort temp file cleanup */ }
+                try
+                {
+                    File.Delete(wavPath);
+                }
+                catch (IOException)
+                { /* Intentional: best-effort temp file cleanup */
+                }
             }
         }
     }
@@ -187,7 +193,13 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
         {
             if (File.Exists(tempPath))
             {
-                try { File.Delete(tempPath); } catch (IOException) { /* Intentional: best-effort temp file cleanup */ }
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch (IOException)
+                { /* Intentional: best-effort temp file cleanup */
+                }
             }
         }
     }
@@ -266,7 +278,6 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
                     await modelStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
                     System.Diagnostics.Trace.TraceInformation("[whisper.net] Model downloaded to {0}", modelPath);
                 }
-                catch (OperationCanceledException) { throw; }
                 catch (HttpRequestException ex)
                 {
                     return Result<bool, string>.Failure($"Failed to download model: {ex.Message}");
@@ -289,7 +300,6 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
 
             return Result<bool, string>.Success(true);
         }
-        catch (OperationCanceledException) { throw; }
         catch (IOException ex)
         {
             return Result<bool, string>.Failure($"Failed to initialize Whisper.net: {ex.Message}");
@@ -307,7 +317,11 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_isDisposed) return;
+        if (_isDisposed)
+        {
+            return;
+        }
+
         _isDisposed = true;
 
         _processor?.Dispose();

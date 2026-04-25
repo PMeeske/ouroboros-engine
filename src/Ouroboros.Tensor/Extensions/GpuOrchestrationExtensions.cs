@@ -28,6 +28,7 @@ public static class GpuOrchestrationExtensions
     /// Registers GPU orchestration services: backend selector, scheduler, and
     /// decorated backend pipeline (Validation → Logging → Metrics → Backend).
     /// </summary>
+    /// <returns></returns>
     public static IServiceCollection AddOuroborosTensorGpu(
         this IServiceCollection services,
         Action<GpuOrchestrationOptions>? configure = null)
@@ -87,6 +88,7 @@ public static class GpuOrchestrationExtensions
         services.TryAddSingleton<IVramLayout>(sp =>
         {
             var provider = sp.GetRequiredService<IVramLayoutProvider>();
+
             // Empty IConfiguration acceptable — DxgiVramLayoutProvider treats a
             // missing override key as "auto-detect". Hosts that want to force a
             // preset register their own IConfiguration before this callback runs.
@@ -97,7 +99,7 @@ public static class GpuOrchestrationExtensions
         return services;
     }
 
-    private static long EstimateVram(ITensorBackendSelector selector)
+    private static long EstimateVram()
     {
 #if ENABLE_ILGPU
         var backend = selector.SelectBackend(DeviceType.OpenCL);
@@ -115,13 +117,13 @@ public static class GpuOrchestrationExtensions
 public sealed class GpuOrchestrationOptions
 {
     /// <summary>
-    /// Prefer OpenCL/ILGPU (AMD) over CUDA/TorchSharp when both are available.
+    /// Gets or sets a value indicating whether prefer OpenCL/ILGPU (AMD) over CUDA/TorchSharp when both are available.
     /// Default: <see langword="true"/>.
     /// </summary>
     public bool PreferOpenCl { get; set; } = true;
 
     /// <summary>
-    /// Override the auto-detected total VRAM for scheduler accounting.
+    /// Gets or sets override the auto-detected total VRAM for scheduler accounting.
     /// Useful when the GPU is shared with other processes.
     /// When null, auto-detected from the device.
     /// </summary>
@@ -137,6 +139,7 @@ public static class TensorBackendBuilderGpuExtensions
     /// Wraps the current backend with GPU scheduling awareness. Operations are
     /// funneled through the <see cref="GpuScheduler"/> for VRAM accounting.
     /// </summary>
+    /// <returns></returns>
     public static TensorBackendBuilder WithGpuScheduling(
         this TensorBackendBuilder builder,
         GpuScheduler scheduler,
@@ -154,7 +157,6 @@ public static class TensorBackendBuilderGpuExtensions
         //
         // For now, GPU scheduling is handled at the node level (GpuTensorNode),
         // not at the backend level. This keeps the existing decorator chain intact.
-
         return builder;
     }
 }

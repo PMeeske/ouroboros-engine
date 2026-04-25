@@ -6,87 +6,107 @@
 public enum ChatEndpointType
 {
     /// <summary>
-    /// Auto-detect endpoint type based on URL or use OpenAI-compatible as default
+    /// Auto-detect endpoint type based on URL or use OpenAI-compatible as default.
     /// </summary>
     Auto,
+
     /// <summary>
-    /// OpenAI-compatible API (original behavior)
+    /// OpenAI-compatible API (original behavior).
     /// </summary>
     OpenAiCompatible,
+
     /// <summary>
-    /// Native OpenAI API (api.openai.com)
+    /// Native OpenAI API (api.openai.com).
     /// </summary>
     OpenAI,
+
     /// <summary>
-    /// Ollama Cloud API format
+    /// Ollama Cloud API format.
     /// </summary>
     OllamaCloud,
+
     /// <summary>
-    /// Local Ollama instance
+    /// Local Ollama instance.
     /// </summary>
     OllamaLocal,
+
     /// <summary>
-    /// LiteLLM proxy with OpenAI-compatible chat completions
+    /// LiteLLM proxy with OpenAI-compatible chat completions.
     /// </summary>
     LiteLLM,
+
     /// <summary>
-    /// GitHub Models API with OpenAI-compatible chat completions
+    /// GitHub Models API with OpenAI-compatible chat completions.
     /// </summary>
     GitHubModels,
+
     /// <summary>
-    /// Anthropic Claude API (native Messages API format)
+    /// Anthropic Claude API (native Messages API format).
     /// </summary>
     Anthropic,
+
     /// <summary>
-    /// Azure OpenAI Service
+    /// Azure OpenAI Service.
     /// </summary>
     AzureOpenAI,
+
     /// <summary>
-    /// Google AI (Gemini) API
+    /// Google AI (Gemini) API.
     /// </summary>
     Google,
+
     /// <summary>
-    /// Mistral AI API
+    /// Mistral AI API.
     /// </summary>
     Mistral,
+
     /// <summary>
-    /// DeepSeek API
+    /// DeepSeek API.
     /// </summary>
     DeepSeek,
+
     /// <summary>
-    /// Cohere API
+    /// Cohere API.
     /// </summary>
     Cohere,
+
     /// <summary>
-    /// Groq API (fast inference)
+    /// Groq API (fast inference).
     /// </summary>
     Groq,
+
     /// <summary>
-    /// Together AI API
+    /// Together AI API.
     /// </summary>
     Together,
+
     /// <summary>
-    /// Fireworks AI API
+    /// Fireworks AI API.
     /// </summary>
     Fireworks,
+
     /// <summary>
-    /// Perplexity AI API
+    /// Perplexity AI API.
     /// </summary>
     Perplexity,
+
     /// <summary>
-    /// Replicate API
+    /// Replicate API.
     /// </summary>
     Replicate,
+
     /// <summary>
-    /// HuggingFace Inference API
+    /// HuggingFace Inference API.
     /// </summary>
     HuggingFace,
+
     /// <summary>
-    /// Claude CLI (pipe through 'claude' command-line tool)
+    /// Claude CLI (pipe through 'claude' command-line tool).
     /// </summary>
     ClaudeCli,
+
     /// <summary>
-    /// Generic CLI provider (pipe through an external CLI tool)
+    /// Generic CLI provider (pipe through an external CLI tool).
     /// </summary>
-    CliProvider
+    CliProvider,
 }

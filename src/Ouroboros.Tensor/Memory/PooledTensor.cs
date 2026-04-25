@@ -13,7 +13,8 @@ namespace Ouroboros.Tensor.Memory;
 /// Instances are created exclusively by <see cref="TensorMemoryPool"/>. Callers must dispose
 /// this tensor when done to return the underlying buffer to the pool.
 /// </remarks>
-public sealed class PooledTensor<T> : ITensor<T> where T : unmanaged
+public sealed class PooledTensor<T> : ITensor<T>
+    where T : unmanaged
 {
     private readonly T[] _buffer;
     private readonly int _length;
@@ -33,7 +34,7 @@ public sealed class PooledTensor<T> : ITensor<T> where T : unmanaged
     public DeviceType Device => DeviceType.Cpu;
 
     /// <summary>
-    /// Exposes the underlying writable memory segment (for use by backend implementations only).
+    /// Gets exposes the underlying writable memory segment (for use by backend implementations only).
     /// </summary>
     internal Memory<T> WritableMemory
     {
@@ -84,7 +85,10 @@ public sealed class PooledTensor<T> : ITensor<T> where T : unmanaged
     private void ThrowIfDisposed()
     {
         if (_disposed)
-            throw new ObjectDisposedException(nameof(PooledTensor<T>),
+        {
+            throw new ObjectDisposedException(
+                nameof(PooledTensor<T>),
                 "Cannot access a tensor that has been disposed and its buffer returned to the pool.");
+        }
     }
 }

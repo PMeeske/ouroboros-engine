@@ -48,13 +48,14 @@ public sealed class TapoKlapClient : IDisposable
     private int _seq;
     private string? _sessionCookie;
 
-    /// <summary>The base URI (e.g. <c>https://192.168.1.42</c>) — useful for diagnostics.</summary>
+    /// <summary>Gets the base URI (e.g. <c>https://192.168.1.42</c>) — useful for diagnostics.</summary>
     public Uri BaseUri => _baseUri;
 
-    /// <summary>True once <see cref="LoginAsync"/> has completed successfully.</summary>
+    /// <summary>Gets a value indicating whether true once <see cref="LoginAsync"/> has completed successfully.</summary>
     public bool IsAuthenticated => _key is not null && _baseIv is not null && _sigKey is not null;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TapoKlapClient"/> class.
     /// Creates a client targeting a specific Tapo device. Caller may inject an <see cref="HttpClient"/>
     /// (e.g. one with custom DNS, proxy, or shared connection pool); when null, an internal client
     /// is created with cert validation disabled — appropriate for LAN devices with self-signed certs.
@@ -117,6 +118,7 @@ public sealed class TapoKlapClient : IDisposable
     /// Performs the two-step KLAP handshake, derives session keys, and stores the session cookie.
     /// Idempotent — calling twice resets the session.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task LoginAsync(CancellationToken ct = default)
     {
         // handshake1: client posts 16-byte local_seed; device returns 48 bytes (16 remote_seed || 32 server_hash) + Set-Cookie
@@ -133,6 +135,7 @@ public sealed class TapoKlapClient : IDisposable
         {
             throw new TapoKlapAuthException("handshake1 returned 403 — credentials rejected by device");
         }
+
         resp1.EnsureSuccessStatusCode();
 
         byte[] hs1Body = await resp1.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
@@ -176,6 +179,7 @@ public sealed class TapoKlapClient : IDisposable
     }
 
     /// <summary>Convenience for the common <c>get_device_info</c> call.</summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<TapoDeviceInfo> GetDeviceInfoAsync(CancellationToken ct = default)
     {
         TapoDeviceInfo? info = await SendAsync<TapoDeviceInfo>("get_device_info", null, ct).ConfigureAwait(false);
@@ -183,6 +187,7 @@ public sealed class TapoKlapClient : IDisposable
     }
 
     /// <summary>Convenience: turn a plug or bulb on or off.</summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task SetDeviceOnAsync(bool on, CancellationToken ct = default)
         => SendAsync<JsonElement>("set_device_info", new { device_on = on }, ct);
 
@@ -190,6 +195,7 @@ public sealed class TapoKlapClient : IDisposable
     /// Sends an arbitrary KLAP method call. Encrypts the request, signs it, and decodes the
     /// <c>{"error_code":N,"result":...}</c> envelope. Throws <see cref="TapoKlapException"/> on non-zero error_code.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<T?> SendAsync<T>(string method, object? @params, CancellationToken ct = default)
     {
         EnsureAuthenticated();
@@ -220,6 +226,7 @@ public sealed class TapoKlapClient : IDisposable
             _key = _baseIv = _sigKey = null;
             throw new TapoKlapAuthException($"Session rejected ({(int)resp.StatusCode}) — re-login required");
         }
+
         resp.EnsureSuccessStatusCode();
 
         byte[] wire = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
@@ -230,10 +237,12 @@ public sealed class TapoKlapClient : IDisposable
         {
             throw new TapoKlapException("KLAP response decoded but JSON envelope was null");
         }
+
         if (parsed.ErrorCode != 0)
         {
             throw new TapoKlapException($"Device returned error_code={parsed.ErrorCode} for {method} ({parsed.Message ?? "no message"})");
         }
+
         return parsed.Result;
     }
 
@@ -270,6 +279,7 @@ public sealed class TapoKlapClient : IDisposable
                 return pair;
             }
         }
+
         return null;
     }
 
@@ -280,9 +290,22 @@ public sealed class TapoKlapClient : IDisposable
         {
             _http.Dispose();
         }
-        if (_key is not null) CryptographicOperations.ZeroMemory(_key);
-        if (_baseIv is not null) CryptographicOperations.ZeroMemory(_baseIv);
-        if (_sigKey is not null) CryptographicOperations.ZeroMemory(_sigKey);
+
+        if (_key is not null)
+        {
+            CryptographicOperations.ZeroMemory(_key);
+        }
+
+        if (_baseIv is not null)
+        {
+            CryptographicOperations.ZeroMemory(_baseIv);
+        }
+
+        if (_sigKey is not null)
+        {
+            CryptographicOperations.ZeroMemory(_sigKey);
+        }
+
         CryptographicOperations.ZeroMemory(_authHash);
     }
 }
@@ -290,13 +313,27 @@ public sealed class TapoKlapClient : IDisposable
 /// <summary>Base exception for KLAP transport errors.</summary>
 public class TapoKlapException : Exception
 {
-    public TapoKlapException(string message) : base(message) { }
-    public TapoKlapException(string message, Exception inner) : base(message, inner) { }
+    public TapoKlapException(string message)
+        : base(message)
+    {
+    }
+
+    public TapoKlapException(string message, Exception inner)
+        : base(message, inner)
+    {
+    }
 }
 
 /// <summary>Authentication-specific failure (bad creds, session expired, device rejected).</summary>
 public sealed class TapoKlapAuthException : TapoKlapException
 {
-    public TapoKlapAuthException(string message) : base(message) { }
-    public TapoKlapAuthException(string message, Exception inner) : base(message, inner) { }
+    public TapoKlapAuthException(string message)
+        : base(message)
+    {
+    }
+
+    public TapoKlapAuthException(string message, Exception inner)
+        : base(message, inner)
+    {
+    }
 }

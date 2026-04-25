@@ -41,21 +41,33 @@ public sealed record TensorPipelineConfig(
     public void Validate()
     {
         if (BatchSize <= 0)
-            throw new ArgumentOutOfRangeException(nameof(BatchSize),
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(BatchSize),
                 $"BatchSize must be positive. Got {BatchSize}.");
+        }
+
         if (Decoder is null)
+        {
             throw new ArgumentNullException(nameof(Decoder));
+        }
+
         if (NormalizationStd == 0f)
-            throw new ArgumentOutOfRangeException(nameof(NormalizationStd),
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(NormalizationStd),
                 "NormalizationStd must not be zero.");
+        }
     }
 
     private static float[] BytesToFloats(byte[] bytes)
     {
         if (bytes.Length % sizeof(float) != 0)
+        {
             throw new ArgumentException(
                 $"Byte array length {bytes.Length} is not a multiple of sizeof(float)={sizeof(float)}.",
                 nameof(bytes));
+        }
 
         var floats = new float[bytes.Length / sizeof(float)];
         System.Buffer.BlockCopy(bytes, 0, floats, 0, bytes.Length);

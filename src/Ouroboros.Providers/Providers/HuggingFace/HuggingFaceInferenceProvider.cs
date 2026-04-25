@@ -2,11 +2,10 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-namespace Ouroboros.Providers.HuggingFace;
-
 using System.Net.Http.Json;
 using Ouroboros.Abstractions.Monads;
 
+namespace Ouroboros.Providers.HuggingFace;
 /// <summary>
 /// Provider for the HuggingFace Inference API.
 /// Supports text classification, zero-shot classification, embeddings,
@@ -66,10 +65,6 @@ public sealed class HuggingFaceInferenceProvider : IDisposable
             var results = ParseClassificationResponse(json);
             return Result<List<ClassificationResult>, string>.Success(results);
         }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
         catch (HttpRequestException ex)
         {
             return Result<List<ClassificationResult>, string>.Failure(
@@ -113,10 +108,6 @@ public sealed class HuggingFaceInferenceProvider : IDisposable
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var result = ParseZeroShotResponse(json);
             return Result<ZeroShotResult, string>.Success(result);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (HttpRequestException ex)
         {
@@ -206,10 +197,6 @@ public sealed class HuggingFaceInferenceProvider : IDisposable
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var text = ParseGenerationResponse(json);
             return Result<string, string>.Success(text);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
         }
         catch (HttpRequestException ex)
         {

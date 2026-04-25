@@ -60,7 +60,7 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
             {
                 "strict" => "1",
                 "off" => "-1",
-                _ => "-2" // moderate (default)
+                _ => "-2", // moderate (default)
             };
 
             var url = $"{_options.SearchBaseUrl}/html/?q={Uri.EscapeDataString(query)}" +
@@ -68,14 +68,15 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
 
             var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<IReadOnlyList<DuckDuckGoSearchResult>, string>.Failure(
                     $"Search failed: {response.StatusCode}");
+            }
 
             var html = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var results = ParseHtmlSearchResults(html, maxResults);
             return Result<IReadOnlyList<DuckDuckGoSearchResult>, string>.Success(results);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<IReadOnlyList<DuckDuckGoSearchResult>, string>.Failure($"Search failed: {ex.Message}");
@@ -97,14 +98,15 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
 
             var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<IReadOnlyList<DuckDuckGoNewsResult>, string>.Failure(
                     $"News search failed: {response.StatusCode}");
+            }
 
             var html = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var results = ParseHtmlNewsResults(html, maxResults);
             return Result<IReadOnlyList<DuckDuckGoNewsResult>, string>.Success(results);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<IReadOnlyList<DuckDuckGoNewsResult>, string>.Failure($"News search failed: {ex.Message}");
@@ -123,8 +125,10 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
 
             var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<DuckDuckGoInstantAnswer, string>.Failure(
                     $"Instant answer failed: {response.StatusCode}");
+            }
 
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json).RootElement;
@@ -139,7 +143,7 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
                         topics.Add(new DuckDuckGoRelatedTopic
                         {
                             Text = text.GetString(),
-                            Url = t.TryGetProperty("FirstURL", out var firstUrl) ? firstUrl.GetString() : null
+                            Url = t.TryGetProperty("FirstURL", out var firstUrl) ? firstUrl.GetString() : null,
                         });
                     }
                 }
@@ -156,12 +160,11 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
                 Answer = doc.TryGetProperty("Answer", out var ans) ? ans.GetString() : null,
                 AnswerType = doc.TryGetProperty("AnswerType", out var atype) ? atype.GetString() : null,
                 Definition = doc.TryGetProperty("Definition", out var def) ? def.GetString() : null,
-                RelatedTopics = topics
+                RelatedTopics = topics,
             };
 
             return Result<DuckDuckGoInstantAnswer, string>.Success(answer);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<DuckDuckGoInstantAnswer, string>.Failure($"Instant answer failed: {ex.Message}");
@@ -183,7 +186,6 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
     }
 
     // ── HTML Parsing Helpers ────────────────────────────────────────────
-
     private static IReadOnlyList<DuckDuckGoSearchResult> ParseHtmlSearchResults(string html, int maxResults)
     {
         var results = new List<DuckDuckGoSearchResult>();
@@ -192,15 +194,22 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
         var resultMatches = ResultBlockRegex().Matches(html);
         foreach (Match block in resultMatches)
         {
-            if (results.Count >= maxResults) break;
+            if (results.Count >= maxResults)
+            {
+                break;
+            }
 
             var blockHtml = block.Groups[1].Value;
 
             // Extract URL from <a class="result__a" href="...">
             var urlMatch = ResultUrlRegex().Match(blockHtml);
-            if (!urlMatch.Success) continue;
+            if (!urlMatch.Success)
+            {
+                continue;
+            }
 
             var rawUrl = HttpUtility.HtmlDecode(urlMatch.Groups[1].Value);
+
             // DuckDuckGo wraps URLs in a redirect; extract the actual URL
             var actualUrl = ExtractActualUrl(rawUrl);
 
@@ -222,7 +231,7 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
                 {
                     Title = title,
                     Url = actualUrl,
-                    Snippet = snippet
+                    Snippet = snippet,
                 });
             }
         }
@@ -237,12 +246,18 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
 
         foreach (Match block in resultMatches)
         {
-            if (results.Count >= maxResults) break;
+            if (results.Count >= maxResults)
+            {
+                break;
+            }
 
             var blockHtml = block.Groups[1].Value;
 
             var urlMatch = ResultUrlRegex().Match(blockHtml);
-            if (!urlMatch.Success) continue;
+            if (!urlMatch.Success)
+            {
+                continue;
+            }
 
             var rawUrl = HttpUtility.HtmlDecode(urlMatch.Groups[1].Value);
             var actualUrl = ExtractActualUrl(rawUrl);
@@ -263,7 +278,7 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
                 {
                     Title = title,
                     Url = actualUrl,
-                    Snippet = snippet
+                    Snippet = snippet,
                 });
             }
         }
@@ -279,19 +294,23 @@ public sealed partial class DuckDuckGoMcpClient : IDuckDuckGoMcpClient, IDisposa
             var parsed = HttpUtility.ParseQueryString(new Uri("https:" + ddgUrl).Query);
             var uddg = parsed["uddg"];
             if (!string.IsNullOrWhiteSpace(uddg))
+            {
                 return uddg;
+            }
         }
 
         // Direct URL
         if (ddgUrl.StartsWith("//"))
+        {
             return "https:" + ddgUrl;
+        }
 
         return ddgUrl;
     }
 
     private static string StripHtmlTags(string input)
     {
-        return HtmlTagRegex().Replace(input, "");
+        return HtmlTagRegex().Replace(input, string.Empty);
     }
 
     [GeneratedRegex(@"<div\s+class=""result[^""]*""[^>]*>(.*?)</div>", RegexOptions.Singleline)]

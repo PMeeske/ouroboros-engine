@@ -173,7 +173,11 @@ public sealed class SFaceOnnxEmbedder : IFaceEmbedder, IAsyncDisposable
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
 
         _runOptions?.Dispose();
@@ -183,9 +187,15 @@ public sealed class SFaceOnnxEmbedder : IFaceEmbedder, IAsyncDisposable
         IVramReservation? reservation = Interlocked.Exchange(ref _reservation, null);
         if (reservation is not null)
         {
-            try { await reservation.DisposeAsync().ConfigureAwait(false); }
+            try
+            {
+                await reservation.DisposeAsync().ConfigureAwait(false);
+            }
 #pragma warning disable CA1031
-            catch (Exception ex) { _logger?.LogDebug(ex, "[SFaceOnnx] reservation dispose failed"); }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "[SFaceOnnx] reservation dispose failed");
+            }
 #pragma warning restore CA1031
         }
 
@@ -197,7 +207,10 @@ public sealed class SFaceOnnxEmbedder : IFaceEmbedder, IAsyncDisposable
         await _initLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (_state != 0) return;
+            if (_state != 0)
+            {
+                return;
+            }
 
             if (!File.Exists(_modelPath))
             {

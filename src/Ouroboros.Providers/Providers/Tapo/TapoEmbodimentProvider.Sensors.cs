@@ -15,7 +15,10 @@ public sealed partial class TapoEmbodimentProvider
     /// <inheritdoc/>
     public Task<Result<EmbodimentState>> GetStateAsync(CancellationToken ct = default)
     {
-        if (_disposed) return Task.FromResult(Result<EmbodimentState>.Failure("Provider is disposed"));
+        if (_disposed)
+        {
+            return Task.FromResult(Result<EmbodimentState>.Failure("Provider is disposed"));
+        }
 
         var state = _isConnected ? EmbodimentState.Awake : EmbodimentState.Dormant;
 
@@ -30,7 +33,10 @@ public sealed partial class TapoEmbodimentProvider
     /// <inheritdoc/>
     public Task<Result<IReadOnlyList<SensorInfo>>> GetSensorsAsync(CancellationToken ct = default)
     {
-        if (_disposed) return Task.FromResult(Result<IReadOnlyList<SensorInfo>>.Failure("Provider is disposed"));
+        if (_disposed)
+        {
+            return Task.FromResult(Result<IReadOnlyList<SensorInfo>>.Failure("Provider is disposed"));
+        }
 
         var sensors = _sensors.Values.ToList();
         return Task.FromResult(Result<IReadOnlyList<SensorInfo>>.Success(sensors));
@@ -39,7 +45,10 @@ public sealed partial class TapoEmbodimentProvider
     /// <inheritdoc/>
     public Task<Result<IReadOnlyList<ActuatorInfo>>> GetActuatorsAsync(CancellationToken ct = default)
     {
-        if (_disposed) return Task.FromResult(Result<IReadOnlyList<ActuatorInfo>>.Failure("Provider is disposed"));
+        if (_disposed)
+        {
+            return Task.FromResult(Result<IReadOnlyList<ActuatorInfo>>.Failure("Provider is disposed"));
+        }
 
         var actuators = _actuators.Values.ToList();
         return Task.FromResult(Result<IReadOnlyList<ActuatorInfo>>.Success(actuators));
@@ -48,8 +57,15 @@ public sealed partial class TapoEmbodimentProvider
     /// <inheritdoc/>
     public Task<Result<Unit>> ActivateSensorAsync(string sensorId, CancellationToken ct = default)
     {
-        if (_disposed) return Task.FromResult(Result<Unit>.Failure("Provider is disposed"));
-        if (!_isConnected) return Task.FromResult(Result<Unit>.Failure("Not connected"));
+        if (_disposed)
+        {
+            return Task.FromResult(Result<Unit>.Failure("Provider is disposed"));
+        }
+
+        if (!_isConnected)
+        {
+            return Task.FromResult(Result<Unit>.Failure("Not connected"));
+        }
 
         if (!_sensors.ContainsKey(sensorId))
         {
@@ -61,7 +77,8 @@ public sealed partial class TapoEmbodimentProvider
         var sensor = _sensors[sensorId];
         _sensors[sensorId] = sensor with { IsActive = true };
 
-        RaiseEvent(EmbodimentProviderEventType.SensorActivated,
+        RaiseEvent(
+            EmbodimentProviderEventType.SensorActivated,
             new Dictionary<string, object> { ["sensorId"] = sensorId });
 
         _logger?.LogInformation("Activated sensor: {SensorId}", sensorId);
@@ -71,7 +88,10 @@ public sealed partial class TapoEmbodimentProvider
     /// <inheritdoc/>
     public Task<Result<Unit>> DeactivateSensorAsync(string sensorId, CancellationToken ct = default)
     {
-        if (_disposed) return Task.FromResult(Result<Unit>.Failure("Provider is disposed"));
+        if (_disposed)
+        {
+            return Task.FromResult(Result<Unit>.Failure("Provider is disposed"));
+        }
 
         if (_activeSensors.ContainsKey(sensorId))
         {
@@ -82,7 +102,8 @@ public sealed partial class TapoEmbodimentProvider
                 _sensors[sensorId] = sensor with { IsActive = false };
             }
 
-            RaiseEvent(EmbodimentProviderEventType.SensorDeactivated,
+            RaiseEvent(
+                EmbodimentProviderEventType.SensorDeactivated,
                 new Dictionary<string, object> { ["sensorId"] = sensorId });
         }
 
@@ -92,8 +113,15 @@ public sealed partial class TapoEmbodimentProvider
     /// <inheritdoc/>
     public Task<Result<PerceptionData>> ReadSensorAsync(string sensorId, CancellationToken ct = default)
     {
-        if (_disposed) return Task.FromResult(Result<PerceptionData>.Failure("Provider is disposed"));
-        if (!_isConnected) return Task.FromResult(Result<PerceptionData>.Failure("Not connected"));
+        if (_disposed)
+        {
+            return Task.FromResult(Result<PerceptionData>.Failure("Provider is disposed"));
+        }
+
+        if (!_isConnected)
+        {
+            return Task.FromResult(Result<PerceptionData>.Failure("Not connected"));
+        }
 
         if (!_sensors.TryGetValue(sensorId, out var sensor))
         {
@@ -119,8 +147,7 @@ public sealed partial class TapoEmbodimentProvider
     /// </summary>
     private async Task<Result<PerceptionData>> ReadRtspCameraFrameAsync(
         string sensorId,
-        SensorInfo sensor,
-        CancellationToken ct)
+                CancellationToken ct)
     {
         var cameraName = sensorId;
         var rtspClient = _rtspClientFactory?.GetClient(cameraName);
@@ -149,12 +176,13 @@ public sealed partial class TapoEmbodimentProvider
                 ["height"] = frame.Height,
                 ["frameNumber"] = frame.FrameNumber,
                 ["cameraName"] = frame.CameraName,
-                ["contentType"] = "image/jpeg"
+                ["contentType"] = "image/jpeg",
             });
 
         _perceptions.OnNext(perception);
 
-        _logger?.LogDebug("Captured frame from {Camera}: {Width}x{Height}, {Size} bytes",
+        _logger?.LogDebug(
+            "Captured frame from {Camera}: {Width}x{Height}, {Size} bytes",
             cameraName, frame.Width, frame.Height, frame.Data.Length);
 
         return Result<PerceptionData>.Success(perception);
@@ -163,13 +191,21 @@ public sealed partial class TapoEmbodimentProvider
     /// <summary>
     /// Processes a video frame through the vision model.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<Result<VisionAnalysisResult>> AnalyzeFrameAsync(
         string sensorId,
         byte[] frameData,
         CancellationToken ct = default)
     {
-        if (_disposed) return Result<VisionAnalysisResult>.Failure("Provider is disposed");
-        if (_visionModel == null) return Result<VisionAnalysisResult>.Failure("Vision model not available");
+        if (_disposed)
+        {
+            return Result<VisionAnalysisResult>.Failure("Provider is disposed");
+        }
+
+        if (_visionModel == null)
+        {
+            return Result<VisionAnalysisResult>.Failure("Vision model not available");
+        }
 
         var options = new VisionAnalysisOptions(
             IncludeDescription: true,
@@ -191,7 +227,7 @@ public sealed partial class TapoEmbodimentProvider
                 new Dictionary<string, object>
                 {
                     ["visionModel"] = _visionConfig.VisionModel,
-                    ["description"] = result.Value.Description
+                    ["description"] = result.Value.Description,
                 });
 
             _perceptions.OnNext(perception);
@@ -210,7 +246,10 @@ public sealed partial class TapoEmbodimentProvider
     /// <returns>Result indicating success or failure.</returns>
     public async Task<Result<string>> AuthenticateAsync(string serverPassword, CancellationToken ct = default)
     {
-        if (_disposed) return Result<string>.Failure("Provider is disposed");
+        if (_disposed)
+        {
+            return Result<string>.Failure("Provider is disposed");
+        }
 
         if (_tapoClient == null)
         {

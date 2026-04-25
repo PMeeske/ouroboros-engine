@@ -413,11 +413,19 @@ public sealed class YuNetOnnxFaceDetector : IFaceDetector, IAsyncDisposable
         bool[] suppressed = new bool[cands.Count];
         for (int i = 0; i < cands.Count; i++)
         {
-            if (suppressed[i]) continue;
+            if (suppressed[i])
+            {
+                continue;
+            }
+
             kept.Add(cands[i]);
             for (int j = i + 1; j < cands.Count; j++)
             {
-                if (suppressed[j]) continue;
+                if (suppressed[j])
+                {
+                    continue;
+                }
+
                 if (Iou(cands[i], cands[j]) >= iouThresh)
                 {
                     suppressed[j] = true;

@@ -15,11 +15,16 @@ public sealed class DeterministicEmbeddingModel : IEmbeddingModel
     private readonly int _dimension;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DeterministicEmbeddingModel"/> class.
     /// Initializes a new instance with the default dimension (1024).
     /// </summary>
-    public DeterministicEmbeddingModel() : this(DefaultDimension) { }
+    public DeterministicEmbeddingModel()
+        : this(DefaultDimension)
+    {
+    }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DeterministicEmbeddingModel"/> class.
     /// Initializes a new instance with a custom dimension.
     /// </summary>
     /// <param name="dimension">The vector dimension to generate.</param>
@@ -31,7 +36,10 @@ public sealed class DeterministicEmbeddingModel : IEmbeddingModel
     /// <inheritdoc/>
     public Task<float[]> CreateEmbeddingsAsync(string input, CancellationToken ct = default)
     {
-        if (input is null) input = string.Empty;
+        if (input is null)
+        {
+            input = string.Empty;
+        }
 
         // Compress long inputs instead of truncating to preserve semantic information
         // This captures essence from entire text rather than just the beginning
@@ -64,6 +72,7 @@ public sealed class DeterministicEmbeddingModel : IEmbeddingModel
         {
             magnitude += vector[i] * vector[i];
         }
+
         magnitude = (float)Math.Sqrt(magnitude);
         if (magnitude > 0)
         {
@@ -116,10 +125,15 @@ public sealed class DeterministicEmbeddingModel : IEmbeddingModel
         {
             if (char.IsLetterOrDigit(c))
             {
-                if (!inWord) { wordCount++; inWord = true; }
+                if (!inWord) { wordCount++;
+                    inWord = true; }
             }
-            else { inWord = false; }
+            else
+            {
+                inWord = false;
+            }
         }
+
         writer.Write(wordCount);
 
         // Add character frequency signature (top 8 chars)
@@ -128,6 +142,7 @@ public sealed class DeterministicEmbeddingModel : IEmbeddingModel
         {
             freqs[c] = freqs.GetValueOrDefault(c) + 1;
         }
+
         foreach (var (ch, count) in freqs.OrderByDescending(kv => kv.Value).Take(8))
         {
             writer.Write((byte)ch);

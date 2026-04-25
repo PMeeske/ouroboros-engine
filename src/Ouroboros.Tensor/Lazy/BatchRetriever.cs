@@ -27,6 +27,7 @@ public sealed class BatchRetriever
     private readonly int _batchSize;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="BatchRetriever"/> class.
     /// Initializes a new <see cref="BatchRetriever"/>.
     /// </summary>
     /// <param name="store">The vector store to retrieve from.</param>
@@ -35,7 +36,9 @@ public sealed class BatchRetriever
     {
         ArgumentNullException.ThrowIfNull(store);
         if (batchSize <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(batchSize), "Batch size must be positive.");
+        }
 
         _store = store;
         _batchSize = batchSize;
@@ -59,8 +62,10 @@ public sealed class BatchRetriever
 
         var handleList = handles.ToList();
         if (handleList.Count == 0)
+        {
             return Result<IReadOnlyList<(VectorHandle, float[])>, string>.Success(
                 Array.Empty<(VectorHandle, float[])>());
+        }
 
         // Preserve original ordering: map index → (handle, result slot)
         var results = new (VectorHandle Handle, float[] Vector)?[handleList.Count];
@@ -68,7 +73,9 @@ public sealed class BatchRetriever
         // Build index map for result placement
         var indexMap = new Dictionary<string, int>(handleList.Count);
         for (var i = 0; i < handleList.Count; i++)
+        {
             indexMap[HandleKey(handleList[i])] = i;
+        }
 
         // Group by provider + collection for efficient batching
         var groups = handleList
@@ -90,14 +97,18 @@ public sealed class BatchRetriever
                     .ConfigureAwait(false);
 
                 if (!batchResult.IsSuccess)
+                {
                     return Result<IReadOnlyList<(VectorHandle, float[])>, string>.Failure(
                         batchResult.Error);
+                }
 
                 foreach (var (handle, vector) in batchResult.Value)
                 {
                     var key = HandleKey(handle);
                     if (indexMap.TryGetValue(key, out var idx))
+                    {
                         results[idx] = (handle, vector);
+                    }
                 }
             }
         }

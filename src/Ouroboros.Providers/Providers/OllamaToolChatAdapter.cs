@@ -12,9 +12,9 @@ using OllamaSharp.Models.Chat;
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Providers.Resilience;
 using Ouroboros.Tools;
-using ToolRegistry = Ouroboros.Tools.ToolRegistry;
 using Polly;
 using Polly.Wrap;
+using ToolRegistry = Ouroboros.Tools.ToolRegistry;
 
 namespace Ouroboros.Providers;
 
@@ -34,7 +34,7 @@ namespace Ouroboros.Providers;
 /// by <see cref="OllamaCloudChatModel"/>. Integrates <see cref="NeuralPathway"/> health
 /// tracking and <see cref="LlmCostTracker"/> for per-request cost metrics.
 /// </remarks>
-public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBridge, ICostAwareChatModel, IDisposable
+public sealed class OllamaToolChatAdapter : IChatClientBridge, ICostAwareChatModel, IDisposable
 {
     private readonly OllamaApiClient _client;
     private readonly string _model;
@@ -91,7 +91,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
         var httpClient = new HttpClient
         {
             BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute),
-            Timeout = TimeSpan.FromMinutes(10)
+            Timeout = TimeSpan.FromMinutes(10),
         };
 
         if (!string.IsNullOrWhiteSpace(apiKey))
@@ -116,6 +116,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="OllamaToolChatAdapter"/> class.
     /// Initializes a new instance using a pre-configured <see cref="OllamaApiClient"/>.
     /// </summary>
     public OllamaToolChatAdapter(
@@ -162,6 +163,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
     /// Uses Polly resilience for network-level retries and circuit breaking.
     /// Tracks costs and neural pathway health.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<(string Text, List<ToolExecution> Tools)> GenerateWithToolsAsync(
         string prompt,
         CancellationToken ct = default)
@@ -180,7 +182,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
                     Prompt = prompt,
                     Tools = _tools.All.Select(t =>
                         new ToolDefinitionSlim(t.Name, t.Description, t.JsonSchema)).ToList(),
-                    Temperature = (float)_settings.Temperature
+                    Temperature = (float)_settings.Temperature,
                 };
 
                 result = await _retryPolicy.ExecuteWithEvolutionAsync(
@@ -243,7 +245,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
     {
         var messages = new List<Message>
         {
-            new(OllamaSharp.Models.Chat.ChatRole.User, [prompt])
+            new(OllamaSharp.Models.Chat.ChatRole.User, [prompt]),
         };
 
         // Build Ollama tool definitions from registry
@@ -267,7 +269,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
                 {
                     Temperature = temperature,
                     NumPredict = _settings.MaxTokens > 0 ? _settings.MaxTokens : null
-                }
+                },
             };
 
             Message? assistantMessage = null;
@@ -390,7 +392,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
                     Name = tool.Name,
                     Description = tool.Description,
                     Parameters = ParseToolParameters(tool.JsonSchema)
-                }
+                },
             });
         }
 
@@ -404,7 +406,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
             return new Parameters
             {
                 Type = "object",
-                Properties = new Dictionary<string, Property>()
+                Properties = new Dictionary<string, Property>(),
             };
         }
 
@@ -419,7 +421,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
                 Properties = new Dictionary<string, Property>(),
                 Required = root.TryGetProperty("required", out var reqEl)
                     ? reqEl.EnumerateArray().Select(e => e.GetString()!).ToList()
-                    : null
+                    : null,
             };
 
             if (root.TryGetProperty("properties", out var propsEl))
@@ -433,7 +435,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
                             : "string",
                         Description = prop.Value.TryGetProperty("description", out var desc)
                             ? desc.GetString()
-                            : null
+                            : null,
                     };
                     parameters.Properties[prop.Name] = property;
                 }
@@ -446,7 +448,7 @@ public sealed class OllamaToolChatAdapter : IChatCompletionModel, IChatClientBri
             return new Parameters
             {
                 Type = "object",
-                Properties = new Dictionary<string, Property>()
+                Properties = new Dictionary<string, Property>(),
             };
         }
     }

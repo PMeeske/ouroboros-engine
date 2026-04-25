@@ -22,6 +22,7 @@ public static class HostStepExtensions
     /// <summary>
     /// Register services inside HostApplicationBuilder via a pipeline step.
     /// </summary>
+    /// <returns></returns>
     public static Step<HostApplicationBuilder, HostApplicationBuilder> Services(Action<IServiceCollection> configure)
         => new(async b =>
         {
@@ -32,6 +33,7 @@ public static class HostStepExtensions
     /// <summary>
     /// Convenience to add interchangeable LLM (OpenAI via reflection or Ollama) to the service collection.
     /// </summary>
+    /// <returns></returns>
     public static Step<HostApplicationBuilder, HostApplicationBuilder> AddInterchangeableLlm(string? model = null, string? embed = null)
         => Services(s => s.AddInterchangeableLlm(model, embed));
 }

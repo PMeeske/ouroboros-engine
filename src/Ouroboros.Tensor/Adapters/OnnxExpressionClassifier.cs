@@ -162,7 +162,11 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
 
         _runOptions?.Dispose();
@@ -176,7 +180,10 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         await _initLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (_state != 0) return;
+            if (_state != 0)
+            {
+                return;
+            }
 
             if (!File.Exists(_modelPath))
             {
@@ -308,7 +315,10 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         float max = float.NegativeInfinity;
         for (int i = 0; i < logits.Length; i++)
         {
-            if (logits[i] > max) max = logits[i];
+            if (logits[i] > max)
+            {
+                max = logits[i];
+            }
         }
 
         float sum = 0f;
@@ -318,7 +328,10 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
             sum += probabilities[i];
         }
 
-        if (sum <= 0f) sum = 1f;
+        if (sum <= 0f)
+        {
+            sum = 1f;
+        }
 
         for (int i = 0; i < probabilities.Length; i++)
         {

@@ -7,10 +7,15 @@
 public sealed class ResponseCandidate<T>
 {
     public T Value { get; }
+
     public string Source { get; }
+
     public double Score { get; private set; }
+
     public TimeSpan Latency { get; }
+
     public IReadOnlyDictionary<string, double> Metrics { get; }
+
     public bool IsValid { get; }
 
     private ResponseCandidate(T value, string source, double score, TimeSpan latency,
@@ -51,9 +56,17 @@ public sealed class ResponseCandidate<T>
         Func<T, ResponseCandidate<TIntermediate>> selector,
         Func<T, TIntermediate, TResult> resultSelector)
     {
-        if (!IsValid) return ResponseCandidate<TResult>.Invalid(Source);
+        if (!IsValid)
+        {
+            return ResponseCandidate<TResult>.Invalid(Source);
+        }
+
         var intermediate = selector(Value);
-        if (!intermediate.IsValid) return ResponseCandidate<TResult>.Invalid(Source);
+        if (!intermediate.IsValid)
+        {
+            return ResponseCandidate<TResult>.Invalid(Source);
+        }
+
         return ResponseCandidate<TResult>.Create(
             resultSelector(Value, intermediate.Value), Source, Latency + intermediate.Latency);
     }

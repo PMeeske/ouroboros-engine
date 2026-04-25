@@ -232,7 +232,6 @@ public sealed class EwcClient
     }
 
     // ── Internal DTOs ────────────────────────────────────────────────────────
-
     private sealed record FisherResponseDto(float[] FisherDiagonal, int SampleCount);
 }
 

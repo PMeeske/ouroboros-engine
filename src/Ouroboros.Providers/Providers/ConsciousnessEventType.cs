@@ -10,5 +10,5 @@ public enum ConsciousnessEventType
     Synthesis,
     Emergence,
     Election,
-    Optimization
+    Optimization,
 }

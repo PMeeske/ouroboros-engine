@@ -187,6 +187,7 @@ public sealed class SharedD3D12Device : IDisposable
                 throw new InvalidOperationException(
                     $"D3D12CreateDevice at FEATURE_LEVEL_11_0 failed (hr=0x{hr:X8}, device={(rawDevice == null ? "null" : "set")}).");
             }
+
             _device = new ComPtr<ID3D12Device>((ID3D12Device*)rawDevice);
 
             CreateComputeQueue();
@@ -203,6 +204,7 @@ public sealed class SharedD3D12Device : IDisposable
         {
             adapter.Dispose();
             factory.Dispose();
+
             // d3d12 / dxgi are stateless API wrappers; disposing releases nothing that outlives the device.
             d3d12?.Dispose();
             dxgi?.Dispose();

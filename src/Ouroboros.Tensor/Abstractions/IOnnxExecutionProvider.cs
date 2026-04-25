@@ -20,12 +20,12 @@ public interface IOnnxExecutionProvider
     bool Configure(SessionOptions options);
 
     /// <summary>
-    /// Device allocator name for <see cref="OrtMemoryInfo"/> when creating
+    /// Gets device allocator name for <see cref="OrtMemoryInfo"/> when creating
     /// IOBinding-based zero-copy GPU tensors (e.g. <c>"DML"</c> for DirectML).
     /// <c>null</c> when the EP does not support device allocation.
     /// </summary>
     string? DeviceAllocatorName { get; }
 
-    /// <summary>Human-readable name for diagnostics/logging.</summary>
+    /// <summary>Gets human-readable name for diagnostics/logging.</summary>
     string Name { get; }
 }

@@ -10,6 +10,7 @@ public static class CollectiveMindFactory
     /// <summary>
     /// Creates a balanced collective with multiple diverse providers.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind CreateBalanced(ChatRuntimeSettings? settings = null)
     {
         var mind = new CollectiveMind();
@@ -30,6 +31,7 @@ public static class CollectiveMindFactory
     /// <summary>
     /// Creates a speed-optimized collective using fast inference providers.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind CreateFast(ChatRuntimeSettings? settings = null)
     {
         var mind = new CollectiveMind();
@@ -45,6 +47,7 @@ public static class CollectiveMindFactory
     /// <summary>
     /// Creates a quality-optimized collective using premium providers.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind CreatePremium(ChatRuntimeSettings? settings = null)
     {
         var mind = new CollectiveMind();
@@ -60,6 +63,7 @@ public static class CollectiveMindFactory
     /// <summary>
     /// Creates a cost-optimized collective using budget-friendly providers.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind CreateBudget(ChatRuntimeSettings? settings = null)
     {
         var mind = new CollectiveMind();
@@ -76,6 +80,7 @@ public static class CollectiveMindFactory
     /// Creates a local-only collective using Ollama.
     /// Provides resilience features (circuit breaker, health tracking) for a single local provider.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind CreateLocal(string model = "llama3:latest", string endpoint = DefaultEndpoints.Ollama, ChatRuntimeSettings? settings = null)
     {
         var mind = new CollectiveMind();
@@ -88,6 +93,7 @@ public static class CollectiveMindFactory
     /// Creates a single-provider collective mind.
     /// Useful for getting resilience features with just one provider.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind CreateSingle(
         string name,
         ChatEndpointType endpointType,
@@ -106,6 +112,7 @@ public static class CollectiveMindFactory
     /// Creates a collective mind from the current ChatConfig settings.
     /// Uses the configured endpoint type and adds it as the primary pathway.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind CreateFromConfig(
         string model,
         string? endpoint = null,
@@ -124,7 +131,10 @@ public static class CollectiveMindFactory
 
         var mind = new CollectiveMind();
         string providerName = LlmCostTracker.GetProvider(model);
-        if (providerName == "Unknown") providerName = resolvedType.ToString();
+        if (providerName == "Unknown")
+        {
+            providerName = resolvedType.ToString();
+        }
 
         mind.AddPathway(providerName, resolvedType, model, resolvedEndpoint, resolvedApiKey, settings);
         mind.ThinkingMode = CollectiveThinkingMode.Sequential;
@@ -135,6 +145,7 @@ public static class CollectiveMindFactory
     /// Creates a decomposition-enabled collective that splits requests into sub-goals.
     /// Routes sub-goals to optimal pathways (local/cloud) based on complexity.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind CreateDecomposed(ChatRuntimeSettings? settings = null)
     {
         var mind = new CollectiveMind();
@@ -154,6 +165,7 @@ public static class CollectiveMindFactory
     /// Creates a local-first decomposition collective.
     /// Prefers local Ollama for simple tasks, escalates to cloud only when needed.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind CreateLocalFirstDecomposed(
         string localModel = "llama3:latest",
         string localEndpoint = DefaultEndpoints.Ollama,
@@ -179,6 +191,7 @@ public static class CollectiveMindFactory
     /// Creates a hybrid collective with explicit tier assignments.
     /// Allows fine-grained control over which models handle which tasks.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind CreateHybrid(
         (string Name, ChatEndpointType Type, string Model, PathwayTier Tier)[] pathways,
         ChatRuntimeSettings? settings = null)
@@ -188,6 +201,7 @@ public static class CollectiveMindFactory
         foreach (var (name, type, model, _) in pathways)
         {
             mind.AddPathway(name, type, model, settings: settings);
+
             // Note: Tier is inferred automatically, but we could add explicit tier setting
         }
 

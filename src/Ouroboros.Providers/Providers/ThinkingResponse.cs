@@ -18,7 +18,7 @@ public sealed partial record ThinkingResponse(
     int? ContentTokens = null)
 {
     /// <summary>
-    /// Returns true if this response contains thinking content.
+    /// Gets a value indicating whether returns true if this response contains thinking content.
     /// </summary>
     public bool HasThinking => !string.IsNullOrEmpty(Thinking);
 
@@ -27,10 +27,13 @@ public sealed partial record ThinkingResponse(
     /// </summary>
     /// <param name="thinkingPrefix">Prefix for thinking section (default: "🤔 Thinking:\n").</param>
     /// <param name="contentPrefix">Prefix for content section (default: "\n\n📝 Response:\n").</param>
+    /// <returns></returns>
     public string ToFormattedString(string thinkingPrefix = "🤔 Thinking:\n", string contentPrefix = "\n\n📝 Response:\n")
     {
         if (!HasThinking)
+        {
             return Content;
+        }
 
         return $"{thinkingPrefix}{Thinking}{contentPrefix}{Content}";
     }
@@ -39,17 +42,20 @@ public sealed partial record ThinkingResponse(
     /// Creates a ThinkingResponse from raw text that may contain thinking tags.
     /// Supports &lt;think&gt;...&lt;/think&gt; format used by some models.
     /// </summary>
+    /// <returns></returns>
     public static ThinkingResponse FromRawText(string text)
     {
         if (string.IsNullOrEmpty(text))
+        {
             return new ThinkingResponse(null, text ?? string.Empty);
+        }
 
         // Try to extract <think>...</think> tags (used by DeepSeek R1, etc.)
         var thinkMatch = ThinkTagRegex().Match(text);
         if (thinkMatch.Success)
         {
             string thinking = thinkMatch.Groups[1].Value.Trim();
-            string content = text.Replace(thinkMatch.Value, "").Trim();
+            string content = text.Replace(thinkMatch.Value, string.Empty).Trim();
             return new ThinkingResponse(thinking, content);
         }
 
@@ -58,7 +64,7 @@ public sealed partial record ThinkingResponse(
         if (thinkingMatch.Success)
         {
             string thinking = thinkingMatch.Groups[1].Value.Trim();
-            string content = text.Replace(thinkingMatch.Value, "").Trim();
+            string content = text.Replace(thinkingMatch.Value, string.Empty).Trim();
             return new ThinkingResponse(thinking, content);
         }
 

@@ -80,6 +80,7 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
     private readonly ConcurrentDictionary<string, GpuPriorityClass> _originalBasePriorities = new(StringComparer.Ordinal);
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GpuSchedulerV2"/> class.
     /// Initializes a new <see cref="GpuSchedulerV2"/>.
     /// </summary>
     /// <param name="totalVramBytes">Total VRAM in bytes (used for metrics reporting only in plan 01).</param>

@@ -49,6 +49,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="RoundRobinChatModel"/> class.
     /// Initializes a new round-robin chat model.
     /// </summary>
     /// <param name="failoverEnabled">If true, automatically retry with next provider on failure.</param>
@@ -86,7 +87,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
         endpoint ??= ChatConfig.GetDefaultEndpoint(config.EndpointType);
 
         var costTracker = new LlmCostTracker(config.Model ?? "unknown", config.Name);
-        Ouroboros.Abstractions.Core.IChatCompletionModel model = CreateModel(config.EndpointType, endpoint ?? "", apiKey ?? "", config.Model ?? "", settings, costTracker);
+        Ouroboros.Abstractions.Core.IChatCompletionModel model = CreateModel(config.EndpointType, endpoint ?? string.Empty, apiKey ?? string.Empty, config.Model ?? string.Empty, settings, costTracker);
 
         AddProvider(model, config);
     }
@@ -105,7 +106,7 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
             ChatEndpointType.OllamaCloud => new OllamaCloudChatModel(endpoint, apiKey, model, settings, costTracker),
             ChatEndpointType.OllamaLocal => new OllamaCloudChatModel(endpoint, "ollama", model, settings, costTracker),
             ChatEndpointType.GitHubModels => new GitHubModelsChatModel(apiKey, model, endpoint, settings, costTracker),
-            _ => new LiteLLMChatModel(endpoint, apiKey, model, settings, costTracker)
+            _ => new LiteLLMChatModel(endpoint, apiKey, model, settings, costTracker),
         };
     }
 
@@ -117,7 +118,10 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
     {
         lock (_lock)
         {
-            if (_providers.Count == 0) return null;
+            if (_providers.Count == 0)
+            {
+                return null;
+            }
 
             int attempts = 0;
 
@@ -144,7 +148,9 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
             {
                 var provider = _providers[i];
                 if (provider.Config.Enabled && excludeIndices?.Contains(i) != true)
+                {
                     return (provider.Model, provider.Config, provider.Stats, i);
+                }
             }
 
             return null;
@@ -231,7 +237,10 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
             {
                 throw; // deliberate cancellation — don't retry
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 Interlocked.Increment(ref stats.FailedRequests);
@@ -242,7 +251,9 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                 System.Diagnostics.Trace.TraceWarning("[RoundRobinChatModel] Provider '{0}' failed: {1}", config.Name, ex.Message);
 
                 if (!_failoverEnabled)
+                {
                     throw;
+                }
 
                 retries++;
             }
@@ -285,7 +296,8 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                     {
                         bool hasContent = false;
                         await streamingThinking.StreamWithThinkingAsync(prompt, token)
-                            .ForEachAsync(chunk =>
+                            .ForEachAsync(
+                                chunk =>
                             {
                                 hasContent = true;
                                 observer.OnNext(chunk);
@@ -322,7 +334,10 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
                     observer.OnErrorResume(ex); // deliberate cancellation — signal error, don't retry
                     return;
                 }
-                catch (OperationCanceledException) { throw; }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     Interlocked.Increment(ref stats.FailedRequests);
@@ -362,24 +377,27 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
     /// <summary>
     /// Gets a formatted status summary of all providers.
     /// </summary>
+    /// <returns></returns>
     public string GetStatusSummary()
     {
         lock (_lock)
         {
             if (_providers.Count == 0)
+            {
                 return "No providers configured";
+            }
 
             var activeCount = _providers.Count(p => p.Config.Enabled && p.Stats.IsHealthy);
             var lines = new List<string>
             {
                 $"Round-Robin Pool: {_providers.Count} providers ({activeCount} healthy)",
-                ""
+                string.Empty,
             };
 
             foreach (var (_, config, stats) in _providers)
             {
                 string status = stats.IsHealthy ? "✓" : "✗";
-                string enabled = config.Enabled ? "" : " [disabled]";
+                string enabled = config.Enabled ? string.Empty : " [disabled]";
                 lines.Add($"  {status} {config.Name}{enabled}: {stats.SuccessfulRequests}/{stats.TotalRequests} ({stats.SuccessRate:P0})");
             }
 
@@ -395,8 +413,11 @@ public sealed class RoundRobinChatModel : IStreamingThinkingChatModel, ICostAwar
             foreach (var (model, _, _) in _providers)
             {
                 if (model is IDisposable disposable)
+                {
                     disposable.Dispose();
+                }
             }
+
             _providers.Clear();
         }
     }

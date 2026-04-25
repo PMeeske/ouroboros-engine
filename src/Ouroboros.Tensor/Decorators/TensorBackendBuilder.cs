@@ -22,6 +22,7 @@ public sealed class TensorBackendBuilder
     private ITensorBackend _backend;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TensorBackendBuilder"/> class.
     /// Initializes the builder with a concrete backend as the innermost layer.
     /// </summary>
     public TensorBackendBuilder(ITensorBackend backend)
@@ -34,6 +35,7 @@ public sealed class TensorBackendBuilder
     /// Wraps the current backend with a <see cref="ValidatingTensorBackend"/> that checks
     /// shapes and device compatibility before dispatching (R15).
     /// </summary>
+    /// <returns></returns>
     public TensorBackendBuilder WithValidation()
     {
         _backend = new ValidatingTensorBackend(_backend);
@@ -44,6 +46,7 @@ public sealed class TensorBackendBuilder
     /// Wraps the current backend with a <see cref="LoggingTensorBackend"/> that records each
     /// operation name, shapes, latency and outcome (R18).
     /// </summary>
+    /// <returns></returns>
     public TensorBackendBuilder WithLogging(ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(logger);
@@ -56,6 +59,7 @@ public sealed class TensorBackendBuilder
     /// latency histograms and operation counters to the <c>Ouroboros.Tensor</c> meter (R18).
     /// </summary>
     /// <param name="meter">Optional pre-existing meter; a default is created when null.</param>
+    /// <returns></returns>
     public TensorBackendBuilder WithMetrics(Meter? meter = null)
     {
         _backend = new MetricsTensorBackend(_backend, meter);
@@ -66,6 +70,7 @@ public sealed class TensorBackendBuilder
     /// Wraps the current backend with a <see cref="CachingTensorBackend"/> that memoises
     /// identical <see cref="ITensorBackend.Create"/> calls (R11).
     /// </summary>
+    /// <returns></returns>
     public TensorBackendBuilder WithCaching()
     {
         _backend = new CachingTensorBackend(_backend);
@@ -73,5 +78,6 @@ public sealed class TensorBackendBuilder
     }
 
     /// <summary>Returns the fully decorated backend.</summary>
+    /// <returns></returns>
     public ITensorBackend Build() => _backend;
 }

@@ -19,7 +19,7 @@ namespace Ouroboros.Providers.Resilience;
 /// 1. Selects the best <see cref="IMutationStrategy{TContext}"/> based on error type and chromosome weights
 /// 2. Applies the mutation with chromosome-encoded parameters
 /// 3. Evaluates fitness of the chromosome based on the outcome
-/// 4. Evolves the chromosome population for the next generation via crossover + mutation
+/// 4. Evolves the chromosome population for the next generation via crossover + mutation.
 /// </para>
 /// <para>
 /// MeTTa atoms are generated for each mutation via <c>McpToolCallAtomConverter</c>
@@ -27,7 +27,8 @@ namespace Ouroboros.Providers.Resilience;
 /// </para>
 /// </remarks>
 /// <typeparam name="TContext">The mutable execution context type.</typeparam>
-public sealed class EvolutionaryRetryPolicy<TContext> where TContext : class
+public sealed class EvolutionaryRetryPolicy<TContext>
+    where TContext : class
 {
     private readonly IReadOnlyList<IMutationStrategy<TContext>> _strategies;
     private readonly int _maxGenerations;
@@ -220,7 +221,7 @@ public sealed class EvolutionaryRetryPolicy<TContext> where TContext : class
             }
             else if (strategy.Name == "llm-variator")
             {
-                score *= 1.0 + llmVariatorWeight * 2.0;
+                score *= 1.0 + (llmVariatorWeight * 2.0);
             }
 
             return (Strategy: strategy, Score: score);

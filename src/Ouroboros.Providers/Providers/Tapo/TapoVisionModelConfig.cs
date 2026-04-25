@@ -43,17 +43,17 @@ public sealed record TapoVisionModelConfig
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(120);
 
     /// <summary>
-    /// Gets whether to enable detailed object detection.
+    /// Gets a value indicating whether gets whether to enable detailed object detection.
     /// </summary>
     public bool EnableObjectDetection { get; init; } = true;
 
     /// <summary>
-    /// Gets whether to enable face detection and emotion analysis.
+    /// Gets a value indicating whether gets whether to enable face detection and emotion analysis.
     /// </summary>
     public bool EnableFaceDetection { get; init; } = true;
 
     /// <summary>
-    /// Gets whether to enable scene classification.
+    /// Gets a value indicating whether gets whether to enable scene classification.
     /// </summary>
     public bool EnableSceneClassification { get; init; } = true;
 
@@ -83,7 +83,7 @@ public sealed record TapoVisionModelConfig
     {
         VisionModel = LightweightVisionModel,
         RequestTimeout = TimeSpan.FromSeconds(60),
-        MaxObjectsPerFrame = 10
+        MaxObjectsPerFrame = 10,
     };
 
     /// <summary>
@@ -96,6 +96,6 @@ public sealed record TapoVisionModelConfig
         VisionModel = HighQualityVisionModel,
         RequestTimeout = TimeSpan.FromSeconds(180),
         MaxObjectsPerFrame = 50,
-        ConfidenceThreshold = 0.3
+        ConfidenceThreshold = 0.3,
     };
 }

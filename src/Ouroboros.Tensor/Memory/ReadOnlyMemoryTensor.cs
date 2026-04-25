@@ -13,16 +13,19 @@ namespace Ouroboros.Tensor.Memory;
 /// Created by <see cref="ITensorBackend.FromMemory"/> to avoid a redundant copy when the caller
 /// already holds the data in a compatible format (R09, R12).
 /// </remarks>
-internal sealed class ReadOnlyMemoryTensor<T> : ITensor<T> where T : unmanaged
+internal sealed class ReadOnlyMemoryTensor<T> : ITensor<T>
+    where T : unmanaged
 {
     private readonly ReadOnlyMemory<T> _memory;
 
     internal ReadOnlyMemoryTensor(ReadOnlyMemory<T> memory, TensorShape shape)
     {
         if (memory.Length != (int)shape.ElementCount)
+        {
             throw new ArgumentException(
                 $"Memory length {memory.Length} does not match shape element count {shape.ElementCount}.",
                 nameof(memory));
+        }
 
         _memory = memory;
         Shape = shape;
@@ -50,5 +53,7 @@ internal sealed class ReadOnlyMemoryTensor<T> : ITensor<T> where T : unmanaged
 
     /// <inheritdoc/>
     /// <remarks>No-op: memory is owned by the caller.</remarks>
-    public void Dispose() { }
+    public void Dispose()
+    {
+    }
 }

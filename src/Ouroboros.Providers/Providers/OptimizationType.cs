@@ -9,5 +9,5 @@ public enum OptimizationType
     ReduceUsage,
     ConsiderRemoving,
     AdjustParameters,
-    AddFallback
+    AddFallback,
 }

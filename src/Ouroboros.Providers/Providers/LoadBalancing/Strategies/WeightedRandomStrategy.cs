@@ -20,16 +20,20 @@ public sealed class WeightedRandomStrategy : IProviderSelectionStrategy
     public string SelectProvider(List<string> healthyProviders, IReadOnlyDictionary<string, ProviderHealthStatus> healthStatus)
     {
         if (healthyProviders == null || healthyProviders.Count == 0)
+        {
             throw new ArgumentException("No healthy providers available", nameof(healthyProviders));
+        }
 
         // Weight by health score
         var weights = healthyProviders
             .Select(id => (healthStatus[id].HealthScore, id))
             .ToList();
 
-        double totalWeight = weights.Sum(w => w.Item1);
+        double totalWeight = weights.Sum(w => w.HealthScore);
         if (totalWeight <= 0)
+        {
             return healthyProviders[RandomNumberGenerator.GetInt32(healthyProviders.Count)];
+        }
 
         double randomValue = (RandomNumberGenerator.GetInt32(256) / 256.0) * totalWeight;
         double cumulative = 0;
@@ -38,7 +42,9 @@ public sealed class WeightedRandomStrategy : IProviderSelectionStrategy
         {
             cumulative += weight;
             if (randomValue <= cumulative)
+            {
                 return id;
+            }
         }
 
         return healthyProviders[^1];

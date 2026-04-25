@@ -14,6 +14,7 @@ public static class ObservableAsyncEnumerableExtensions
     /// Converts an R3 <see cref="Observable{T}"/> to an <see cref="IAsyncEnumerable{T}"/>
     /// using an unbounded channel as the bridge.
     /// </summary>
+    /// <returns></returns>
     public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(
         this Observable<T> source,
         [EnumeratorCancellation] CancellationToken ct = default)
@@ -23,7 +24,7 @@ public static class ObservableAsyncEnumerableExtensions
         var channel = Channel.CreateUnbounded<T>(new UnboundedChannelOptions
         {
             SingleWriter = true,
-            SingleReader = true
+            SingleReader = true,
         });
 
         IDisposable subscription = source.Subscribe(

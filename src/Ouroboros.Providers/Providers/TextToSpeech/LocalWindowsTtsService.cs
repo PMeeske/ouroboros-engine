@@ -89,7 +89,6 @@ $synth.GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name }
                     output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()),
                 error => Result<List<string>, string>.Failure(error));
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             return Result<List<string>, string>.Failure(ex.Message);
@@ -126,7 +125,7 @@ $synth.GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name }
                 TtsVoice.Onyx => -2,     // Slower, authoritative
                 TtsVoice.Fable => 0,     // Normal, expressive
                 TtsVoice.Shimmer => -1,  // Slower, gentle
-                _ => 0
+                _ => 0,
             };
 
             int effectiveRate = Math.Clamp(_rate + rateAdjust, -10, 10);
@@ -144,6 +143,7 @@ $synth.GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name }
             if (_useEnhancedProsody)
             {
                 string ssml = BuildEnhancedSsml(text, effectiveRate);
+
                 // Use PowerShell here-string (@' ... '@) for SSML to avoid escaping issues
                 // Here-strings preserve content literally without interpretation
                 script = $@"
@@ -198,7 +198,13 @@ Write-Output 'OK'
                 byte[] audioData = await File.ReadAllBytesAsync(tempFile, ct).ConfigureAwait(false);
 
                 // Clean up temp file
-                try { File.Delete(tempFile); } catch (IOException) { /* Intentional: best-effort temp file cleanup */ }
+                try
+                {
+                    File.Delete(tempFile);
+                }
+                catch (IOException)
+                { /* Intentional: best-effort temp file cleanup */
+                }
 
                 return Result<SpeechResult, string>.Success(new SpeechResult(audioData, "wav"));
             }
@@ -207,7 +213,6 @@ Write-Output 'OK'
                 return Result<SpeechResult, string>.Failure(runResult.Error);
             }
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             return Result<SpeechResult, string>.Failure($"TTS error: {ex.Message}");
@@ -230,7 +235,7 @@ Write-Output 'OK'
             <= -3 => "slow",
             <= 3 => "medium",
             <= 6 => "fast",
-            _ => "x-fast"
+            _ => "x-fast",
         };
 
         // Add natural pauses and emphasis
@@ -320,7 +325,6 @@ Write-Output 'OK'
                 await File.WriteAllBytesAsync(outputPath, result.Value.AudioData, ct).ConfigureAwait(false);
                 return Result<string, string>.Success(outputPath);
             }
-            catch (OperationCanceledException) { throw; }
             catch (IOException ex)
             {
                 return Result<string, string>.Failure($"Failed to save audio: {ex.Message}");
@@ -348,7 +352,6 @@ Write-Output 'OK'
                 await outputStream.WriteAsync(result.Value.AudioData, ct).ConfigureAwait(false);
                 return Result<string, string>.Success("wav");
             }
-            catch (OperationCanceledException) { throw; }
             catch (IOException ex)
             {
                 return Result<string, string>.Failure($"Failed to write to stream: {ex.Message}");
@@ -435,7 +438,6 @@ $synth.Speak($speechText)
                 _ => Result<bool, string>.Success(true),
                 error => Result<bool, string>.Failure(error));
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             return Result<bool, string>.Failure($"TTS error: {ex.Message}");
@@ -487,7 +489,6 @@ $synth.Speak($speechText)
 
             return Result<string, string>.Success(output.Trim());
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             return Result<string, string>.Failure(ex.Message);

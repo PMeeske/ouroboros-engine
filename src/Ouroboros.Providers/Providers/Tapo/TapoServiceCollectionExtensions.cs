@@ -22,7 +22,9 @@ public static class TapoServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         if (string.IsNullOrWhiteSpace(baseAddress))
+        {
             throw new ArgumentException("Base address is required", nameof(baseAddress));
+        }
 
         services.AddHttpClient<TapoRestClient>(client =>
         {
@@ -74,7 +76,9 @@ public static class TapoServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         if (string.IsNullOrWhiteSpace(baseAddress))
+        {
             throw new ArgumentException("Base address is required", nameof(baseAddress));
+        }
 
         // Add the REST client (state source)
         services.AddTapoRestClient(baseAddress);
@@ -85,6 +89,7 @@ public static class TapoServiceCollectionExtensions
         {
             visionConfig = configureVision(visionConfig);
         }
+
         services.AddSingleton(visionConfig);
 
         // Register the provider as singleton to maintain connection state across application lifecycle
@@ -136,6 +141,7 @@ public static class TapoServiceCollectionExtensions
         {
             visionConfig = configureVision(visionConfig);
         }
+
         services.AddSingleton(visionConfig);
 
         // Register the RTSP-based embodiment provider
@@ -214,13 +220,19 @@ public static class TapoServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         if (string.IsNullOrWhiteSpace(cameraIp))
+        {
             throw new ArgumentException("Camera IP is required", nameof(cameraIp));
+        }
 
         if (string.IsNullOrWhiteSpace(username))
+        {
             throw new ArgumentException("Username is required", nameof(username));
+        }
 
         if (string.IsNullOrWhiteSpace(password))
+        {
             throw new ArgumentException("Password is required", nameof(password));
+        }
 
         services.AddSingleton(sp =>
         {
@@ -270,7 +282,9 @@ public static class TapoServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         if (string.IsNullOrWhiteSpace(gatewayScriptPath))
+        {
             throw new ArgumentException("Gateway script path is required", nameof(gatewayScriptPath));
+        }
 
         services.AddSingleton(sp =>
         {

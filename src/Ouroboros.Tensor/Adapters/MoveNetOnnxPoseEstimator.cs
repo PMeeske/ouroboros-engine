@@ -75,10 +75,21 @@ public sealed class MoveNetOnnxPoseEstimator : IPoseEstimator, IAsyncDisposable
     /// <inheritdoc/>
     public async Task<PoseEstimate?> EstimateAsync(FrameBuffer frame, CancellationToken cancellationToken)
     {
-        if (_disposed || frame is null || frame.Rgba is null) return null;
-        if (frame.Width <= 0 || frame.Height <= 0) return null;
+        if (_disposed || frame is null || frame.Rgba is null)
+        {
+            return null;
+        }
+
+        if (frame.Width <= 0 || frame.Height <= 0)
+        {
+            return null;
+        }
+
         int expected = frame.Width * frame.Height * 4;
-        if (frame.Rgba.Length != expected) return null;
+        if (frame.Rgba.Length != expected)
+        {
+            return null;
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -98,7 +109,10 @@ public sealed class MoveNetOnnxPoseEstimator : IPoseEstimator, IAsyncDisposable
         {
             (inputBuffer, letterbox) = PreprocessLetterbox256(frame);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
 #pragma warning disable CA1031
         catch (Exception ex)
 #pragma warning restore CA1031
@@ -122,7 +136,10 @@ public sealed class MoveNetOnnxPoseEstimator : IPoseEstimator, IAsyncDisposable
 
             return estimate ?? await _fallback.EstimateAsync(frame, cancellationToken).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (TimeoutException ex)
         {
             _logger?.LogDebug(ex, "[MoveNetOnnx] scheduler latency exceeded");
@@ -150,7 +167,11 @@ public sealed class MoveNetOnnxPoseEstimator : IPoseEstimator, IAsyncDisposable
     /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
 
         _runOptions?.Dispose();
@@ -160,9 +181,15 @@ public sealed class MoveNetOnnxPoseEstimator : IPoseEstimator, IAsyncDisposable
         IVramReservation? reservation = Interlocked.Exchange(ref _reservation, null);
         if (reservation is not null)
         {
-            try { await reservation.DisposeAsync().ConfigureAwait(false); }
+            try
+            {
+                await reservation.DisposeAsync().ConfigureAwait(false);
+            }
 #pragma warning disable CA1031
-            catch (Exception ex) { _logger?.LogDebug(ex, "[MoveNetOnnx] reservation dispose failed"); }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "[MoveNetOnnx] reservation dispose failed");
+            }
 #pragma warning restore CA1031
         }
 
@@ -174,7 +201,10 @@ public sealed class MoveNetOnnxPoseEstimator : IPoseEstimator, IAsyncDisposable
         await _initLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (_state != 0) return;
+            if (_state != 0)
+            {
+                return;
+            }
 
             if (!File.Exists(_modelPath))
             {
@@ -322,12 +352,20 @@ public sealed class MoveNetOnnxPoseEstimator : IPoseEstimator, IAsyncDisposable
         {
             int sy = Math.Min((int)(dy * invScale), srcH - 1);
             int outY = dy + offsetY;
-            if (outY < 0 || outY >= InputDim) continue;
+            if (outY < 0 || outY >= InputDim)
+            {
+                continue;
+            }
+
             for (int dx = 0; dx < scaledW; dx++)
             {
                 int sx = Math.Min((int)(dx * invScale), srcW - 1);
                 int outX = dx + offsetX;
-                if (outX < 0 || outX >= InputDim) continue;
+                if (outX < 0 || outX >= InputDim)
+                {
+                    continue;
+                }
+
                 int srcIdx = ((sy * srcW) + sx) * 4;
                 int dstIdx = ((outY * InputDim) + outX) * 3;
                 dst[dstIdx] = rgba[srcIdx];
