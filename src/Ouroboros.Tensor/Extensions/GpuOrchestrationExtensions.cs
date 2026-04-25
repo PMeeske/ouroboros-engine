@@ -102,7 +102,7 @@ public static class GpuOrchestrationExtensions
     private static long EstimateVram(ITensorBackendSelector? selector = null)
     {
 #if ENABLE_ILGPU
-        var backend = selector.SelectBackend(DeviceType.OpenCL);
+        var backend = selector?.SelectBackend(DeviceType.OpenCL);
         if (backend is IlgpuOpenClTensorBackend ilgpu)
             return ilgpu.TotalMemoryBytes;
 #endif
