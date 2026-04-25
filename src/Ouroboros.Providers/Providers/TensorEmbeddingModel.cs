@@ -140,7 +140,9 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
         ulong pointId = ComputePointId(input);
         if (_qdrant is not null)
         {
+#pragma warning disable CS0612 // TryGetCachedAsync uses legacy Qdrant.Vector.Data API (TODO: migrate to named vectors)
             var cached = await TryGetCachedAsync(pointId, ct).ConfigureAwait(false);
+#pragma warning restore CS0612
             if (cached is not null)
             {
                 return cached;
