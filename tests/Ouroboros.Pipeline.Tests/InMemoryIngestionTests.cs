@@ -149,8 +149,8 @@ public class InMemoryIngestionTests
         // Assert
         for (int i = 0; i < vectors.Count; i++)
         {
-            vectors[i].Metadata.Should().ContainKey("chunkIndex");
-            vectors[i].Metadata["chunkIndex"].Should().Be(i);
+            vectors[i]!.Metadata!.Should().ContainKey("chunkIndex");
+            vectors[i]!.Metadata!["chunkIndex"].Should().Be(i);
         }
     }
 
@@ -218,7 +218,7 @@ public class InMemoryIngestionTests
         vectors.Should().NotBeEmpty();
         
         // Each chunk should have unique chunk index
-        var indices = vectors.Select(v => v.Metadata["chunkIndex"]).Cast<int>().ToList();
+        var indices = vectors.Select(v => v!.Metadata!["chunkIndex"]).Cast<int>().ToList();
         indices.Should().OnlyHaveUniqueItems();
         indices.Should().BeInAscendingOrder();
     }

@@ -116,8 +116,8 @@ public class BranchSnapshotTests
         snapshot.Name.Should().Be("complex-branch");
         snapshot.Events.Should().HaveCount(2);
         snapshot.Vectors.Should().HaveCount(1);
-        snapshot.Vectors[0].Metadata.Should().ContainKey("type");
-        snapshot.Vectors[0].Metadata["type"].Should().Be("test");
+        snapshot.Vectors[0]!.Metadata!.Should().ContainKey("type");
+        snapshot.Vectors[0]!.Metadata!["type"].Should().Be("test");
     }
 
     [Fact]
@@ -318,7 +318,7 @@ public class BranchSnapshotTests
                 {
                     Id = "vec1",
                     Text = "Content",
-                    Embedding = null
+                    Embedding = Array.Empty<float>()
                 }
             }
         };

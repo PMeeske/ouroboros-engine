@@ -100,7 +100,7 @@ public class VectorGraphFeedbackLoopTests
         result.IsSuccess.Should().BeTrue();
         var retrievedEdge = dag.GetEdge(edge.Id);
         retrievedEdge.HasValue.Should().BeTrue();
-        retrievedEdge.Value.Confidence.Should().Be(0.9);
+        retrievedEdge.Value!.Confidence.Should().Be(0.9);
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public class VectorGraphFeedbackLoopTests
         result.IsSuccess.Should().BeTrue();
         var retrieved = dag.GetNode(node.Id);
         retrieved.HasValue.Should().BeTrue();
-        retrieved.Value.PayloadJson.Should().Contain("updated");
+        retrieved.Value!.PayloadJson.Should().Contain("updated");
     }
 
     [Fact]
@@ -417,7 +417,7 @@ public class VectorGraphFeedbackLoopTests
         // sink1 should still exist with merged payload
         var mergedNode = dag.GetNode(sink1.Id);
         mergedNode.HasValue.Should().BeTrue();
-        mergedNode.Value.PayloadJson.Should().Contain("sink2");
+        mergedNode.Value!.PayloadJson.Should().Contain("sink2");
 
         // sink2 should be removed
         var removedNode = dag.GetNode(sink2.Id);
@@ -672,7 +672,7 @@ public class VectorGraphFeedbackLoopTests
         // Assert - sink1 should still exist with merged payload, sink2 should be removed
         var mergedNode = dag.GetNode(sink1.Id);
         mergedNode.HasValue.Should().BeTrue();
-        mergedNode.Value.PayloadJson.Should().Contain("sink2");
+        mergedNode.Value!.PayloadJson.Should().Contain("sink2");
 
         var removedNode = dag.GetNode(sink2.Id);
         removedNode.HasValue.Should().BeFalse();
@@ -701,8 +701,8 @@ public class VectorGraphFeedbackLoopTests
         dag.AddEdge(cyclicToSink);
 
         // Record pre-mutation state
-        var preSourceSinkConfidence = dag.GetEdge(sourceToSink.Id)!.Value.Confidence ?? 0.5;
-        var preCyclicSinkConfidence = dag.GetEdge(cyclicToSink.Id)!.Value.Confidence ?? 0.5;
+        var preSourceSinkConfidence = dag.GetEdge(sourceToSink.Id)!.Value!.Confidence ?? 0.5;
+        var preCyclicSinkConfidence = dag.GetEdge(cyclicToSink.Id)!.Value!.Confidence ?? 0.5;
         preSourceSinkConfidence.Should().Be(0.5);
         preCyclicSinkConfidence.Should().Be(0.3);
 
@@ -724,11 +724,11 @@ public class VectorGraphFeedbackLoopTests
         // Source->sink edge should have been strengthened (confidence increased from 0.5)
         var strengthenedEdge = dag.GetEdge(sourceToSink.Id);
         strengthenedEdge.HasValue.Should().BeTrue();
-        strengthenedEdge.Value.Confidence.Should().BeGreaterThan(preSourceSinkConfidence);
+        strengthenedEdge.Value!.Confidence.Should().BeGreaterThan(preSourceSinkConfidence);
 
         // Cyclic->sink edge should have been weakened (confidence decreased from 0.3)
         var weakenedEdge = dag.GetEdge(cyclicToSink.Id);
         weakenedEdge.HasValue.Should().BeTrue();
-        weakenedEdge.Value.Confidence.Should().BeLessThan(preCyclicSinkConfidence);
+        weakenedEdge.Value!.Confidence.Should().BeLessThan(preCyclicSinkConfidence);
     }
 }
