@@ -117,6 +117,7 @@ trim_trailing_whitespace = false
 # StyleCop SA-family — reclassified to suggestion per v56.0 milestone decision
 # (matches existing Sonar S#### treatment). 92 SA rules, ~24,643 warnings.
 # Single category-line per StyleCop rule family:
+[*.cs]
 dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpacingRules.severity = suggestion
 dotnet_analyzer_diagnostic.category-StyleCop.CSharp.ReadabilityRules.severity = suggestion
 dotnet_analyzer_diagnostic.category-StyleCop.CSharp.OrderingRules.severity = suggestion

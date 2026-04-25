@@ -197,7 +197,7 @@ public static class TensorReactiveExtensions
     /// inside the reactive node graph.
     /// </summary>
     /// <param name="source">Input observable.</param>
-    /// <param name="pipelineStage">
+    /// <param name="stage">
     /// An async pipeline stage (e.g. from <see cref="TensorPipelineArrows"/>).
     /// </param>
     /// <returns>Flattened output observable.</returns>
