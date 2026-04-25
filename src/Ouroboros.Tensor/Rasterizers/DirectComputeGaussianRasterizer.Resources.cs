@@ -337,7 +337,7 @@ public sealed partial class DirectComputeGaussianRasterizer
         // Slot 8 = tile-raster RWTexture2D.
         WriteUav(dev, _bufTileCounts, tileCount,              4u, Offset(baseH, 6));
         WriteUav(dev, _bufTileLists,  tileCount * MaxPerTile, 4u, Offset(baseH, 7));
-        WriteUavTex2D(dev, _texOutput, width, height, Offset(baseH, 8));
+        WriteUavTex2D(dev, _texOutput, Offset(baseH, 8));
 
         // Slot 9..12 = tile-raster / tile-assign SRVs
         // (projected/projColors/tileCounts/tileLists) — written as a dedicated

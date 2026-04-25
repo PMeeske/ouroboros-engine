@@ -12,7 +12,7 @@ namespace Ouroboros.Providers.Tapo;
 /// </summary>
 public sealed partial class TapoEmbodimentProvider
 {
-    private Task RefreshRtspCameraInventoryAsync()
+    private Task RefreshRtspCameraInventoryAsync(CancellationToken ct = default)
     {
         _sensors.Clear();
         _actuators.Clear();

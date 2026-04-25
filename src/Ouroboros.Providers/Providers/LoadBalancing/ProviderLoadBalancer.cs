@@ -151,7 +151,7 @@ public sealed class ProviderLoadBalancer<T> : IProviderLoadBalancer<T>
         }
 
         ProviderHealthStatus health = _healthStatus[selectedId];
-        string reason = GenerateSelectionReason(selectedId, health);
+        string reason = GenerateSelectionReason(health);
 
         ProviderSelectionResult<T> result = new(
             Provider: provider,

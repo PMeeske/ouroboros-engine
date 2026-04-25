@@ -167,8 +167,8 @@ public sealed partial class DirectComputeGaussianRasterizer
         // ---- PASS 1: gaussian_project ----
         // Root constants: (translateX, translateY, count, width, height, 0, 0, 0)
         uint* rc = stackalloc uint[8];
-        float tx = Camera_TxFromView(width);
-        float ty = Camera_TyFromView(height);
+        float tx = Camera_TxFromView();
+        float ty = Camera_TyFromView();
         rc[0] = BitConverter.SingleToUInt32Bits(tx);
         rc[1] = BitConverter.SingleToUInt32Bits(ty);
         rc[2] = (uint)gaussianCount;

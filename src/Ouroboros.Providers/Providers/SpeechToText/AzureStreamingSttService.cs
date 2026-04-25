@@ -295,7 +295,7 @@ public sealed class AzureStreamingSttService : IStreamingSttService, IDisposable
 
         public bool IsActive => _isActive;
 
-        public async Task InitializeAsync()
+        public async Task InitializeAsync(CancellationToken ct = default)
         {
             _pushStream = AudioInputStream.CreatePushStream(
                 AudioStreamFormat.GetWaveFormatPCM(16000, 16, 1));

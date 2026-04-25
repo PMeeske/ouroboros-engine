@@ -147,6 +147,7 @@ public sealed partial class TapoEmbodimentProvider
     /// </summary>
     private async Task<Result<PerceptionData>> ReadRtspCameraFrameAsync(
         string sensorId,
+        SensorInfo sensor,
                 CancellationToken ct)
     {
         var cameraName = sensorId;

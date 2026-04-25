@@ -53,7 +53,7 @@ public sealed partial class MasterModelElection
     }
 
     private static async Task<(ResponseCandidate<ThinkingResponse> Winner, Dictionary<string, double> Votes, string Rationale)>
-        ElectByCondorcetAsync(List<ResponseCandidate<ThinkingResponse>> candidates)
+        ElectByCondorcetAsync(List<ResponseCandidate<ThinkingResponse>> candidates, string originalPrompt = "", CancellationToken ct = default)
     {
         // Simplified Condorcet: use scores for pairwise comparison
         var wins = candidates.ToDictionary(c => c.Source, _ => 0);

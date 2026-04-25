@@ -99,7 +99,7 @@ public static class GpuOrchestrationExtensions
         return services;
     }
 
-    private static long EstimateVram()
+    private static long EstimateVram(ITensorBackendSelector? selector = null)
     {
 #if ENABLE_ILGPU
         var backend = selector.SelectBackend(DeviceType.OpenCL);

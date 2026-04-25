@@ -12,7 +12,7 @@ namespace Ouroboros.Providers.SpeechToText;
 /// </summary>
 public static partial class MicrophoneRecorder
 {
-    private static ProcessStartInfo? GetRecorderStartInfo(string outputPath, int durationSeconds)
+    private static ProcessStartInfo? GetRecorderStartInfo(string outputPath, int durationSeconds, string format = "wav")
     {
         if (OperatingSystem.IsWindows())
         {
