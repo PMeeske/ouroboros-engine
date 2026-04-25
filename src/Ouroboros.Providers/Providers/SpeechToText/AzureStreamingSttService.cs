@@ -11,7 +11,7 @@ namespace Ouroboros.Providers.SpeechToText;
 
 /// <summary>
 /// Azure Speech SDK implementation of <see cref="IStreamingSttService"/>.
-/// Uses continuous recognition via <see cref="AudioInputStream.CreatePushStream"/>
+/// Uses continuous recognition via <see cref="AudioInputStream.CreatePushStream()"/>
 /// instead of the simpler RecognizeOnceAsync, enabling real-time streaming STT
 /// with interim results and barge-in support.
 /// </summary>

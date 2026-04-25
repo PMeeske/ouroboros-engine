@@ -211,9 +211,10 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
                 bool inThinkingFromTag = false;
                 StringBuilder tagBuffer = new();
 
-                while (!reader.EndOfStream && !token.IsCancellationRequested)
+                while (!token.IsCancellationRequested)
                 {
                     string? line = await reader.ReadLineAsync(token).ConfigureAwait(false);
+                    if (line is null) break;
                     if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data: "))
                     {
                         continue;

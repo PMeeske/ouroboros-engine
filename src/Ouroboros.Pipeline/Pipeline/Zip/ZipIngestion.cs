@@ -195,11 +195,12 @@ public static class ZipIngestion
             ct.ThrowIfCancellationRequested();
             rows.Add(SplitCsv(line));
         }
+        bool hasMore = await reader.ReadLineAsync(ct).ConfigureAwait(false) != null;
         return new Dictionary<string, object>
         {
             ["type"] = "csv",
             ["table"] = new CsvTable(header, rows),
-            ["truncated"] = !reader.EndOfStream
+            ["truncated"] = hasMore
         };
     }
 
@@ -284,7 +285,7 @@ public static class ZipIngestion
         {
             ["type"] = "text",
             ["preview"] = text,
-            ["truncated"] = !reader.EndOfStream
+            ["truncated"] = read == buffer.Length && await reader.ReadAsync(buffer, 0, 1).ConfigureAwait(false) > 0
         };
     }
 

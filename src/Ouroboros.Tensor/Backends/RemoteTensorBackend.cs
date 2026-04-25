@@ -224,6 +224,7 @@ public sealed class RemoteTensorBackend : ITensorBackend, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
+        if (_disposed) return;
         _disposed = true;
 
         // TensorServiceClient is injected — caller owns its lifetime.
