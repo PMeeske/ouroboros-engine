@@ -172,7 +172,7 @@ public class OllamaPresetsTests
         settings.TopP.Should().Be(0.92f);
         settings.TopK.Should().Be(50);
         settings.RepeatPenalty.Should().Be(1.05f);
-        OllamaPresets.DeepSeekR1_14B_ReasonKeepAlive.Should().Be("10m");
+        OllamaPresets.DeepSeekR114BReasonKeepAlive.Should().Be("10m");
     }
 
     [Fact]
@@ -418,10 +418,10 @@ public class OllamaPresetsTests
             OllamaPresets.DeepSeekCoder33BKeepAlive,
             OllamaPresets.Llama3GeneralKeepAlive,
             OllamaPresets.Llama3SummarizeKeepAlive,
-            OllamaPresets.DeepSeekR1_14B_ReasonKeepAlive,
-            OllamaPresets.DeepSeekR1_32B_ReasonKeepAlive,
+            OllamaPresets.DeepSeekR114BReasonKeepAlive,
+            OllamaPresets.DeepSeekR132BReasonKeepAlive,
             OllamaPresets.Mistral7BGeneralKeepAlive,
-            OllamaPresets.Qwen25_7B_GeneralKeepAlive,
+            OllamaPresets.Qwen257BGeneralKeepAlive,
             OllamaPresets.Phi3MiniGeneralKeepAlive,
             OllamaPresets.TinyLlamaFastKeepAlive
         };

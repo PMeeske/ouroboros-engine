@@ -21,7 +21,7 @@ public sealed class DeepSeekChatModelTests
         var model = new DeepSeekChatModel(
             "https://api.ollama.ai",
             "test-api-key",
-            DeepSeekChatModel.ModelDeepSeekR1_32B);
+            DeepSeekChatModel.ModelDeepSeekR132B);
 
         // Assert
         model.Should().NotBeNull();
@@ -94,10 +94,10 @@ public sealed class DeepSeekChatModelTests
     public void ModelConstants_HaveExpectedValues()
     {
         // Assert
-        DeepSeekChatModel.ModelDeepSeekR1_7B.Should().Be("deepseek-r1:7b");
-        DeepSeekChatModel.ModelDeepSeekR1_8B.Should().Be("deepseek-r1:8b");
-        DeepSeekChatModel.ModelDeepSeekR1_14B.Should().Be("deepseek-r1:14b");
-        DeepSeekChatModel.ModelDeepSeekR1_32B.Should().Be("deepseek-r1:32b");
-        DeepSeekChatModel.ModelDeepSeekR1_70B.Should().Be("deepseek-r1:70b");
+        DeepSeekChatModel.ModelDeepSeekR17B.Should().Be("deepseek-r1:7b");
+        DeepSeekChatModel.ModelDeepSeekR18B.Should().Be("deepseek-r1:8b");
+        DeepSeekChatModel.ModelDeepSeekR114B.Should().Be("deepseek-r1:14b");
+        DeepSeekChatModel.ModelDeepSeekR132B.Should().Be("deepseek-r1:32b");
+        DeepSeekChatModel.ModelDeepSeekR170B.Should().Be("deepseek-r1:70b");
     }
 }

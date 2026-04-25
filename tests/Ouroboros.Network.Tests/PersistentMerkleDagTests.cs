@@ -102,7 +102,7 @@ public class PersistentMerkleDagTests : IDisposable
         dag2.GetEdge(edge.Id).HasValue.Should().BeTrue();
 
         var restoredEdge = dag2.GetEdge(edge.Id).Value;
-        restoredEdge.OperationName.Should().Be("UseCritique");
+        restoredEdge!.OperationName.Should().Be("UseCritique");
         restoredEdge.InputIds.Should().Contain(inputNode.Id);
         restoredEdge.OutputId.Should().Be(outputNode.Id);
 
