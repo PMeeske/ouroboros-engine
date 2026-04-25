@@ -93,8 +93,7 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
             };
 
             // Emit proposed event
-            await _eventStore.AppendEventsAsync(streamId,
-                [new ModificationProposedEvent(Guid.NewGuid(), DateTime.UtcNow, proposal)]).ConfigureAwait(false);
+            await _eventStore.AppendEventsAsync(streamId, [new ModificationProposedEvent(Guid.NewGuid(), DateTime.UtcNow, proposal)], cancellationToken: ct).ConfigureAwait(false);
 
             // Hard deny: ethics denied
             if (clearance.Level == EthicalClearanceLevel.Denied)
@@ -199,26 +198,23 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
 
             if (result.IsFailure)
             {
-                await _eventStore.AppendEventsAsync(streamId,
-                    [new ModificationFailedEvent(
-                        Guid.NewGuid(), DateTime.UtcNow, decision.ProposalId, result.Error)]).ConfigureAwait(false);
+                await _eventStore.AppendEventsAsync(streamId, [new ModificationFailedEvent(
+                        Guid.NewGuid(), DateTime.UtcNow, decision.ProposalId, result.Error)], cancellationToken: ct).ConfigureAwait(false);
                 return Result<ModificationSnapshot, string>.Failure(
                     $"Modification execution failed: {result.Error}");
             }
 
             // Record successful execution
-            await _eventStore.AppendEventsAsync(streamId,
-                [new ModificationExecutedEvent(
-                    Guid.NewGuid(), DateTime.UtcNow, decision.ProposalId, snapshot)]).ConfigureAwait(false);
+            await _eventStore.AppendEventsAsync(streamId, [new ModificationExecutedEvent(
+                    Guid.NewGuid(), DateTime.UtcNow, decision.ProposalId, snapshot)], cancellationToken: ct).ConfigureAwait(false);
 
             return Result<ModificationSnapshot, string>.Success(snapshot);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            await _eventStore.AppendEventsAsync(streamId,
-                [new ModificationFailedEvent(
-                    Guid.NewGuid(), DateTime.UtcNow, decision.ProposalId, ex.Message)]).ConfigureAwait(false);
+            await _eventStore.AppendEventsAsync(streamId, [new ModificationFailedEvent(
+                    Guid.NewGuid(), DateTime.UtcNow, decision.ProposalId, ex.Message)], cancellationToken: ct).ConfigureAwait(false);
             return Result<ModificationSnapshot, string>.Failure(
                 $"Modification execution failed: {ex.Message}");
         }
@@ -231,11 +227,10 @@ public sealed class SelfModificationGovernor : ISelfModificationGovernor
 
         try
         {
-            await _eventStore.AppendEventsAsync(snapshot.StreamId,
-                [new ModificationRolledBackEvent(
+            await _eventStore.AppendEventsAsync(snapshot.StreamId, [new ModificationRolledBackEvent(
                     Guid.NewGuid(), DateTime.UtcNow,
                     snapshot.ProposalId, snapshot.SnapshotId,
-                    $"Rollback to version {snapshot.EventStoreVersion}")]).ConfigureAwait(false);
+                    $"Rollback to version {snapshot.EventStoreVersion}")], cancellationToken: ct).ConfigureAwait(false);
 
             return Result<bool, string>.Success(true);
         }

@@ -56,7 +56,7 @@ public static class InMemoryIngestion
             }
         }
 
-        await store.AddAsync(vectors).ConfigureAwait(false);
+        await store.AddAsync(vectors, ct).ConfigureAwait(false);
         return vectors;
     }
 }

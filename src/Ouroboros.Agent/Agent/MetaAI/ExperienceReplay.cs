@@ -54,10 +54,7 @@ public sealed class ExperienceReplay : IExperienceReplay
             foreach (Experience? exp in experiences.Where(e => e.Verification.QualityScore > 0.8))
             {
                 string skillName = $"learned_skill_{Guid.NewGuid().ToString("N").Substring(0, 8)}";
-                Result<Skill, string> skillResult = await _skills.ExtractSkillAsync(
-                    exp.Execution,
-                    skillName,
-                    $"Learned from goal: {exp.Goal}").ConfigureAwait(false);
+                Result<Skill, string> skillResult = await _skills.ExtractSkillAsync(exp.Execution, skillName, $"Learned from goal: {exp.Goal}", ct).ConfigureAwait(false);
 
                 if (skillResult.IsSuccess)
                 {
@@ -144,7 +141,7 @@ public sealed class ExperienceReplay : IExperienceReplay
         ExperienceReplayConfig config,
         CancellationToken ct = default)
     {
-                _ = await _memory.GetStatisticsAsync().ConfigureAwait(false);
+                _ = await _memory.GetStatisticsAsync(ct).ConfigureAwait(false);
 
         // Get all experiences and filter
         MemoryQuery query = new MemoryQuery(

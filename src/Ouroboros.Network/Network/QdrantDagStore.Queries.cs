@@ -140,14 +140,14 @@ public sealed partial class QdrantDagStore
     {
         try
         {
-            if (await _client.CollectionExistsAsync(_config.NodesCollection).ConfigureAwait(false))
+            if (await _client.CollectionExistsAsync(_config.NodesCollection, ct).ConfigureAwait(false))
             {
-                await _client.DeleteCollectionAsync(_config.NodesCollection).ConfigureAwait(false);
+                await _client.DeleteCollectionAsync(_config.NodesCollection, cancellationToken: ct).ConfigureAwait(false);
             }
 
-            if (await _client.CollectionExistsAsync(_config.EdgesCollection).ConfigureAwait(false))
+            if (await _client.CollectionExistsAsync(_config.EdgesCollection, ct).ConfigureAwait(false))
             {
-                await _client.DeleteCollectionAsync(_config.EdgesCollection).ConfigureAwait(false);
+                await _client.DeleteCollectionAsync(_config.EdgesCollection, cancellationToken: ct).ConfigureAwait(false);
             }
 
             _initialized = false;

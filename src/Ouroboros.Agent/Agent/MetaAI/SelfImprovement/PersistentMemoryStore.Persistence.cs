@@ -149,10 +149,7 @@ public sealed partial class PersistentMemoryStore
 
         try
         {
-            IReadOnlyCollection<Document> searchResults = await _vectorStore.GetSimilarDocuments(
-                _embedding,
-                query.ContextSimilarity,
-                amount: query.MaxResults).ConfigureAwait(false);
+            IReadOnlyCollection<Document> searchResults = await _vectorStore.GetSimilarDocuments(_embedding, query.ContextSimilarity, amount: query.MaxResults, cancellationToken: ct).ConfigureAwait(false);
 
             List<Experience> experiences = new List<Experience>();
             foreach (Document doc in searchResults)

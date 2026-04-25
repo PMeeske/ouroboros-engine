@@ -148,7 +148,7 @@ public sealed partial class MetaAIPlannerOrchestrator
             if (tool != null)
             {
                 string args = JsonSerializer.Serialize(step.Parameters);
-                Result<string, string> toolResult = await tool.InvokeAsync(args).ConfigureAwait(false);
+                Result<string, string> toolResult = await tool.InvokeAsync(args, ct).ConfigureAwait(false);
 
                 stopwatch.Stop();
 
