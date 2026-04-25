@@ -33,14 +33,22 @@ public sealed record CameraParams(
     /// <returns>True when every diagonal element is 1 and every off-diagonal element is 0.</returns>
     public bool IsIdentityView()
     {
-        if (ViewMatrix.Length != 16) return false;
+        if (ViewMatrix.Length != 16)
+        {
+            return false;
+        }
+
         for (int i = 0; i < 16; i++)
         {
             int row = i / 4;
             int col = i % 4;
             float expected = row == col ? 1.0f : 0.0f;
-            if (MathF.Abs(ViewMatrix[i] - expected) > 1e-6f) return false;
+            if (MathF.Abs(ViewMatrix[i] - expected) > 1e-6f)
+            {
+                return false;
+            }
         }
+
         return true;
     }
 

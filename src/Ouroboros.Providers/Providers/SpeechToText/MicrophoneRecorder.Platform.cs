@@ -12,7 +12,7 @@ namespace Ouroboros.Providers.SpeechToText;
 /// </summary>
 public static partial class MicrophoneRecorder
 {
-    private static ProcessStartInfo? GetRecorderStartInfo(string outputPath, int durationSeconds, string format)
+    private static ProcessStartInfo? GetRecorderStartInfo(string outputPath, int durationSeconds, string format = "wav")
     {
         if (OperatingSystem.IsWindows())
         {
@@ -45,22 +45,10 @@ public static partial class MicrophoneRecorder
                 return psi;
             }
 
-            // Fallback to PowerShell with Windows.Media.Capture
-            var psPsi = new ProcessStartInfo
-            {
-                FileName = "powershell.exe",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardError = true,
-            };
-            psPsi.ArgumentList.Add("-NoProfile");
-            psPsi.ArgumentList.Add("-Command");
-            psPsi.ArgumentList.Add(
-                "Add-Type -AssemblyName System.Speech; " +
-                "$recognizer = New-Object System.Speech.Recognition.SpeechRecognitionEngine; " +
-                "$recognizer.SetInputToDefaultAudioDevice(); " +
-                $"Start-Sleep -Seconds {durationSeconds}");
-            return psPsi;
+            // No ffmpeg available — recording is not possible on Windows without it.
+            // The old PowerShell fallback only created a SpeechRecognitionEngine and slept;
+            // it never actually wrote audio to the output file.
+            return null;
         }
         else if (OperatingSystem.IsMacOS())
         {
@@ -181,8 +169,8 @@ public static partial class MicrophoneRecorder
                 return null;
             }
 
-            string error = process.StandardError.ReadToEnd();
             process.WaitForExit(5000);
+            string error = process.StandardError.ReadToEnd();
 
             // Parse output to find audio devices.
             // Old ffmpeg (<7) format: [dshow @ ...] "Device Name" (audio)

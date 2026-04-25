@@ -48,7 +48,7 @@ public sealed partial class DockerMcpClient
             var h = new SocketsHttpHandler();
             h.ConnectCallback = async (context, ct) =>
             {
-                var pipeName = options.PipePath.Replace(@"//./pipe/", "");
+                var pipeName = options.PipePath.Replace(@"//./pipe/", string.Empty);
                 var pipe = new System.IO.Pipes.NamedPipeClientStream(
                     ".", pipeName, System.IO.Pipes.PipeDirection.InOut,
                     System.IO.Pipes.PipeOptions.Asynchronous);
@@ -72,8 +72,12 @@ public sealed partial class DockerMcpClient
     {
         var names = new List<string>();
         if (el.TryGetProperty("Names", out var ns) && ns.ValueKind == JsonValueKind.Array)
+        {
             foreach (var n in ns.EnumerateArray())
+            {
                 names.Add(n.GetString()!.TrimStart('/'));
+            }
+        }
 
         var ports = new List<DockerPortMapping>();
         if (el.TryGetProperty("Ports", out var ps) && ps.ValueKind == JsonValueKind.Array)
@@ -85,15 +89,19 @@ public sealed partial class DockerMcpClient
                     HostIp = p.TryGetProperty("IP", out var ip) ? ip.GetString() : null,
                     HostPort = p.TryGetProperty("PublicPort", out var hp) ? hp.GetInt32() : null,
                     ContainerPort = p.TryGetProperty("PrivatePort", out var cp) ? cp.GetInt32() : 0,
-                    Protocol = p.TryGetProperty("Type", out var tp) ? tp.GetString()! : "tcp"
+                    Protocol = p.TryGetProperty("Type", out var tp) ? tp.GetString()! : "tcp",
                 });
             }
         }
 
         var labels = new Dictionary<string, string>();
         if (el.TryGetProperty("Labels", out var lbl) && lbl.ValueKind == JsonValueKind.Object)
+        {
             foreach (var kv in lbl.EnumerateObject())
+            {
                 labels[kv.Name] = kv.Value.GetString()!;
+            }
+        }
 
         return new DockerContainerInfo
         {
@@ -105,7 +113,7 @@ public sealed partial class DockerMcpClient
             Ports = ports,
             Labels = labels,
             CreatedAt = el.TryGetProperty("Created", out var cr)
-                ? DateTimeOffset.FromUnixTimeSeconds(cr.GetInt64()) : null
+                ? DateTimeOffset.FromUnixTimeSeconds(cr.GetInt64()) : null,
         };
     }
 
@@ -124,7 +132,7 @@ public sealed partial class DockerMcpClient
             State = state,
             Status = state,
             CreatedAt = el.TryGetProperty("Created", out var cr)
-                ? DateTimeOffset.Parse(cr.GetString()!) : null
+                ? DateTimeOffset.Parse(cr.GetString()!) : null,
         };
     }
 
@@ -134,7 +142,9 @@ public sealed partial class DockerMcpClient
     private static string StripDockerStreamHeaders(string raw)
     {
         if (string.IsNullOrEmpty(raw) || raw.Length < 8)
+        {
             return raw;
+        }
 
         var sb = new StringBuilder();
         var bytes = Encoding.UTF8.GetBytes(raw);

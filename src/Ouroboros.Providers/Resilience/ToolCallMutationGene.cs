@@ -19,6 +19,7 @@ public sealed record ToolCallMutationGene(
     /// <summary>
     /// Validates that the weight is within the valid range.
     /// </summary>
+    /// <returns></returns>
     public bool IsValid() => Weight is >= 0.0 and <= 1.0 && !string.IsNullOrWhiteSpace(ParameterName);
 
     /// <summary>
@@ -43,6 +44,7 @@ public sealed record ToolCallMutationGene(
         /// Controls how aggressively to modify the prompt with format hints.
         /// Higher = more format instruction injection.
         /// </summary>
+        /// <returns></returns>
         public static ToolCallMutationGene FormatHintAggression(double weight) =>
             new("FormatHintAggression", weight, "How aggressively to inject format hints (0=subtle, 1=explicit)");
 
@@ -50,6 +52,7 @@ public sealed record ToolCallMutationGene(
         /// Temperature adjustment amplitude per generation.
         /// Higher = larger temperature swings during mutation.
         /// </summary>
+        /// <returns></returns>
         public static ToolCallMutationGene TemperatureAmplitude(double weight) =>
             new("TemperatureAmplitude", weight, "Amplitude of temperature changes (0=small, 1=large)");
 
@@ -57,6 +60,7 @@ public sealed record ToolCallMutationGene(
         /// Tool simplification aggressiveness.
         /// Higher = more aggressive tool count reduction.
         /// </summary>
+        /// <returns></returns>
         public static ToolCallMutationGene SimplificationRate(double weight) =>
             new("SimplificationRate", weight, "How aggressively to reduce tool definitions (0=keep most, 1=minimize)");
 
@@ -64,6 +68,7 @@ public sealed record ToolCallMutationGene(
         /// Preference for trying format switches before other mutations.
         /// Higher = try format switching earlier in the mutation pipeline.
         /// </summary>
+        /// <returns></returns>
         public static ToolCallMutationGene FormatSwitchPreference(double weight) =>
             new("FormatSwitchPreference", weight, "Preference for format switching over other strategies (0=last resort, 1=first choice)");
 
@@ -71,6 +76,7 @@ public sealed record ToolCallMutationGene(
         /// LLM variator usage weight — how often to use LLM-based prompt rephrasing.
         /// Higher = use LLM variator more frequently.
         /// </summary>
+        /// <returns></returns>
         public static ToolCallMutationGene LlmVariatorWeight(double weight) =>
             new("LlmVariatorWeight", weight, "How often to use LLM-based prompt rephrasing (0=never, 1=always)");
     }

@@ -31,6 +31,7 @@ public static class TensorPipelineArrows
     /// Creates a Decode arrow: <c>IAsyncEnumerable&lt;byte[]&gt; → IAsyncEnumerable&lt;float[]&gt;</c>.
     /// Applies <paramref name="decoder"/> to each chunk in the stream.
     /// </summary>
+    /// <returns></returns>
     public static Step<IAsyncEnumerable<byte[]>, IAsyncEnumerable<float[]>> DecodeArrow(
         Func<byte[], float[]> decoder)
     {
@@ -44,11 +45,14 @@ public static class TensorPipelineArrows
     /// </summary>
     /// <param name="mean">Mean to subtract. Default 0 (no shift).</param>
     /// <param name="std">Standard deviation to divide by. Must not be zero.</param>
+    /// <returns></returns>
     public static Step<IAsyncEnumerable<float[]>, IAsyncEnumerable<float[]>> NormalizeArrow(
         float mean = 0f, float std = 1f)
     {
         if (std == 0f)
+        {
             throw new ArgumentOutOfRangeException(nameof(std), "Standard deviation must not be zero.");
+        }
 
         return source => Task.FromResult(NormalizeStream(source, mean, std));
     }
@@ -59,13 +63,16 @@ public static class TensorPipelineArrows
     /// Accumulates vectors into batches of <paramref name="batchSize"/> and emits a 2-D tensor
     /// for each full batch, plus a partial tensor for the final batch.
     /// </summary>
+    /// <returns></returns>
     public static Step<IAsyncEnumerable<float[]>, IAsyncEnumerable<ITensor<float>>> BatchToTensorArrow(
         ITensorBackend backend,
         int batchSize)
     {
         ArgumentNullException.ThrowIfNull(backend);
         if (batchSize <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(batchSize), "Batch size must be positive.");
+        }
 
         return source => Task.FromResult(
             StreamingTensorAdapter.AdaptAsync(source, backend, batchSize));
@@ -80,6 +87,7 @@ public static class TensorPipelineArrows
     /// step. Errors during construction are captured in the <see cref="Result{TSuccess,TError}"/>
     /// return value; errors during async enumeration propagate as exceptions (R15).
     /// </summary>
+    /// <returns></returns>
     public static KleisliResult<IAsyncEnumerable<byte[]>, IAsyncEnumerable<ITensor<float>>, string>
         SafeStreamingPipelineArrow(ITensorBackend backend, TensorPipelineConfig config)
     {
@@ -110,14 +118,15 @@ public static class TensorPipelineArrows
     // ────────────────────────────────────────────────────────────────────────────────
     // Private async helpers
     // ────────────────────────────────────────────────────────────────────────────────
-
     private static async IAsyncEnumerable<float[]> DecodeStream(
         IAsyncEnumerable<byte[]> source,
         Func<byte[], float[]> decoder,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         await foreach (var chunk in source.WithCancellation(ct).ConfigureAwait(false))
+        {
             yield return decoder(chunk);
+        }
     }
 
     private static async IAsyncEnumerable<float[]> NormalizeStream(

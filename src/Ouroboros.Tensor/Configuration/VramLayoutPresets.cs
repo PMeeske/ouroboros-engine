@@ -33,16 +33,16 @@ public static class VramLayoutPresets
     private const long OneMib = 1L * 1024 * 1024;
 
     /// <summary>Preset id for the RX 9060 XT 16 GB developer-box layout.</summary>
-    public const string RX9060XT_16GB_Id = "RX9060XT_16GB";
+    public const string RX9060XT16GBId = "RX9060XT_16GB";
 
     /// <summary>Preset id for the conservative 8 GB layout used as the DXGI fallback default.</summary>
-    public const string Generic_8GB_Id = "Generic_8GB";
+    public const string Generic8GBId = "Generic_8GB";
 
     /// <summary>Preset id for the roomy 24 GB-class layout (RTX 4090, RX 7900 XTX, etc.).</summary>
-    public const string Generic_24GB_Plus_Id = "Generic_24GB_Plus";
+    public const string Generic24GBPlusId = "Generic_24GB_Plus";
 
     /// <summary>
-    /// RX 9060 XT 16 GB preset — byte-identical to legacy
+    /// Gets rX 9060 XT 16 GB preset — byte-identical to legacy
     /// <c>VramBudgetMonitor</c> defaults for TTS / Avatar / Training / Total;
     /// Rasterizer = 128 MiB (Minimum = 64 MiB) carved out of the legacy
     /// 4 GiB headroom. External-tenant buckets (LlmInference=512 MiB,
@@ -50,8 +50,8 @@ public static class VramLayoutPresets
     /// 3 GiB + 128 MiB as <see cref="VramBucket.Headroom"/>.
     /// </summary>
     public static VramLayout RX9060XT_16GB { get; } = new(
-        Id: RX9060XT_16GB_Id,
-        AdapterDescription: RX9060XT_16GB_Id,
+        Id: RX9060XT16GBId,
+        AdapterDescription: RX9060XT16GBId,
         AdapterLuid: 0UL,
         TotalDeviceBytes: 16L * OneGib,
         Buckets: new Dictionary<VramBucket, VramBucketBudget>
@@ -68,14 +68,14 @@ public static class VramLayoutPresets
         });
 
     /// <summary>
-    /// Generic 8 GB-class preset (DXGI fallback default). Splits:
+    /// Gets generic 8 GB-class preset (DXGI fallback default). Splits:
     /// TTS 1 GiB / Avatar 2 GiB / Rasterizer 128 MiB / Training 2 GiB /
     /// LlmInference 256 MiB / Embed 64 MiB / Stt 64 MiB /
     /// Headroom 2 GiB + 512 MiB.
     /// </summary>
     public static VramLayout Generic_8GB { get; } = new(
-        Id: Generic_8GB_Id,
-        AdapterDescription: Generic_8GB_Id,
+        Id: Generic8GBId,
+        AdapterDescription: Generic8GBId,
         AdapterLuid: 0UL,
         TotalDeviceBytes: 8L * OneGib,
         Buckets: new Dictionary<VramBucket, VramBucketBudget>
@@ -92,14 +92,14 @@ public static class VramLayoutPresets
         });
 
     /// <summary>
-    /// Generic 24 GB+ preset for workstation-class GPUs. Splits:
+    /// Gets generic 24 GB+ preset for workstation-class GPUs. Splits:
     /// TTS 3 GiB / Avatar 6 GiB / Rasterizer 256 MiB / Training 10 GiB /
     /// LlmInference 1 GiB / Embed 256 MiB / Stt 256 MiB /
     /// Headroom 3 GiB + 256 MiB.
     /// </summary>
     public static VramLayout Generic_24GB_Plus { get; } = new(
-        Id: Generic_24GB_Plus_Id,
-        AdapterDescription: Generic_24GB_Plus_Id,
+        Id: Generic24GBPlusId,
+        AdapterDescription: Generic24GBPlusId,
         AdapterLuid: 0UL,
         TotalDeviceBytes: 24L * OneGib,
         Buckets: new Dictionary<VramBucket, VramBucketBudget>
@@ -115,7 +115,7 @@ public static class VramLayoutPresets
             [VramBucket.Headroom] = new(Minimum: 0L, Budget: (3L * OneGib) + (256L * OneMib), Priority: 0),
         });
 
-    /// <summary>Enumerates all built-in presets (stable order: RX9060XT_16GB, Generic_8GB, Generic_24GB_Plus).</summary>
+    /// <summary>Gets enumerates all built-in presets (stable order: RX9060XT_16GB, Generic_8GB, Generic_24GB_Plus).</summary>
     /// <returns>All in-code presets.</returns>
     public static IReadOnlyList<VramLayout> All { get; } = new[]
     {
@@ -132,7 +132,10 @@ public static class VramLayoutPresets
     /// <returns>The matching <see cref="VramLayout"/> or <see langword="null"/>.</returns>
     public static VramLayout? TryGet(string? id)
     {
-        if (string.IsNullOrWhiteSpace(id)) return null;
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return null;
+        }
 
         foreach (VramLayout preset in All)
         {

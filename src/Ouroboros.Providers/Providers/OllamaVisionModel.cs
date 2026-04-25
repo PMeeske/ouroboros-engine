@@ -2,18 +2,17 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-namespace Ouroboros.Providers;
-
 using System.Diagnostics;
-using OllamaSharp;
-using OllamaSharp.Models;
-using Ouroboros.Providers.Configuration;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using OllamaSharp;
+using OllamaSharp.Models;
 using Ouroboros.Core.EmbodiedInteraction;
 using Ouroboros.Core.Monads;
+using Ouroboros.Providers.Configuration;
 
+namespace Ouroboros.Providers;
 /// <summary>
 /// Ollama-based implementation of <see cref="IVisionModel"/> that routes vision requests
 /// to multimodal models like qwen3-vl, llava, or minicpm-v via the Ollama API.
@@ -185,7 +184,7 @@ public sealed class OllamaVisionModel : IVisionModel
         CancellationToken ct = default)
     {
         string base64Image = Convert.ToBase64String(imageData);
-        string emotionPart = analyzeEmotion ? " and their emotion (happy, sad, neutral, surprised, angry, fearful, disgusted)" : "";
+        string emotionPart = analyzeEmotion ? " and their emotion (happy, sad, neutral, surprised, angry, fearful, disgusted)" : string.Empty;
         string prompt = $"Detect all human faces in this image. For each face, describe their approximate location" +
                         $"{emotionPart} and estimated age. Format as JSON array: " +
                         "[{\"emotion\":\"happy\",\"age\":30,\"x\":0.1,\"y\":0.2,\"w\":0.3,\"h\":0.4}]";
@@ -224,7 +223,8 @@ public sealed class OllamaVisionModel : IVisionModel
     private async Task<string> CallOllamaVisionAsync(string base64Image, string prompt, CancellationToken ct)
     {
         StringBuilder responseBuilder = new();
-        await foreach (var chunk in _ollamaClient.GenerateAsync(new GenerateRequest
+        await foreach (var chunk in _ollamaClient.GenerateAsync(
+            new GenerateRequest
         {
             Model = _model,
             Prompt = prompt,
@@ -237,6 +237,7 @@ public sealed class OllamaVisionModel : IVisionModel
                 responseBuilder.Append(chunk.Response);
             }
         }
+
         return responseBuilder.ToString();
     }
 

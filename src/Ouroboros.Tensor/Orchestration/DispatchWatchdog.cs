@@ -2,8 +2,8 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 
 namespace Ouroboros.Tensor.Orchestration;
 
@@ -32,6 +32,7 @@ public sealed class DispatchWatchdog : IDisposable
     private readonly ITimer _restoreTimer;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DispatchWatchdog"/> class.
     /// Initializes a new <see cref="DispatchWatchdog"/>.
     /// </summary>
     /// <param name="scheduler">Scheduler whose tenants are watched.</param>

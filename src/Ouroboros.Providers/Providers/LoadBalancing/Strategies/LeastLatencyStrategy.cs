@@ -18,7 +18,9 @@ public sealed class LeastLatencyStrategy : IProviderSelectionStrategy
     public string SelectProvider(List<string> healthyProviders, IReadOnlyDictionary<string, ProviderHealthStatus> healthStatus)
     {
         if (healthyProviders == null || healthyProviders.Count == 0)
+        {
             throw new ArgumentException("No healthy providers available", nameof(healthyProviders));
+        }
 
         return healthyProviders
             .OrderBy(id => healthStatus[id].AverageLatencyMs)

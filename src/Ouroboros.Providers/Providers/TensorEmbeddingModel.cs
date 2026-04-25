@@ -42,6 +42,7 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
     public const string DefaultCacheCollection = "tensor_embedding_cache";
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TensorEmbeddingModel"/> class.
     /// Initializes a tensor embedding model.
     /// </summary>
     /// <param name="qdrant">Optional Qdrant client for caching embeddings.</param>
@@ -84,6 +85,7 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
                     options.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL;
                     _onnxSession = new InferenceSession(onnxModelPath, options);
                 }
+
                 _onnxInputName = _onnxSession.InputMetadata.Keys.First();
                 _logger?.LogInformation(
                     "TensorEmbeddingModel: ONNX inference enabled via {Model} (factory={Factory})",
@@ -91,7 +93,8 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                _logger?.LogWarning(ex,
+                _logger?.LogWarning(
+                    ex,
                     "DirectML session creation failed, falling back to CPU TensorPrimitives path");
                 _onnxSession?.Dispose();
                 _onnxSession = null;
@@ -112,10 +115,12 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
 
         _bias = new float[_dimension];
         for (int i = 0; i < _dimension; i++)
+        {
             _bias[i] = (float)(rng.NextDouble() - 0.5) * 0.01f;
+        }
     }
 
-    /// <summary>Whether the DirectML GPU path is active.</summary>
+    /// <summary>Gets a value indicating whether whether the DirectML GPU path is active.</summary>
     public bool IsGpuAccelerated => _onnxSession is not null;
 
     /// <inheritdoc/>
@@ -127,15 +132,21 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         if (string.IsNullOrEmpty(input))
+        {
             input = "empty";
+        }
 
         // Check Qdrant cache first
         ulong pointId = ComputePointId(input);
         if (_qdrant is not null)
         {
+#pragma warning disable CS0612 // TryGetCachedAsync uses legacy Qdrant.Vector.Data API (TODO: migrate to named vectors)
             var cached = await TryGetCachedAsync(pointId, ct).ConfigureAwait(false);
+#pragma warning restore CS0612
             if (cached is not null)
+            {
                 return cached;
+            }
         }
 
         // Compute embedding — GPU or CPU path
@@ -145,7 +156,9 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
 
         // Cache in Qdrant (fire-and-forget)
         if (_qdrant is not null)
+        {
             _ = CacheEmbeddingAsync(pointId, input, output);
+        }
 
         return output;
     }
@@ -160,7 +173,7 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
         var inputTensor = new DenseTensor<long>(tokenIds, [1, tokenIds.Length]);
         var inputs = new List<NamedOnnxValue>
         {
-            NamedOnnxValue.CreateFromTensor(_onnxInputName!, inputTensor)
+            NamedOnnxValue.CreateFromTensor(_onnxInputName!, inputTensor),
         };
 
         // Add attention mask if the model expects it
@@ -187,6 +200,7 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
                 var slice = outputTensor.AsSpan(s * hiddenDim, hiddenDim);
                 TensorPrimitives.Add(pooled, slice, pooled);
             }
+
             TensorPrimitives.Divide(pooled, seqLen, pooled);
             outputTensor = pooled;
         }
@@ -194,7 +208,9 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
         // L2 normalize
         float norm = TensorPrimitives.Norm(outputTensor);
         if (norm > 1e-10f)
+        {
             TensorPrimitives.Divide(outputTensor, norm, outputTensor);
+        }
 
         return outputTensor;
     }
@@ -212,11 +228,18 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
         for (int i = 0; i < _featureDim; i++)
         {
             float f = features[i];
-            if (f == 0) continue;
+            if (f == 0)
+            {
+                continue;
+            }
+
             var weightRow = _weights.AsSpan(i * _dimension, _dimension);
+
             // output += f * weightRow (scatter accumulate)
             for (int j = 0; j < _dimension; j++)
+            {
                 output[j] += f * weightRow[j];
+            }
         }
 
         // Add bias
@@ -224,12 +247,19 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
 
         // ReLU
         for (int i = 0; i < output.Length; i++)
-            if (output[i] < 0) output[i] = 0;
+        {
+            if (output[i] < 0)
+            {
+                output[i] = 0;
+            }
+        }
 
         // L2 normalize
         float norm = TensorPrimitives.Norm(output);
         if (norm > 1e-10f)
+        {
             TensorPrimitives.Divide(output, norm, output);
+        }
 
         return output;
     }
@@ -243,7 +273,10 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
         int len = Math.Min(input.Length, maxLength);
         var tokens = new long[len];
         for (int i = 0; i < len; i++)
+        {
             tokens[i] = input[i];
+        }
+
         return tokens;
     }
 
@@ -290,6 +323,7 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
                     uint hash = FnvHash(word) ^ 0xDEADBEEF;
                     features[hash % (uint)_featureDim] += 2.0f;
                 }
+
                 wordStart = -1;
             }
             else if (!isSep && wordStart < 0)
@@ -314,6 +348,7 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
             hash ^= c;
             hash *= 16777619u;
         }
+
         return hash;
     }
 
@@ -324,6 +359,7 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
         return BitConverter.ToUInt64(hash, 0);
     }
 
+    [Obsolete]
     private async Task<float[]?> TryGetCachedAsync(ulong pointId, CancellationToken ct)
     {
         try
@@ -335,7 +371,9 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
                 cancellationToken: ct).ConfigureAwait(false);
 
             if (points is { Count: > 0 } && points[0].Vectors?.Vector?.Data is { Count: > 0 } data)
+            {
                 return [.. data];
+            }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -368,7 +406,7 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
                         {
                             ["text_preview"] = input.Length > 200 ? input[..200] : input,
                             ["created_at"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-                        }
+                        },
                     }
                 ]).ConfigureAwait(false);
         }
@@ -381,22 +419,28 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
     /// <summary>
     /// Ensures the Qdrant cache collection exists. Call once at startup.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task EnsureCacheCollectionAsync(CancellationToken ct = default)
     {
-        if (_qdrant is null) return;
+        if (_qdrant is null)
+        {
+            return;
+        }
 
         try
         {
             var collections = await _qdrant.ListCollectionsAsync(ct).ConfigureAwait(false);
             if (collections.Any(c => c == _cacheCollection))
+            {
                 return;
+            }
 
             await _qdrant.CreateCollectionAsync(
                 _cacheCollection,
                 new VectorParams
                 {
                     Size = (ulong)_dimension,
-                    Distance = Distance.Cosine
+                    Distance = Distance.Cosine,
                 },
                 cancellationToken: ct).ConfigureAwait(false);
 
@@ -412,7 +456,11 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
         _onnxSession?.Dispose();
     }

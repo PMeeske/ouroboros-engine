@@ -46,8 +46,10 @@ public sealed class CpuTensorBackend : ITensorBackend
         ArgumentNullException.ThrowIfNull(b);
 
         if (a.Shape.Rank < 2 || b.Shape.Rank < 2)
+        {
             return Result<ITensor<float>, string>.Failure(
                 $"MatMul requires at least rank-2 tensors, got {a.Shape} and {b.Shape}.");
+        }
 
         var aRows = a.Shape.Dimensions[^2];
         var aCols = a.Shape.Dimensions[^1];
@@ -55,9 +57,11 @@ public sealed class CpuTensorBackend : ITensorBackend
         var bCols = b.Shape.Dimensions[^1];
 
         if (aCols != bRows)
+        {
             return Result<ITensor<float>, string>.Failure(
                 $"MatMul shape mismatch: [{aRows}×{aCols}] × [{bRows}×{bCols}] — " +
                 $"inner dimensions must match.");
+        }
 
         var resultShape = TensorShape.Of(aRows, bCols);
         var result = TensorMemoryPool.Rent<float>(resultShape);
@@ -74,8 +78,11 @@ public sealed class CpuTensorBackend : ITensorBackend
                     var rowSlice = aSpan.Slice(i * aCols, aCols);
                     float dot = 0f;
                     for (var k = 0; k < aCols; k++)
-                        dot += rowSlice[k] * bSpan[k * bCols + j];
-                    resultSpan[i * bCols + j] = dot;
+                    {
+                        dot += rowSlice[k] * bSpan[(k * bCols) + j];
+                    }
+
+                    resultSpan[(i * bCols) + j] = dot;
                 }
             }
 
@@ -96,8 +103,10 @@ public sealed class CpuTensorBackend : ITensorBackend
         ArgumentNullException.ThrowIfNull(b);
 
         if (!a.Shape.IsCompatibleWith(b.Shape))
+        {
             return Result<ITensor<float>, string>.Failure(
                 $"Add shape mismatch: {a.Shape} vs {b.Shape}.");
+        }
 
         var result = TensorMemoryPool.Rent<float>(a.Shape);
         try

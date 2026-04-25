@@ -43,7 +43,7 @@ public sealed class TensorServiceClient : ITensorServiceClient
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
         };
     }
 
@@ -55,7 +55,8 @@ public sealed class TensorServiceClient : ITensorServiceClient
     /// <exception cref="HttpRequestException">Thrown when the request fails after all retries.</exception>
     public async Task<HealthResponse> GetHealthAsync(CancellationToken cancellationToken = default)
     {
-        return await ExecuteWithRetryAsync(async () =>
+        return await ExecuteWithRetryAsync(
+            async () =>
         {
             var response = await _httpClient.GetAsync("/health", cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
@@ -81,7 +82,8 @@ public sealed class TensorServiceClient : ITensorServiceClient
         ArgumentNullException.ThrowIfNull(b);
 
         var request = new MatMulRequest(a, b);
-        return await ExecuteWithRetryAsync(async () =>
+        return await ExecuteWithRetryAsync(
+            async () =>
         {
             var response = await _httpClient.PostAsJsonAsync("/tensor/matmul", request, _jsonOptions, cancellationToken)
                 .ConfigureAwait(false);
@@ -108,7 +110,8 @@ public sealed class TensorServiceClient : ITensorServiceClient
         ArgumentNullException.ThrowIfNull(input);
 
         var request = new FftRequest(input);
-        return await ExecuteWithRetryAsync(async () =>
+        return await ExecuteWithRetryAsync(
+            async () =>
         {
             var url = $"/tensor/fft?dimensions={dimensions}";
             var response = await _httpClient.PostAsJsonAsync(url, request, _jsonOptions, cancellationToken)
@@ -137,7 +140,8 @@ public sealed class TensorServiceClient : ITensorServiceClient
         ArgumentNullException.ThrowIfNull(b);
 
         var request = new CosineSimilarityRequest(a, b);
-        return await ExecuteWithRetryAsync(async () =>
+        return await ExecuteWithRetryAsync(
+            async () =>
         {
             var response = await _httpClient.PostAsJsonAsync("/tensor/cosine_similarity", request, _jsonOptions, cancellationToken)
                 .ConfigureAwait(false);

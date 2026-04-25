@@ -46,6 +46,7 @@ public static class TensorReactiveExtensions
                 {
                     observer.OnNext(item);
                 }
+
                 observer.OnCompleted();
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -69,6 +70,7 @@ public static class TensorReactiveExtensions
     /// Uses a bounded channel (capacity 128, DropOldest) to prevent unbounded
     /// memory growth when the observable emits faster than the consumer iterates.
     /// </remarks>
+    /// <returns></returns>
     public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(
         this Observable<T> source,
         [EnumeratorCancellation] CancellationToken ct = default)
@@ -85,7 +87,11 @@ public static class TensorReactiveExtensions
 
         using var sub = source.Subscribe(
             item => channel.Writer.TryWrite(item),
-            result => { if (result.IsSuccess) channel.Writer.Complete(); });
+            result => { if (result.IsSuccess)
+{
+    channel.Writer.Complete();
+}
+            });
 
         await foreach (var item in channel.Reader.ReadAllAsync(ct).ConfigureAwait(false))
         {
@@ -128,8 +134,10 @@ public static class TensorReactiveExtensions
                 ct).ConfigureAwait(false);
 
             if (result.IsFailure)
+            {
                 throw new InvalidOperationException(
                     $"GPU operation failed: {result.Error}");
+            }
 
             return result.Value;
         });
@@ -162,7 +170,10 @@ public static class TensorReactiveExtensions
     {
         DisposableBag disposables = default;
         foreach (var ds in downstreams)
+        {
             upstream.ConnectTo(ds).AddTo(ref disposables);
+        }
+
         var bag = disposables;
         return Disposable.Create(() => bag.Dispose());
     }
@@ -171,6 +182,7 @@ public static class TensorReactiveExtensions
     /// Merges outputs from multiple upstream nodes into a single observable,
     /// optionally concatenating the tensors along a batch dimension.
     /// </summary>
+    /// <returns></returns>
     public static Observable<ITensor<float>> MergeOutputs(
         params GpuTensorNode[] nodes)
     {
@@ -185,7 +197,7 @@ public static class TensorReactiveExtensions
     /// inside the reactive node graph.
     /// </summary>
     /// <param name="source">Input observable.</param>
-    /// <param name="pipelineStage">
+    /// <param name="stage">
     /// An async pipeline stage (e.g. from <see cref="TensorPipelineArrows"/>).
     /// </param>
     /// <returns>Flattened output observable.</returns>

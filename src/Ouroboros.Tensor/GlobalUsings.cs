@@ -20,10 +20,10 @@ global using System.Threading.Tasks;
 // Logging
 global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.Logging.Abstractions;
+global using Ouroboros.Abstractions.Monads;
 
 // Foundation monads and arrows
 global using Ouroboros.Core.Kleisli;
-global using Ouroboros.Abstractions.Monads;
 global using Ouroboros.Core.Monads;
 global using Ouroboros.Core.Steps;
 

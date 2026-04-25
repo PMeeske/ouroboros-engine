@@ -20,28 +20,33 @@ public sealed class MindOperation<T>
     }
 
     /// <summary>Creates a pure value operation.</summary>
+    /// <returns></returns>
     public static MindOperation<T> Return(T value) =>
         new((_, _) => Task.FromResult(value));
 
     /// <summary>Creates an async operation.</summary>
+    /// <returns></returns>
     public static MindOperation<T> FromAsync(Func<CollectiveMind, CancellationToken, Task<T>> execute) =>
         new(execute);
 
     /// <summary>Creates a streaming operation.</summary>
+    /// <returns></returns>
     public static MindOperation<T> FromStream(
         Func<CollectiveMind, CancellationToken, Observable<(bool IsThinking, string Chunk)>> stream,
         Func<CollectiveMind, CancellationToken, Task<T>> finalResult) =>
         new(finalResult, stream);
 
     /// <summary>Executes the operation against a collective mind.</summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task<T> ExecuteAsync(CollectiveMind mind, CancellationToken ct = default) =>
         _execute(mind, ct);
 
     /// <summary>Gets the streaming observable if available.</summary>
+    /// <returns></returns>
     public Observable<(bool IsThinking, string Chunk)>? GetStream(CollectiveMind mind, CancellationToken ct = default) =>
         _stream?.Invoke(mind, ct);
 
-    /// <summary>Whether this operation supports streaming.</summary>
+    /// <summary>Gets a value indicating whether whether this operation supports streaming.</summary>
     public bool SupportsStreaming => _stream != null;
 
     // Functor: map

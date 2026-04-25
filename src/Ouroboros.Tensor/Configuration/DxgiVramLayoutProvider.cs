@@ -54,7 +54,7 @@ public sealed class DxgiAdapterEnumerator : IDxgiAdapterEnumerator
 {
     private readonly ILogger<DxgiAdapterEnumerator>? _logger;
 
-    /// <summary>Constructs the enumerator with an optional logger for DXGI failures.</summary>
+    /// <summary>Initializes a new instance of the <see cref="DxgiAdapterEnumerator"/> class.Constructs the enumerator with an optional logger for DXGI failures.</summary>
     /// <param name="logger">Logger for native-layer diagnostics.</param>
     public DxgiAdapterEnumerator(ILogger<DxgiAdapterEnumerator>? logger = null)
     {
@@ -85,19 +85,26 @@ public sealed class DxgiAdapterEnumerator : IDxgiAdapterEnumerator
             uint i = 0;
             while (true)
             {
-                var adapter = new ComPtr<IDXGIAdapter1>();
+                var adapter = default(ComPtr<IDXGIAdapter1>);
                 int enumHr = factory.EnumAdapters1(i, ref adapter);
-                if (enumHr < 0) break; // DXGI_ERROR_NOT_FOUND terminates the loop
+                if (enumHr < 0)
+                {
+                    break; // DXGI_ERROR_NOT_FOUND terminates the loop
+                }
 
                 try
                 {
-                    var desc = new AdapterDesc1();
+                    var desc = default(AdapterDesc1);
                     adapter.GetDesc1(ref desc);
 
                     string description = new string(desc.Description);
+
                     // Trim embedded NULs that Silk.NET leaves in the char buffer.
                     int nul = description.IndexOf('\0');
-                    if (nul >= 0) description = description.Substring(0, nul);
+                    if (nul >= 0)
+                    {
+                        description = description.Substring(0, nul);
+                    }
 
                     // Pack LUID into a ulong. High part reinterpreted as uint first to
                     // preserve bit pattern for negative values.
@@ -168,6 +175,7 @@ public sealed class DxgiVramLayoutProvider : IVramLayoutProvider
     private readonly ILogger<DxgiVramLayoutProvider>? _logger;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DxgiVramLayoutProvider"/> class.
     /// Constructs the provider with an optional logger. The default
     /// <see cref="DxgiAdapterEnumerator"/> performs real DXGI queries; tests
     /// inject a stub via the other overload.
@@ -179,6 +187,7 @@ public sealed class DxgiVramLayoutProvider : IVramLayoutProvider
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DxgiVramLayoutProvider"/> class.
     /// Constructs the provider with an explicit enumerator (test seam) and
     /// optional logger.
     /// </summary>

@@ -332,7 +332,7 @@ public sealed class CausalReasoner : ICausalReasoner
     private int EstimateDepth(Guid fromId, Guid toId)
     {
         Option<CausalPath> path = _graph.FindPath(fromId, toId);
-        return path.HasValue ? path.Value.Length : 1;
+        return path.HasValue ? path.Value!.Length : 1;
     }
 
     /// <summary>

@@ -22,6 +22,7 @@ public sealed class TrainingEvictor : IEvictionPolicy
     public TimeSpan EstimatedReloadLatency => TimeSpan.FromSeconds(5);
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TrainingEvictor"/> class.
     /// Initializes a new <see cref="TrainingEvictor"/>.
     /// </summary>
     /// <param name="tenantName">Tenant name.</param>

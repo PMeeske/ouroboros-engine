@@ -39,12 +39,12 @@ public sealed class ToolAwareChatModel(
     public Ouroboros.Abstractions.Core.IChatCompletionModel InnerModel => llm;
 
     /// <summary>
-    /// Returns true if the underlying model supports thinking mode.
+    /// Gets a value indicating whether returns true if the underlying model supports thinking mode.
     /// </summary>
     public bool SupportsThinking => llm is IThinkingChatModel;
 
     /// <summary>
-    /// Observable stream of tool execution events for reactive composition.
+    /// Gets observable stream of tool execution events for reactive composition.
     /// </summary>
     /// <remarks>
     /// Subscribers receive <see cref="ToolExecutionEvent"/> for every tool invocation,
@@ -53,19 +53,19 @@ public sealed class ToolAwareChatModel(
     public Observable<ToolExecutionEvent> ToolExecutions => _toolExecutionSubject;
 
     /// <summary>
-    /// When true, streaming tokens are piped through an SMCP token atomizer
+    /// Gets or sets a value indicating whether when true, streaming tokens are piped through an SMCP token atomizer
     /// for mid-stream intent detection and tool self-selection.
     /// </summary>
     public bool SmcpMode { get; set; }
 
     /// <summary>
-    /// Callback invoked for each streaming token when <see cref="SmcpMode"/> is enabled.
+    /// Gets or sets callback invoked for each streaming token when <see cref="SmcpMode"/> is enabled.
     /// Set by the app layer to feed tokens into the <c>SmcpTokenAtomizer</c>.
     /// </summary>
     public Action<string>? SmcpTokenCallback { get; set; }
 
     /// <summary>
-    /// Tensor-centric fallback: invoked when the LLM response contains no explicit tool calls.
+    /// Gets or sets tensor-centric fallback: invoked when the LLM response contains no explicit tool calls.
     /// The delegate receives the LLM response text and should route it through SMCP tensor
     /// matching to auto-fire actions (speak, express, etc.) based on embedding similarity.
     /// Set by the app layer (IaretAgent) to bridge into <c>SmcpConsciousnessBridge</c>.
@@ -73,7 +73,7 @@ public sealed class ToolAwareChatModel(
     public Func<string, CancellationToken, Task>? SmcpFallbackHandler { get; set; }
 
     /// <summary>
-    /// Optional session-scoped failure tracker. When set, known-failing tool+input
+    /// Gets or sets optional session-scoped failure tracker. When set, known-failing tool+input
     /// combinations are short-circuited with a degradation message instead of retried.
     /// Set by the app layer (ToolSubsystem) to share a single tracker across all execution paths.
     /// </summary>
@@ -104,7 +104,10 @@ public sealed class ToolAwareChatModel(
             neuralPathway?.RecordActivation(sw.Elapsed);
             return response;
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception)
         {
             sw.Stop();
@@ -143,7 +146,10 @@ public sealed class ToolAwareChatModel(
 
             return (response with { Content = processedContent }, toolCalls);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception)
         {
             sw.Stop();
@@ -165,7 +171,10 @@ public sealed class ToolAwareChatModel(
             (string text, List<ToolExecution> tools) = await this.GenerateWithToolsAsync(prompt, ct).ConfigureAwait(false);
             return Result<(string, List<ToolExecution>), string>.Success((text, tools));
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<(string, List<ToolExecution>), string>.Failure($"Tool-aware generation failed: {ex.Message}");
@@ -185,7 +194,10 @@ public sealed class ToolAwareChatModel(
             var result = await GenerateWithThinkingAndToolsAsync(prompt, ct).ConfigureAwait(false);
             return Result<(ThinkingResponse, List<ToolExecution>), string>.Success(result);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<(ThinkingResponse, List<ToolExecution>), string>.Failure($"Tool-aware generation with thinking failed: {ex.Message}");
@@ -195,20 +207,19 @@ public sealed class ToolAwareChatModel(
     // ── Crush-inspired hooks ────────────────────────────────────────────────────
 
     /// <summary>
-    /// Optional pre-execution gate called before every LLM-driven tool call.
+    /// Gets or sets optional pre-execution gate called before every LLM-driven tool call.
     /// Return <c>false</c> to skip the tool (treated as denied).
-    /// Signature: (toolName, args, cancellationToken) => Task&lt;bool&gt;
+    /// Signature: (toolName, args, cancellationToken) => Task&lt;bool&gt.
     /// </summary>
     public Func<string, string, CancellationToken, Task<bool>>? BeforeInvoke { get; set; }
 
     /// <summary>
-    /// Optional post-execution callback for metrics, UI updates, and event publishing.
-    /// Signature: (toolName, args, output, elapsed, success)
+    /// Gets or sets optional post-execution callback for metrics, UI updates, and event publishing.
+    /// Signature: (toolName, args, output, elapsed, success).
     /// </summary>
     public Action<string, string, string, TimeSpan, bool>? AfterInvoke { get; set; }
 
     // ── Internal execution ───────────────────────────────────────────────────────
-
     private static readonly System.Text.RegularExpressions.Regex ToolInvocationPattern =
         new(@"\[TOOL:([^\s]+)\s*([^\]]*)\]", System.Text.RegularExpressions.RegexOptions.Compiled);
 
@@ -219,7 +230,9 @@ public sealed class ToolAwareChatModel(
         {
             var tokens = result.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             foreach (var token in tokens)
+            {
                 SmcpTokenCallback(token);
+            }
         }
 
         List<ToolExecution> toolCalls = [];
@@ -277,7 +290,10 @@ public sealed class ToolAwareChatModel(
                         Result<string, string> toolResult = await tool.InvokeAsync(args, ct).ConfigureAwait(false);
                         output = toolResult.Match(success => success, error => $"error: {error}");
                     }
-                    catch (OperationCanceledException) { throw; }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
                         output = $"error: {ex.Message}";
@@ -365,7 +381,10 @@ public sealed class ToolAwareChatModel(
                     success => success,
                     error => $"error: {error}");
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 output = $"error: {ex.Message}";

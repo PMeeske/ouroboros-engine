@@ -20,15 +20,19 @@ public static class MinimalHost
 
         // Define configuration pipeline
         StepDefinition<ConfigurationManager, ConfigurationManager> configDef = new StepDefinition<ConfigurationManager, ConfigurationManager>(c => c)
-            | HostStepExtensions.Use(c => { c.AddJsonFile("hostsettings.json", optional: true); return c; })
-            | HostStepExtensions.Use(c => { c.AddEnvironmentVariables(prefix: "PREFIX_"); return c; })
-            | HostStepExtensions.Use(c => { c.AddCommandLine(args); return c; });
+            | HostStepExtensions.Use(c => { c.AddJsonFile("hostsettings.json", optional: true);
+                return c; })
+            | HostStepExtensions.Use(c => { c.AddEnvironmentVariables(prefix: "PREFIX_");
+                return c; })
+            | HostStepExtensions.Use(c => { c.AddCommandLine(args);
+                return c; });
 
         // Apply configuration to settings
         settings.Configuration = await configDef.Build()(settings.Configuration).ConfigureAwait(false);
 
         // Host builder pipeline (extensible)
         StepDefinition<HostApplicationBuilder, HostApplicationBuilder> hostDef = new StepDefinition<HostApplicationBuilder, HostApplicationBuilder>(b => b)
+
             // Add interchangeable model registration (OpenAI key presence => remote reflective provider else local Ollama)
             | HostStepExtensions.AddInterchangeableLlm();
 

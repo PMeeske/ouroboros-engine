@@ -27,6 +27,7 @@ public sealed class MetricsTensorBackend : ITensorBackend, IDisposable
     private readonly Counter<long> _addErrors;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="MetricsTensorBackend"/> class.
     /// Initializes a new <see cref="MetricsTensorBackend"/> using an optionally shared
     /// <see cref="Meter"/>. If <paramref name="meter"/> is null, a default meter is created.
     /// </summary>
@@ -45,13 +46,17 @@ public sealed class MetricsTensorBackend : ITensorBackend, IDisposable
             "MatMul operation latency in milliseconds");
         _addLatency = m.CreateHistogram<double>("tensor.add.duration_ms", "ms",
             "Add operation latency in milliseconds");
-        _matMulCount = m.CreateCounter<long>("tensor.matmul.count",
+        _matMulCount = m.CreateCounter<long>(
+            "tensor.matmul.count",
             description: "Total MatMul operations attempted");
-        _addCount = m.CreateCounter<long>("tensor.add.count",
+        _addCount = m.CreateCounter<long>(
+            "tensor.add.count",
             description: "Total Add operations attempted");
-        _matMulErrors = m.CreateCounter<long>("tensor.matmul.errors",
+        _matMulErrors = m.CreateCounter<long>(
+            "tensor.matmul.errors",
             description: "Failed MatMul operations");
-        _addErrors = m.CreateCounter<long>("tensor.add.errors",
+        _addErrors = m.CreateCounter<long>(
+            "tensor.add.errors",
             description: "Failed Add operations");
     }
 
@@ -78,7 +83,11 @@ public sealed class MetricsTensorBackend : ITensorBackend, IDisposable
         var result = _inner.MatMul(a, b);
         sw.Stop();
         _matMulLatency.Record(sw.Elapsed.TotalMilliseconds);
-        if (!result.IsSuccess) _matMulErrors.Add(1);
+        if (!result.IsSuccess)
+        {
+            _matMulErrors.Add(1);
+        }
+
         return result;
     }
 
@@ -90,7 +99,11 @@ public sealed class MetricsTensorBackend : ITensorBackend, IDisposable
         var result = _inner.Add(a, b);
         sw.Stop();
         _addLatency.Record(sw.Elapsed.TotalMilliseconds);
-        if (!result.IsSuccess) _addErrors.Add(1);
+        if (!result.IsSuccess)
+        {
+            _addErrors.Add(1);
+        }
+
         return result;
     }
 

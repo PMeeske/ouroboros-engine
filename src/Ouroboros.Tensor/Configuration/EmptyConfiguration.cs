@@ -20,7 +20,9 @@ internal sealed class EmptyConfiguration : IConfiguration
     /// <summary>Shared singleton instance.</summary>
     public static readonly EmptyConfiguration Instance = new();
 
-    private EmptyConfiguration() { }
+    private EmptyConfiguration()
+    {
+    }
 
     /// <inheritdoc/>
     public string? this[string key]
@@ -41,7 +43,9 @@ internal sealed class EmptyConfiguration : IConfiguration
     private sealed class NullChangeToken : IChangeToken
     {
         public static readonly NullChangeToken Instance = new();
+
         public bool HasChanged => false;
+
         public bool ActiveChangeCallbacks => false;
 
         public IDisposable RegisterChangeCallback(Action<object?> callback, object? state) => NullDisposable.Instance;
@@ -49,7 +53,10 @@ internal sealed class EmptyConfiguration : IConfiguration
         private sealed class NullDisposable : IDisposable
         {
             public static readonly NullDisposable Instance = new();
-            public void Dispose() { }
+
+            public void Dispose()
+            {
+            }
         }
     }
 
@@ -62,7 +69,9 @@ internal sealed class EmptyConfiguration : IConfiguration
         }
 
         public string Key { get; }
+
         public string Path { get; }
+
         public string? Value { get => null; set => throw new InvalidOperationException("EmptyConfiguration is read-only."); }
 
         public string? this[string key]

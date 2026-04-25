@@ -97,7 +97,7 @@ public sealed class FileWalPersistence : IGraphPersistence
         {
             if (_writer != null)
             {
-                await _writer.FlushAsync().ConfigureAwait(false);
+                await _writer.FlushAsync(ct).ConfigureAwait(false);
             }
         }
         finally

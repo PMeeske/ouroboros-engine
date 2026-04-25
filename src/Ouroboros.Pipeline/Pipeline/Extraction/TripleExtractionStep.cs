@@ -62,7 +62,7 @@ public sealed class TripleExtractionStep
                 .Replace("{document_id}", documentId)
                 .Replace("{content}", content);
 
-            (string response, _) = await this._llm.GenerateWithToolsAsync(prompt).ConfigureAwait(false);
+            (string response, _) = await this._llm.GenerateWithToolsAsync(prompt, ct).ConfigureAwait(false);
 
             List<SemanticTriple> triples = ParseTriples(documentId, response);
 

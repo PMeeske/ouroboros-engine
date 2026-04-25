@@ -12,7 +12,7 @@ namespace Ouroboros.Tensor.Adapters;
 /// <para>
 /// Vectors are accumulated into a staging buffer and emitted as a 2-D tensor of shape
 /// <c>[batchSize, dimension]</c> when the buffer is full. A partial final batch is always
-/// emitted even if fewer than <paramref name="batchSize"/> vectors were received.
+/// emitted even if fewer than <c>batchSize</c> vectors were received.
 /// </para>
 /// <para>
 /// A single temporary <see cref="ArrayPool{T}"/> rental is used for staging each batch;
@@ -48,7 +48,9 @@ public static class StreamingTensorAdapter
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(backend);
         if (batchSize <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(batchSize), "Batch size must be positive.");
+        }
 
         return AdaptAsyncCore(source, backend, batchSize, cancellationToken);
     }
@@ -65,14 +67,18 @@ public static class StreamingTensorAdapter
         await foreach (var vector in source.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
             if (vector.Length == 0)
+            {
                 continue;
+            }
 
             expectedDim ??= vector.Length;
 
             if (vector.Length != expectedDim.Value)
+            {
                 throw new ArgumentException(
                     $"Inconsistent vector dimension at stream position {batch.Count + 1}: " +
                     $"expected {expectedDim.Value}, got {vector.Length}.");
+            }
 
             batch.Add(vector);
 
@@ -85,7 +91,9 @@ public static class StreamingTensorAdapter
 
         // Emit partial final batch
         if (batch.Count > 0)
+        {
             yield return CreateBatchTensor(batch, expectedDim!.Value, backend);
+        }
     }
 
     private static ITensor<float> CreateBatchTensor(
@@ -97,7 +105,9 @@ public static class StreamingTensorAdapter
         try
         {
             for (var i = 0; i < batch.Count; i++)
+            {
                 batch[i].AsSpan().CopyTo(buffer.AsSpan(i * dim, dim));
+            }
 
             return backend.Create(shape, buffer.AsSpan(0, totalElements));
         }

@@ -35,7 +35,7 @@ public sealed class ToolCallContext
     public float Temperature { get; set; } = 0.7f;
 
     /// <summary>
-    /// Gets the current generation/iteration number (0-based).
+    /// Gets or sets the current generation/iteration number (0-based).
     /// </summary>
     public int Generation { get; set; }
 
@@ -47,6 +47,7 @@ public sealed class ToolCallContext
     /// <summary>
     /// Creates a deep copy of this context for mutation.
     /// </summary>
+    /// <returns></returns>
     public ToolCallContext Clone()
     {
         var clone = new ToolCallContext
@@ -55,7 +56,7 @@ public sealed class ToolCallContext
             Tools = Tools.ToList(),
             PreferredFormat = PreferredFormat,
             Temperature = Temperature,
-            Generation = Generation
+            Generation = Generation,
         };
         clone.History.AddRange(History);
         return clone;

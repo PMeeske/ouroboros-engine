@@ -2,11 +2,11 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using R3;
 using Microsoft.CognitiveServices.Speech;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Retry;
+using R3;
 
 namespace Ouroboros.Providers.TextToSpeech;
 
@@ -87,7 +87,10 @@ public sealed partial class AzureNeuralTtsService
 
                 observer.OnCompleted();
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 observer.OnErrorResume(ex);
@@ -110,14 +113,17 @@ public sealed partial class AzureNeuralTtsService
             return Result<SpeechChunk, string>.Failure("Text cannot be empty");
         }
 
-        if (_synthesizer == null) InitializeSynthesizer();
+        if (_synthesizer == null)
+        {
+            InitializeSynthesizer();
+        }
 
         try
         {
             _isSynthesizing = true;
-            var rate      = options?.Speed ?? 1.0;
+            var rate = options?.Speed ?? 1.0;
             var isWhisper = options?.IsWhisper ?? false;
-            var ssml      = BuildSsml(text, isWhisper, cultureOverride: null, rate);
+            var ssml = BuildSsml(text, isWhisper, cultureOverride: null, rate);
 
             using var result = await _synthesizer!.SpeakSsmlAsync(ssml).ConfigureAwait(false);
 
@@ -140,7 +146,10 @@ public sealed partial class AzureNeuralTtsService
 
             return Result<SpeechChunk, string>.Failure("Speech synthesis failed");
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<SpeechChunk, string>.Failure($"Azure TTS error: {ex.Message}");

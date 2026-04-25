@@ -187,6 +187,7 @@ public sealed class SharedD3D12Device : IDisposable
                 throw new InvalidOperationException(
                     $"D3D12CreateDevice at FEATURE_LEVEL_11_0 failed (hr=0x{hr:X8}, device={(rawDevice == null ? "null" : "set")}).");
             }
+
             _device = new ComPtr<ID3D12Device>((ID3D12Device*)rawDevice);
 
             CreateComputeQueue();
@@ -203,6 +204,7 @@ public sealed class SharedD3D12Device : IDisposable
         {
             adapter.Dispose();
             factory.Dispose();
+
             // d3d12 / dxgi are stateless API wrappers; disposing releases nothing that outlives the device.
             d3d12?.Dispose();
             dxgi?.Dispose();
@@ -243,15 +245,34 @@ public sealed class SharedD3D12Device : IDisposable
         _fence = new ComPtr<ID3D12Fence>((ID3D12Fence*)raw);
     }
 
-    private void ReleaseHandles()
+    private unsafe void ReleaseHandles()
     {
+        // During process exit D3D12.dll may already be unloaded; releasing COM
+        // objects at that point causes an AV inside Silk.NET. Skip cleanup — the
+        // OS reclaims all handles on termination anyway.
+        if (Environment.HasShutdownStarted)
+        {
+            return;
+        }
+
         // Reverse creation order: fence, queue, device.
-        _fence.Dispose();
-        _fence = default;
-        _computeQueue.Dispose();
-        _computeQueue = default;
-        _device.Dispose();
-        _device = default;
+        if (_fence.Handle != null)
+        {
+            _fence.Dispose();
+            _fence = default;
+        }
+
+        if (_computeQueue.Handle != null)
+        {
+            _computeQueue.Dispose();
+            _computeQueue = default;
+        }
+
+        if (_device.Handle != null)
+        {
+            _device.Dispose();
+            _device = default;
+        }
     }
 
     private void ThrowIfUnavailable()

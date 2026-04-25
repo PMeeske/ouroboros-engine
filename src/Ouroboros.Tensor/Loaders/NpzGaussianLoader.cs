@@ -44,7 +44,9 @@ public static class NpzGaussianLoader
     {
         ArgumentException.ThrowIfNullOrEmpty(path);
         if (!File.Exists(path))
+        {
             throw new FileNotFoundException($".npz checkpoint not found: {path}", path);
+        }
 
         using FileStream fs = File.OpenRead(path);
         return Load(fs);
@@ -69,7 +71,9 @@ public static class NpzGaussianLoader
         float[] barycentricWeights = ReadFloat32(zip, BarycentricWeightsKey);
 
         if (opacities.Length == 0)
+        {
             throw new InvalidDataException("opacities array is empty; cannot determine gaussian count.");
+        }
 
         return new GaussianSet(
             count: opacities.Length,
@@ -100,7 +104,9 @@ public static class NpzGaussianLoader
     {
         ZipArchiveEntry? entry = zip.GetEntry(key + ".npy");
         if (entry is null)
+        {
             throw new InvalidDataException($"Missing required entry '{key}.npy' in .npz archive.");
+        }
 
         using Stream stream = entry.Open();
         using var ms = new MemoryStream(capacity: (int)Math.Min(entry.Length, int.MaxValue));

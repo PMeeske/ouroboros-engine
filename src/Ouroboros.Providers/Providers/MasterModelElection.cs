@@ -15,17 +15,17 @@ public sealed partial class MasterModelElection : IDisposable
     private readonly EvaluationCriteria _criteria;
     private ElectionStrategy _strategy;
 
-    /// <summary>Observable stream of election events.</summary>
+    /// <summary>Gets observable stream of election events.</summary>
     public Observable<ElectionEvent> ElectionEvents => _electionEvents;
 
-    /// <summary>Current election strategy.</summary>
+    /// <summary>Gets or sets current election strategy.</summary>
     public ElectionStrategy Strategy
     {
         get => _strategy;
         set => _strategy = value;
     }
 
-    /// <summary>Performance history for all models.</summary>
+    /// <summary>Gets performance history for all models.</summary>
     public IReadOnlyDictionary<string, ModelPerformance> PerformanceHistory => _performanceHistory;
 
     public MasterModelElection(
@@ -42,17 +42,22 @@ public sealed partial class MasterModelElection : IDisposable
     /// Runs an election to select the best response from candidates.
     /// Pure function that returns the election result.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<ElectionResult<ThinkingResponse>> RunElectionAsync(
         IReadOnlyList<ResponseCandidate<ThinkingResponse>> candidates,
         string originalPrompt,
         CancellationToken ct = default)
     {
         if (candidates.Count == 0)
+        {
             throw new InvalidOperationException("No candidates for election");
+        }
 
         var validCandidates = candidates.Where(c => c.IsValid).ToList();
         if (validCandidates.Count == 0)
+        {
             throw new InvalidOperationException("No valid candidates for election");
+        }
 
         // Single candidate = automatic winner
         if (validCandidates.Count == 1)
@@ -77,7 +82,7 @@ public sealed partial class MasterModelElection : IDisposable
             ElectionStrategy.InstantRunoff => ElectByInstantRunoff(scored),
             ElectionStrategy.ApprovalVoting => ElectByApproval(scored, threshold: 0.6),
             ElectionStrategy.MasterDecision => await ElectByMasterDecisionAsync(scored, originalPrompt, ct).ConfigureAwait(false),
-            _ => ElectByMajority(scored)
+            _ => ElectByMajority(scored),
         };
 
         // Update performance history
@@ -120,19 +125,19 @@ public sealed partial class MasterModelElection : IDisposable
             metrics["completeness"] = CalculateCompleteness(candidate.Value.Content, originalPrompt);
 
             // Latency: normalized inverse (faster = higher score)
-            metrics["latency"] = Math.Max(0, 1 - candidate.Latency.TotalSeconds / 30);
+            metrics["latency"] = Math.Max(0, 1 - (candidate.Latency.TotalSeconds / 30));
 
             // Cost: from performance history
             var perf = _performanceHistory.GetValueOrDefault(candidate.Source);
-            metrics["cost"] = perf?.AverageCost > 0 ? Math.Max(0, 1 - perf.AverageCost / 0.01) : 0.5;
+            metrics["cost"] = perf?.AverageCost > 0 ? Math.Max(0, 1 - (perf.AverageCost / 0.01)) : 0.5;
 
             // Compute weighted score
             double score =
-                metrics["relevance"] * _criteria.RelevanceWeight +
-                metrics["coherence"] * _criteria.CoherenceWeight +
-                metrics["completeness"] * _criteria.CompletenessWeight +
-                metrics["latency"] * _criteria.LatencyWeight +
-                metrics["cost"] * _criteria.CostWeight;
+                (metrics["relevance"] * _criteria.RelevanceWeight) +
+                (metrics["coherence"] * _criteria.CoherenceWeight) +
+                (metrics["completeness"] * _criteria.CompletenessWeight) +
+                (metrics["latency"] * _criteria.LatencyWeight) +
+                (metrics["cost"] * _criteria.CostWeight);
 
             scored.Add(candidate.WithScore(score).WithMetrics(metrics));
         }
@@ -166,7 +171,7 @@ public sealed partial class MasterModelElection : IDisposable
             for (int i = 0; i < candidates.Count && i < masterScores.Count; i++)
             {
                 // Blend heuristic score with master evaluation
-                double blendedScore = candidates[i].Score * 0.4 + masterScores[i] * 0.6;
+                double blendedScore = (candidates[i].Score * 0.4) + (masterScores[i] * 0.6);
                 candidates[i] = candidates[i].WithScore(blendedScore);
             }
 
@@ -202,7 +207,11 @@ public sealed partial class MasterModelElection : IDisposable
         for (int i = 0; i < candidates.Count; i++)
         {
             var preview = candidates[i].Value.Content;
-            if (preview.Length > 300) preview = preview.Substring(0, 300) + "...";
+            if (preview.Length > 300)
+            {
+                preview = preview.Substring(0, 300) + "...";
+            }
+
             sb.AppendLine($"Response {i + 1} ({candidates[i].Source}):");
             sb.AppendLine(preview);
             sb.AppendLine();
@@ -220,13 +229,18 @@ public sealed partial class MasterModelElection : IDisposable
             if (double.TryParse(m.Value, out double score))
             {
                 scores.Add(Math.Clamp(score, 0, 1));
-                if (scores.Count >= expectedCount) break;
+                if (scores.Count >= expectedCount)
+                {
+                    break;
+                }
             }
         }
 
         // Pad with defaults if needed
         while (scores.Count < expectedCount)
+        {
             scores.Add(0.5);
+        }
 
         return scores;
     }

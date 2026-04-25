@@ -31,15 +31,25 @@ public sealed partial class WhisperNetService
                 if (convertResult.IsSuccess)
                 {
                     var samples = await ReadAudioSamplesAsync(convertedPath, ct).ConfigureAwait(false);
-                    try { File.Delete(convertedPath); } catch (IOException) { /* Intentional: best-effort temp file cleanup */ }
+                    try
+                    {
+                        File.Delete(convertedPath);
+                    }
+                    catch (IOException)
+                    { /* Intentional: best-effort temp file cleanup */
+                    }
                     return samples;
                 }
+
                 return null;
             }
 
             reader.ReadInt32(); // File size
             string wave = new(reader.ReadChars(4));
-            if (wave != "WAVE") return null;
+            if (wave != "WAVE")
+            {
+                return null;
+            }
 
             // Find fmt chunk
             int channels = 1;
@@ -59,7 +69,10 @@ public sealed partial class WhisperNetService
                     reader.ReadInt32(); // Byte rate
                     reader.ReadInt16(); // Block align
                     bitsPerSample = reader.ReadInt16();
-                    if (chunkSize > 16) reader.ReadBytes(chunkSize - 16);
+                    if (chunkSize > 16)
+                    {
+                        reader.ReadBytes(chunkSize - 16);
+                    }
                 }
                 else if (chunkId == "data")
                 {
@@ -79,10 +92,11 @@ public sealed partial class WhisperNetService
                                 16 => reader.ReadInt16() / 32768f,
                                 24 => (reader.ReadByte() | (reader.ReadByte() << 8) | (reader.ReadSByte() << 16)) / 8388608f,
                                 32 => reader.ReadInt32() / 2147483648f,
-                                _ => 0f
+                                _ => 0f,
                             };
                             sample += channelSample;
                         }
+
                         samples[i] = sample / channels; // Average channels to mono
                     }
 
@@ -130,7 +144,7 @@ public sealed partial class WhisperNetService
 
             if (srcIndexInt + 1 < samples.Length)
             {
-                resampled[i] = (float)(samples[srcIndexInt] * (1 - frac) + samples[srcIndexInt + 1] * frac);
+                resampled[i] = (float)((samples[srcIndexInt] * (1 - frac)) + (samples[srcIndexInt + 1] * frac));
             }
             else if (srcIndexInt < samples.Length)
             {
@@ -152,7 +166,7 @@ public sealed partial class WhisperNetService
                 FileName = "ffmpeg",
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                RedirectStandardError = true
+                RedirectStandardError = true,
             };
             startInfo.ArgumentList.Add("-i");
             startInfo.ArgumentList.Add(inputPath);
@@ -181,7 +195,6 @@ public sealed partial class WhisperNetService
 
             return Result<string, string>.Success(outputPath);
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             return Result<string, string>.Failure($"Conversion failed: {ex.Message}");
@@ -213,7 +226,7 @@ public sealed partial class WhisperNetService
             GgmlType.LargeV1 => "ggml-large-v1.bin",
             GgmlType.LargeV2 => "ggml-large-v2.bin",
             GgmlType.LargeV3 => "ggml-large-v3.bin",
-            _ => "ggml-base.bin"
+            _ => "ggml-base.bin",
         };
     }
 }

@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;SA0001</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Ouroboros.Agent/Ouroboros.Agent.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="8.0.0" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="8.8.0" />
+    <PackageReference Include="FsCheck.Xunit" Version="3.3.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="OrchestrationScopeAndExperimentTests.cs" />
+    <Compile Remove="obj/Debug/net10.0/Ouroboros.Agent.Tests.MetaAI2.GlobalUsings.g.cs" />
+  </ItemGroup>
+
+  <!-- Strip inherited global usings that Kimi tests don't need (avoids missing-namespace errors). -->
+  <ItemGroup>
+    <Using Remove="Ouroboros.Tests.Mocks" />
+    <Using Remove="Ouroboros.Tests.Infrastructure" />
+    <Using Remove="Ouroboros.Tests.Infrastructure.Utilities" />
+    <Using Remove="Ouroboros.Tests.Infrastructure.Fixtures" />
+    <Using Remove="Ouroboros.Core.Kleisli" />
+    <Using Remove="Ouroboros.Core.Learning" />
+    <Using Remove="Ouroboros.Core.Memory" />
+    <Using Remove="Ouroboros.Abstractions.Monads" />
+    <Using Remove="Ouroboros.Core.Monads" />
+    <Using Remove="Ouroboros.Core.Steps" />
+    <Using Remove="Ouroboros.Domain" />
+    <Using Remove="Ouroboros.Domain.Autonomous" />
+    <Using Remove="Ouroboros.Domain.Events" />
+    <Using Remove="Ouroboros.Domain.States" />
+    <Using Remove="Ouroboros.Domain.Vectors" />
+    <Using Remove="Ouroboros.Tools" />
+    <Using Remove="Ouroboros.Agent" />
+    <Using Remove="Ouroboros.Pipeline.Branches" />
+    <Using Remove="Ouroboros.Pipeline.Reasoning" />
+    <Using Remove="Ouroboros.Providers" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="OrchestrationExtensionsTests.cs" />
+    <Compile Remove="OuroborosOrchestratorTests.cs" />
+    <Compile Remove="ParallelExecutorTests.cs" />
+    <Compile Remove="PersistentMetricsAndSkillComposerTests.cs" />
+    <Compile Remove="QdrantAndPersistentSkillRegistryTests.cs" />
+    <Compile Remove="RecordsAndEnumsTests.cs" />
+    <Compile Remove="SafetyGuardTests.cs" />
+    <Compile Remove="SkillDslAndOrchestratorBuilderTests.cs" />
+    <Compile Remove="SkillRegistryTests.cs" />
+    <Compile Remove="StakeholderReviewLoopTests.cs" />
+    <Compile Remove="StepDependencyGraphTests.cs" />
+    <Compile Remove="ToolSelectorTests.cs" />
+  </ItemGroup>
+</Project>

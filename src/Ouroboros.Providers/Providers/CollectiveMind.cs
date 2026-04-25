@@ -1,9 +1,9 @@
 ﻿using System.Collections.Concurrent;
-using R3;
 using System.Text;
 using System.Text.RegularExpressions;
 using Polly;
 using Polly.CircuitBreaker;
+using R3;
 
 namespace Ouroboros.Providers;
 
@@ -26,17 +26,17 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     private readonly Subject<SubGoalResult> _subGoalStream = new();
 
     /// <summary>
-    /// Observable stream of the mind's internal thoughts and reasoning.
+    /// Gets observable stream of the mind's internal thoughts and reasoning.
     /// </summary>
     public Observable<string> ThoughtStream => _thoughtStream;
 
     /// <summary>
-    /// Observable stream of sub-goal execution results.
+    /// Gets observable stream of sub-goal execution results.
     /// </summary>
     public Observable<SubGoalResult> SubGoalStream => _subGoalStream;
 
     /// <summary>
-    /// Configuration for goal decomposition behavior.
+    /// Gets or sets configuration for goal decomposition behavior.
     /// </summary>
     public DecompositionConfig DecompositionConfig
     {
@@ -45,27 +45,32 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     }
 
     /// <summary>
-    /// The collective's thinking mode.
+    /// Gets or sets the collective's thinking mode.
     /// </summary>
     public CollectiveThinkingMode ThinkingMode { get; set; } = CollectiveThinkingMode.Adaptive;
 
     /// <summary>
-    /// Election strategy for selecting best answers.
+    /// Gets or sets election strategy for selecting best answers.
     /// </summary>
     public ElectionStrategy ElectionStrategy
     {
         get => _election?.Strategy ?? ElectionStrategy.WeightedMajority;
-        set { if (_election != null) _election.Strategy = value; }
+        set { if (_election != null)
+            {
+                _election.Strategy = value;
+            }
+        }
     }
 
     /// <summary>
-    /// Observable stream of election events.
+    /// Gets observable stream of election events.
     /// </summary>
     public Observable<ElectionEvent>? ElectionEvents => _election?.ElectionEvents;
 
     /// <summary>
     /// Gets optimization suggestions from the election system.
     /// </summary>
+    /// <returns></returns>
     public IReadOnlyList<OptimizationSuggestion> GetOptimizationSuggestions() =>
         _election?.GetOptimizationSuggestions() ?? Array.Empty<OptimizationSuggestion>();
 
@@ -79,7 +84,11 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     /// </summary>
     public IReadOnlyList<NeuralPathway> Pathways
     {
-        get { lock (_lock) return _pathways.ToList(); }
+        get { lock (_lock)
+            {
+                return _pathways.ToList();
+            }
+        }
     }
 
     /// <summary>
@@ -87,7 +96,11 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     /// </summary>
     public int HealthyPathwayCount
     {
-        get { lock (_lock) return _pathways.Count(p => p.IsHealthy); }
+        get { lock (_lock)
+            {
+                return _pathways.Count(p => p.IsHealthy);
+            }
+        }
     }
 
     public CollectiveMind(ElectionStrategy electionStrategy = ElectionStrategy.WeightedMajority)
@@ -100,6 +113,7 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     /// Designates a pathway as the master orchestrator.
     /// The master evaluates and selects best answers from other pathways.
     /// </summary>
+    /// <returns></returns>
     public CollectiveMind SetMaster(string pathwayName)
     {
         lock (_lock)
@@ -112,12 +126,14 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
                 _thoughtStream.OnNext($"👑 Master pathway set: {pathwayName}");
             }
         }
+
         return this;
     }
 
     /// <summary>
     /// Sets the first pathway as the master orchestrator.
     /// </summary>
+    /// <returns></returns>
     public CollectiveMind SetFirstAsMaster()
     {
         lock (_lock)
@@ -130,6 +146,7 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
                 _thoughtStream.OnNext($"👑 Master pathway set: {_masterPathway.Name}");
             }
         }
+
         return this;
     }
 
@@ -150,7 +167,10 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     {
         lock (_lock)
         {
-            if (_pathways.Count == 0) return null;
+            if (_pathways.Count == 0)
+            {
+                return null;
+            }
 
             // Weight-based selection
             var candidates = _pathways
@@ -164,7 +184,10 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
                 candidates = _pathways.Where(p => exclude?.Contains(p) != true).ToList();
             }
 
-            if (candidates.Count == 0) return null;
+            if (candidates.Count == 0)
+            {
+                return null;
+            }
 
             // Round-robin within weighted candidates
             _currentPathwayIndex = (_currentPathwayIndex + 1) % candidates.Count;
@@ -220,7 +243,6 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
                     observer.OnCompleted();
                 }).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) { throw; }
             catch (InvalidOperationException ex)
             {
                 pathway.RecordInhibition();
@@ -233,10 +255,14 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     /// <summary>
     /// Computes IIT Φ (integrated information) for the current pathway topology.
     /// </summary>
+    /// <returns></returns>
     public PhiResult ComputePhi()
     {
         IReadOnlyList<NeuralPathway> snapshot;
-        lock (_lock) { snapshot = _pathways.ToList(); }
+        lock (_lock)
+        {
+            snapshot = _pathways.ToList();
+        }
 
         var result = new IITPhiCalculator().Compute(snapshot);
         _thoughtStream.OnNext($"Φ={result.Phi:F4} | MIP: {result.MinimumInformationPartition}");
@@ -246,6 +272,7 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
     /// <summary>
     /// Gets the collective's consciousness status.
     /// </summary>
+    /// <returns></returns>
     public string GetConsciousnessStatus()
     {
         lock (_lock)
@@ -297,8 +324,11 @@ public sealed partial class CollectiveMind : IStreamingThinkingChatModel, ICostA
             foreach (var pathway in _pathways)
             {
                 if (pathway.Model is IDisposable disposable)
+                {
                     disposable.Dispose();
+                }
             }
+
             _pathways.Clear();
         }
     }

@@ -115,7 +115,11 @@ public sealed partial class DirectComputeGaussianRasterizer
         D3DRange read = default; // empty read range ⇒ CPU never reads from this resource
         void* dst;
         int hr = buf.Handle->Map(0u, &read, &dst);
-        if (hr < 0 || dst == null) throw new InvalidOperationException($"Map upload buffer failed (hr=0x{hr:X8}).");
+        if (hr < 0 || dst == null)
+        {
+            throw new InvalidOperationException($"Map upload buffer failed (hr=0x{hr:X8}).");
+        }
+
         try
         {
             fixed (float* p = src)
@@ -134,7 +138,8 @@ public sealed partial class DirectComputeGaussianRasterizer
         // Root constants path: we push constants per-pass inside RecordAndSubmit
         // (tile-assign has a different layout than project/raster). _bufCbv is
         // kept around for possible future CBV migration. No-op here by design.
-        _ = camera; _ = gaussianCount;
+        _ = camera;
+        _ = gaussianCount;
     }
 
     private unsafe void RecordAndSubmit(int gaussianCount, int width, int height)
@@ -162,14 +167,16 @@ public sealed partial class DirectComputeGaussianRasterizer
         // ---- PASS 1: gaussian_project ----
         // Root constants: (translateX, translateY, count, width, height, 0, 0, 0)
         uint* rc = stackalloc uint[8];
-        float tx = camera_TxFromView(width);
-        float ty = camera_TyFromView(height);
+        float tx = Camera_TxFromView();
+        float ty = Camera_TyFromView();
         rc[0] = BitConverter.SingleToUInt32Bits(tx);
         rc[1] = BitConverter.SingleToUInt32Bits(ty);
         rc[2] = (uint)gaussianCount;
         rc[3] = (uint)width;
         rc[4] = (uint)height;
-        rc[5] = 0u; rc[6] = 0u; rc[7] = 0u;
+        rc[5] = 0u;
+        rc[6] = 0u;
+        rc[7] = 0u;
         _cmdList.SetComputeRoot32BitConstants(0u, 8u, rc, 0u);
         _cmdList.SetComputeRootDescriptorTable(1u, GpuOffset(0)); // SRV table at slot 0..3
         _cmdList.SetComputeRootDescriptorTable(2u, GpuOffset(4)); // UAV table at slot 4..5 (projected/projColors)
@@ -187,7 +194,9 @@ public sealed partial class DirectComputeGaussianRasterizer
         rc[2] = (uint)tilesY;
         rc[3] = (uint)width;
         rc[4] = (uint)height;
-        rc[5] = 0u; rc[6] = 0u; rc[7] = 0u;
+        rc[5] = 0u;
+        rc[6] = 0u;
+        rc[7] = 0u;
         _cmdList.SetComputeRoot32BitConstants(0u, 8u, rc, 0u);
         _cmdList.SetComputeRootDescriptorTable(1u, GpuOffset(9)); // SRV t0 = projected (slots 9..12)
         _cmdList.SetComputeRootDescriptorTable(2u, GpuOffset(6)); // UAV u0..u1 = tileCounts/tileLists
@@ -208,7 +217,10 @@ public sealed partial class DirectComputeGaussianRasterizer
         rc[1] = (uint)tilesY;
         rc[2] = (uint)width;
         rc[3] = (uint)height;
-        rc[4] = 0u; rc[5] = 0u; rc[6] = 0u; rc[7] = 0u;
+        rc[4] = 0u;
+        rc[5] = 0u;
+        rc[6] = 0u;
+        rc[7] = 0u;
         _cmdList.SetComputeRoot32BitConstants(0u, 8u, rc, 0u);
         _cmdList.SetComputeRootDescriptorTable(1u, GpuOffset(9)); // SRV t0..t3 = projected/projColors/tileCounts/tileLists
         _cmdList.SetComputeRootDescriptorTable(2u, GpuOffset(8)); // UAV u0 = RWTexture2D output
@@ -263,7 +275,11 @@ public sealed partial class DirectComputeGaussianRasterizer
         D3DRange read = default;
         void* dst;
         int hr = buf.Handle->Map(0u, &read, &dst);
-        if (hr < 0 || dst == null) throw new InvalidOperationException($"Map zero upload buffer failed (hr=0x{hr:X8}).");
+        if (hr < 0 || dst == null)
+        {
+            throw new InvalidOperationException($"Map zero upload buffer failed (hr=0x{hr:X8}).");
+        }
+
         try
         {
             Unsafe.InitBlockUnaligned(dst, 0, (uint)byteCount);
@@ -304,29 +320,43 @@ public sealed partial class DirectComputeGaussianRasterizer
     private unsafe void SignalAfterSubmit(ulong signalValue)
     {
         int hr = _sharedDevice!.ComputeQueue.Signal(_sharedDevice.Fence, signalValue);
-        if (hr < 0) throw new InvalidOperationException($"CommandQueue.Signal failed (hr=0x{hr:X8}).");
+        if (hr < 0)
+        {
+            throw new InvalidOperationException($"CommandQueue.Signal failed (hr=0x{hr:X8}).");
+        }
     }
 
     private async Task WaitOnFenceAsync(ulong signalValue, CancellationToken ct)
     {
-        if (_sharedDevice!.Fence.GetCompletedValue() >= signalValue) return;
+        if (_sharedDevice!.Fence.GetCompletedValue() >= signalValue)
+        {
+            return;
+        }
 
         using var evt = new ManualResetEventSlim(false);
+
         // Use a Win32 HANDLE-compatible event. ManualResetEventSlim isn't one,
         // so back it with a ManualResetEvent (WaitHandle → WaitHandle.Handle).
         using var winEvt = new ManualResetEvent(false);
         unsafe
         {
             int hr = _sharedDevice.Fence.SetEventOnCompletion(signalValue, winEvt.SafeWaitHandle.DangerousGetHandle().ToPointer());
-            if (hr < 0) throw new InvalidOperationException($"Fence.SetEventOnCompletion failed (hr=0x{hr:X8}).");
+            if (hr < 0)
+            {
+                throw new InvalidOperationException($"Fence.SetEventOnCompletion failed (hr=0x{hr:X8}).");
+            }
         }
 
         // Wait honoring cancellation. Task.Run offloads the blocking wait so
         // we never block the dispatcher thread.
-        await Task.Run(() =>
+        await Task.Run(
+            () =>
         {
             int idx = WaitHandle.WaitAny(new[] { winEvt, ct.WaitHandle });
-            if (idx == 1) ct.ThrowIfCancellationRequested();
+            if (idx == 1)
+            {
+                ct.ThrowIfCancellationRequested();
+            }
         }, ct).ConfigureAwait(false);
     }
 
@@ -335,7 +365,11 @@ public sealed partial class DirectComputeGaussianRasterizer
         D3DRange readAll = new() { Begin = 0u, End = (nuint)((int)_cachedRowPitchAligned * height) };
         void* src;
         int hr = _bufReadback.Handle->Map(0u, &readAll, &src);
-        if (hr < 0 || src == null) throw new InvalidOperationException($"Map readback failed (hr=0x{hr:X8}).");
+        if (hr < 0 || src == null)
+        {
+            throw new InvalidOperationException($"Map readback failed (hr=0x{hr:X8}).");
+        }
+
         try
         {
             byte[] rgba = new byte[width * height * 4];
@@ -346,9 +380,10 @@ public sealed partial class DirectComputeGaussianRasterizer
             {
                 for (int row = 0; row < height; row++)
                 {
-                    Buffer.MemoryCopy(srcBytes + row * srcRowBytes, dstPin + row * dstRowBytes, dstRowBytes, dstRowBytes);
+                    Buffer.MemoryCopy(srcBytes + (row * srcRowBytes), dstPin + (row * dstRowBytes), dstRowBytes, dstRowBytes);
                 }
             }
+
             return rgba;
         }
         finally
@@ -361,33 +396,54 @@ public sealed partial class DirectComputeGaussianRasterizer
     private void ReleaseGpuResources()
     {
         ReleasePerFrameBuffers();
-        _srvUavHeap.Dispose();      _srvUavHeap = default;
-        _cmdList.Dispose();         _cmdList = default;
-        _cmdAllocator.Dispose();    _cmdAllocator = default;
-        _psoTileRaster.Dispose();   _psoTileRaster = default;
-        _psoTileSort.Dispose();     _psoTileSort = default;
-        _psoTileAssign.Dispose();   _psoTileAssign = default;
-        _psoProject.Dispose();      _psoProject = default;
-        _rsCompute.Dispose();       _rsCompute = default;
+        _srvUavHeap.Dispose();
+        _srvUavHeap = default;
+        _cmdList.Dispose();
+        _cmdList = default;
+        _cmdAllocator.Dispose();
+        _cmdAllocator = default;
+        _psoTileRaster.Dispose();
+        _psoTileRaster = default;
+        _psoTileSort.Dispose();
+        _psoTileSort = default;
+        _psoTileAssign.Dispose();
+        _psoTileAssign = default;
+        _psoProject.Dispose();
+        _psoProject = default;
+        _rsCompute.Dispose();
+        _rsCompute = default;
         _loadedShaders = null;
         _pipelineBuilt = false;
     }
 
     private void ReleasePerFrameBuffers()
     {
-        _bufReadback.Dispose();       _bufReadback = default;
-        _texOutput.Dispose();         _texOutput = default;
-        _bufCbv.Dispose();            _bufCbv = default;
-        _bufTileCountsZero.Dispose(); _bufTileCountsZero = default;
-        _bufTileLists.Dispose();      _bufTileLists = default;
-        _bufTileCounts.Dispose();     _bufTileCounts = default;
-        _bufProjColors.Dispose();     _bufProjColors = default;
-        _bufProjected.Dispose();      _bufProjected = default;
-        _bufColorsPacked.Dispose();   _bufColorsPacked = default;
-        _bufColors.Dispose();         _bufColors = default;
-        _bufOpacities.Dispose();      _bufOpacities = default;
-        _bufScales.Dispose();         _bufScales = default;
-        _bufPositions.Dispose();      _bufPositions = default;
+        _bufReadback.Dispose();
+        _bufReadback = default;
+        _texOutput.Dispose();
+        _texOutput = default;
+        _bufCbv.Dispose();
+        _bufCbv = default;
+        _bufTileCountsZero.Dispose();
+        _bufTileCountsZero = default;
+        _bufTileLists.Dispose();
+        _bufTileLists = default;
+        _bufTileCounts.Dispose();
+        _bufTileCounts = default;
+        _bufProjColors.Dispose();
+        _bufProjColors = default;
+        _bufProjected.Dispose();
+        _bufProjected = default;
+        _bufColorsPacked.Dispose();
+        _bufColorsPacked = default;
+        _bufColors.Dispose();
+        _bufColors = default;
+        _bufOpacities.Dispose();
+        _bufOpacities = default;
+        _bufScales.Dispose();
+        _bufScales = default;
+        _bufPositions.Dispose();
+        _bufPositions = default;
         _cachedGaussianCount = 0;
         _cachedWidth = 0;
         _cachedHeight = 0;
@@ -404,8 +460,10 @@ public sealed partial class DirectComputeGaussianRasterizer
     // calling RecordAndSubmit. (Kept local since this is the only consumer.)
     private float _pendingTx;
     private float _pendingTy;
-    private float camera_TxFromView(int _width) => _pendingTx;
-    private float camera_TyFromView(int _height) => _pendingTy;
+
+    private float Camera_TxFromView() => _pendingTx;
+
+    private float Camera_TyFromView() => _pendingTy;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static uint AlignUp(uint value, uint alignment) => (value + (alignment - 1u)) & ~(alignment - 1u);
@@ -414,7 +472,11 @@ public sealed partial class DirectComputeGaussianRasterizer
     private static int NextPow2(int value)
     {
         int v = 1;
-        while (v < value) v <<= 1;
+        while (v < value)
+        {
+            v <<= 1;
+        }
+
         return v;
     }
 }

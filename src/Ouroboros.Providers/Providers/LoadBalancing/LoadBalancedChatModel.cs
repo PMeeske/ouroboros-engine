@@ -45,6 +45,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
         ArgumentNullException.ThrowIfNull(loadBalancer);
         _loadBalancer = loadBalancer;
         _retryPolicy = CreateRetryPolicy();
+        _logger = NullLogger<LoadBalancedChatModel>.Instance;
     }
 
     /// <summary>
@@ -84,6 +85,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
     /// <summary>
     /// Gets the current health status of all providers.
     /// </summary>
+    /// <returns></returns>
     public IReadOnlyDictionary<string, ProviderHealthStatus> GetHealthStatus()
     {
         return _loadBalancer.GetHealthStatus();
@@ -122,7 +124,7 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
                     // No healthy providers available
                     string error = selectionResult.Match(_ => string.Empty, err => err);
                     _logger.LogWarning("Provider selection failed: {Error}", error);
-                    
+
                     // Throw to trigger Polly retry
                     throw new InvalidOperationException($"No healthy providers available: {error}");
                 }
@@ -184,7 +186,6 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
                 }
             }).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             // All retries exhausted - return error message for graceful degradation
@@ -235,7 +236,10 @@ public sealed class LoadBalancedChatModel : Ouroboros.Abstractions.Core.IChatCom
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
 
         // Load balancer doesn't own the providers, so no disposal needed
         _disposed = true;

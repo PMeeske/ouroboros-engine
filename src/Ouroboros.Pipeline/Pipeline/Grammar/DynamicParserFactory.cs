@@ -230,7 +230,7 @@ public class DynamicParserFactory : IDisposable
         foreach (var file in csFiles)
         {
             string source = await File.ReadAllTextAsync(file, ct).ConfigureAwait(false);
-            syntaxTrees.Add(CSharpSyntaxTree.ParseText(source, path: file));
+            syntaxTrees.Add(CSharpSyntaxTree.ParseText(source, path: file, cancellationToken: ct));
         }
 
         var compilation = CSharpCompilation.Create(
@@ -242,7 +242,7 @@ public class DynamicParserFactory : IDisposable
                 optimizationLevel: OptimizationLevel.Release));
 
         using var ms = new MemoryStream();
-        var result = compilation.Emit(ms);
+        var result = compilation.Emit(ms, cancellationToken: ct);
 
         if (!result.Success)
         {

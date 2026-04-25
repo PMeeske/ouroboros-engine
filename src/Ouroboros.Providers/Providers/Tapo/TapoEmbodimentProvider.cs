@@ -2,9 +2,9 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using R3;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Core.EmbodiedInteraction;
+using R3;
 using OuroborosUnit = Ouroboros.Abstractions.Unit;
 
 namespace Ouroboros.Providers.Tapo;
@@ -38,6 +38,7 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
     private EmbodimentCapabilities _capabilities;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TapoEmbodimentProvider"/> class.
     /// Initializes a new TapoEmbodimentProvider with REST client.
     /// </summary>
     /// <param name="tapoClient">The Tapo REST API client (state source).</param>
@@ -65,6 +66,7 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TapoEmbodimentProvider"/> class.
     /// Initializes a new TapoEmbodimentProvider with RTSP camera support.
     /// </summary>
     /// <param name="rtspClientFactory">Factory for creating RTSP clients for cameras.</param>
@@ -98,6 +100,7 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TapoEmbodimentProvider"/> class.
     /// Initializes a new TapoEmbodimentProvider with both REST API and RTSP camera support.
     /// This allows simultaneous access to cameras (via RTSP) and other devices (via REST API).
     /// </summary>
@@ -174,8 +177,15 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
     /// <inheritdoc/>
     public async Task<Result<EmbodimentCapabilities>> ConnectAsync(CancellationToken ct = default)
     {
-        if (_disposed) return Result<EmbodimentCapabilities>.Failure("Provider is disposed");
-        if (_isConnected) return Result<EmbodimentCapabilities>.Success(_capabilities);
+        if (_disposed)
+        {
+            return Result<EmbodimentCapabilities>.Failure("Provider is disposed");
+        }
+
+        if (_isConnected)
+        {
+            return Result<EmbodimentCapabilities>.Success(_capabilities);
+        }
 
         try
         {
@@ -193,7 +203,8 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
 
                 if (devicesResult.IsFailure)
                 {
-                    _logger?.LogWarning("Could not get REST API devices: {Error}. Smart home device control may be unavailable.",
+                    _logger?.LogWarning(
+                        "Could not get REST API devices: {Error}. Smart home device control may be unavailable.",
                         devicesResult.Error);
                 }
                 else
@@ -218,7 +229,10 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
 
             return Result<EmbodimentCapabilities>.Success(_capabilities);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to connect to Tapo provider");
@@ -229,7 +243,10 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
     /// <inheritdoc/>
     public async Task<Result<OuroborosUnit>> DisconnectAsync(CancellationToken ct = default)
     {
-        if (!_isConnected) return Result<OuroborosUnit>.Success(OuroborosUnit.Value);
+        if (!_isConnected)
+        {
+            return Result<OuroborosUnit>.Success(OuroborosUnit.Value);
+        }
 
         try
         {
@@ -243,7 +260,10 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
             await Task.CompletedTask.ConfigureAwait(false);
             return Result<OuroborosUnit>.Success(OuroborosUnit.Value);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Error disconnecting from Tapo provider");
@@ -261,7 +281,11 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
 
         _isConnected = false;

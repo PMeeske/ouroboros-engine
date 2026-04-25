@@ -141,7 +141,7 @@ public sealed partial class MeTTaOrchestrator : IMetaAIPlannerOrchestrator, IDis
             MemoryQuery query = MemoryQueryExtensions.ForGoal(goal, context, maxResults: 5, minSimilarity: 0.7);
             var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
             List<Experience> pastExperiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
-            List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context).ConfigureAwait(false);
+            List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context, ct).ConfigureAwait(false);
 
             // Generate initial plan using LLM
             string planPrompt = BuildPlanPrompt(goal, context, pastExperiences, matchingSkills);

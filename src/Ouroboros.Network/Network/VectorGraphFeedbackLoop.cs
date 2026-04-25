@@ -646,8 +646,8 @@ public sealed partial class VectorGraphFeedbackLoop
             return false;
         }
 
-        var node = nodeOption.Value;
-        var partner = partnerOption.Value;
+        var node = nodeOption.Value!;
+        var partner = partnerOption.Value!;
 
         // Combine payloads via JSON merge
         var mergedPayload = MergePayloads(node.PayloadJson, partner.PayloadJson);
@@ -786,7 +786,7 @@ public sealed partial class VectorGraphFeedbackLoop
                 continue;
             }
 
-            var node = nodeOption.Value;
+            var node = nodeOption.Value!;
 
             // Re-generate embedding
             var semanticText = $"{node.TypeName}: {node.PayloadJson}";

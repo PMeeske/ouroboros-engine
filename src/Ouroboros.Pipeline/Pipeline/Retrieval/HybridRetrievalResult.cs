@@ -28,6 +28,6 @@ public sealed record HybridRetrievalResult(
     private static string GetDocumentId(Document doc)
     {
         string fallback = doc.PageContent[..Math.Min(50, doc.PageContent.Length)];
-        return doc.Metadata.TryGetValue("id", out var id) ? id?.ToString() ?? fallback : fallback;
+        return doc.Metadata?.TryGetValue("id", out var id) == true ? id?.ToString() ?? fallback : fallback;
     }
 }

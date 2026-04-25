@@ -1,7 +1,7 @@
 ﻿using System.Net.Http.Json;
-using R3;
 using Polly;
 using Polly.Retry;
+using R3;
 
 namespace Ouroboros.Providers;
 
@@ -30,12 +30,19 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
 
     protected OpenAiCompatibleChatModelBase(string endpoint, string apiKey, string model, string providerName, ChatRuntimeSettings? settings = null, LlmCostTracker? costTracker = null)
     {
-        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
-        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        }
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new ArgumentException("API key is required", nameof(apiKey));
+        }
 
         _client = new HttpClient
         {
-            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute)
+            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute),
         };
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _model = model;
@@ -47,7 +54,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
         _retryPolicy = Policy
             .HandleResult<HttpResponseMessage>(r =>
                 (int)r.StatusCode == 429 || // Too Many Requests
-                (int)r.StatusCode >= 500)   // Server errors
+                (int)r.StatusCode >= 500) // Server errors
             .WaitAndRetryAsync(
                 retryCount: 3,
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
@@ -61,6 +68,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
         var response = await GenerateWithThinkingAsync(prompt, ct).ConfigureAwait(false);
+
         // Return combined thinking + content for backward compatibility if thinking is present
         return response.HasThinking ? response.ToFormattedString() : response.Content;
     }
@@ -77,10 +85,10 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
                 model = _model,
                 messages = new[]
                 {
-                    new { role = "user", content = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt }
+                    new { role = "user", content = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt },
                 },
                 temperature = _settings.Temperature,
-                max_tokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null
+                max_tokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null,
             });
 
             HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
@@ -104,14 +112,20 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
             if (doc.RootElement.TryGetProperty("usage", out var usageElement))
             {
                 if (usageElement.TryGetProperty("reasoning_tokens", out var rtElement))
+                {
                     reasoningTokens = rtElement.GetInt32();
+                }
+
                 if (usageElement.TryGetProperty("completion_tokens", out var ctElement))
                 {
                     contentTokens = ctElement.GetInt32();
                     completionTokens = contentTokens.Value;
                 }
+
                 if (usageElement.TryGetProperty("prompt_tokens", out var ptElement))
+                {
                     promptTokens = ptElement.GetInt32();
+                }
             }
 
             // Record cost tracking
@@ -177,11 +191,11 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
                     model = _model,
                     messages = new[]
                     {
-                        new { role = "user", content = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt }
+                        new { role = "user", content = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt },
                     },
                     temperature = _settings.Temperature,
                     max_tokens = _settings.MaxTokens > 0 ? _settings.MaxTokens : (int?)null,
-                    stream = true
+                    stream = true,
                 });
 
                 HttpResponseMessage response = await _retryPolicy.ExecuteAsync(async () =>
@@ -199,15 +213,21 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
 
                 while (!reader.EndOfStream && !token.IsCancellationRequested)
                 {
-                    string? line = await reader.ReadLineAsync().ConfigureAwait(false);
-                    if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data: ")) continue;
+                    string? line = await reader.ReadLineAsync(token).ConfigureAwait(false);
+                    if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data: "))
+                    {
+                        continue;
+                    }
 
                     string jsonData = line.Substring(6).Trim();
                     if (jsonData == "[DONE]")
                     {
                         // Flush any remaining buffer
                         if (tagBuffer.Length > 0)
+                        {
                             observer.OnNext((inThinkingFromTag, tagBuffer.ToString()));
+                        }
+
                         observer.OnCompleted();
                         return;
                     }
@@ -232,6 +252,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
                                     {
                                         observer.OnNext((true, reasoning));
                                     }
+
                                     continue;
                                 }
 
@@ -250,7 +271,9 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
                                             int idx = bufferStr.IndexOf("<think>", StringComparison.OrdinalIgnoreCase);
                                             string beforeTag = bufferStr[..idx];
                                             if (!string.IsNullOrEmpty(beforeTag))
+                                            {
                                                 observer.OnNext((false, beforeTag));
+                                            }
 
                                             tagBuffer.Clear();
                                             tagBuffer.Append(bufferStr[(idx + 7)..]);
@@ -263,7 +286,9 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
                                             int idx = bufferStr.IndexOf("</think>", StringComparison.OrdinalIgnoreCase);
                                             string thinkingContent = bufferStr[..idx];
                                             if (!string.IsNullOrEmpty(thinkingContent))
+                                            {
                                                 observer.OnNext((true, thinkingContent));
+                                            }
 
                                             tagBuffer.Clear();
                                             tagBuffer.Append(bufferStr[(idx + 8)..]);
@@ -288,7 +313,6 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
 
                 observer.OnCompleted();
             }
-            catch (OperationCanceledException) { throw; }
             catch (HttpRequestException ex)
             {
                 observer.OnErrorResume(ex);
@@ -312,6 +336,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
     /// <summary>
     /// Gets the fallback message to return when the API call fails.
     /// </summary>
+    /// <returns></returns>
     protected virtual string GetFallbackMessage(string prompt)
     {
         return $"[{_providerName.ToLowerInvariant()}-fallback:{_model}] {prompt}";

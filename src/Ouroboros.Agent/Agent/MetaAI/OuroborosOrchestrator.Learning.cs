@@ -205,7 +205,7 @@ Provide insights as a bullet list, each starting with '-'. Focus on:
                 {
                     _logger.LogDebug("[SkillExtractor] Non-fatal error during skill extraction: {Message}", ex.Message);
                 }
-            });
+            }, ct);
         }
     }
 

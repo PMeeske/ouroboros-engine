@@ -23,6 +23,7 @@ public sealed class KokoroEvictor : IEvictionPolicy
     public TimeSpan EstimatedReloadLatency => TimeSpan.FromSeconds(1.5);
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="KokoroEvictor"/> class.
     /// Initializes a new <see cref="KokoroEvictor"/>.
     /// </summary>
     /// <param name="tenantName">Tenant name.</param>

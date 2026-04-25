@@ -28,25 +28,25 @@ namespace Ouroboros.Tensor.Abstractions;
 /// </remarks>
 public interface IVramLayout
 {
-    /// <summary>Preset id — e.g. <c>RX9060XT_16GB</c>, <c>Generic_8GB</c>, <c>Generic_24GB_Plus</c>.</summary>
+    /// <summary>Gets preset id — e.g. <c>RX9060XT_16GB</c>, <c>Generic_8GB</c>, <c>Generic_24GB_Plus</c>.</summary>
     string Id { get; }
 
     /// <summary>
-    /// Human-readable description of the resolved adapter, or
+    /// Gets human-readable description of the resolved adapter, or
     /// <c>"override:{Id}"</c> when <c>Avatar:VramLayoutOverride</c> forced the preset.
     /// </summary>
     string AdapterDescription { get; }
 
     /// <summary>
-    /// Packed LUID of the <c>IDXGIAdapter1</c> this layout was resolved for,
+    /// Gets packed LUID of the <c>IDXGIAdapter1</c> this layout was resolved for,
     /// computed as <c>(ulong)(LowPart) | ((ulong)HighPart &lt;&lt; 32)</c>.
     /// <c>0UL</c> for in-code presets that did not come from DXGI enumeration.
     /// </summary>
     ulong AdapterLuid { get; }
 
-    /// <summary>Total dedicated VRAM on the adapter in bytes.</summary>
+    /// <summary>Gets total dedicated VRAM on the adapter in bytes.</summary>
     long TotalDeviceBytes { get; }
 
-    /// <summary>Named-bucket map (<see cref="VramBucket"/> → <see cref="VramBucketBudget"/>).</summary>
+    /// <summary>Gets named-bucket map (<see cref="VramBucket"/> → <see cref="VramBucketBudget"/>).</summary>
     IReadOnlyDictionary<VramBucket, VramBucketBudget> Buckets { get; }
 }

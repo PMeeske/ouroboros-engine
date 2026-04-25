@@ -104,6 +104,7 @@ public static class ServiceCollectionExtensions
     /// (e.g. <see cref="OllamaChatAdapter"/>), the native client is returned directly
     /// for zero-overhead interop. Otherwise, a <see cref="CompletionModelChatClientAdapter"/> wraps the model.
     /// </summary>
+    /// <returns></returns>
     public static IServiceCollection AddMeaiChatClient(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -130,9 +131,13 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IEmbeddingModel>(sp =>
         {
             var generator = sp.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
+
             // Unwrap if the generator is already our forward adapter (avoid double-wrapping)
             if (generator.GetService(typeof(IEmbeddingModel)) is IEmbeddingModel inner)
+            {
                 return inner;
+            }
+
             return new EmbeddingGeneratorModelAdapter(generator);
         });
 
@@ -140,7 +145,10 @@ public static class ServiceCollectionExtensions
         {
             var model = sp.GetRequiredService<Ouroboros.Abstractions.Core.IChatCompletionModel>();
             if (model is Ouroboros.Abstractions.Core.IOuroborosChatClient ouroClient)
+            {
                 return ouroClient;
+            }
+
             throw new InvalidOperationException(
                 $"The resolved IChatCompletionModel ({model.GetType().Name}) does not implement IOuroborosChatClient. " +
                 "Migrate the provider to IOuroborosChatClient or use IChatClient via AddMeaiChatClient() instead.");
@@ -178,7 +186,9 @@ public static class ServiceCollectionExtensions
 
         string? apiKey = configuration?["Anthropic:ApiKey"] ?? Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
         if (string.IsNullOrWhiteSpace(apiKey))
+        {
             return services;
+        }
 
         string model = configuration?["Anthropic:Model"]
             ?? Environment.GetEnvironmentVariable("ANTHROPIC_MODEL")
@@ -200,28 +210,44 @@ public static class ServiceCollectionExtensions
         string n = (model ?? string.Empty).ToLowerInvariant();
 
         if (n.StartsWith("deepseek-coder:33b"))
+        {
             return (OllamaPresets.DeepSeekCoder33B, OllamaPresets.DeepSeekCoder33BKeepAlive);
+        }
 
         if (n.StartsWith("llama3"))
+        {
             return (OllamaPresets.Llama3General, OllamaPresets.Llama3GeneralKeepAlive);
+        }
 
         if (n.StartsWith("deepseek-r1:32") || n.Contains("32b"))
-            return (OllamaPresets.DeepSeekR1_32B_Reason, OllamaPresets.DeepSeekR1_32B_ReasonKeepAlive);
+        {
+            return (OllamaPresets.DeepSeekR1_32B_Reason, OllamaPresets.DeepSeekR132BReasonKeepAlive);
+        }
 
         if (n.StartsWith("deepseek-r1:14") || n.Contains("14b"))
-            return (OllamaPresets.DeepSeekR1_14B_Reason, OllamaPresets.DeepSeekR1_14B_ReasonKeepAlive);
+        {
+            return (OllamaPresets.DeepSeekR1_14B_Reason, OllamaPresets.DeepSeekR114BReasonKeepAlive);
+        }
 
         if (n.Contains("mistral") && (n.Contains("7b") || !n.Contains("large")))
+        {
             return (OllamaPresets.Mistral7BGeneral, OllamaPresets.Mistral7BGeneralKeepAlive);
+        }
 
         if (n.StartsWith("qwen3-coder", StringComparison.Ordinal) || n.Contains("qwen3-coder", StringComparison.Ordinal))
-            return (OllamaPresets.Qwen25_7B_General, OllamaPresets.Qwen25_7B_GeneralKeepAlive);
+        {
+            return (OllamaPresets.Qwen25_7B_General, OllamaPresets.Qwen257BGeneralKeepAlive);
+        }
 
         if (n.StartsWith("qwen2.5") || n.Contains("qwen"))
-            return (OllamaPresets.Qwen25_7B_General, OllamaPresets.Qwen25_7B_GeneralKeepAlive);
+        {
+            return (OllamaPresets.Qwen25_7B_General, OllamaPresets.Qwen257BGeneralKeepAlive);
+        }
 
         if (n.StartsWith("phi3") || n.Contains("phi-3"))
+        {
             return (OllamaPresets.Phi3MiniGeneral, OllamaPresets.Phi3MiniGeneralKeepAlive);
+        }
 
         return (null, null);
     }
@@ -290,6 +316,7 @@ public static class ServiceCollectionExtensions
     /// Services needing runtime deps (embedding, MeTTa) are created by subsystems using
     /// <see cref="QdrantClient"/> and <see cref="IQdrantCollectionRegistry"/> from DI.
     /// </summary>
+    /// <returns></returns>
     public static IServiceCollection AddQdrantServices(
         this IServiceCollection services)
     {
@@ -369,7 +396,7 @@ public static class ServiceCollectionExtensions
         {
             Type = storeType,
             ConnectionString = connectionString,
-            DefaultCollection = collectionName
+            DefaultCollection = collectionName,
         };
 
         return services.AddVectorStore(config);

@@ -2,11 +2,11 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using R3;
 using Microsoft.CognitiveServices.Speech;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Retry;
+using R3;
 
 namespace Ouroboros.Providers.TextToSpeech;
 
@@ -82,7 +82,7 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         .Build();
 
     /// <summary>
-    /// Gets whether the circuit breaker is currently open (Azure TTS disabled).
+    /// Gets a value indicating whether gets whether the circuit breaker is currently open (Azure TTS disabled).
     /// </summary>
     public static bool IsCircuitOpen { get; private set; }
 
@@ -107,19 +107,19 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     }
 
     /// <summary>
-    /// Current emotional speech style (e.g. "cheerful", "sad", "excited").
+    /// Gets or sets current emotional speech style (e.g. "cheerful", "sad", "excited").
     /// Set externally by the personality/embodiment system.
     /// When set, overrides the default "assistant" style in SSML.
     /// </summary>
     public string? EmotionalStyle { get; set; }
 
     /// <summary>
-    /// Pitch offset from the SelfVector (-0.2 to +0.2). Overrides default when set.
+    /// Gets or sets pitch offset from the SelfVector (-0.2 to +0.2). Overrides default when set.
     /// </summary>
     public float? SelfVectorPitchOffset { get; set; }
 
     /// <summary>
-    /// Rate multiplier from the SelfVector (0.7 to 1.4). Overrides default when set.
+    /// Gets or sets rate multiplier from the SelfVector (0.7 to 1.4). Overrides default when set.
     /// </summary>
     public float? SelfVectorRateMultiplier { get; set; }
 
@@ -149,6 +149,7 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     {
         _config = SpeechConfig.FromSubscription(_subscriptionKey, _region);
         _config.SpeechSynthesisVoiceName = _voiceName;
+
         // Do NOT set SpeechSynthesisLanguage — SSML xml:lang controls language.
         // Setting it to a different locale than the voice's primary can conflict.
         _synthesizer = new SpeechSynthesizer(_config);
@@ -186,6 +187,7 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     /// <summary>
     /// Stops any currently playing speech.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task StopSpeakingAsync()
     {
         if (_isSynthesizing && _synthesizer != null)
@@ -205,6 +207,7 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     /// <summary>
     /// Speaks text to the default audio output using the service's current culture.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task SpeakAsync(string text, CancellationToken ct = default)
         => SpeakCoreAsync(text, isWhisper: false, cultureOverride: null, ct);
 
@@ -216,6 +219,7 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     /// <param name="text">Text to synthesise.</param>
     /// <param name="culture">BCP-47 culture for this utterance (e.g. "de-DE").</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task SpeakAsync(string text, string culture, CancellationToken ct = default)
         => SpeakCoreAsync(text, isWhisper: false, cultureOverride: culture, ct);
 
@@ -225,6 +229,7 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     /// <param name="text">Text to speak.</param>
     /// <param name="isWhisper">Use whispering style for inner thoughts.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public Task SpeakAsync(string text, bool isWhisper, CancellationToken ct = default)
         => SpeakCoreAsync(text, isWhisper, cultureOverride: null, ct);
 
@@ -235,12 +240,16 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     /// <param name="segments">Voice segments with per-segment style/prosody.</param>
     /// <param name="cultureOverride">Override culture for this utterance.</param>
     /// <param name="ct">Cancellation token.</param>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task SpeakSegmentsAsync(
         IReadOnlyList<(string Text, string? Style, float? PitchOffset, float? RateMultiplier)> segments,
         string? cultureOverride = null,
         CancellationToken ct = default)
     {
-        if (segments.Count == 0) return;
+        if (segments.Count == 0)
+        {
+            return;
+        }
 
         await StopSpeakingAsync().ConfigureAwait(false);
         await _speechLock.WaitAsync(ct).ConfigureAwait(false);
@@ -248,13 +257,18 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         {
             _isSynthesizing = true;
             _currentSynthesisCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            if (_synthesizer == null) InitializeSynthesizer();
+            if (_synthesizer == null)
+            {
+                InitializeSynthesizer();
+            }
 
             var ssml = BuildMultiSegmentSsml(segments, cultureOverride);
 
-            await CircuitBreakerPipeline.ExecuteAsync(async _ =>
+            await CircuitBreakerPipeline.ExecuteAsync(
+                async _ =>
             {
-                await RetryPipeline.ExecuteAsync(async token =>
+                await RetryPipeline.ExecuteAsync(
+                    async token =>
                 {
                     using SpeechSynthesisResult result = await _synthesizer!.SpeakSsmlAsync(ssml).ConfigureAwait(false);
                     if (result.Reason == ResultReason.Canceled)
@@ -262,14 +276,23 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
                         var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
                         string errorDetails = cancellation.ErrorDetails ?? string.Empty;
                         if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
+                        {
                             throw new HttpRequestException($"Rate limited: {errorDetails}");
+                        }
+
                         throw new InvalidOperationException(
                             $"Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
                     }
                     else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
                     {
                         System.Diagnostics.Debug.WriteLine($"[Azure TTS] Segment synthesis complete, {result.AudioData.Length} bytes");
-                        try { OnAudioSynthesized?.Invoke(result.AudioData); } catch (Exception ex) when (ex is not OperationCanceledException) { }
+                        try
+                        {
+                            OnAudioSynthesized?.Invoke(result.AudioData);
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                        }
                     }
                 }, ct).ConfigureAwait(false);
             }, ct).ConfigureAwait(false);
@@ -277,11 +300,15 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         catch (BrokenCircuitException)
         {
             System.Diagnostics.Trace.TraceWarning("[TTS] Circuit open -- segment speech falling back to Edge TTS");
+
             // Fallback: concatenate segments and speak as plain text
             var plainText = string.Join(" ", segments.Select(s => s.Text));
             await FallbackSpeakWithEdgeTtsAsync(plainText, ct).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             System.Diagnostics.Trace.TraceWarning("[TTS] Segment speech failed: {0} -- falling back to Edge TTS", ex.Message);
@@ -299,7 +326,10 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
 
     private async Task SpeakCoreAsync(string text, bool isWhisper, string? cultureOverride, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(text)) return;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
 
         await StopSpeakingAsync().ConfigureAwait(false);
         await _speechLock.WaitAsync(ct).ConfigureAwait(false);
@@ -307,13 +337,18 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         {
             _isSynthesizing = true;
             _currentSynthesisCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            if (_synthesizer == null) InitializeSynthesizer();
+            if (_synthesizer == null)
+            {
+                InitializeSynthesizer();
+            }
 
             var ssml = BuildSsml(text, isWhisper, cultureOverride);
 
-            await CircuitBreakerPipeline.ExecuteAsync(async _ =>
+            await CircuitBreakerPipeline.ExecuteAsync(
+                async _ =>
             {
-                await RetryPipeline.ExecuteAsync(async token =>
+                await RetryPipeline.ExecuteAsync(
+                    async token =>
                 {
                     using SpeechSynthesisResult result = await _synthesizer!.SpeakSsmlAsync(ssml).ConfigureAwait(false);
                     if (result.Reason == ResultReason.Canceled)
@@ -321,7 +356,10 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
                         var cancellation = SpeechSynthesisCancellationDetails.FromResult(result);
                         string errorDetails = cancellation.ErrorDetails ?? string.Empty;
                         if (errorDetails.Contains("429") || errorDetails.Contains("Too many requests"))
+                        {
                             throw new HttpRequestException($"Rate limited: {errorDetails}");
+                        }
+
                         // Throw so callers can fall back to Edge/Local TTS
                         throw new InvalidOperationException(
                             $"Azure TTS canceled: {cancellation.Reason} - {errorDetails}");
@@ -329,7 +367,13 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
                     else if (result.Reason == ResultReason.SynthesizingAudioCompleted)
                     {
                         System.Diagnostics.Debug.WriteLine($"[Azure TTS] Synthesis complete, {result.AudioData.Length} bytes");
-                        try { OnAudioSynthesized?.Invoke(result.AudioData); } catch (Exception ex) when (ex is not OperationCanceledException) { }
+                        try
+                        {
+                            OnAudioSynthesized?.Invoke(result.AudioData);
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                        }
                     }
                 }, ct).ConfigureAwait(false);
             }, ct).ConfigureAwait(false);
@@ -344,7 +388,10 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
             System.Diagnostics.Trace.TraceWarning("[TTS] Rate limit (429) -- falling back to Edge TTS Jenny");
             await FallbackSpeakWithEdgeTtsAsync(text, ct).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             System.Diagnostics.Trace.TraceWarning("[TTS] {0}: {1} -- falling back to Edge TTS Jenny", ex.GetType().Name, ex.Message);
@@ -370,13 +417,16 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
             return Result<SpeechResult, string>.Failure("Text cannot be empty");
         }
 
-        if (_synthesizer == null) InitializeSynthesizer();
+        if (_synthesizer == null)
+        {
+            InitializeSynthesizer();
+        }
 
         try
         {
-            var rate      = options?.Speed ?? 1.0;
+            var rate = options?.Speed ?? 1.0;
             var isWhisper = options?.IsWhisper ?? false;
-            var ssml      = BuildSsml(text, isWhisper, cultureOverride: null, rate);
+            var ssml = BuildSsml(text, isWhisper, cultureOverride: null, rate);
 
             using var result = await _synthesizer!.SpeakSsmlAsync(ssml).ConfigureAwait(false);
 
@@ -398,7 +448,10 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
             System.Diagnostics.Trace.TraceWarning("[Azure TTS] Synthesis failed -- falling back to Edge TTS Jenny");
             return await FallbackSynthesizeWithEdgeTtsAsync(text, options, ct).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             System.Diagnostics.Trace.TraceWarning("[Azure TTS] {0}: {1} -- falling back to Edge TTS Jenny", ex.GetType().Name, ex.Message);
@@ -443,7 +496,11 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+        {
+            return;
+        }
+
         _disposed = true;
         _currentSynthesisCts?.Cancel();
         _currentSynthesisCts?.Dispose();
@@ -470,7 +527,10 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
                 System.Diagnostics.Trace.TraceWarning("[TTS] Edge TTS fallback also failed: {0}", edgeResult.Error);
             }
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             System.Diagnostics.Trace.TraceWarning("[TTS] Edge TTS fallback error: {0}", ex.Message);
@@ -490,7 +550,10 @@ public sealed partial class AzureNeuralTtsService : IStreamingTtsService, IDispo
         {
             return await EdgeTtsFallback.Value.SynthesizeAsync(text, options, ct).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return Result<SpeechResult, string>.Failure(

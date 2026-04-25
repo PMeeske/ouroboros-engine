@@ -123,7 +123,8 @@ public static partial class MicrophoneRecorder
             // Wait for key press or cancellation
             Console.WriteLine("🎤 Recording... Press Enter to stop.");
 
-            Task keyTask = Task.Run(() =>
+            Task keyTask = Task.Run(
+                () =>
             {
                 Console.ReadLine();
             }, ct);
@@ -248,5 +249,4 @@ public static partial class MicrophoneRecorder
 
         return "Unable to list devices on this platform";
     }
-
 }

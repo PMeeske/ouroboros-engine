@@ -26,12 +26,13 @@ public sealed class TapoGatewayManager : IAsyncDisposable
     /// <summary>Gets the base URL of the running gateway.</summary>
     public string BaseUrl => $"http://127.0.0.1:{Port}";
 
-    /// <summary>Gets whether the gateway process is running.</summary>
+    /// <summary>Gets a value indicating whether gets whether the gateway process is running.</summary>
     public bool IsRunning => _process is { HasExited: false };
 
     /// <summary>
     /// Starts the Python Tapo Gateway process.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<bool> StartAsync(
         string tapoUsername,
         string tapoPassword,
@@ -98,12 +99,16 @@ public sealed class TapoGatewayManager : IAsyncDisposable
             _process.OutputDataReceived += (_, e) =>
             {
                 if (e.Data != null)
+                {
                     _logger?.LogDebug("[Gateway] {Output}", e.Data);
+                }
             };
             _process.ErrorDataReceived += (_, e) =>
             {
                 if (e.Data != null)
+                {
                     _logger?.LogDebug("[Gateway] {Error}", e.Data);
+                }
             };
             _process.BeginOutputReadLine();
             _process.BeginErrorReadLine();
@@ -122,7 +127,6 @@ public sealed class TapoGatewayManager : IAsyncDisposable
             _logger?.LogInformation("Gateway ready on port {Port}", Port);
             return true;
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             _logger?.LogError(ex, "Failed to start gateway process");
@@ -133,6 +137,7 @@ public sealed class TapoGatewayManager : IAsyncDisposable
     /// <summary>
     /// Polls /health until the gateway responds or timeout is reached.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task<bool> WaitForHealthAsync(TimeSpan timeout, CancellationToken ct = default)
     {
         using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
@@ -150,7 +155,9 @@ public sealed class TapoGatewayManager : IAsyncDisposable
             {
                 var response = await httpClient.GetAsync($"{BaseUrl}/health", ct).ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
+                {
                     return true;
+                }
             }
             catch (HttpRequestException)
             {
@@ -170,10 +177,13 @@ public sealed class TapoGatewayManager : IAsyncDisposable
     /// <summary>
     /// Stops the gateway process.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task StopAsync()
     {
         if (_process == null)
+        {
             return;
+        }
 
         try
         {
@@ -184,7 +194,10 @@ public sealed class TapoGatewayManager : IAsyncDisposable
                 await _process.WaitForExitAsync().ConfigureAwait(false);
             }
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogWarning(ex, "Error stopping gateway process");
@@ -218,7 +231,10 @@ public sealed class TapoGatewayManager : IAsyncDisposable
 
                 // SECURITY: safe — hardcoded python candidates with ArgumentList
                 using var proc = Process.Start(psi);
-                if (proc == null) continue;
+                if (proc == null)
+                {
+                    continue;
+                }
 
                 var output = await proc.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
                 var error = await proc.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
@@ -226,7 +242,9 @@ public sealed class TapoGatewayManager : IAsyncDisposable
 
                 var version = (output + error).Trim();
                 if (version.StartsWith("Python 3", StringComparison.OrdinalIgnoreCase))
+                {
                     return name;
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

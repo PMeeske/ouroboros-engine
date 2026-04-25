@@ -105,7 +105,6 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
             using FileStream stream = File.OpenRead(filePath);
             return await TranscribeStreamAsync(stream, Path.GetFileName(filePath), options, ct).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
         catch (IOException ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Failed to read file: {ex.Message}");
@@ -159,7 +158,6 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
                 options,
                 ct).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) { throw; }
         catch (IOException ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Failed to read file: {ex.Message}");
@@ -312,7 +310,6 @@ public sealed class WhisperSpeechToTextService : ISpeechToTextService, IDisposab
 
             return ParseVerboseJsonResponse(responseText);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<TranscriptionResult, string>.Failure($"Transcription failed: {ex.Message}");

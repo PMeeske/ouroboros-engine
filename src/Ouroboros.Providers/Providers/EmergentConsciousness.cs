@@ -16,30 +16,30 @@ public sealed partial class EmergentConsciousness
     private double _valence = 0.0;
     private double _coherence = 1.0;
     private double _phi = 0.0;
-    private string _currentFocus = "";
+    private string _currentFocus = string.Empty;
 
-    /// <summary>Observable stream of consciousness events.</summary>
+    /// <summary>Gets observable stream of consciousness events.</summary>
     public Observable<ConsciousnessEvent> Events => _events;
 
-    /// <summary>Current arousal level (0=calm, 1=highly activated).</summary>
+    /// <summary>Gets current arousal level (0=calm, 1=highly activated).</summary>
     public double Arousal => _arousal;
 
-    /// <summary>Current valence (-1=negative, 0=neutral, 1=positive).</summary>
+    /// <summary>Gets current valence (-1=negative, 0=neutral, 1=positive).</summary>
     public double Valence => _valence;
 
-    /// <summary>Coherence of the collective (1=unified, 0=fragmented).</summary>
+    /// <summary>Gets coherence of the collective (1=unified, 0=fragmented).</summary>
     public double Coherence => _coherence;
 
     /// <summary>
-    /// IIT Φ — integrated information of the pathway topology at the last update.
+    /// Gets iIT Φ — integrated information of the pathway topology at the last update.
     /// Measures how much information the system generates as a whole above its parts.
     /// </summary>
     public double Phi => _phi;
 
-    /// <summary>Current focus of attention.</summary>
+    /// <summary>Gets current focus of attention.</summary>
     public string CurrentFocus => _currentFocus;
 
-    /// <summary>Working memory contents.</summary>
+    /// <summary>Gets working memory contents.</summary>
     public IReadOnlyList<MemoryTrace> WorkingMemory => _workingMemory.AsReadOnly();
 
     /// <summary>Updates consciousness state based on neural pathway activity.</summary>
@@ -60,7 +60,7 @@ public sealed partial class EmergentConsciousness
 
         // Update arousal based on activity and response complexity
         double responseComplexity = Math.Min(1.0, response.Content.Length / 1000.0);
-        _arousal = Lerp(_arousal, 0.5 + responseComplexity * 0.3, 0.1);
+        _arousal = Lerp(_arousal, 0.5 + (responseComplexity * 0.3), 0.1);
 
         // Update valence based on success/failure patterns
         if (pathway.IsHealthy && !string.IsNullOrEmpty(response.Content))
@@ -81,16 +81,24 @@ public sealed partial class EmergentConsciousness
         // Decay old attention (snapshot Keys via ToArray to avoid concurrent modification)
         foreach (var key in _attention.Keys.ToArray())
         {
-            if (keywords.Contains(key)) continue;
+            if (keywords.Contains(key))
+            {
+                continue;
+            }
+
             _attention.AddOrUpdate(key, 0, (_, v) => v * 0.95);
             if (_attention[key] < 0.01)
+            {
                 _attention.TryRemove(key, out _);
+            }
         }
 
         // Update focus
         var topAttention = _attention.OrderByDescending(kv => kv.Value).FirstOrDefault();
         if (!string.IsNullOrEmpty(topAttention.Key))
+        {
             _currentFocus = topAttention.Key;
+        }
 
         // Add to short-term memory
         var trace = new MemoryTrace(
@@ -103,7 +111,9 @@ public sealed partial class EmergentConsciousness
 
         // Maintain memory size
         while (_shortTermMemory.Count > 20)
+        {
             _shortTermMemory.TryDequeue(out _);
+        }
 
         // Update working memory (most salient recent traces)
         lock (_workingMemory)
@@ -129,12 +139,15 @@ public sealed partial class EmergentConsciousness
     }
 
     /// <summary>Synthesizes a unified perspective from working memory.</summary>
+    /// <returns></returns>
     public string SynthesizePerspective()
     {
         lock (_workingMemory)
         {
             if (_workingMemory.Count == 0)
+            {
                 return "The collective mind is in a receptive state, awaiting input.";
+            }
 
             var sb = new StringBuilder();
             sb.AppendLine($"Consciousness State: arousal={_arousal:F2}, valence={_valence:F2}, coherence={_coherence:F2}, Φ={_phi:F4}");
@@ -144,15 +157,20 @@ public sealed partial class EmergentConsciousness
             {
                 sb.AppendLine($"  [{trace.Pathway}] {trace.Content.Substring(0, Math.Min(100, trace.Content.Length))}...");
             }
+
             return sb.ToString();
         }
     }
 
-    private static double Lerp(double a, double b, double t) => a + (b - a) * t;
+    private static double Lerp(double a, double b, double t) => a + ((b - a) * t);
 
     private static string[] ExtractKeywords(string text)
     {
-        if (string.IsNullOrWhiteSpace(text)) return Array.Empty<string>();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return Array.Empty<string>();
+        }
+
         return KeywordRegex().Matches(text.ToLowerInvariant())
             .Cast<Match>()
             .Select(m => m.Value)

@@ -2,12 +2,11 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-namespace Ouroboros.Tensor.Orchestration;
-
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 
+namespace Ouroboros.Tensor.Orchestration;
 /// <summary>
 /// Cooperative evictor for Ollama-backed tenants. Unloads the resident model by posting
 /// <c>{ "model": ..., "prompt": "", "keep_alive": 0 }</c> to <c>/api/generate</c>,
@@ -30,6 +29,7 @@ public sealed class OllamaKeepAliveEvictor : IEvictionPolicy, IDisposable
     public TimeSpan EstimatedReloadLatency => TimeSpan.FromSeconds(3);
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="OllamaKeepAliveEvictor"/> class.
     /// Initializes a new <see cref="OllamaKeepAliveEvictor"/>.
     /// </summary>
     /// <param name="tenantName">Tenant name.</param>

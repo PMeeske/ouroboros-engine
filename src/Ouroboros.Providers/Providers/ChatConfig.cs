@@ -194,15 +194,21 @@ public static class ChatConfig
     private static ChatEndpointType ParseEndpointType(string? endpointTypeStr)
     {
         if (string.IsNullOrWhiteSpace(endpointTypeStr))
+        {
             return ChatEndpointType.Auto;
+        }
 
         // Try direct enum parse first
         if (Enum.TryParse<ChatEndpointType>(endpointTypeStr, true, out ChatEndpointType parsedType))
+        {
             return parsedType;
+        }
 
         // Try alias lookup
         if (EndpointTypeAliases.TryGetValue(endpointTypeStr, out ChatEndpointType aliasType))
+        {
             return aliasType;
+        }
 
         return ChatEndpointType.Auto;
     }
@@ -216,69 +222,99 @@ public static class ChatConfig
 
         // === ANTHROPIC ===
         if (url.Contains("anthropic.com") || url.Contains("claude.ai"))
+        {
             return ChatEndpointType.Anthropic;
+        }
 
         // === OPENAI ===
         if (url.Contains("api.openai.com"))
+        {
             return ChatEndpointType.OpenAI;
+        }
 
         // === AZURE OPENAI ===
         if (url.Contains(".openai.azure.com") || url.Contains("azure.com/openai"))
+        {
             return ChatEndpointType.AzureOpenAI;
+        }
 
         // === GOOGLE ===
         if (url.Contains("googleapis.com") ||
             url.Contains("generativelanguage.googleapis.com") ||
             url.Contains("aiplatform.googleapis.com") ||
             url.Contains("vertexai"))
+        {
             return ChatEndpointType.Google;
+        }
 
         // === MISTRAL ===
         if (url.Contains("mistral.ai") || url.Contains("api.mistral"))
+        {
             return ChatEndpointType.Mistral;
+        }
 
         // === DEEPSEEK ===
         if (url.Contains("deepseek.com") || url.Contains("api.deepseek"))
+        {
             return ChatEndpointType.DeepSeek;
+        }
 
         // === COHERE ===
         if (url.Contains("cohere.ai") || url.Contains("api.cohere"))
+        {
             return ChatEndpointType.Cohere;
+        }
 
         // === GROQ ===
         if (url.Contains("groq.com") || url.Contains("api.groq"))
+        {
             return ChatEndpointType.Groq;
+        }
 
         // === TOGETHER ===
         if (url.Contains("together.xyz") || url.Contains("api.together"))
+        {
             return ChatEndpointType.Together;
+        }
 
         // === FIREWORKS ===
         if (url.Contains("fireworks.ai") || url.Contains("api.fireworks"))
+        {
             return ChatEndpointType.Fireworks;
+        }
 
         // === PERPLEXITY ===
         if (url.Contains("perplexity.ai") || url.Contains("api.perplexity"))
+        {
             return ChatEndpointType.Perplexity;
+        }
 
         // === REPLICATE ===
         if (url.Contains("replicate.com") || url.Contains("api.replicate"))
+        {
             return ChatEndpointType.Replicate;
+        }
 
         // === HUGGINGFACE ===
         if (url.Contains("huggingface.co") ||
             url.Contains("hf.co") ||
             url.Contains("api-inference.huggingface"))
+        {
             return ChatEndpointType.HuggingFace;
+        }
 
         // === GITHUB MODELS ===
         if (url.Contains("models.inference.ai.azure.com") ||
             url.Contains("github.com/models"))
+        {
             return ChatEndpointType.GitHubModels;
+        }
 
         // === OLLAMA ===
         if (url.Contains("api.ollama.com") || url.Contains("ollama.cloud"))
+        {
             return ChatEndpointType.OllamaCloud;
+        }
 
         if ((url.Contains("localhost") || url.Contains("127.0.0.1") || url.Contains("0.0.0.0"))
             && url.Contains(":11434"))
@@ -288,7 +324,9 @@ public static class ChatConfig
 
         // === LITELLM ===
         if (url.Contains("litellm"))
+        {
             return ChatEndpointType.LiteLLM;
+        }
 
         // Default to OpenAI-compatible
         return ChatEndpointType.OpenAiCompatible;
@@ -300,13 +338,17 @@ public static class ChatConfig
     private static string? GetProviderApiKey(ChatEndpointType endpointType)
     {
         if (!ProviderApiKeyEnvVars.TryGetValue(endpointType, out string[]? envVars))
+        {
             return null;
+        }
 
         foreach (string envVar in envVars)
         {
             string? value = GetConfigValue(envVar);
             if (!string.IsNullOrWhiteSpace(value))
+            {
                 return value;
+            }
         }
 
         return null;
@@ -332,6 +374,7 @@ public static class ChatConfig
     /// <summary>
     /// Get the default endpoint for a provider, if known.
     /// </summary>
+    /// <returns></returns>
     public static string? GetDefaultEndpoint(ChatEndpointType endpointType)
     {
         return DefaultEndpoints.TryGetValue(endpointType, out string? endpoint) ? endpoint : null;
@@ -340,5 +383,6 @@ public static class ChatConfig
     /// <summary>
     /// Get all known endpoint type aliases.
     /// </summary>
+    /// <returns></returns>
     public static IReadOnlyDictionary<string, ChatEndpointType> GetAliases() => EndpointTypeAliases;
 }

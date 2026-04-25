@@ -18,14 +18,17 @@ public readonly record struct TensorShape
     /// </summary>
     public ImmutableArray<int> Dimensions { get; }
 
-    /// <summary>Initializes a new <see cref="TensorShape"/> from an immutable dimension array.</summary>
+    /// <summary>Initializes a new instance of the <see cref="TensorShape"/> struct.Initializes a new <see cref="TensorShape"/> from an immutable dimension array.</summary>
     public TensorShape(ImmutableArray<int> dimensions)
     {
         foreach (var d in dimensions)
         {
             if (d <= 0)
-                throw new ArgumentOutOfRangeException(nameof(dimensions),
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(dimensions),
                     $"All dimensions must be positive. Got {d}.");
+            }
         }
 
         Dimensions = dimensions;
@@ -35,6 +38,7 @@ public readonly record struct TensorShape
     /// Creates a <see cref="TensorShape"/> from a params array of dimension sizes.
     /// </summary>
     /// <example><code>TensorShape.Of(2, 3) // 2×3 matrix</code></example>
+    /// <returns></returns>
     public static TensorShape Of(params int[] dimensions)
         => new(ImmutableArray.Create(dimensions));
 
@@ -47,6 +51,7 @@ public readonly record struct TensorShape
     /// <summary>
     /// Returns <see langword="true"/> if this shape has the same dimensions as <paramref name="other"/>.
     /// </summary>
+    /// <returns></returns>
     public bool IsCompatibleWith(TensorShape other) => Dimensions.SequenceEqual(other.Dimensions);
 
     /// <inheritdoc/>
@@ -56,8 +61,12 @@ public readonly record struct TensorShape
     /// <inheritdoc/>
     public override int GetHashCode()
     {
-        var hash = new HashCode();
-        foreach (var d in Dimensions) hash.Add(d);
+        var hash = default(HashCode);
+        foreach (var d in Dimensions)
+        {
+            hash.Add(d);
+        }
+
         return hash.ToHashCode();
     }
 

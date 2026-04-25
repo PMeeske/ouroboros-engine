@@ -39,13 +39,13 @@ public sealed class CpuGaussianRasterizer : IGaussianRasterizer
 
     private readonly GpuScheduler? _scheduler;
 
-    /// <summary>Creates a scheduler-less rasterizer (tests / no-orchestration paths).</summary>
+    /// <summary>Initializes a new instance of the <see cref="CpuGaussianRasterizer"/> class.Creates a scheduler-less rasterizer (tests / no-orchestration paths).</summary>
     public CpuGaussianRasterizer()
         : this(scheduler: null)
     {
     }
 
-    /// <summary>Creates a rasterizer that routes dispatches through <paramref name="scheduler"/>.</summary>
+    /// <summary>Initializes a new instance of the <see cref="CpuGaussianRasterizer"/> class.Creates a rasterizer that routes dispatches through <paramref name="scheduler"/>.</summary>
     /// <param name="scheduler">GPU scheduler providing priority + telemetry. May be null for direct execution.</param>
     public CpuGaussianRasterizer(GpuScheduler? scheduler)
     {
@@ -80,7 +80,9 @@ public sealed class CpuGaussianRasterizer : IGaussianRasterizer
         int width = camera.Width;
         int height = camera.Height;
         if (width <= 0 || height <= 0)
+        {
             throw new ArgumentException("Camera width/height must be positive.", nameof(camera));
+        }
 
         // Extract orthographic translation (column-major view matrix). Maps
         // world → screen with only xy translation; matches CreateOrthographicIdentity
@@ -152,21 +154,23 @@ public sealed class CpuGaussianRasterizer : IGaussianRasterizer
                 for (int g = 0; g < n; g++)
                 {
                     float gx = positions[g * 3] + tx;
-                    float gy = positions[g * 3 + 1] + ty;
+                    float gy = positions[(g * 3) + 1] + ty;
 
-                    float s = (scales[g * 3] + scales[g * 3 + 1] + scales[g * 3 + 2]) / 3.0f;
+                    float s = (scales[g * 3] + scales[(g * 3) + 1] + scales[(g * 3) + 2]) / 3.0f;
                     float sigma = MathF.Max(0.5f, MathF.Min(s, 30.0f) / 2.0f);
                     float cutoff = sigma * 3.0f;
 
                     float dxCenter = MathF.Abs(gx - tileCx);
                     float dyCenter = MathF.Abs(gy - tileCy);
                     if (dxCenter > cutoff + TileRadius || dyCenter > cutoff + TileRadius)
+                    {
                         continue;
+                    }
 
                     float opacity = opacities[g];
                     float cr = colors[g * 3];
-                    float cg = colors[g * 3 + 1];
-                    float cb = colors[g * 3 + 2];
+                    float cg = colors[(g * 3) + 1];
+                    float cb = colors[(g * 3) + 2];
                     float invSigma2 = 1.0f / (2.0f * sigma * sigma);
 
                     for (int py = y0; py < y1; py++)
@@ -177,15 +181,18 @@ public sealed class CpuGaussianRasterizer : IGaussianRasterizer
                         for (int px = x0; px < x1; px++)
                         {
                             float dx = px - gx;
-                            float dist2 = dx * dx + dy2;
+                            float dist2 = (dx * dx) + dy2;
                             float gauss = MathF.Exp(-dist2 * invSigma2) * opacity;
-                            if (gauss < 1e-6f) continue;
+                            if (gauss < 1e-6f)
+                            {
+                                continue;
+                            }
 
-                            int pixelIdx = py * width + px;
+                            int pixelIdx = (py * width) + px;
                             weightSum[pixelIdx] += gauss;
                             canvas[pixelIdx * 3] += gauss * cr;
-                            canvas[pixelIdx * 3 + 1] += gauss * cg;
-                            canvas[pixelIdx * 3 + 2] += gauss * cb;
+                            canvas[(pixelIdx * 3) + 1] += gauss * cg;
+                            canvas[(pixelIdx * 3) + 2] += gauss * cb;
                         }
                     }
                 }

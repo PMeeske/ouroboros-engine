@@ -32,6 +32,7 @@ namespace Ouroboros.Tensor.Abstractions;
 public sealed record GaussianSet
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="GaussianSet"/> class.
     /// Initializes a new <see cref="GaussianSet"/>. Throws
     /// <see cref="ArgumentException"/> when array lengths disagree with
     /// <paramref name="count"/> or when any position/scale/opacity value is
@@ -64,7 +65,9 @@ public sealed record GaussianSet
         ArgumentNullException.ThrowIfNull(barycentricWeights);
 
         if (count <= 0)
+        {
             throw new ArgumentException("Count must be positive (zero-gaussian sets are rejected).", nameof(count));
+        }
 
         ValidateLength(positions.Length, count * 3, nameof(positions));
         ValidateLength(scales.Length, count * 3, nameof(scales));
@@ -117,7 +120,9 @@ public sealed record GaussianSet
     private static void ValidateLength(int actual, int expected, string name)
     {
         if (actual != expected)
+        {
             throw new ArgumentException($"Expected length {expected}, got {actual}.", name);
+        }
     }
 
     private static void ValidateFinite(float[] buffer, string name)
@@ -126,7 +131,9 @@ public sealed record GaussianSet
         {
             float v = buffer[i];
             if (!float.IsFinite(v))
+            {
                 throw new ArgumentException($"Non-finite value ({v}) at index {i}.", name);
+            }
         }
     }
 }

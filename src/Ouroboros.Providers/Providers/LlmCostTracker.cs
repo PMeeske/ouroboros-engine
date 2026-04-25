@@ -102,21 +102,28 @@ public sealed class LlmCostTracker : ICostTracker
     /// <summary>
     /// Get the provider name for a model.
     /// </summary>
+    /// <returns></returns>
     public static string GetProvider(string model)
     {
         if (string.IsNullOrWhiteSpace(model))
+        {
             return "Unknown";
+        }
 
         // Try exact match first
         if (KnownPricing.TryGetValue(model, out var pricing))
+        {
             return pricing.Provider;
+        }
 
         // Normalize model name for pattern matching
         string normalized = model.ToLowerInvariant();
 
         // === ANTHROPIC ===
         if (normalized.StartsWith("claude") || normalized.Contains("anthropic"))
+        {
             return "Anthropic";
+        }
 
         // === OPENAI ===
         if (normalized.StartsWith("gpt") ||
@@ -127,18 +134,24 @@ public sealed class LlmCostTracker : ICostTracker
             normalized.StartsWith("dall-e") ||
             normalized.StartsWith("whisper") ||
             normalized.Contains("openai"))
+        {
             return "OpenAI";
+        }
 
         // === DEEPSEEK ===
         if (normalized.StartsWith("deepseek") || normalized.Contains("deepseek"))
+        {
             return "DeepSeek";
+        }
 
         // === GOOGLE ===
         if (normalized.StartsWith("gemini") ||
             normalized.StartsWith("palm") ||
             normalized.StartsWith("bard") ||
             normalized.Contains("google"))
+        {
             return "Google";
+        }
 
         // === MISTRAL ===
         if (normalized.StartsWith("mistral") ||
@@ -146,45 +159,61 @@ public sealed class LlmCostTracker : ICostTracker
             normalized.StartsWith("mixtral") ||
             normalized.StartsWith("pixtral") ||
             normalized.Contains("mistral"))
+        {
             return "Mistral";
+        }
 
         // === META (Llama) ===
         if (normalized.StartsWith("llama") ||
             normalized.StartsWith("meta-llama") ||
             normalized.Contains("llama"))
+        {
             return "Meta";
+        }
 
         // === MICROSOFT (Phi) ===
         if (normalized.StartsWith("phi") ||
             normalized.Contains("phi-") ||
             normalized.Contains("microsoft"))
+        {
             return "Microsoft";
+        }
 
         // === COHERE ===
         if (normalized.StartsWith("command") ||
             normalized.StartsWith("cohere") ||
             normalized.Contains("cohere"))
+        {
             return "Cohere";
+        }
 
         // === ALIBABA (Qwen) ===
         if (normalized.StartsWith("qwen") ||
             normalized.Contains("qwen") ||
             normalized.Contains("alibaba"))
+        {
             return "Alibaba";
+        }
 
         // === XAI (Grok) ===
         if (normalized.StartsWith("grok") || normalized.Contains("xai"))
+        {
             return "xAI";
+        }
 
         // === STABILITY AI ===
         if (normalized.StartsWith("stable") ||
             normalized.Contains("stability") ||
             normalized.Contains("sdxl"))
+        {
             return "Stability AI";
+        }
 
         // === HUGGINGFACE ===
         if (normalized.Contains("huggingface") || normalized.Contains("hf/"))
+        {
             return "HuggingFace";
+        }
 
         // === LOCAL INFERENCE ENGINES ===
         if (normalized.Contains("ollama") ||
@@ -192,7 +221,9 @@ public sealed class LlmCostTracker : ICostTracker
             normalized.Contains("llama.cpp") ||
             normalized.Contains("gguf") ||
             normalized.Contains("ggml"))
+        {
             return "Local";
+        }
 
         // === COMMON LOCAL MODELS (free) ===
         if (normalized.StartsWith("gemma") ||
@@ -208,7 +239,9 @@ public sealed class LlmCostTracker : ICostTracker
             normalized.StartsWith("openchat") ||
             normalized.StartsWith("starling") ||
             normalized.StartsWith("zephyr"))
+        {
             return "Local";
+        }
 
         return "Unknown";
     }
@@ -216,17 +249,22 @@ public sealed class LlmCostTracker : ICostTracker
     /// <summary>
     /// Gets pricing for a model. Returns (0, 0) if model unknown or local.
     /// </summary>
+    /// <returns></returns>
     public static ModelPricing GetPricing(string model)
     {
         // Try exact match first
         if (KnownPricing.TryGetValue(model, out var pricing))
+        {
             return pricing;
+        }
 
         // Try prefix match
         foreach (var (key, value) in KnownPricing)
         {
             if (model.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+            {
                 return value;
+            }
         }
 
         // Default to free (assume local/unknown)
@@ -236,6 +274,7 @@ public sealed class LlmCostTracker : ICostTracker
     /// <summary>
     /// Calculates cost for a given token count.
     /// </summary>
+    /// <returns></returns>
     public static decimal CalculateCost(string model, int inputTokens, int outputTokens)
     {
         var pricing = GetPricing(model);
@@ -254,6 +293,7 @@ public sealed class LlmCostTracker : ICostTracker
     /// <summary>
     /// Record completion of a request with token counts.
     /// </summary>
+    /// <returns></returns>
     public RequestMetrics EndRequest(int inputTokens, int outputTokens)
     {
         _currentRequestTimer?.Stop();
@@ -271,7 +311,9 @@ public sealed class LlmCostTracker : ICostTracker
             _totalCost += cost;
 
             if (_requestHistory.Count < 1000) // Limit history size
+            {
                 _requestHistory.Add(metrics);
+            }
         }
 
         // Update global tracker
@@ -295,6 +337,7 @@ public sealed class LlmCostTracker : ICostTracker
     /// <summary>
     /// Get session totals.
     /// </summary>
+    /// <returns></returns>
     public SessionMetrics GetSessionMetrics()
     {
         lock (_lock)
@@ -307,14 +350,14 @@ public sealed class LlmCostTracker : ICostTracker
                 _totalOutputTokens,
                 _totalLatency,
                 _totalCost,
-                _totalRequests > 0 ? _totalLatency / _totalRequests : TimeSpan.Zero
-            );
+                _totalRequests > 0 ? _totalLatency / _totalRequests : TimeSpan.Zero);
         }
     }
 
     /// <summary>
     /// Get global metrics across all trackers.
     /// </summary>
+    /// <returns></returns>
     public static SessionMetrics GetGlobalMetrics() => GlobalTracker.GetSessionMetrics();
 
     /// <summary>
@@ -336,6 +379,7 @@ public sealed class LlmCostTracker : ICostTracker
     /// <summary>
     /// Format a cost summary for display.
     /// </summary>
+    /// <returns></returns>
     public string FormatSessionSummary()
     {
         var metrics = GetSessionMetrics();
@@ -357,6 +401,7 @@ public sealed class LlmCostTracker : ICostTracker
     /// <summary>
     /// Get a cost-awareness prompt that can be injected into system messages.
     /// </summary>
+    /// <returns></returns>
     public static string GetCostAwarenessPrompt(string model)
     {
         var pricing = GetPricing(model);
@@ -385,11 +430,15 @@ public sealed class LlmCostTracker : ICostTracker
     /// <summary>
     /// Get a brief cost string for display.
     /// </summary>
+    /// <returns></returns>
     public string GetCostString()
     {
         var metrics = GetSessionMetrics();
         if (metrics.TotalCost == 0)
+        {
             return $"{metrics.TotalTokens.ToString("N0", CultureInfo.InvariantCulture)} tokens";
+        }
+
         return $"{metrics.TotalTokens.ToString("N0", CultureInfo.InvariantCulture)} tokens (${metrics.TotalCost.ToString("F4", CultureInfo.InvariantCulture)})";
     }
 }

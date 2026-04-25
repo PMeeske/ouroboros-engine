@@ -2,6 +2,9 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -36,10 +39,29 @@ namespace Ouroboros.Tensor.Backends;
 /// </remarks>
 public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
 {
+    // Per-session circuit breaker. When the same InferenceSession throws
+    // OnnxRuntimeException FailureThreshold times in a row, we stop calling
+    // session.Run for CooldownSeconds and return Failure synthetically. This
+    // prevents a 30-60 fps avatar render loop from amplifying a deterministic
+    // ORT failure into 70-200 exceptions/sec, each carrying a stack-trace string
+    // that promotes to LOH/gen2 and never gets reclaimed.
+    private const int FailureThreshold = 10;
+    private const int CooldownSeconds = 30;
+
+    private static readonly ConditionalWeakTable<InferenceSession, CircuitState> S_circuits = new();
+
+    private sealed class CircuitState
+    {
+        public int ConsecutiveFailures;
+        public long OpenUntilTicks; // 0 = closed, otherwise UTC ticks past which we retry
+        public string? LastMessage;
+    }
+
     private readonly CpuTensorBackend _cpuFallback = CpuTensorBackend.Instance;
     private readonly ISharedOrtDmlSessionFactory? _sessionFactory;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="OnnxRuntimeTensorBackend"/> class.
     /// Initializes a new <see cref="OnnxRuntimeTensorBackend"/> with optional session factory.
     /// Pass a configured <see cref="ISharedOrtDmlSessionFactory"/> to enable shared D3D12
     /// DirectML sessions.
@@ -96,6 +118,22 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(inputs);
 
+        CircuitState circuit = S_circuits.GetValue(session, _ => new CircuitState());
+
+        long openUntil = Volatile.Read(ref circuit.OpenUntilTicks);
+        if (openUntil != 0)
+        {
+            if (DateTime.UtcNow.Ticks < openUntil)
+            {
+                return Result<IReadOnlyDictionary<string, ITensor<float>>, string>.Failure(
+                    $"ONNX session circuit open: {circuit.LastMessage}");
+            }
+
+            // Cooldown elapsed — half-open: reset the counter and try once.
+            Interlocked.Exchange(ref circuit.OpenUntilTicks, 0L);
+            Interlocked.Exchange(ref circuit.ConsecutiveFailures, 0);
+        }
+
         try
         {
             // Convert ITensor<float> → OnnxValue
@@ -125,18 +163,39 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
                 }
             }
 
+            // Success — reset circuit.
+            Interlocked.Exchange(ref circuit.ConsecutiveFailures, 0);
             return Result<IReadOnlyDictionary<string, ITensor<float>>, string>.Success(outputs);
         }
         catch (OnnxRuntimeException ex)
         {
-            return Result<IReadOnlyDictionary<string, ITensor<float>>, string>.Failure(
-                $"ONNX inference failed: {ex.Message}");
+            return RecordFailure(circuit, $"ONNX inference failed: {ex.Message}");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Result<IReadOnlyDictionary<string, ITensor<float>>, string>.Failure(
-                $"Unexpected error during ONNX inference: {ex.Message}");
+            return RecordFailure(circuit, $"Unexpected error during ONNX inference: {ex.Message}");
         }
+    }
+
+    private static Result<IReadOnlyDictionary<string, ITensor<float>>, string> RecordFailure(
+        CircuitState circuit, string message)
+    {
+        circuit.LastMessage = message;
+        int count = Interlocked.Increment(ref circuit.ConsecutiveFailures);
+        if (count >= FailureThreshold)
+        {
+            long until = DateTime.UtcNow.AddSeconds(CooldownSeconds).Ticks;
+
+            // Only the first thread that trips the breaker emits the trace, to avoid log spam.
+            if (Interlocked.CompareExchange(ref circuit.OpenUntilTicks, until, 0L) == 0L)
+            {
+                Trace.TraceError(
+                    "[ONNX] Circuit breaker opened after {0} consecutive failures (cooldown {1}s): {2}",
+                    count, CooldownSeconds, message);
+            }
+        }
+
+        return Result<IReadOnlyDictionary<string, ITensor<float>>, string>.Failure(message);
     }
 
     /// <summary>
@@ -144,10 +203,13 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
     /// <see cref="SessionOptions"/> bound to the shared D3D12 device.
     /// Otherwise returns <c>null</c> so the caller can fall back to CPU.
     /// </summary>
+    /// <returns></returns>
     public SessionOptions? TryCreateSessionOptions()
     {
         if (_sessionFactory is null)
+        {
             return null;
+        }
 
         try
         {
@@ -161,5 +223,7 @@ public sealed class OnnxRuntimeTensorBackend : ITensorBackend, IDisposable
     }
 
     /// <inheritdoc/>
-    public void Dispose() { }
+    public void Dispose()
+    {
+    }
 }

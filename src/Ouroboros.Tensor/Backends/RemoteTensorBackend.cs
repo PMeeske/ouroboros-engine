@@ -109,8 +109,10 @@ public sealed class RemoteTensorBackend : ITensorBackend, IDisposable
 
         // Validate shapes
         if (a.Shape.Rank < 2 || b.Shape.Rank < 2)
+        {
             return Result<ITensor<float>, string>.Failure(
                 $"MatMul requires at least rank-2 tensors, got {a.Shape} and {b.Shape}.");
+        }
 
         var aRows = a.Shape.Dimensions[^2];
         var aCols = a.Shape.Dimensions[^1];
@@ -118,8 +120,10 @@ public sealed class RemoteTensorBackend : ITensorBackend, IDisposable
         var bCols = b.Shape.Dimensions[^1];
 
         if (aCols != bRows)
+        {
             return Result<ITensor<float>, string>.Failure(
                 $"MatMul shape mismatch: [{aRows}x{aCols}] x [{bRows}x{bCols}] — inner dimensions must match.");
+        }
 
         try
         {
@@ -221,6 +225,7 @@ public sealed class RemoteTensorBackend : ITensorBackend, IDisposable
     public void Dispose()
     {
         _disposed = true;
+
         // TensorServiceClient is injected — caller owns its lifetime.
         // This method exists so test teardown (IDisposable.Dispose) compiles.
     }

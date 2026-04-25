@@ -30,7 +30,9 @@ public sealed class EmbeddingGeneratorModelAdapter : IEmbeddingModel
             .ConfigureAwait(false);
 
         if (result.Count == 0)
+        {
             return [];
+        }
 
         return result[0].Vector.ToArray();
     }

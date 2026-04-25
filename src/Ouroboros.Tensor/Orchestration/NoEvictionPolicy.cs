@@ -21,6 +21,7 @@ public sealed class NoEvictionPolicy : IEvictionPolicy
     public TimeSpan EstimatedReloadLatency => Timeout.InfiniteTimeSpan;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="NoEvictionPolicy"/> class.
     /// Initializes a new <see cref="NoEvictionPolicy"/>.
     /// </summary>
     /// <param name="tenantName">Tenant name.</param>

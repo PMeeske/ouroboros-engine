@@ -79,6 +79,7 @@ public sealed class LlmVariatorMutation : IMutationStrategy<ToolCallContext>
 #pragma warning restore CA1031
         {
             _logger?.LogWarning(ex, "LLM variator failed, falling back to original prompt with format hint");
+
             // Fallback: append a generic rephrase instruction
             mutatedPrompt = context.Prompt +
                 "\n\nPlease try again. Make sure to call the appropriate tool with the correct format.";
@@ -95,7 +96,7 @@ public sealed class LlmVariatorMutation : IMutationStrategy<ToolCallContext>
         string toolNames = string.Join(", ", context.Tools.Select(t => t.Name));
         string lastErrorInfo = context.History.Count > 0
             ? $"The previous attempt failed. "
-            : "";
+            : string.Empty;
 
         string variatorPrompt = $"""
             You are a prompt optimizer. Your task is to rephrase the following user prompt

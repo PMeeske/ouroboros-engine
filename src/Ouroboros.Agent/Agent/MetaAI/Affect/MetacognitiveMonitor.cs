@@ -87,7 +87,7 @@ public enum ErrorCategory
 /// <summary>
 /// Attribution of a reasoning error to one or more root causes.
 /// </summary>
-/// <param name="Chain">The reasoning chain that produced the error.</param>
+/// <param name="ChainId">Identifier of the reasoning chain that produced the error.</param>
 /// <param name="PrimaryCategory">Most likely error category.</param>
 /// <param name="Confidence">Confidence in this attribution (0-1).</param>
 /// <param name="ContributingFactors">Additional factors that contributed to the error.</param>

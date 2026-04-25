@@ -8,18 +8,21 @@ public static class CollectiveMindDslExtensions
     /// <summary>
     /// Executes a DSL operation on the collective mind.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static Task<T> RunAsync<T>(this CollectiveMind mind, MindOperation<T> operation, CancellationToken ct = default) =>
         operation.ExecuteAsync(mind, ct);
 
     /// <summary>
     /// Creates a streaming pipeline.
     /// </summary>
+    /// <returns></returns>
     public static StreamingPipeline Stream(this CollectiveMind mind) =>
         new(mind);
 
     /// <summary>
     /// Executes a DSL pipeline: config -> operation -> result.
     /// </summary>
+    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public static async Task<TResult> PipelineAsync<TResult>(
         this CollectiveMind mind,
         MindOperation<VoidResult> config,
@@ -33,6 +36,7 @@ public static class CollectiveMindDslExtensions
     /// <summary>
     /// Fluent: Sets master and returns the mind.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind WithMaster(this CollectiveMind mind, string pathwayName)
     {
         mind.SetMaster(pathwayName);
@@ -42,6 +46,7 @@ public static class CollectiveMindDslExtensions
     /// <summary>
     /// Fluent: Sets election strategy and returns the mind.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind WithElection(this CollectiveMind mind, ElectionStrategy strategy)
     {
         mind.ElectionStrategy = strategy;
@@ -51,6 +56,7 @@ public static class CollectiveMindDslExtensions
     /// <summary>
     /// Fluent: Sets thinking mode and returns the mind.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind WithMode(this CollectiveMind mind, CollectiveThinkingMode mode)
     {
         mind.ThinkingMode = mode;
@@ -60,17 +66,22 @@ public static class CollectiveMindDslExtensions
     /// <summary>
     /// Fluent: Enables decomposed mode for goal splitting.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind WithDecomposition(this CollectiveMind mind, DecompositionConfig? config = null)
     {
         mind.ThinkingMode = CollectiveThinkingMode.Decomposed;
         if (config != null)
+        {
             mind.DecompositionConfig = config;
+        }
+
         return mind;
     }
 
     /// <summary>
     /// Fluent: Configures decomposition to prefer local models.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind WithLocalFirst(this CollectiveMind mind)
     {
         mind.ThinkingMode = CollectiveThinkingMode.Decomposed;
@@ -81,6 +92,7 @@ public static class CollectiveMindDslExtensions
     /// <summary>
     /// Fluent: Configures decomposition to prefer quality (cloud premium).
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind WithQualityFirst(this CollectiveMind mind)
     {
         mind.ThinkingMode = CollectiveThinkingMode.Decomposed;
@@ -91,6 +103,7 @@ public static class CollectiveMindDslExtensions
     /// <summary>
     /// Fluent: Configures a pathway's tier and specializations.
     /// </summary>
+    /// <returns></returns>
     public static CollectiveMind WithPathwayConfig(
         this CollectiveMind mind,
         string pathwayName,
@@ -104,6 +117,7 @@ public static class CollectiveMindDslExtensions
     /// <summary>
     /// Creates a DSL expression from a string (simple prompt shorthand).
     /// </summary>
+    /// <returns></returns>
     public static MindOperation<ThinkingResponse> Ask(this CollectiveMind _, string prompt) =>
         MindDsl.Think(prompt);
 }

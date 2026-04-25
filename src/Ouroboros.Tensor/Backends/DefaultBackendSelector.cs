@@ -19,6 +19,7 @@ public sealed class DefaultBackendSelector : ITensorBackendSelector
     private readonly ITensorBackend? _gpuBackend;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultBackendSelector"/> class.
     /// Initializes a new <see cref="DefaultBackendSelector"/> with the default backends.
     /// </summary>
     public DefaultBackendSelector()
@@ -27,6 +28,7 @@ public sealed class DefaultBackendSelector : ITensorBackendSelector
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultBackendSelector"/> class.
     /// Initializes a new <see cref="DefaultBackendSelector"/> with explicit backend instances.
     /// Use this constructor in tests or when injecting a real GPU backend.
     /// </summary>
@@ -53,10 +55,14 @@ public sealed class DefaultBackendSelector : ITensorBackendSelector
     public ITensorBackend SelectBackend(DeviceType preferred = DeviceType.Cpu)
     {
         if (preferred == DeviceType.Cpu)
+        {
             return _cpuBackend;
+        }
 
         if (_gpuBackend is not null)
+        {
             return _gpuBackend;
+        }
 
         // Graceful fallback: GPU requested but unavailable
         return _cpuBackend;

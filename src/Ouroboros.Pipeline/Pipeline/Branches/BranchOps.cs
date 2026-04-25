@@ -48,7 +48,7 @@ public static class BranchOps
 
                 IReadOnlyCollection<Document> top = await temp.GetSimilarDocuments(embed, query, amount: topK).ConfigureAwait(false);
                 Document? best = top.FirstOrDefault();
-                if (best is not null && best.Metadata.TryGetValue("id", out object? idObj) && idObj is string idStr)
+                if (best is not null && best.Metadata?.TryGetValue("id", out object? idObj) == true && idObj is string idStr)
                 {
                     resolved.Add(group.First(g => g.Id == idStr));
                 }

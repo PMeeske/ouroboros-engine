@@ -62,11 +62,15 @@ public sealed record DockerMcpClientOptions
     {
         // Explicit URL always works
         if (!string.IsNullOrWhiteSpace(BaseUrl))
+        {
             return true;
+        }
 
         // On Windows, named pipe is always available if Docker Desktop is running
         if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+        {
             return true;
+        }
 
         // On Unix, check socket exists
         return File.Exists(SocketPath);

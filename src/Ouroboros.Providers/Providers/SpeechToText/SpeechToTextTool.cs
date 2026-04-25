@@ -117,7 +117,6 @@ public sealed class SpeechToTextTool : ITool
                 transcription => Result<string, string>.Success(transcription.Text),
                 error => Result<string, string>.Failure(error));
         }
-        catch (OperationCanceledException) { throw; }
         catch (InvalidOperationException ex)
         {
             return Result<string, string>.Failure($"Transcription failed: {ex.Message}");

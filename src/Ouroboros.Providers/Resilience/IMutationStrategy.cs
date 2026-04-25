@@ -10,7 +10,8 @@ namespace Ouroboros.Providers.Resilience;
 /// enabling the system to adapt rather than repeat the same failing request.
 /// </summary>
 /// <typeparam name="TContext">The mutable execution context type.</typeparam>
-public interface IMutationStrategy<TContext> where TContext : class
+public interface IMutationStrategy<TContext>
+    where TContext : class
 {
     /// <summary>
     /// Gets the human-readable name of this mutation strategy.

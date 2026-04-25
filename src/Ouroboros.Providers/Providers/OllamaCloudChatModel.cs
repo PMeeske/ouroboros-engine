@@ -1,10 +1,10 @@
-﻿using R3;
-using System.Text;
+﻿using System.Text;
 using OllamaSharp;
 using OllamaSharp.Models;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Wrap;
+using R3;
 
 namespace Ouroboros.Providers;
 
@@ -18,7 +18,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
 {
     // Global concurrency limiter: prevents thundering herd when multiple model slots
     // (coder, reasoner, summarizer) all target the same cloud endpoint simultaneously.
-    private static readonly SemaphoreSlim s_cloudConcurrency = new(2, 2);
+    private static readonly SemaphoreSlim cloudConcurrency = new(2, 2);
 
     private readonly HttpClient _client;
     private readonly OllamaApiClient _ollamaClient;
@@ -34,8 +34,15 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
 
     public OllamaCloudChatModel(string endpoint, string apiKey, string model, ChatRuntimeSettings? settings = null, LlmCostTracker? costTracker = null)
     {
-        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
-        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        }
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new ArgumentException("API key is required", nameof(apiKey));
+        }
 
         // Guard: embedding models (nomic-embed-text, mxbai-embed-large, etc.) cannot generate text.
         // Replace with the default chat model to prevent fallback noise in output.
@@ -50,7 +57,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
         _client = new HttpClient
         {
             BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute),
-            Timeout = TimeSpan.FromMinutes(10) // Large models like DeepSeek 671B need longer timeouts
+            Timeout = TimeSpan.FromMinutes(10), // Large models like DeepSeek 671B need longer timeouts
         };
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
 
@@ -67,8 +74,9 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
 
         // 1. Retry policy with exponential backoff + jitter for rate limiting and server errors
         var retryPolicy = Policy
-            .Handle<HttpRequestException>()        // Network failures and HTTP error status codes
-            .Or<TaskCanceledException>(ex =>        // Only genuine HttpClient timeouts, NOT external cancellation.
+            .Handle<HttpRequestException>() // Network failures and HTTP error status codes
+            .Or<TaskCanceledException>(ex => // Only genuine HttpClient timeouts, NOT external cancellation.
+
                 // HttpClient.Timeout fires as TaskCanceledException with InnerException=TimeoutException.
                 // Deliberate cancellation (Racing mode, user Ctrl+C) produces a bare TCE without a TimeoutException.
                 ex.InnerException is TimeoutException)
@@ -111,7 +119,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
     }
 
     /// <summary>
-    /// Maximum prompt size in bytes. Ollama cloud rejects bodies &gt; ~100 KB.
+    /// Gets or sets maximum prompt size in bytes. Ollama cloud rejects bodies &gt; ~100 KB.
     /// Prompts exceeding this are truncated to prevent 500 errors.
     /// </summary>
     public int MaxPromptBytes { get; set; } = 90_000;
@@ -120,7 +128,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
     public async Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
     {
         _costTracker?.StartRequest();
-        await s_cloudConcurrency.WaitAsync(ct).ConfigureAwait(false);
+        await cloudConcurrency.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             string finalPrompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
@@ -139,12 +147,14 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 }
             }
 
-            var result = await _resiliencePolicy.ExecuteAsync(async (innerCt) =>
+            var result = await _resiliencePolicy.ExecuteAsync(
+                async (innerCt) =>
             {
-                string response = "";
+                string response = string.Empty;
                 int promptTokens = 0, outputTokens = 0;
 
-                await foreach (var chunk in _ollamaClient.GenerateAsync(new GenerateRequest
+                await foreach (var chunk in _ollamaClient.GenerateAsync(
+                    new GenerateRequest
                 {
                     Model = _model,
                     Prompt = finalPrompt,
@@ -153,9 +163,10 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                     {
                         Temperature = (float)_settings.Temperature,
                         NumPredict = _settings.MaxTokens > 0 ? _settings.MaxTokens : null
-                    }
+                    },
                 }, innerCt).ConfigureAwait(false))
                 {
+                    if (chunk is null) continue;
                     response += chunk.Response;
 
                     // Extract token counts from the final (done=true) chunk.
@@ -172,7 +183,9 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             }, ct).ConfigureAwait(false);
 
             if (!string.IsNullOrEmpty(result))
+            {
                 return result;
+            }
 
             // Empty response — throw so callers (CollectiveMind, RoundRobin) can
             // trigger circuit breakers and failover to other pathways.
@@ -183,8 +196,14 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
             // Circuit is open - propagate so CollectiveMind can failover to another pathway
             throw new InvalidOperationException($"Ollama circuit open for '{_model}' — service appears down", ex);
         }
-        catch (OperationCanceledException) { throw; }
-        catch (InvalidOperationException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             System.Diagnostics.Trace.TraceWarning("[OllamaCloudChatModel] Error: {0}: {1}", ex.GetType().Name, ex.Message);
@@ -192,7 +211,7 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
         }
         finally
         {
-            s_cloudConcurrency.Release();
+            cloudConcurrency.Release();
         }
     }
 
@@ -208,17 +227,19 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
     {
         return Observable.Create<(bool IsThinking, string Chunk)>(async (observer, token) =>
         {
-            await s_cloudConcurrency.WaitAsync(token).ConfigureAwait(false);
+            await cloudConcurrency.WaitAsync(token).ConfigureAwait(false);
             try
             {
                 string finalPrompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
 
-                await _resiliencePolicy.ExecuteAsync(async (innerToken) =>
+                await _resiliencePolicy.ExecuteAsync(
+                    async (innerToken) =>
                 {
                     bool inThinking = false;
                     StringBuilder buffer = new();
 
-                    await foreach (var chunk in _ollamaClient.GenerateAsync(new GenerateRequest
+                    await foreach (var chunk in _ollamaClient.GenerateAsync(
+                        new GenerateRequest
                     {
                         Model = _model,
                         Prompt = finalPrompt,
@@ -227,9 +248,10 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                         {
                             Temperature = (float)_settings.Temperature,
                             NumPredict = _settings.MaxTokens > 0 ? _settings.MaxTokens : null
-                        }
+                        },
                     }, innerToken).ConfigureAwait(false))
                     {
+                        if (chunk is null) continue;
                         string? content = chunk.Response;
                         if (!string.IsNullOrEmpty(content))
                         {
@@ -242,7 +264,9 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                                 int idx = bufferStr.IndexOf("<think>", StringComparison.OrdinalIgnoreCase);
                                 string beforeTag = bufferStr[..idx];
                                 if (!string.IsNullOrEmpty(beforeTag))
+                                {
                                     observer.OnNext((false, beforeTag));
+                                }
 
                                 buffer.Clear();
                                 buffer.Append(bufferStr[(idx + 7)..]);
@@ -255,7 +279,9 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                                 int idx = bufferStr.IndexOf("</think>", StringComparison.OrdinalIgnoreCase);
                                 string thinkingContent = bufferStr[..idx];
                                 if (!string.IsNullOrEmpty(thinkingContent))
+                                {
                                     observer.OnNext((true, thinkingContent));
+                                }
 
                                 buffer.Clear();
                                 buffer.Append(bufferStr[(idx + 8)..]);
@@ -272,7 +298,10 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                         {
                             // Flush any remaining buffer
                             if (buffer.Length > 0)
+                            {
                                 observer.OnNext((inThinking, buffer.ToString()));
+                            }
+
                             break;
                         }
                     }
@@ -285,14 +314,17 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 // Circuit is open - complete gracefully without error
                 observer.OnCompleted();
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 observer.OnErrorResume(ex);
             }
             finally
             {
-                s_cloudConcurrency.Release();
+                cloudConcurrency.Release();
             }
         });
     }
@@ -302,14 +334,16 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
     {
         return Observable.Create<string>(async (observer, token) =>
         {
-            await s_cloudConcurrency.WaitAsync(token).ConfigureAwait(false);
+            await cloudConcurrency.WaitAsync(token).ConfigureAwait(false);
             try
             {
                 string finalPrompt = _settings.Culture is { Length: > 0 } c ? $"Please answer in {c}. {prompt}" : prompt;
 
-                await _resiliencePolicy.ExecuteAsync(async (innerToken) =>
+                await _resiliencePolicy.ExecuteAsync(
+                    async (innerToken) =>
                 {
-                    await foreach (var chunk in _ollamaClient.GenerateAsync(new GenerateRequest
+                    await foreach (var chunk in _ollamaClient.GenerateAsync(
+                        new GenerateRequest
                     {
                         Model = _model,
                         Prompt = finalPrompt,
@@ -318,9 +352,10 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                         {
                             Temperature = (float)_settings.Temperature,
                             NumPredict = _settings.MaxTokens > 0 ? _settings.MaxTokens : null
-                        }
+                        },
                     }, innerToken).ConfigureAwait(false))
                     {
+                        if (chunk is null) continue;
                         string? content = chunk.Response;
                         if (!string.IsNullOrEmpty(content))
                         {
@@ -341,14 +376,17 @@ public sealed class OllamaCloudChatModel : IStreamingThinkingChatModel, ICostAwa
                 // Circuit is open - complete gracefully without error
                 observer.OnCompleted();
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 observer.OnErrorResume(ex);
             }
             finally
             {
-                s_cloudConcurrency.Release();
+                cloudConcurrency.Release();
             }
         });
     }

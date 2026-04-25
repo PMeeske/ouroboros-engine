@@ -17,7 +17,8 @@ public static class TensorMemoryPool
     /// <typeparam name="T">Unmanaged element type.</typeparam>
     /// <param name="shape">The shape of the tensor to allocate.</param>
     /// <returns>A new <see cref="PooledTensor{T}"/>; must be disposed by the caller.</returns>
-    public static PooledTensor<T> Rent<T>(TensorShape shape) where T : unmanaged
+    public static PooledTensor<T> Rent<T>(TensorShape shape)
+        where T : unmanaged
     {
         var count = (int)shape.ElementCount;
         var buffer = ArrayPool<T>.Shared.Rent(count);
@@ -33,14 +34,17 @@ public static class TensorMemoryPool
     /// Source data to copy; length must equal <see cref="TensorShape.ElementCount"/>.
     /// </param>
     /// <exception cref="ArgumentException">Thrown when data length mismatches the shape.</exception>
+    /// <returns></returns>
     public static PooledTensor<T> RentAndFill<T>(TensorShape shape, ReadOnlySpan<T> data)
         where T : unmanaged
     {
         var count = (int)shape.ElementCount;
         if (data.Length != count)
+        {
             throw new ArgumentException(
                 $"Data length {data.Length} does not match shape element count {count}.",
                 nameof(data));
+        }
 
         var tensor = Rent<T>(shape);
         data.CopyTo(tensor.WritableMemory.Span);

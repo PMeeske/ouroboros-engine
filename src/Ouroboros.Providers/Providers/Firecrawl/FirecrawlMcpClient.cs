@@ -73,10 +73,25 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
             if (options != null)
             {
                 body["formats"] = options.Formats;
-                if (options.IncludeTags != null) body["includeTags"] = options.IncludeTags;
-                if (options.ExcludeTags != null) body["excludeTags"] = options.ExcludeTags;
-                if (options.WaitForDynamic) body["waitFor"] = 3000;
-                if (options.TimeoutMs.HasValue) body["timeout"] = options.TimeoutMs.Value;
+                if (options.IncludeTags != null)
+                {
+                    body["includeTags"] = options.IncludeTags;
+                }
+
+                if (options.ExcludeTags != null)
+                {
+                    body["excludeTags"] = options.ExcludeTags;
+                }
+
+                if (options.WaitForDynamic)
+                {
+                    body["waitFor"] = 3000;
+                }
+
+                if (options.TimeoutMs.HasValue)
+                {
+                    body["timeout"] = options.TimeoutMs.Value;
+                }
             }
 
             using var content = new StringContent(
@@ -96,7 +111,6 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
 
             return Result<FirecrawlScrapeResult, string>.Success(ParseScrapeResult(data, url));
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<FirecrawlScrapeResult, string>.Failure($"Scrape failed: {ex.Message}");
@@ -121,8 +135,15 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
             {
                 body["limit"] = options.MaxPages;
                 body["maxDepth"] = options.MaxDepth;
-                if (options.IncludePatterns != null) body["includePaths"] = options.IncludePatterns;
-                if (options.ExcludePatterns != null) body["excludePaths"] = options.ExcludePatterns;
+                if (options.IncludePatterns != null)
+                {
+                    body["includePaths"] = options.IncludePatterns;
+                }
+
+                if (options.ExcludePatterns != null)
+                {
+                    body["excludePaths"] = options.ExcludePatterns;
+                }
             }
 
             using var content = new StringContent(
@@ -143,7 +164,6 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
 
             return Result<string, string>.Success(jobId);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"Crawl failed: {ex.Message}");
@@ -163,8 +183,10 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
         {
             var response = await _httpClient.GetAsync($"/{_options.ApiVersion}/crawl/{jobId}", ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
+            {
                 return Result<FirecrawlCrawlStatus, string>.Failure(
                     $"GetCrawlStatus failed: {response.StatusCode}");
+            }
 
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             var doc = JsonDocument.Parse(json).RootElement;
@@ -173,7 +195,9 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
             if (doc.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
             {
                 foreach (var item in data.EnumerateArray())
-                    results.Add(ParseScrapeResult(item, ""));
+                {
+                    results.Add(ParseScrapeResult(item, string.Empty));
+                }
             }
 
             return Result<FirecrawlCrawlStatus, string>.Success(new FirecrawlCrawlStatus
@@ -182,10 +206,9 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
                 Status = doc.TryGetProperty("status", out var st) ? st.GetString()! : "unknown",
                 PagesScraped = doc.TryGetProperty("completed", out var comp) ? comp.GetInt32() : results.Count,
                 TotalPages = doc.TryGetProperty("total", out var tot) ? tot.GetInt32() : results.Count,
-                Results = results
+                Results = results,
             });
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<FirecrawlCrawlStatus, string>.Failure($"GetCrawlStatus failed: {ex.Message}");
@@ -207,7 +230,7 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
             var body = new Dictionary<string, object>
             {
                 ["query"] = query,
-                ["limit"] = maxResults
+                ["limit"] = maxResults,
             };
 
             using var content = new StringContent(
@@ -232,17 +255,16 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
                 {
                     results.Add(new FirecrawlSearchResult
                     {
-                        Url = item.TryGetProperty("url", out var u) ? u.GetString()! : "",
+                        Url = item.TryGetProperty("url", out var u) ? u.GetString()! : string.Empty,
                         Title = item.TryGetProperty("title", out var t) ? t.GetString() : null,
                         Description = item.TryGetProperty("description", out var desc) ? desc.GetString() : null,
-                        Markdown = item.TryGetProperty("markdown", out var md) ? md.GetString() : null
+                        Markdown = item.TryGetProperty("markdown", out var md) ? md.GetString() : null,
                     });
                 }
             }
 
             return Result<IReadOnlyList<FirecrawlSearchResult>, string>.Success(results);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<IReadOnlyList<FirecrawlSearchResult>, string>.Failure($"Search failed: {ex.Message}");
@@ -265,7 +287,7 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
             var body = new Dictionary<string, object>
             {
                 ["urls"] = new[] { url },
-                ["schema"] = schemaObj
+                ["schema"] = schemaObj,
             };
 
             using var content = new StringContent(
@@ -281,7 +303,6 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
             return Result<string, string>.Success(json);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<string, string>.Failure($"Extract failed: {ex.Message}");
@@ -318,13 +339,16 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
             if (linksArray.ValueKind == JsonValueKind.Array)
             {
                 foreach (var item in linksArray.EnumerateArray())
+                {
                     if (item.GetString() is { } s)
+                    {
                         urls.Add(s);
+                    }
+                }
             }
 
             return Result<IReadOnlyList<string>, string>.Success(urls);
         }
-        catch (OperationCanceledException) { throw; }
         catch (HttpRequestException ex)
         {
             return Result<IReadOnlyList<string>, string>.Failure($"Map failed: {ex.Message}");
@@ -346,7 +370,6 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
-
     private static FirecrawlScrapeResult ParseScrapeResult(JsonElement el, string fallbackUrl)
     {
         var metadata = el.TryGetProperty("metadata", out var md) ? md : default;
@@ -369,7 +392,7 @@ public sealed class FirecrawlMcpClient : IFirecrawlMcpClient, IDisposable
                     SourceUrl = metadata.TryGetProperty("sourceURL", out var src) ? src.GetString() : null,
                     StatusCode = metadata.TryGetProperty("statusCode", out var sc) ? sc.GetInt32() : null
                 }
-                : null
+                : null,
         };
     }
 }

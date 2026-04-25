@@ -39,6 +39,7 @@ public interface ITensorBackend
     /// Creates an uninitialised tensor of the given shape (contents undefined).
     /// Useful when the caller will fill the tensor immediately.
     /// </summary>
+    /// <returns></returns>
     ITensor<float> CreateUninitialized(TensorShape shape);
 
     /// <summary>
@@ -47,6 +48,7 @@ public interface ITensorBackend
     /// </summary>
     /// <param name="memory">Source memory; length must equal <see cref="TensorShape.ElementCount"/>.</param>
     /// <param name="shape">Shape the memory represents.</param>
+    /// <returns></returns>
     ITensor<float> FromMemory(ReadOnlyMemory<float> memory, TensorShape shape);
 
     /// <summary>

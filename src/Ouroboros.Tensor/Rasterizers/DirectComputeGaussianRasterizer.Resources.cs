@@ -20,7 +20,10 @@ public sealed partial class DirectComputeGaussianRasterizer
 {
     private unsafe void EnsurePipelineBuilt()
     {
-        if (_pipelineBuilt) return;
+        if (_pipelineBuilt)
+        {
+            return;
+        }
 
         ComPtr<ID3D12Device> dev = _sharedDevice!.Device;
 
@@ -44,6 +47,7 @@ public sealed partial class DirectComputeGaussianRasterizer
             NumDescriptors = 2u,
             BaseShaderRegister = 0u,
             RegisterSpace = 0u,
+
             // 188.1.1-03-phase2 gap-#2 fix: UAV range lives in its own standalone
             // descriptor table (root parameter 2). OffsetInDescriptorsFromTableStart
             // is relative to the TABLE's GPU handle base, not to a shared table
@@ -99,6 +103,7 @@ public sealed partial class DirectComputeGaussianRasterizer
             {
                 throw new InvalidOperationException($"CreateRootSignature failed (hr=0x{hr:X8}).");
             }
+
             _rsCompute = new ComPtr<ID3D12RootSignature>((ID3D12RootSignature*)raw);
         }
         finally
@@ -107,22 +112,30 @@ public sealed partial class DirectComputeGaussianRasterizer
             blob.Dispose();
         }
 
-        _psoProject    = CreatePso(dev, _loadedShaders!["gaussian_project"]);
+        _psoProject = CreatePso(dev, _loadedShaders!["gaussian_project"]);
         _psoTileAssign = CreatePso(dev, _loadedShaders!["gaussian_tile_assign"]);
-        _psoTileSort   = CreatePso(dev, _loadedShaders!["gaussian_tile_sort"]);
+        _psoTileSort = CreatePso(dev, _loadedShaders!["gaussian_tile_sort"]);
         _psoTileRaster = CreatePso(dev, _loadedShaders!["gaussian_tile_raster"]);
 
         // Command allocator + graphics command list (COMPUTE type).
         Guid iidAlloc = ID3D12CommandAllocator.Guid;
         void* rawAlloc;
         int hrA = dev.CreateCommandAllocator(CommandListType.Compute, &iidAlloc, &rawAlloc);
-        if (hrA < 0 || rawAlloc == null) throw new InvalidOperationException($"CreateCommandAllocator failed (hr=0x{hrA:X8}).");
+        if (hrA < 0 || rawAlloc == null)
+        {
+            throw new InvalidOperationException($"CreateCommandAllocator failed (hr=0x{hrA:X8}).");
+        }
+
         _cmdAllocator = new ComPtr<ID3D12CommandAllocator>((ID3D12CommandAllocator*)rawAlloc);
 
         Guid iidList = ID3D12GraphicsCommandList.Guid;
         void* rawList;
         int hrL = dev.CreateCommandList(0u, CommandListType.Compute, _cmdAllocator, (ID3D12PipelineState*)null, &iidList, &rawList);
-        if (hrL < 0 || rawList == null) throw new InvalidOperationException($"CreateCommandList failed (hr=0x{hrL:X8}).");
+        if (hrL < 0 || rawList == null)
+        {
+            throw new InvalidOperationException($"CreateCommandList failed (hr=0x{hrL:X8}).");
+        }
+
         _cmdList = new ComPtr<ID3D12GraphicsCommandList>((ID3D12GraphicsCommandList*)rawList);
         _cmdList.Close(); // created in recording state — close so reset is valid next dispatch
 
@@ -139,7 +152,11 @@ public sealed partial class DirectComputeGaussianRasterizer
         Guid iidHeap = ID3D12DescriptorHeap.Guid;
         void* rawHeap;
         int hrH = dev.CreateDescriptorHeap(&heapDesc, &iidHeap, &rawHeap);
-        if (hrH < 0 || rawHeap == null) throw new InvalidOperationException($"CreateDescriptorHeap failed (hr=0x{hrH:X8}).");
+        if (hrH < 0 || rawHeap == null)
+        {
+            throw new InvalidOperationException($"CreateDescriptorHeap failed (hr=0x{hrH:X8}).");
+        }
+
         _srvUavHeap = new ComPtr<ID3D12DescriptorHeap>((ID3D12DescriptorHeap*)rawHeap);
         _descriptorSize = dev.GetDescriptorHandleIncrementSize(DescriptorHeapType.CbvSrvUav);
 
@@ -165,6 +182,7 @@ public sealed partial class DirectComputeGaussianRasterizer
             {
                 throw new InvalidOperationException($"CreateComputePipelineState failed (hr=0x{hr:X8}).");
             }
+
             return new ComPtr<ID3D12PipelineState>((ID3D12PipelineState*)raw);
         }
     }
@@ -179,7 +197,10 @@ public sealed partial class DirectComputeGaussianRasterizer
         bool grow = gaussianCount > _cachedGaussianCount
             || width != _cachedWidth
             || height != _cachedHeight;
-        if (!grow) return;
+        if (!grow)
+        {
+            return;
+        }
 
         ReleasePerFrameBuffers();
 
@@ -198,19 +219,20 @@ public sealed partial class DirectComputeGaussianRasterizer
     private unsafe void CreateBuffers(int gaussianCap, int width, int height, int tileCount, uint rowPitchAligned)
     {
         ComPtr<ID3D12Device> dev = _sharedDevice!.Device;
+
         // Upload-heap SRV inputs (StructuredBuffer). float3 is packed by HLSL
         // as a 12-byte stride; D3D12 accepts that provided the total size
         // is a multiple of 4. We oversize conservatively to avoid edge cases.
         _bufPositions = CreateBuffer(dev, HeapType.Upload, (ulong)gaussianCap * 3ul * 4ul, ResourceStates.GenericRead, ResourceFlags.None);
-        _bufScales    = CreateBuffer(dev, HeapType.Upload, (ulong)gaussianCap * 3ul * 4ul, ResourceStates.GenericRead, ResourceFlags.None);
+        _bufScales = CreateBuffer(dev, HeapType.Upload, (ulong)gaussianCap * 3ul * 4ul, ResourceStates.GenericRead, ResourceFlags.None);
         _bufOpacities = CreateBuffer(dev, HeapType.Upload, (ulong)gaussianCap * 4ul,       ResourceStates.GenericRead, ResourceFlags.None);
-        _bufColors    = CreateBuffer(dev, HeapType.Upload, (ulong)gaussianCap * 3ul * 4ul, ResourceStates.GenericRead, ResourceFlags.None);
+        _bufColors = CreateBuffer(dev, HeapType.Upload, (ulong)gaussianCap * 3ul * 4ul, ResourceStates.GenericRead, ResourceFlags.None);
 
         // Default-heap UAV targets for project/tile-assign.
-        _bufProjected   = CreateBuffer(dev, HeapType.Default, (ulong)gaussianCap * 16ul,  ResourceStates.UnorderedAccess, ResourceFlags.AllowUnorderedAccess);
-        _bufProjColors  = CreateBuffer(dev, HeapType.Default, (ulong)gaussianCap * 16ul,  ResourceStates.UnorderedAccess, ResourceFlags.AllowUnorderedAccess);
-        _bufTileCounts  = CreateBuffer(dev, HeapType.Default, (ulong)tileCount * 4ul,     ResourceStates.CopyDest,        ResourceFlags.AllowUnorderedAccess);
-        _bufTileLists   = CreateBuffer(dev, HeapType.Default, (ulong)tileCount * (ulong)MaxPerTile * 4ul, ResourceStates.UnorderedAccess, ResourceFlags.AllowUnorderedAccess);
+        _bufProjected = CreateBuffer(dev, HeapType.Default, (ulong)gaussianCap * 16ul,  ResourceStates.UnorderedAccess, ResourceFlags.AllowUnorderedAccess);
+        _bufProjColors = CreateBuffer(dev, HeapType.Default, (ulong)gaussianCap * 16ul,  ResourceStates.UnorderedAccess, ResourceFlags.AllowUnorderedAccess);
+        _bufTileCounts = CreateBuffer(dev, HeapType.Default, (ulong)tileCount * 4ul,     ResourceStates.CopyDest,        ResourceFlags.AllowUnorderedAccess);
+        _bufTileLists = CreateBuffer(dev, HeapType.Default, (ulong)tileCount * (ulong)MaxPerTile * 4ul, ResourceStates.UnorderedAccess, ResourceFlags.AllowUnorderedAccess);
 
         // Zero-filled upload source used each frame to re-clear tileCounts
         // via CopyBufferRegion. ClearUnorderedAccessViewUint is gated to
@@ -249,7 +271,11 @@ public sealed partial class DirectComputeGaussianRasterizer
         Guid iidRes = ID3D12Resource.Guid;
         void* rawTex;
         int hrT = dev.CreateCommittedResource(&defHeap, HeapFlags.None, &texDesc, ResourceStates.UnorderedAccess, (ClearValue*)null, &iidRes, &rawTex);
-        if (hrT < 0 || rawTex == null) throw new InvalidOperationException($"CreateCommittedResource(texture) failed (hr=0x{hrT:X8}).");
+        if (hrT < 0 || rawTex == null)
+        {
+            throw new InvalidOperationException($"CreateCommittedResource(texture) failed (hr=0x{hrT:X8}).");
+        }
+
         _texOutput = new ComPtr<ID3D12Resource>((ID3D12Resource*)rawTex);
 
         // Readback buffer sized to pitch-aligned rows.
@@ -284,7 +310,11 @@ public sealed partial class DirectComputeGaussianRasterizer
         Guid iid = ID3D12Resource.Guid;
         void* raw;
         int hr = dev.CreateCommittedResource(&hp, HeapFlags.None, &desc, initialState, (ClearValue*)null, &iid, &raw);
-        if (hr < 0 || raw == null) throw new InvalidOperationException($"CreateCommittedResource(buffer,heap={heapType}) failed (hr=0x{hr:X8}).");
+        if (hr < 0 || raw == null)
+        {
+            throw new InvalidOperationException($"CreateCommittedResource(buffer,heap={heapType}) failed (hr=0x{hr:X8}).");
+        }
+
         return new ComPtr<ID3D12Resource>((ID3D12Resource*)raw);
     }
 
@@ -307,7 +337,7 @@ public sealed partial class DirectComputeGaussianRasterizer
         // Slot 8 = tile-raster RWTexture2D.
         WriteUav(dev, _bufTileCounts, tileCount,              4u, Offset(baseH, 6));
         WriteUav(dev, _bufTileLists,  tileCount * MaxPerTile, 4u, Offset(baseH, 7));
-        WriteUavTex2D(dev, _texOutput, width, height, Offset(baseH, 8));
+        WriteUavTex2D(dev, _texOutput, Offset(baseH, 8));
 
         // Slot 9..12 = tile-raster / tile-assign SRVs
         // (projected/projColors/tileCounts/tileLists) — written as a dedicated
@@ -341,7 +371,7 @@ public sealed partial class DirectComputeGaussianRasterizer
         dev.CreateUnorderedAccessView(buf, (ID3D12Resource*)null, &d, h);
     }
 
-    private static unsafe void WriteUavTex2D(ComPtr<ID3D12Device> dev, ComPtr<ID3D12Resource> tex, int w, int h, CpuDescriptorHandle handle)
+    private static unsafe void WriteUavTex2D(ComPtr<ID3D12Device> dev, ComPtr<ID3D12Resource> tex, CpuDescriptorHandle handle)
     {
         UnorderedAccessViewDesc d = new()
         {

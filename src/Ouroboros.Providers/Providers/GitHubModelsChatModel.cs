@@ -41,9 +41,9 @@ public sealed class GitHubModelsChatModel : OpenAiCompatibleChatModelBase
     public static GitHubModelsChatModel FromEnvironment(string model, ChatRuntimeSettings? settings = null)
     {
         string? token = Environment.GetEnvironmentVariable("MODEL_TOKEN")
-                       ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN") 
+                       ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN")
                        ?? Environment.GetEnvironmentVariable("GITHUB_MODELS_TOKEN");
-        
+
         if (string.IsNullOrWhiteSpace(token))
         {
             throw new InvalidOperationException(

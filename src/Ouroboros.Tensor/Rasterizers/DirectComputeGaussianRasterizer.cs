@@ -67,6 +67,7 @@ public sealed partial class DirectComputeGaussianRasterizer : IGaussianRasterize
     private int _disposed;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DirectComputeGaussianRasterizer"/> class.
     /// Simplified constructor for scenarios where D3D12 infrastructure is
     /// unavailable (tests, non-Windows hosts, early-boot paths). Always
     /// latches CPU fallback.
@@ -79,6 +80,7 @@ public sealed partial class DirectComputeGaussianRasterizer : IGaussianRasterize
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="DirectComputeGaussianRasterizer"/> class.
     /// Production DI constructor. <paramref name="sharedDevice"/> is wired
     /// by <c>GaussianRasterizerExtensions.AddDirectComputeGaussianRasterizer</c>;
     /// a null instance or an unavailable device forces CPU latch.
@@ -110,7 +112,7 @@ public sealed partial class DirectComputeGaussianRasterizer : IGaussianRasterize
     }
 
     /// <summary>
-    /// <see langword="true"/> once any call has successfully dispatched on
+    /// <see langword="true"/> Gets a value indicating whether once any call has successfully dispatched on
     /// the GPU at least once. Plan 188.1.1-04's pixel-diff test uses this
     /// flag to guard against silent CPU fallbacks passing the MAD gate
     /// trivially (since both paths run the same algorithm until the real
@@ -119,7 +121,7 @@ public sealed partial class DirectComputeGaussianRasterizer : IGaussianRasterize
     public bool WasGpuDispatched => _wasGpuDispatched;
 
     /// <summary>
-    /// <see langword="true"/> when init has run and latched permanent CPU
+    /// <see langword="true"/> Gets a value indicating whether when init has run and latched permanent CPU
     /// fallback. Public for diagnostics + test surfaces.
     /// </summary>
     public bool IsCpuLatched
@@ -237,6 +239,7 @@ public sealed partial class DirectComputeGaussianRasterizer : IGaussianRasterize
             LatchCpu(reason: "one or more required DXIL resources missing (DXC not run / non-Windows build)");
             return;
         }
+
         _loadedShaders = loaded;
 
         if (_vramBudget is not null)
@@ -254,7 +257,11 @@ public sealed partial class DirectComputeGaussianRasterizer : IGaussianRasterize
 
     private void LatchCpu(string reason)
     {
-        if (_cpuLatched) return;
+        if (_cpuLatched)
+        {
+            return;
+        }
+
         _cpuLatched = true;
         _logger.LogWarning(
             "[DirectComputeGaussianRasterizer] CPU fallback latched: {Reason}",

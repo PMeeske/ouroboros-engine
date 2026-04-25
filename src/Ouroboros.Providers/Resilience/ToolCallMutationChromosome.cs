@@ -45,18 +45,21 @@ public sealed class ToolCallMutationChromosome
     /// <summary>
     /// Creates a new chromosome with the same fitness but different genes.
     /// </summary>
+    /// <returns></returns>
     public ToolCallMutationChromosome WithGenes(IReadOnlyList<ToolCallMutationGene> genes) =>
         new(genes, Fitness);
 
     /// <summary>
     /// Creates a new chromosome with the same genes but different fitness.
     /// </summary>
+    /// <returns></returns>
     public ToolCallMutationChromosome WithFitness(double fitness) =>
         new(Genes, fitness);
 
     /// <summary>
     /// Creates a default chromosome with balanced parameters.
     /// </summary>
+    /// <returns></returns>
     public static ToolCallMutationChromosome CreateDefault() => new(
     [
         ToolCallMutationGene.Parameters.FormatHintAggression(0.5),
@@ -69,6 +72,7 @@ public sealed class ToolCallMutationChromosome
     /// <summary>
     /// Creates a chromosome with randomized gene values.
     /// </summary>
+    /// <returns></returns>
     public static ToolCallMutationChromosome CreateRandom(System.Random random) => new(
     [
         ToolCallMutationGene.Parameters.FormatHintAggression(random.NextDouble()),
@@ -110,6 +114,7 @@ public sealed class ToolCallMutationChromosome
     /// <summary>
     /// Gets a specific gene by parameter name.
     /// </summary>
+    /// <returns></returns>
     public ToolCallMutationGene? GetGene(string parameterName) =>
         Genes.FirstOrDefault(g => g.ParameterName == parameterName);
 

@@ -36,14 +36,26 @@ public readonly record struct VectorHandle(
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(ProviderId))
+        {
             throw new ArgumentException("ProviderId must not be empty.", nameof(ProviderId));
+        }
+
         if (string.IsNullOrWhiteSpace(CollectionName))
+        {
             throw new ArgumentException("CollectionName must not be empty.", nameof(CollectionName));
+        }
+
         if (string.IsNullOrWhiteSpace(VectorId))
+        {
             throw new ArgumentException("VectorId must not be empty.", nameof(VectorId));
+        }
+
         if (Dimension <= 0)
-            throw new ArgumentOutOfRangeException(nameof(Dimension),
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(Dimension),
                 $"Dimension must be positive. Got {Dimension}.");
+        }
     }
 
     /// <inheritdoc/>

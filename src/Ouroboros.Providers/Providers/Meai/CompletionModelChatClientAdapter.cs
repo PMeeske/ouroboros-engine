@@ -23,10 +23,10 @@ public sealed class CompletionModelChatClientAdapter : IChatClient
         _model = model;
     }
 
-    private static readonly ChatClientMetadata s_metadata = new(nameof(CompletionModelChatClientAdapter));
+    private static readonly ChatClientMetadata MetadataValue = new(nameof(CompletionModelChatClientAdapter));
 
     /// <inheritdoc/>
-    public ChatClientMetadata Metadata => s_metadata;
+    public ChatClientMetadata Metadata => MetadataValue;
 
     /// <inheritdoc/>
     public async Task<ChatResponse> GetResponseAsync(
@@ -75,13 +75,20 @@ public sealed class CompletionModelChatClientAdapter : IChatClient
     /// <inheritdoc/>
     public object? GetService(Type serviceType, object? key = null)
     {
-        if (key is not null) return null;
+        if (key is not null)
+        {
+            return null;
+        }
 
         if (serviceType == typeof(IChatCompletionModel))
+        {
             return _model;
+        }
 
         if (serviceType?.IsAssignableFrom(GetType()) == true)
+        {
             return this;
+        }
 
         return null;
     }
@@ -102,7 +109,9 @@ public sealed class CompletionModelChatClientAdapter : IChatClient
             foreach (var content in msg.Contents)
             {
                 if (content is TextContent tc && !string.IsNullOrEmpty(tc.Text))
+                {
                     parts.Add(tc.Text);
+                }
             }
         }
 

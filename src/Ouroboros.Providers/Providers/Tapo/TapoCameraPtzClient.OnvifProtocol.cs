@@ -18,7 +18,10 @@ public sealed partial class TapoCameraPtzClient
         float panSpeed, float tiltSpeed, float zoomSpeed,
         int durationMs, CancellationToken ct)
     {
-        if (_disposed) return Result<PtzMoveResult>.Failure("Client is disposed");
+        if (_disposed)
+        {
+            return Result<PtzMoveResult>.Failure("Client is disposed");
+        }
 
         // Clamp speeds to valid range
         panSpeed = Math.Clamp(panSpeed, -MaxSpeed, MaxSpeed);
@@ -48,18 +51,19 @@ public sealed partial class TapoCameraPtzClient
 
             var direction = (panSpeed, tiltSpeed) switch
             {
-                ( < 0, 0) => "pan_left",
-                ( > 0, 0) => "pan_right",
+                (< 0, 0) => "pan_left",
+                (> 0, 0) => "pan_right",
                 (0, > 0) => "tilt_up",
                 (0, < 0) => "tilt_down",
-                ( < 0, > 0) => "pan_left+tilt_up",
-                ( > 0, > 0) => "pan_right+tilt_up",
-                ( < 0, < 0) => "pan_left+tilt_down",
-                ( > 0, < 0) => "pan_right+tilt_down",
-                _ => "stop"
+                (< 0, > 0) => "pan_left+tilt_up",
+                (> 0, > 0) => "pan_right+tilt_up",
+                (< 0, < 0) => "pan_left+tilt_down",
+                (> 0, < 0) => "pan_right+tilt_down",
+                _ => "stop",
             };
 
-            _logger?.LogDebug("PTZ move {Direction} at speed ({Pan},{Tilt}) for {Duration}ms on {CameraIp}",
+            _logger?.LogDebug(
+                "PTZ move {Direction} at speed ({Pan},{Tilt}) for {Duration}ms on {CameraIp}",
                 direction, panSpeed, tiltSpeed, durationMs, _cameraIp);
 
             return Result<PtzMoveResult>.Success(
@@ -89,7 +93,7 @@ public sealed partial class TapoCameraPtzClient
 
             using var request = new HttpRequestMessage(HttpMethod.Post, _onvifUrl)
             {
-                Content = content
+                Content = content,
             };
 
             var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
@@ -191,6 +195,7 @@ public sealed partial class TapoCameraPtzClient
             if (response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+
                 // Parse profile token from SOAP response
                 var tokenStart = body.IndexOf("token=\"", StringComparison.Ordinal);
                 if (tokenStart >= 0)
@@ -202,6 +207,7 @@ public sealed partial class TapoCameraPtzClient
                         return Result<string>.Success(body[tokenStart..tokenEnd]);
                     }
                 }
+
                 return Result<string>.Success("profile_1");
             }
 
@@ -352,6 +358,7 @@ public sealed partial class TapoCameraPtzClient
     private string InjectWsseHeader(string soapEnvelope)
     {
         var wsseHeader = BuildWsseHeader();
+
         // Replace empty header placeholder with auth header
         return soapEnvelope.Replace("<s:Header/>", $"<s:Header>{wsseHeader}</s:Header>");
     }

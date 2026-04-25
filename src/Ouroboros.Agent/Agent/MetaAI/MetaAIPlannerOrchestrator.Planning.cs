@@ -27,7 +27,7 @@ public sealed partial class MetaAIPlannerOrchestrator
             List<Experience> pastExperiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
 
             // Find matching skills
-            List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context).ConfigureAwait(false);
+            List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context, ct).ConfigureAwait(false);
 
             // Generate plan using LLM with past experience and skills
             string planPrompt = BuildPlanPrompt(goal, context, pastExperiences, matchingSkills);

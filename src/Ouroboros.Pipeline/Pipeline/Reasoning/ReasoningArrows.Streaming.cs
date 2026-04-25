@@ -22,7 +22,7 @@ public static partial class ReasoningArrows
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             PipelineBranch branch = new PipelineBranch("streaming", new TrackedVectorStore(), DataSource.FromPath("."));
-            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
+            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k, cancellationToken: ct).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = Prompts.Thinking.Format(new()
@@ -42,7 +42,7 @@ public static partial class ReasoningArrows
                 currentTurnText.Clear();
 
                 string? lastFullText = null;
-                await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable().ConfigureAwait(false))
+                await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable(cancellationToken: ct).ConfigureAwait(false))
                 {
                     fullText.Append(chunk);
                     currentTurnText.Append(chunk);
@@ -130,7 +130,7 @@ public static partial class ReasoningArrows
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
             PipelineBranch branch = inputBranch;
-            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
+            IReadOnlyCollection<Document> docs = await branch.Store.GetSimilarDocuments(embed, query, amount: k, cancellationToken: ct).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = Prompts.Draft.Format(new()
@@ -142,7 +142,7 @@ public static partial class ReasoningArrows
 
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
 
-            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable().ConfigureAwait(false))
+            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable(cancellationToken: ct).ConfigureAwait(false))
             {
                 fullText.Append(chunk);
                 PipelineBranch updatedBranch = branch.WithReasoning(new Draft(fullText.ToString()), prompt, null);
@@ -172,7 +172,7 @@ public static partial class ReasoningArrows
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
 
-            IReadOnlyCollection<Document> docs = await inputBranch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
+            IReadOnlyCollection<Document> docs = await inputBranch.Store.GetSimilarDocuments(embed, query, amount: k, cancellationToken: ct).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = Prompts.Critique.Format(new()
@@ -185,7 +185,7 @@ public static partial class ReasoningArrows
 
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
 
-            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable().ConfigureAwait(false))
+            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable(cancellationToken: ct).ConfigureAwait(false))
             {
                 fullText.Append(chunk);
                 PipelineBranch updatedBranch = inputBranch.WithReasoning(new Critique(fullText.ToString()), prompt, null);
@@ -219,7 +219,7 @@ public static partial class ReasoningArrows
         async IAsyncEnumerable<(string chunk, PipelineBranch branch)> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
         {
 
-            IReadOnlyCollection<Document> docs = await inputBranch.Store.GetSimilarDocuments(embed, query, amount: k).ConfigureAwait(false);
+            IReadOnlyCollection<Document> docs = await inputBranch.Store.GetSimilarDocuments(embed, query, amount: k, cancellationToken: ct).ConfigureAwait(false);
             string context = string.Join("\n---\n", docs.Select(d => d.PageContent));
 
             string prompt = Prompts.Improve.Format(new()
@@ -233,7 +233,7 @@ public static partial class ReasoningArrows
 
             System.Text.StringBuilder fullText = new System.Text.StringBuilder();
 
-            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable().ConfigureAwait(false))
+            await foreach (string chunk in streamingModel.StreamReasoningContent(prompt, ct).ToAsyncEnumerable(cancellationToken: ct).ConfigureAwait(false))
             {
                 fullText.Append(chunk);
                 PipelineBranch updatedBranch = inputBranch.WithReasoning(new FinalSpec(fullText.ToString()), prompt, null);

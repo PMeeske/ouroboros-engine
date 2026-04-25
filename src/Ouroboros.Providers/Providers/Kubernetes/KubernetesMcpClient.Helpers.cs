@@ -43,7 +43,9 @@ public sealed partial class KubernetesMcpClient
             {
                 const string saTokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token";
                 if (File.Exists(saTokenPath))
+                {
                     token = File.ReadAllText(saTokenPath).Trim();
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(token))
@@ -68,7 +70,10 @@ public sealed partial class KubernetesMcpClient
         var plural = PluralizeKind(kind);
         var url = $"{prefix}/namespaces/{ns}/{plural}";
         if (!string.IsNullOrWhiteSpace(name))
+        {
             url += $"/{name}";
+        }
+
         return url;
     }
 
@@ -88,7 +93,7 @@ public sealed partial class KubernetesMcpClient
         "cronjob" => "cronjobs",
         "persistentvolumeclaim" => "persistentvolumeclaims",
         var s when s.EndsWith('s') => s,
-        var s => s + "s"
+        var s => s + "s",
     };
 
     private static IReadOnlyList<KubernetesPodInfo> ParsePodList(JsonElement root)
@@ -97,7 +102,9 @@ public sealed partial class KubernetesMcpClient
         if (root.TryGetProperty("items", out var items))
         {
             foreach (var item in items.EnumerateArray())
+            {
                 pods.Add(ParsePod(item));
+            }
         }
 
         return pods;
@@ -113,16 +120,24 @@ public sealed partial class KubernetesMcpClient
         if (spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty("containers", out var cs))
         {
             foreach (var c in cs.EnumerateArray())
+            {
                 if (c.TryGetProperty("name", out var cn))
+                {
                     containers.Add(cn.GetString()!);
+                }
+            }
         }
 
         var restartCount = 0;
         if (status.ValueKind == JsonValueKind.Object && status.TryGetProperty("containerStatuses", out var css))
         {
             foreach (var cs2 in css.EnumerateArray())
+            {
                 if (cs2.TryGetProperty("restartCount", out var rc))
+                {
                     restartCount += rc.GetInt32();
+                }
+            }
         }
 
         return new KubernetesPodInfo
@@ -139,7 +154,7 @@ public sealed partial class KubernetesMcpClient
             Containers = containers,
             CreatedAt = metadata.TryGetProperty("creationTimestamp", out var ct)
                 ? DateTimeOffset.Parse(ct.GetString()!) : null,
-            RestartCount = restartCount
+            RestartCount = restartCount,
         };
     }
 
@@ -149,7 +164,9 @@ public sealed partial class KubernetesMcpClient
         if (root.TryGetProperty("items", out var items))
         {
             foreach (var item in items.EnumerateArray())
+            {
                 list.Add(ParseDeployment(item));
+            }
         }
 
         return list;
@@ -173,7 +190,7 @@ public sealed partial class KubernetesMcpClient
                 ? ar.GetInt32() : 0,
             Labels = ParseLabels(metadata),
             CreatedAt = metadata.TryGetProperty("creationTimestamp", out var ct)
-                ? DateTimeOffset.Parse(ct.GetString()!) : null
+                ? DateTimeOffset.Parse(ct.GetString()!) : null,
         };
     }
 
@@ -183,7 +200,9 @@ public sealed partial class KubernetesMcpClient
         if (root.TryGetProperty("items", out var items))
         {
             foreach (var item in items.EnumerateArray())
+            {
                 list.Add(ParseService(item));
+            }
         }
 
         return list;
@@ -207,7 +226,7 @@ public sealed partial class KubernetesMcpClient
                     TargetPort = p.TryGetProperty("targetPort", out var tp)
                         ? (tp.ValueKind == JsonValueKind.Number ? tp.GetInt32() : int.TryParse(tp.GetString(), out var tpv) ? tpv : 0)
                         : 0,
-                    NodePort = p.TryGetProperty("nodePort", out var np) ? np.GetInt32() : null
+                    NodePort = p.TryGetProperty("nodePort", out var np) ? np.GetInt32() : null,
                 });
             }
         }
@@ -216,7 +235,9 @@ public sealed partial class KubernetesMcpClient
         if (spec.TryGetProperty("selector", out var sel))
         {
             foreach (var kv in sel.EnumerateObject())
+            {
                 selector[kv.Name] = kv.Value.GetString()!;
+            }
         }
 
         return new KubernetesServiceInfo
@@ -228,7 +249,7 @@ public sealed partial class KubernetesMcpClient
             ExternalIp = spec.TryGetProperty("externalIPs", out var eips) && eips.GetArrayLength() > 0
                 ? eips[0].GetString() : null,
             Ports = ports,
-            Selector = selector
+            Selector = selector,
         };
     }
 
@@ -238,7 +259,9 @@ public sealed partial class KubernetesMcpClient
         if (metadata.TryGetProperty("labels", out var lbl))
         {
             foreach (var kv in lbl.EnumerateObject())
+            {
                 labels[kv.Name] = kv.Value.GetString()!;
+            }
         }
 
         return labels;

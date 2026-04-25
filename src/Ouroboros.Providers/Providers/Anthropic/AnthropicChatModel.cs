@@ -68,6 +68,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="AnthropicChatModel"/> class.
     /// Internal constructor for tests that need a custom <see cref="AnthropicClient"/> (for example HTTP stubs).
     /// </summary>
     internal AnthropicChatModel(AnthropicClient client, string model, ChatRuntimeSettings? settings, int? thinkingBudgetTokens, LlmCostTracker? costTracker)
@@ -109,6 +110,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
             {
                 foreach (ContentBlock block in result.Content)
                 {
+#pragma warning disable CS8600 // Anthropic SDK out params lack nullable annotations
                     if (block.TryPickThinking(out ThinkingBlock thinkingBlock))
                     {
                         thinking = thinkingBlock.Thinking;
@@ -117,6 +119,7 @@ public sealed class AnthropicChatModel : IStreamingThinkingChatModel, ICostAware
                     {
                         contentBuilder.Append(textBlock.Text);
                     }
+#pragma warning restore CS8600
                 }
             }
 

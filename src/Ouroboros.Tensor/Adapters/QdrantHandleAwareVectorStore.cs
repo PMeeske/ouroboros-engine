@@ -28,6 +28,7 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
     private readonly QdrantClient _client;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="QdrantHandleAwareVectorStore"/> class.
     /// Initializes a new <see cref="QdrantHandleAwareVectorStore"/> using the given Qdrant client.
     /// </summary>
     public QdrantHandleAwareVectorStore(QdrantClient client)
@@ -42,9 +43,11 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
         CancellationToken cancellationToken = default)
     {
         if (!TryParsePointId(handle.VectorId, out var pointId))
+        {
             return Result<float[], string>.Failure(
                 $"VectorId '{handle.VectorId}' is not a valid Qdrant point ID " +
                 "(expected a GUID string or a numeric ulong).");
+        }
 
         try
         {
@@ -57,10 +60,14 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
 
             var point = points.FirstOrDefault();
             if (point is null)
+            {
                 return Result<float[], string>.Failure(
                     $"Vector '{handle.VectorId}' not found in collection '{handle.CollectionName}'.");
+            }
 
+#pragma warning disable CS0612 // ExtractVector uses legacy Qdrant.Vector.Data API (TODO: migrate to named vectors)
             return ExtractVector(point, handle);
+#pragma warning restore CS0612
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -89,8 +96,10 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
             foreach (var handle in collectionHandles)
             {
                 if (!TryParsePointId(handle.VectorId, out var pid))
+                {
                     return Result<IReadOnlyList<(VectorHandle, float[])>, string>.Failure(
                         $"VectorId '{handle.VectorId}' is not a valid Qdrant point ID.");
+                }
 
                 pointIds.Add(pid);
                 idIndex[handle.VectorId] = handle;
@@ -109,11 +118,17 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
                 {
                     var vectorId = PointIdToString(point.Id);
                     if (!idIndex.TryGetValue(vectorId, out var handle))
+                    {
                         continue;
+                    }
 
+#pragma warning disable CS0612 // ExtractVector uses legacy Qdrant.Vector.Data API (TODO: migrate to named vectors)
                     var vectorResult = ExtractVector(point, handle);
+#pragma warning restore CS0612
                     if (vectorResult.IsSuccess)
+                    {
                         results.Add((handle, vectorResult.Value));
+                    }
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -164,7 +179,6 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
     private static bool TryParsePointId(string id, out PointId pointId)
     {
         if (Guid.TryParse(id, out var guid))
@@ -186,11 +200,17 @@ public sealed class QdrantHandleAwareVectorStore : IHandleAwareVectorStore
     private static string PointIdToString(PointId id)
         => id.Uuid ?? id.Num.ToString();
 
+    [Obsolete]
     private static Result<float[], string> ExtractVector(RetrievedPoint point, VectorHandle handle)
     {
         // Default (un-named) vector lives in Vectors.Vector.Data
+        // TODO(qdrant-api): Migrate to .Dense.Data once schema is named-vectors (Qdrant.Client 1.17+).
+#pragma warning disable CS0612
         if (point.Vectors?.Vector?.Data is { Count: > 0 } data)
+#pragma warning restore CS0612
+        {
             return Result<float[], string>.Success(data.ToArray());
+        }
 
         return Result<float[], string>.Failure(
             $"Point '{handle.VectorId}' in collection '{handle.CollectionName}' " +

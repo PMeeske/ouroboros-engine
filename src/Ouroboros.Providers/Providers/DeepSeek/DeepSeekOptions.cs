@@ -28,4 +28,4 @@ public record DeepSeekOptions(
     /// Gets the effective default model based on local vs cloud usage.
     /// </summary>
     public string EffectiveDefaultModel => DefaultModel ?? (UseLocal ? "deepseek-r1:8b" : "deepseek-r1:32b");
-};
+}

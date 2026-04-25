@@ -20,12 +20,19 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
 
     public OllamaCloudEmbeddingModel(string endpoint, string apiKey, string model)
     {
-        if (string.IsNullOrWhiteSpace(endpoint)) throw new ArgumentException("Endpoint is required", nameof(endpoint));
-        if (string.IsNullOrWhiteSpace(apiKey)) throw new ArgumentException("API key is required", nameof(apiKey));
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            throw new ArgumentException("Endpoint is required", nameof(endpoint));
+        }
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+        {
+            throw new ArgumentException("API key is required", nameof(apiKey));
+        }
 
         _client = new HttpClient
         {
-            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute)
+            BaseAddress = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute),
         };
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         _ollamaClient = new OllamaApiClient(_client);
@@ -52,7 +59,8 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
         {
             EmbedResponse result = await _retryPolicy.ExecuteAsync(async () =>
             {
-                EmbedResponse response = await _ollamaClient.EmbedAsync(new EmbedRequest
+                EmbedResponse response = await _ollamaClient.EmbedAsync(
+                    new EmbedRequest
                 {
                     Model = _model,
                     Input = [input],
@@ -69,6 +77,7 @@ public sealed class OllamaCloudEmbeddingModel : IEmbeddingModel
         {
             // Remote Ollama Cloud not reachable → fall back to deterministic embedding
         }
+
         return await _fallback.CreateEmbeddingsAsync(input, ct).ConfigureAwait(false);
     }
 

@@ -113,7 +113,7 @@ public static class SolutionIngestion
         if (options.MetaOnly)
         {
             if (vectors.Count > 0)
-                await store.AddAsync(vectors).ConfigureAwait(false);
+                await store.AddAsync(vectors, ct).ConfigureAwait(false);
             return vectors;
         }
 
@@ -140,7 +140,7 @@ public static class SolutionIngestion
                 {
                     try
                     {
-                        float[] embResp = await embed.CreateEmbeddingsAsync(chunk).ConfigureAwait(false);
+                        float[] embResp = await embed.CreateEmbeddingsAsync(chunk, ct).ConfigureAwait(false);
                         Dictionary<string, object> meta = new Dictionary<string, object>
                         {
                             ["path"] = file,
@@ -166,7 +166,7 @@ public static class SolutionIngestion
         }
 
         if (vectors.Count > 0)
-            await store.AddAsync(vectors).ConfigureAwait(false);
+            await store.AddAsync(vectors, ct).ConfigureAwait(false);
         return vectors;
     }
 
@@ -174,7 +174,7 @@ public static class SolutionIngestion
     {
         try
         {
-            float[] emb = await embed.CreateEmbeddingsAsync(content).ConfigureAwait(false);
+            float[] emb = await embed.CreateEmbeddingsAsync(content, ct).ConfigureAwait(false);
             Dictionary<string, object> meta = new Dictionary<string, object> { ["type"] = "meta" };
             vectors.Add(new Vector
             {

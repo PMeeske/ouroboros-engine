@@ -10,5 +10,5 @@ public enum ElectionEventType
     MasterEvaluation,
     MasterEvaluationFailed,
     ElectionComplete,
-    OptimizationSuggested
+    OptimizationSuggested,
 }

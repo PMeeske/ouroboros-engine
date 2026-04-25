@@ -71,11 +71,11 @@ dotnet_diagnostic.CS1570.severity = none
 dotnet_diagnostic.CS1573.severity = none
 dotnet_diagnostic.CS1574.severity = none
 dotnet_diagnostic.CS1587.severity = none
-dotnet_diagnostic.CS8601.severity = suggestion
-dotnet_diagnostic.CS8602.severity = suggestion
-dotnet_diagnostic.CS8603.severity = suggestion
-dotnet_diagnostic.CS8604.severity = suggestion
-dotnet_diagnostic.CS8618.severity = suggestion
+# dotnet_diagnostic.CS8601.severity = suggestion  # REMOVED for v56.0 Phase 248 ratchet
+# dotnet_diagnostic.CS8602.severity = suggestion  # REMOVED for v56.0 Phase 248 ratchet
+# dotnet_diagnostic.CS8603.severity = suggestion  # REMOVED for v56.0 Phase 248 ratchet
+# dotnet_diagnostic.CS8604.severity = suggestion  # REMOVED for v56.0 Phase 248 ratchet
+# dotnet_diagnostic.CS8618.severity = suggestion  # REMOVED for v56.0 Phase 248 ratchet
 
 # Sonar: naming / style (not bugs)
 dotnet_diagnostic.S101.severity = suggestion
@@ -113,3 +113,15 @@ indent_size = 2
 # Markdown files
 [*.md]
 trim_trailing_whitespace = false
+
+# StyleCop SA-family — reclassified to suggestion per v56.0 milestone decision
+# (matches existing Sonar S#### treatment). 92 SA rules, ~24,643 warnings.
+# Single category-line per StyleCop rule family:
+[*.cs]
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.SpacingRules.severity = suggestion
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.ReadabilityRules.severity = suggestion
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.OrderingRules.severity = suggestion
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.NamingRules.severity = suggestion
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.MaintainabilityRules.severity = suggestion
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.LayoutRules.severity = suggestion
+dotnet_analyzer_diagnostic.category-StyleCop.CSharp.DocumentationRules.severity = suggestion

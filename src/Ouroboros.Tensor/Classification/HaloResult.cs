@@ -27,19 +27,19 @@ namespace Ouroboros.Tensor.Classification;
 public readonly record struct HaloResult
 {
     /// <summary>
-    /// Index of the winning class, or -1 if the input is out-of-distribution (origin sink wins).
+    /// Gets index of the winning class, or -1 if the input is out-of-distribution (origin sink wins).
     /// When <see cref="IsOutOfDistribution"/> is true, this is always -1.
     /// </summary>
     public int ClassIndex { get; init; }
 
     /// <summary>
-    /// Name of the winning class, or "unknown" if the input is out-of-distribution.
+    /// Gets name of the winning class, or "unknown" if the input is out-of-distribution.
     /// When <see cref="IsOutOfDistribution"/> is true, this is always "unknown".
     /// </summary>
     public string ClassName { get; init; }
 
     /// <summary>
-    /// Confidence score for the winning class, in range [0, 1].
+    /// Gets confidence score for the winning class, in range [0, 1].
     /// This is the softmax probability of the winning class.
     /// For in-distribution inputs near a centroid, this approaches 1.0.
     /// For equidistant inputs, this is approximately 1/K (uniform distribution).
@@ -47,7 +47,7 @@ public readonly record struct HaloResult
     public float Confidence { get; init; }
 
     /// <summary>
-    /// Probability mass assigned to the origin sink.
+    /// Gets probability mass assigned to the origin sink.
     /// The origin sink represents the "none of the above" category -- its logit is always 0
     /// after shift-invariant transformation, meaning it captures inputs that are far from all
     /// class centroids. High <see cref="SinkProbability"/> indicates OOD detection.
@@ -56,7 +56,7 @@ public readonly record struct HaloResult
     public float SinkProbability { get; init; }
 
     /// <summary>
-    /// Whether the input was classified as out-of-distribution.
+    /// Gets a value indicating whether whether the input was classified as out-of-distribution.
     /// True when the origin sink probability exceeds all class probabilities,
     /// meaning the input is far from all known centroids and the model signals
     /// "I don't know" rather than forcing a low-confidence classification.
@@ -64,7 +64,7 @@ public readonly record struct HaloResult
     public bool IsOutOfDistribution { get; init; }
 
     /// <summary>
-    /// Full softmax probability distribution over all classes and the origin sink.
+    /// Gets full softmax probability distribution over all classes and the origin sink.
     /// Length is K+1 when origin sink is included (last element is sink probability),
     /// or K when origin sink is excluded.
     /// </summary>

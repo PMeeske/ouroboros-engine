@@ -21,5 +21,5 @@ public enum CameraStreamQuality
     FullHD,
 
     /// <summary>2K QHD stream.</summary>
-    QHD
+    QHD,
 }

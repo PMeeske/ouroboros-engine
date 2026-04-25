@@ -42,7 +42,7 @@ public sealed partial class PersistentSkillRegistry
                 {
                     string query = category ?? string.Join(" ", tags ?? Array.Empty<string>());
                     float[] queryEmbedding = await _embedding.CreateEmbeddingsAsync(query, ct).ConfigureAwait(false);
-                    var similarDocs = await _vectorStore.GetSimilarDocumentsAsync(queryEmbedding, Math.Min(10, filtered.Count)).ConfigureAwait(false);
+                    var similarDocs = await _vectorStore.GetSimilarDocumentsAsync(queryEmbedding, Math.Min(10, filtered.Count), ct).ConfigureAwait(false);
 
                     var matchedSkills = new List<AgentSkill>();
                     foreach (var doc in similarDocs)

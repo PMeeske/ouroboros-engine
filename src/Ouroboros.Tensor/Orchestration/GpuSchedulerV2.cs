@@ -29,6 +29,7 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
     {
         GpuPriorityClass.Realtime,
         GpuPriorityClass.Normal,
+        GpuPriorityClass.Perception,
         GpuPriorityClass.Background,
         GpuPriorityClass.Idle,
     };
@@ -52,6 +53,7 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
     {
         [GpuPriorityClass.Realtime] = new LinkedList<string>(),
         [GpuPriorityClass.Normal] = new LinkedList<string>(),
+        [GpuPriorityClass.Perception] = new LinkedList<string>(),
         [GpuPriorityClass.Background] = new LinkedList<string>(),
         [GpuPriorityClass.Idle] = new LinkedList<string>(),
     };
@@ -67,7 +69,7 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
 
     private long _completedCount;
     private long _failedCount;
-    private long _estimatedUsedVram;
+    private long _estimatedUsedVram = 0;
     private int _queueDepth;
     private TimeSpan _lastLatency;
     private volatile bool _disposed;
@@ -78,6 +80,7 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
     private readonly ConcurrentDictionary<string, GpuPriorityClass> _originalBasePriorities = new(StringComparer.Ordinal);
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GpuSchedulerV2"/> class.
     /// Initializes a new <see cref="GpuSchedulerV2"/>.
     /// </summary>
     /// <param name="totalVramBytes">Total VRAM in bytes (used for metrics reporting only in plan 01).</param>

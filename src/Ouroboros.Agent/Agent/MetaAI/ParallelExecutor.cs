@@ -57,7 +57,7 @@ public sealed class ParallelExecutor
                     overallSuccess = false;
                 }
 
-                outputs.Add(result.Output);
+                if (result.Output is not null) outputs.Add(result.Output);
 
                 return result;
             });

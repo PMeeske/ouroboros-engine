@@ -8,7 +8,12 @@ namespace Ouroboros.Providers.Meai;
 /// </summary>
 public sealed class ThinkingAIContent : AIContent
 {
-    public ThinkingAIContent(string text) { Text = text; }
+    public ThinkingAIContent(string text)
+    {
+        Text = text;
+    }
+
     public string Text { get; }
+
     public override string ToString() => Text;
 }

@@ -39,6 +39,7 @@ public sealed class TapoRtspClientFactory : ITapoRtspClientFactory, IDisposable
         {
             client.Dispose();
         }
+
         _clients.Clear();
     }
 }

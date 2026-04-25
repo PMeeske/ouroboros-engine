@@ -10,55 +10,55 @@ public enum TapoDeviceType
 {
     /// <summary>Light bulb (non-color).</summary>
     L510,
-    
+
     /// <summary>Light bulb (non-color).</summary>
     L520,
-    
+
     /// <summary>Light bulb (non-color).</summary>
     L610,
-    
+
     /// <summary>Light bulb with customizable colors.</summary>
     L530,
-    
+
     /// <summary>Light bulb with customizable colors.</summary>
     L535,
-    
+
     /// <summary>Light bulb with customizable colors.</summary>
     L630,
-    
+
     /// <summary>RGB light strip.</summary>
     L900,
-    
+
     /// <summary>RGB light strip with individually colored segments.</summary>
     L920,
-    
+
     /// <summary>RGB light strip with individually colored segments.</summary>
     L930,
-    
+
     /// <summary>Smart plug.</summary>
     P100,
-    
+
     /// <summary>Smart plug.</summary>
     P105,
-    
+
     /// <summary>Smart plug with energy monitoring.</summary>
     P110,
-    
+
     /// <summary>Smart plug with energy monitoring.</summary>
     P110M,
-    
+
     /// <summary>Smart plug with energy monitoring.</summary>
     P115,
-    
+
     /// <summary>Power strip.</summary>
     P300,
-    
+
     /// <summary>Power strip.</summary>
     P304,
-    
+
     /// <summary>Power strip.</summary>
     P304M,
-    
+
     /// <summary>Power strip.</summary>
     P316,
 
@@ -89,5 +89,5 @@ public enum TapoDeviceType
     C500,
 
     /// <summary>Outdoor Pan/Tilt Security Wi-Fi Camera with 2K QHD.</summary>
-    C520
+    C520,
 }

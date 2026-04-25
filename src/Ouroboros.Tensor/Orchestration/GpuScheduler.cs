@@ -18,14 +18,22 @@ public enum GpuTaskPriority
     /// <summary>Background jobs (batch processing, pre-computation).</summary>
     Background = 0,
 
+    /// <summary>
+    /// Live sensory capture (webcam FER, face identity, pose, gaze). Phase 235.
+    /// Strictly below <see cref="Normal"/> so perception work never preempts
+    /// interactive inference or the rasterizer. Maps to
+    /// <see cref="GpuPriorityClass.Perception"/>.
+    /// </summary>
+    Perception = 1,
+
     /// <summary>Normal inference tasks.</summary>
-    Normal = 1,
+    Normal = 2,
 
     /// <summary>Interactive tasks requiring low latency (LLM responses). Maps to <see cref="GpuPriorityClass.Realtime"/>.</summary>
-    High = 2,
+    High = 3,
 
     /// <summary>Real-time tasks (streaming video/audio processing).</summary>
-    Realtime = 3,
+    Realtime = 4,
 }
 
 /// <summary>
@@ -86,6 +94,7 @@ public sealed class GpuScheduler : IDisposable
     private volatile bool _disposed;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GpuScheduler"/> class.
     /// Initializes a new <see cref="GpuScheduler"/>.
     /// </summary>
     /// <param name="totalVramBytes">
@@ -99,6 +108,7 @@ public sealed class GpuScheduler : IDisposable
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="GpuScheduler"/> class.
     /// Wraps an existing <see cref="GpuSchedulerV2"/> instance. Used by DI wiring
     /// so the legacy adapter and the v2 scheduler share the same dispatch loop.
     /// </summary>
@@ -285,6 +295,7 @@ public sealed class GpuScheduler : IDisposable
     private static GpuPriorityClass MapPriority(GpuTaskPriority p) => p switch
     {
         GpuTaskPriority.Background => GpuPriorityClass.Background,
+        GpuTaskPriority.Perception => GpuPriorityClass.Perception,
         GpuTaskPriority.Normal => GpuPriorityClass.Normal,
         GpuTaskPriority.High => GpuPriorityClass.Realtime,
         GpuTaskPriority.Realtime => GpuPriorityClass.Realtime,

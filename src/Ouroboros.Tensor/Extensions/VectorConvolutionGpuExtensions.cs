@@ -47,7 +47,9 @@ public static class VectorConvolutionGpu
         ITensorBackend? backend = null)
     {
         if (signal.Length != kernel.Length)
+        {
             throw new ArgumentException("Vectors must have same dimension");
+        }
 
         // If backend is RemoteTensorBackend with GPU, use GPU FFT
         if (backend is RemoteTensorBackend remoteBackend && backend.Device == DeviceType.Cuda)
@@ -74,9 +76,9 @@ public static class VectorConvolutionGpu
         for (int i = 0; i < n; i++)
         {
             signalComplex[i * 2] = signal[i];
-            signalComplex[i * 2 + 1] = 0;
+            signalComplex[(i * 2) + 1] = 0;
             kernelComplex[i * 2] = kernel[i];
-            kernelComplex[i * 2 + 1] = 0;
+            kernelComplex[(i * 2) + 1] = 0;
         }
 
         // Create tensors for FFT
@@ -146,12 +148,12 @@ public static class VectorConvolutionGpu
         for (int i = 0; i < aSpan.Length / 2; i++)
         {
             float aRe = aSpan[i * 2];
-            float aIm = aSpan[i * 2 + 1];
+            float aIm = aSpan[(i * 2) + 1];
             float bRe = bSpan[i * 2];
-            float bIm = bSpan[i * 2 + 1];
+            float bIm = bSpan[(i * 2) + 1];
 
-            resultSpan[i * 2] = aRe * bRe - aIm * bIm;     // real part
-            resultSpan[i * 2 + 1] = aRe * bIm + aIm * bRe;  // imag part
+            resultSpan[i * 2] = (aRe * bRe) - (aIm * bIm);     // real part
+            resultSpan[(i * 2) + 1] = (aRe * bIm) + (aIm * bRe);  // imag part
         }
 
         return result;

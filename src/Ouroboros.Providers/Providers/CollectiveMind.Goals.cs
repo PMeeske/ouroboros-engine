@@ -21,7 +21,9 @@ public sealed partial class CollectiveMind
         // Step 1: Use master or best pathway to decompose the goal
         var decomposer = _masterPathway ?? GetBestPathwayForDecomposition();
         if (decomposer == null)
+        {
             throw new InvalidOperationException("No pathways available for goal decomposition");
+        }
 
         var subGoals = await DecomposeIntoSubGoals(decomposer, prompt, ct).ConfigureAwait(false);
 
@@ -80,7 +82,10 @@ public sealed partial class CollectiveMind
 
             return ParseSubGoals(response.Content);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: LLM provider fallback to single-goal mode
         {
             _thoughtStream.OnNext($"⚠️ Decomposition failed: {ex.Message}, falling back to single goal");
@@ -94,7 +99,7 @@ public sealed partial class CollectiveMind
                     Complexity: EstimateComplexity(prompt),
                     Type: EstimateGoalType(prompt),
                     Dependencies: Array.Empty<string>(),
-                    PreferredTier: PathwayTier.CloudLight)
+                    PreferredTier: PathwayTier.CloudLight),
             };
         }
     }
@@ -117,11 +122,11 @@ public sealed partial class CollectiveMind
             foreach (var element in jsonArray.RootElement.EnumerateArray())
             {
                 var id = element.GetProperty("id").GetString() ?? $"goal_{goals.Count + 1}";
-                var description = element.GetProperty("description").GetString() ?? "";
+                var description = element.GetProperty("description").GetString() ?? string.Empty;
                 var complexityStr = element.TryGetProperty("complexity", out var c) ? c.GetString() : "moderate";
                 var typeStr = element.TryGetProperty("type", out var t) ? t.GetString() : "reasoning";
                 var deps = element.TryGetProperty("dependencies", out var d)
-                    ? d.EnumerateArray().Select(x => x.GetString() ?? "").ToList()
+                    ? d.EnumerateArray().Select(x => x.GetString() ?? string.Empty).ToList()
                     : new List<string>();
 
                 var complexity = ParseComplexity(complexityStr);
@@ -146,7 +151,7 @@ public sealed partial class CollectiveMind
         "moderate" => SubGoalComplexity.Moderate,
         "complex" => SubGoalComplexity.Complex,
         "expert" => SubGoalComplexity.Expert,
-        _ => SubGoalComplexity.Moderate
+        _ => SubGoalComplexity.Moderate,
     };
 
     private static SubGoalType ParseGoalType(string? s) => s?.ToLowerInvariant() switch
@@ -158,7 +163,7 @@ public sealed partial class CollectiveMind
         "coding" or "code" => SubGoalType.Coding,
         "math" or "mathematical" => SubGoalType.Math,
         "synthesis" or "synthesize" => SubGoalType.Synthesis,
-        _ => SubGoalType.Reasoning
+        _ => SubGoalType.Reasoning,
     };
 
     private static SubGoalComplexity EstimateComplexity(string text)
@@ -167,9 +172,21 @@ public sealed partial class CollectiveMind
         var questionCount = QuestionMarkRegex().Matches(text).Count;
         var hasMultipleSteps = GoalMultipleStepsRegex().IsMatch(text);
 
-        if (length < 50 && questionCount <= 1) return SubGoalComplexity.Simple;
-        if (length < 200 && !hasMultipleSteps) return SubGoalComplexity.Moderate;
-        if (length < 500) return SubGoalComplexity.Complex;
+        if (length < 50 && questionCount <= 1)
+        {
+            return SubGoalComplexity.Simple;
+        }
+
+        if (length < 200 && !hasMultipleSteps)
+        {
+            return SubGoalComplexity.Moderate;
+        }
+
+        if (length < 500)
+        {
+            return SubGoalComplexity.Complex;
+        }
+
         return SubGoalComplexity.Expert;
     }
 
@@ -178,17 +195,34 @@ public sealed partial class CollectiveMind
         var lower = text.ToLowerInvariant();
 
         if (GoalCodingKeywordsRegex().IsMatch(lower))
+        {
             return SubGoalType.Coding;
+        }
+
         if (GoalMathKeywordsRegex().IsMatch(lower))
+        {
             return SubGoalType.Math;
+        }
+
         if (GoalCreativeKeywordsRegex().IsMatch(lower))
+        {
             return SubGoalType.Creative;
+        }
+
         if (GoalReasoningKeywordsRegex().IsMatch(lower))
+        {
             return SubGoalType.Reasoning;
+        }
+
         if (GoalTransformKeywordsRegex().IsMatch(lower))
+        {
             return SubGoalType.Transform;
+        }
+
         if (GoalRetrievalKeywordsRegex().IsMatch(lower))
+        {
             return SubGoalType.Retrieval;
+        }
 
         return SubGoalType.Reasoning;
     }
@@ -198,7 +232,10 @@ public sealed partial class CollectiveMind
         if (_decompositionConfig.TypeRouting.TryGetValue(type, out var typeTier))
         {
             if (complexity <= SubGoalComplexity.Simple && _decompositionConfig.PreferLocalForSimple)
+            {
                 return PathwayTier.Local;
+            }
+
             return typeTier;
         }
 
@@ -209,7 +246,7 @@ public sealed partial class CollectiveMind
             SubGoalComplexity.Moderate => PathwayTier.CloudLight,
             SubGoalComplexity.Complex => PathwayTier.CloudPremium,
             SubGoalComplexity.Expert => PathwayTier.CloudPremium,
-            _ => PathwayTier.CloudLight
+            _ => PathwayTier.CloudLight,
         };
     }
 
@@ -266,7 +303,7 @@ public sealed partial class CollectiveMind
         {
             _thoughtStream.OnNext($"⚠️ No pathway available for goal '{goal.Id}'");
             results[goal.Id] = new SubGoalResult(
-                goal.Id, "none", new ThinkingResponse(null, ""),
+                goal.Id, "none", new ThinkingResponse(null, string.Empty),
                 TimeSpan.Zero, false, "No pathway available");
             _subGoalStream.OnNext(results[goal.Id]);
             return;
@@ -295,14 +332,17 @@ public sealed partial class CollectiveMind
 
             _thoughtStream.OnNext($"✓ '{goal.Id}' completed by {pathway.Name} in {sw.ElapsedMilliseconds}ms");
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: sub-goal isolation across provider types
         {
             sw.Stop();
             pathway.RecordInhibition();
 
             var result = new SubGoalResult(
-                goal.Id, pathway.Name, new ThinkingResponse(null, ""),
+                goal.Id, pathway.Name, new ThinkingResponse(null, string.Empty),
                 sw.Elapsed, false, ex.Message);
             results[goal.Id] = result;
             _subGoalStream.OnNext(result);
@@ -321,7 +361,9 @@ public sealed partial class CollectiveMind
                 .FirstOrDefault();
 
             if (specialized != null)
+            {
                 return specialized;
+            }
 
             var tierMatch = _pathways
                 .Where(p => p.IsHealthy && p.Tier == goal.PreferredTier)
@@ -329,7 +371,9 @@ public sealed partial class CollectiveMind
                 .FirstOrDefault();
 
             if (tierMatch != null)
+            {
                 return tierMatch;
+            }
 
             return _pathways
                 .Where(p => p.IsHealthy)
@@ -342,7 +386,9 @@ public sealed partial class CollectiveMind
     private static string BuildDependencyContext(SubGoal goal, ConcurrentDictionary<string, SubGoalResult> results)
     {
         if (goal.Dependencies.Count == 0)
-            return "";
+        {
+            return string.Empty;
+        }
 
         var contextParts = goal.Dependencies
             .Where(d => results.ContainsKey(d) && results[d].Success)
@@ -399,7 +445,9 @@ public sealed partial class CollectiveMind
                 .OrderByDescending(p => p.Weight)
                 .FirstOrDefault();
             if (premium != null)
+            {
                 synthesizer = premium;
+            }
         }
 
         var resultsSummary = new StringBuilder();
@@ -446,14 +494,20 @@ public sealed partial class CollectiveMind
                 var duration = result?.Duration.TotalMilliseconds ?? 0;
                 thinking.AppendLine($"   {status} [{goal.Id}] {goal.Type}/{goal.Complexity} → {pathway} ({duration:F0}ms)");
             }
+
             thinking.AppendLine($"   Synthesized by: {synthesizer.Name}");
 
             if (response.HasThinking)
+            {
                 thinking.AppendLine().AppendLine(response.Thinking);
+            }
 
             return new ThinkingResponse(thinking.ToString(), response.Content);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException) // Intentional: synthesis fallback across provider types
         {
             sw.Stop();
