@@ -184,13 +184,13 @@ public static class ZipIngestion
     {
         using Stream s = rec.OpenStream();
         using StreamReader reader = new StreamReader(s, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: false);
-        string? headerLine = await reader.ReadLineAsync().ConfigureAwait(false);
+        string? headerLine = await reader.ReadLineAsync(ct).ConfigureAwait(false);
         if (headerLine == null)
             return new Dictionary<string, object> { ["type"] = "csv", ["empty"] = true };
         string[] header = SplitCsv(headerLine);
         List<string[]> rows = new List<string[]>();
         string? line;
-        while (rows.Count < maxLines && (line = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
+        while (rows.Count < maxLines && (line = await reader.ReadLineAsync(ct).ConfigureAwait(false)) != null)
         {
             ct.ThrowIfCancellationRequested();
             rows.Add(SplitCsv(line));

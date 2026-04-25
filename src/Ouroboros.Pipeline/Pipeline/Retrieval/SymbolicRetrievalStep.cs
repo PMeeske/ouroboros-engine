@@ -139,7 +139,7 @@ public sealed class SymbolicRetrievalStep
 
             // Step 2: Semantic retrieval (vector similarity)
             IReadOnlyCollection<Document> semanticMatches = 
-                await branch.Store.GetSimilarDocuments(embedModel, query, amount: semanticK).ConfigureAwait(false);
+                await branch.Store.GetSimilarDocuments(embedModel, query, amount: semanticK, cancellationToken: ct).ConfigureAwait(false);
 
             HybridRetrievalResult hybridResult = new(
                 query,

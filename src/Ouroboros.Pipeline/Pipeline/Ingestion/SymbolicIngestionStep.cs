@@ -93,7 +93,7 @@ public sealed class SymbolicIngestionStep
                 Embedding = await this._embedModel.CreateEmbeddingsAsync(content, ct).ConfigureAwait(false),
             };
             
-            await branch.Store.AddAsync(new[] { vector }).ConfigureAwait(false);
+            await branch.Store.AddAsync(new[] { vector }, ct).ConfigureAwait(false);
             vectorIds.Add(documentId);
 
             // Step 4: Update branch with ingest event

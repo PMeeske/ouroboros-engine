@@ -261,7 +261,7 @@ public sealed partial class WhisperNetService : ISpeechToTextService, IDisposabl
                 {
                     using var httpClient = new System.Net.Http.HttpClient();
                     var downloader = new WhisperGgmlDownloader(httpClient);
-                    using var modelStream = await downloader.GetGgmlModelAsync(_modelType).ConfigureAwait(false);
+                    using var modelStream = await downloader.GetGgmlModelAsync(_modelType, cancellationToken: ct).ConfigureAwait(false);
                     using var fileStream = File.Create(modelPath);
                     await modelStream.CopyToAsync(fileStream, ct).ConfigureAwait(false);
                     System.Diagnostics.Trace.TraceInformation("[whisper.net] Model downloaded to {0}", modelPath);

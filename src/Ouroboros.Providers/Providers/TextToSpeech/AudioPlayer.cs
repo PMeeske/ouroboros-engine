@@ -51,7 +51,7 @@ public static class AudioPlayer
                 {
                     // Ignore cleanup errors
                 }
-            });
+            }, ct);
         }
     }
 

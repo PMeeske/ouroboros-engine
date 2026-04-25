@@ -199,7 +199,7 @@ public abstract class OpenAiCompatibleChatModelBase : IStreamingThinkingChatMode
 
                 while (!reader.EndOfStream && !token.IsCancellationRequested)
                 {
-                    string? line = await reader.ReadLineAsync().ConfigureAwait(false);
+                    string? line = await reader.ReadLineAsync(token).ConfigureAwait(false);
                     if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data: ")) continue;
 
                     string jsonData = line.Substring(6).Trim();
