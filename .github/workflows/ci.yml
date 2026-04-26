@@ -33,6 +33,64 @@ jobs:
         src/Ouroboros.Providers/Ouroboros.Providers.csproj
         src/Ouroboros.Network/Ouroboros.Network.csproj
 
+  warning-regression-guard:
+    name: Warning Regression Guard (v56.0 ENF-04)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          submodules: recursive
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3  # v4.0.0
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build with warning-regression check (no CLI override)
+        shell: bash
+        run: |
+          # v56.0 ENF-04: TreatWarningsAsErrors=true is set in
+          # ouroboros-build/build/Directory.Build.props. We MUST NOT pass
+          # -p:WarningsAsErrors=... on the CLI here -- Phase 248 PROBE
+          # proved that CLI global properties bypass the test-project
+          # CS86xx strip in Directory.Build.targets and produce false
+          # positives in test projects. Rely strictly on the in-tree
+          # values.
+          set -o pipefail
+          for proj in \
+            src/Ouroboros.Agent/Ouroboros.Agent.csproj \
+            src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj \
+            src/Ouroboros.Providers/Ouroboros.Providers.csproj \
+            src/Ouroboros.Network/Ouroboros.Network.csproj; do
+            echo "::group::Build $proj"
+            dotnet build "$proj" --configuration Release --no-restore --nologo 2>&1 | tee -a build.log
+            echo "::endgroup::"
+          done
+
+          WARN_TOTAL=$(grep -cE "warning [A-Z]+[0-9]+" build.log || true)
+          ERR_TOTAL=$(grep -cE "error [A-Z]+[0-9]+" build.log || true)
+          echo "Warning grep count: ${WARN_TOTAL}"
+          echo "Error grep count: ${ERR_TOTAL}"
+          if [ "${WARN_TOTAL}" -gt 0 ]; then
+            echo "::error::v56.0 ENF-04 violated: build produced warnings."
+            echo "::error::TreatWarningsAsErrors=true must hold in Directory.Build.props"
+            grep -E "warning [A-Z]+[0-9]+" build.log | head -50 || true
+            exit 1
+          fi
+          if [ "${ERR_TOTAL}" -gt 0 ]; then
+            echo "::error::Build produced errors."
+            grep -E "error [A-Z]+[0-9]+" build.log | head -50 || true
+            exit 1
+          fi
+
   test:
     name: Test
     needs: build
