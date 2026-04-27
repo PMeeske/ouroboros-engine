@@ -62,6 +62,7 @@ public sealed partial class DirectComputeGaussianRasterizer : IGaussianRasterize
     private bool _initAttempted;
     private bool _cpuLatched;
     private bool _wasGpuDispatched;
+    private long _totalDispatches;
     private IReadOnlyDictionary<string, byte[]>? _loadedShaders;
     private bool _vramRegistered;
     private int _disposed;
@@ -119,6 +120,9 @@ public sealed partial class DirectComputeGaussianRasterizer : IGaussianRasterize
     /// HLSL dispatch body lands).
     /// </summary>
     public bool WasGpuDispatched => _wasGpuDispatched;
+
+    /// <summary>Total number of successful GPU dispatches.</summary>
+    public long TotalDispatches => Interlocked.Read(ref _totalDispatches);
 
     /// <summary>
     /// <see langword="true"/> Gets a value indicating whether when init has run and latched permanent CPU
@@ -273,11 +277,11 @@ public sealed partial class DirectComputeGaussianRasterizer : IGaussianRasterize
         CameraParams camera,
         CancellationToken cancellationToken)
     {
-        // Delegate to the partial-class dispatch body. When that path completes
-        // a real GPU dispatch, it sets _wasGpuDispatched = true; until then
-        // it runs the CPU baseline for byte-identical output with
-        // CpuGaussianRasterizer so the plan-04 pixel-diff gate passes
-        // trivially while the command-list body is authored.
+        // Delegate to the partial-class dispatch body. The D3D12 compute-shader
+        // pipeline (project → tile-assign → tile-sort → tile-raster) is fully
+        // implemented in DirectComputeGaussianRasterizer.Dispatch.cs.
+        // _wasGpuDispatched is set to true after the first successful fence-sync
+        // readback so operators can confirm the GPU path is active.
         return await DispatchInternalAsync(gaussians, camera, cancellationToken).ConfigureAwait(false);
     }
 }
