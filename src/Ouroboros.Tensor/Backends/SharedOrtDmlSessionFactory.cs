@@ -89,6 +89,13 @@ public sealed class SharedOrtDmlSessionFactory : ISharedOrtDmlSessionFactory
             opts.AddSessionConfigEntry("session.disable_mem_pattern", "1");
             opts.AppendExecutionProvider_DML(deviceId);
         }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
+        {
+            opts.Dispose();
+            throw new InvalidOperationException(
+                "DirectML execution provider is not available on this system. " +
+                "Ensure onnxruntime-directml.dll is present and the DirectX 12 runtime is installed.", ex);
+        }
         catch
         {
             opts.Dispose();

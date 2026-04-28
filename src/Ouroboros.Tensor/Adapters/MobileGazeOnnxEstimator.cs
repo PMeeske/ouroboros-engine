@@ -431,17 +431,24 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
             ExecutionMode = ExecutionMode.ORT_SEQUENTIAL,
         };
 
-        try
+        if (OrtEnv.Instance().GetAvailableProviders().Contains("DmlExecutionProvider"))
         {
-            opts.AppendExecutionProvider_DML(0);
-            opts.AddSessionConfigEntry("session.disable_mem_pattern", "1");
-            logger?.LogInformation("[MobileGazeOnnx] DirectML EP enabled");
-        }
+            try
+            {
+                opts.AppendExecutionProvider_DML(0);
+                opts.AddSessionConfigEntry("session.disable_mem_pattern", "1");
+                logger?.LogInformation("[MobileGazeOnnx] DirectML EP enabled");
+            }
 #pragma warning disable CA1031
-        catch (Exception ex)
+            catch (Exception ex)
 #pragma warning restore CA1031
+            {
+                logger?.LogWarning("[MobileGazeOnnx] DirectML unavailable — using CPU EP ({Reason})", ex.Message);
+            }
+        }
+        else
         {
-            logger?.LogWarning(ex, "[MobileGazeOnnx] DirectML unavailable — using CPU EP");
+            logger?.LogWarning("[MobileGazeOnnx] DirectML execution provider not available — using CPU EP");
         }
 
         return opts;

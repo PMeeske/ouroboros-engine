@@ -499,17 +499,24 @@ public sealed class YuNetOnnxFaceDetector : IFaceDetector, IAsyncDisposable
             ExecutionMode = ExecutionMode.ORT_SEQUENTIAL,
         };
 
-        try
+        if (OrtEnv.Instance().GetAvailableProviders().Contains("DmlExecutionProvider"))
         {
-            opts.AppendExecutionProvider_DML(0);
-            opts.AddSessionConfigEntry("session.disable_mem_pattern", "1");
-            logger?.LogInformation("[YuNetOnnx] DirectML EP enabled");
-        }
+            try
+            {
+                opts.AppendExecutionProvider_DML(0);
+                opts.AddSessionConfigEntry("session.disable_mem_pattern", "1");
+                logger?.LogInformation("[YuNetOnnx] DirectML EP enabled");
+            }
 #pragma warning disable CA1031 // DirectML availability is opaque.
-        catch (Exception ex)
+            catch (Exception ex)
 #pragma warning restore CA1031
+            {
+                logger?.LogWarning("[YuNetOnnx] DirectML unavailable — using CPU EP ({Reason})", ex.Message);
+            }
+        }
+        else
         {
-            logger?.LogWarning(ex, "[YuNetOnnx] DirectML unavailable — using CPU EP");
+            logger?.LogWarning("[YuNetOnnx] DirectML execution provider not available — using CPU EP");
         }
 
         return opts;
