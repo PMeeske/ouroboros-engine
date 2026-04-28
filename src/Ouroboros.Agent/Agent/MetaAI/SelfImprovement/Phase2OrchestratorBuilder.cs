@@ -23,6 +23,7 @@ public sealed class Phase2OrchestratorBuilder
     private ICapabilityRegistry? _capabilityRegistry;
     private IGoalHierarchy? _goalHierarchy;
     private ISelfEvaluator? _selfEvaluator;
+    private ISelfModificationGovernor? _selfModificationGovernor;
     private double _confidenceThreshold = 0.7;
     private SkillExtractionConfig? _skillConfig;
     private PersistentMemoryConfig? _memoryConfig;
@@ -150,6 +151,16 @@ public sealed class Phase2OrchestratorBuilder
     }
 
     /// <summary>
+    /// Sets the self-modification governor for ethical oversight of self-modification goals.
+    /// </summary>
+    public Phase2OrchestratorBuilder WithSelfModificationGovernor(ISelfModificationGovernor governor)
+    {
+        ArgumentNullException.ThrowIfNull(governor);
+        _selfModificationGovernor = governor;
+        return this;
+    }
+
+    /// <summary>
     /// Builds the orchestrator with all Phase 2 components.
     /// </summary>
     /// <returns>A tuple containing the orchestrator and all Phase 2 components</returns>
@@ -177,7 +188,7 @@ public sealed class Phase2OrchestratorBuilder
 
         // Create Phase 2 components
         _capabilityRegistry ??= new CapabilityRegistry(_llm, _tools, _capabilityConfig);
-        _goalHierarchy ??= new GoalHierarchy(_llm, _safety, _ethics, _goalConfig);
+        _goalHierarchy ??= new GoalHierarchy(_llm, _safety, _ethics, _goalConfig, goalSplitter: null, _selfModificationGovernor);
 
         // Create orchestrator
         MetaAIPlannerOrchestrator orchestrator = new MetaAIPlannerOrchestrator(
