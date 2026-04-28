@@ -18,6 +18,7 @@ using Ouroboros.Tools.MeTTa;
 using Ouroboros.Providers.Meai;
 using Ouroboros.Providers.SpeechToText;
 using Ouroboros.Providers.TextToSpeech;
+using Ouroboros.Tools.MeTTa;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -33,6 +34,9 @@ public static class ServiceCollectionExtensions
     /// Register ONNX Runtime GenAI (OGA) as the chat client when <see cref="LlmProviderConfiguration.OgaModelPath"/> is configured.
     /// Also registers the in-process Hyperon MeTTa engine and prompt compressor for symbolic prompt compression.
     /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">Application configuration.</param>
+    /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddOgaChatClient(this IServiceCollection services, IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -45,14 +49,16 @@ public static class ServiceCollectionExtensions
             return services;
         }
 
+        // Normalize relative paths against the application base directory
         if (!Path.IsPathRooted(ogaPath))
         {
             ogaPath = Path.Combine(AppContext.BaseDirectory, ogaPath);
         }
 
-        services.TryAddSingleton<Ouroboros.Tools.MeTTa.IMeTTaEngine>(_ => new Ouroboros.Tools.MeTTa.HyperonMeTTaEngine());
+        // Register in-process MeTTa engine (no external binaries required)
+        services.TryAddSingleton<IMeTTaEngine>(_ => new HyperonMeTTaEngine());
         services.TryAddSingleton<MeTTaPromptCompressor>(sp =>
-            new MeTTaPromptCompressor(sp.GetService<Ouroboros.Tools.MeTTa.IMeTTaEngine>(), targetRatioPercent: 60));
+            new MeTTaPromptCompressor(sp.GetService<IMeTTaEngine>(), targetRatioPercent: 60));
 
         services.TryAddSingleton<Ouroboros.Abstractions.Core.IChatCompletionModel>(sp =>
         {
