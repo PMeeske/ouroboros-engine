@@ -2,9 +2,12 @@
   <!-- Import repo-level props (Engine → ouroboros-build base) -->
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)..'))" />
 
-  <!-- xUnit has no SynchronizationContext; ConfigureAwait is unnecessary in tests -->
+  <!-- xUnit has no SynchronizationContext; ConfigureAwait is unnecessary in tests.
+       v56.0 Phase 251: xUnit1026/1030/1031 are test-project ergonomic warnings
+       suppressed to match ENF-03's 0-warning contract (test-project carve-out
+       per REQUIREMENTS.md "Out of scope: Test projects"). -->
   <PropertyGroup>
-    <NoWarn>$(NoWarn);CA2007</NoWarn>
+    <NoWarn>$(NoWarn);CA2007;xUnit1026;xUnit1030;xUnit1031</NoWarn>
   </PropertyGroup>
 
   <!-- Common test global usings (mirrors original Ouroboros.Tests GlobalUsings.cs) -->

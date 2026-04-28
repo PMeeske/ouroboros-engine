@@ -97,6 +97,14 @@ public sealed partial class DirectComputeGaussianRasterizer
 
         _wasGpuDispatched = true;
         sw.Stop();
+        if (TotalDispatches == 0)
+        {
+            _logger.LogInformation(
+                "[DirectComputeGaussianRasterizer] FIRST FRAME dispatched on GPU — {W}x{H}, {N} gaussians, {Ms:F1}ms",
+                camera.Width, camera.Height, gaussians.Count,
+                sw.ElapsedTicks * 1000.0 / Stopwatch.Frequency);
+        }
+        Interlocked.Increment(ref _totalDispatches);
         return new FrameBuffer(camera.Width, camera.Height, rgba, sw.ElapsedTicks);
     }
 
