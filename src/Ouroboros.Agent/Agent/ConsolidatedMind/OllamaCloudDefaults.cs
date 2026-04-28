@@ -110,6 +110,12 @@ public static class OllamaCloudDefaults
         /// <summary>RNJ-1 8B - Dense model optimized for code and STEM.</summary>
         public const string Rnj1_8B = "rnj-1:8b-cloud";
 
+        /// <summary>Hermes-3-Llama-3.1-8B — Nous Research instruction-tuned Llama for tool use and agent reasoning.</summary>
+        public const string Hermes3Llama_8B = "hermes3:8b";
+
+        /// <summary>Hermes-3-Llama-3.1-8B (cloud-hosted variant).</summary>
+        public const string Hermes3Llama_8BCloud = "hermes3:8b-cloud";
+
         /// <summary>Ministral 3 3B - Edge deployment capable (smallest).</summary>
         public const string Ministral3_3B = "ministral-3:3b-cloud";
 

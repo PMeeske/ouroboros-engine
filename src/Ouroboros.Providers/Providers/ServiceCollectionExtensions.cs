@@ -14,6 +14,7 @@ using OllamaSharp.Models;
 using Ouroboros.Core.Configuration;
 using Ouroboros.Domain.Autonomous;
 using Ouroboros.Domain.Vectors;
+using Ouroboros.Tools.MeTTa;
 using Ouroboros.Providers.Meai;
 using Ouroboros.Providers.SpeechToText;
 using Ouroboros.Providers.TextToSpeech;
@@ -28,6 +29,39 @@ using Qdrant.Client;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Register ONNX Runtime GenAI (OGA) as the chat client when <see cref="LlmProviderConfiguration.OgaModelPath"/> is configured.
+    /// Also registers the in-process Hyperon MeTTa engine and prompt compressor for symbolic prompt compression.
+    /// </summary>
+    public static IServiceCollection AddOgaChatClient(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        string? ogaPath = configuration["LlmProvider:OgaModelPath"]
+            ?? Environment.GetEnvironmentVariable("OUROBOROS_OGA_MODEL_PATH");
+
+        if (string.IsNullOrWhiteSpace(ogaPath))
+        {
+            return services;
+        }
+
+        if (!Path.IsPathRooted(ogaPath))
+        {
+            ogaPath = Path.Combine(AppContext.BaseDirectory, ogaPath);
+        }
+
+        services.TryAddSingleton<Ouroboros.Tools.MeTTa.IMeTTaEngine>(_ => new Ouroboros.Tools.MeTTa.HyperonMeTTaEngine());
+        services.TryAddSingleton<MeTTaPromptCompressor>(sp =>
+            new MeTTaPromptCompressor(sp.GetService<Ouroboros.Tools.MeTTa.IMeTTaEngine>(), targetRatioPercent: 60));
+
+        services.TryAddSingleton<Ouroboros.Abstractions.Core.IChatCompletionModel>(sp =>
+        {
+            var compressor = sp.GetService<MeTTaPromptCompressor>();
+            return new OgaChatAdapter(ogaPath!, compressor: compressor);
+        });
+        return services;
+    }
+
     /// <summary>
     /// Register an interchangeable chat + embedding stack that prefers remote OpenAI-compatible
     /// endpoints when configured, falling back to local Ollama with deterministic embeddings otherwise.

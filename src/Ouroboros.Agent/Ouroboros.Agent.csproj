@@ -25,4 +25,10 @@
     <PackageReference Include="Qdrant.Client" Version="1.17.0" />
   </ItemGroup>
 
+  <!-- ONNX providers excluded: API diverged from OGA package version. Re-enable when aligned. -->
+  <ItemGroup>
+    <Compile Remove="Agent/MeTTaAgents/OnnxGenAiAgentProvider.cs" />
+    <Compile Remove="Agent/MeTTaAgents/OnnxToolAgentProvider.cs" />
+  </ItemGroup>
+
 </Project>

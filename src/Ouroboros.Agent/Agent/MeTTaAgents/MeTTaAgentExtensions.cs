@@ -51,30 +51,42 @@ public static class MeTTaAgentExtensions
     }
 
     /// <summary>
-    /// Creates a default set of provider factories including Ollama and Mock providers.
+    /// Creates a default set of provider factories including Ollama, ONNX GenAI, ONNX Tool, and Mock providers.
     /// </summary>
-    /// <param name="ollamaEndpoint">Optional Ollama endpoint override.</param>
+    /// <param name="ollamaEndpoint">Optional Ollama endpoint override.</parameter>
+    /// <param name="onnxModelBasePath">Optional base path for ONNX model directories.</parameter>
     /// <returns>List of provider factories.</returns>
     public static IReadOnlyList<IAgentProviderFactory> CreateDefaultProviders(
-        string ollamaEndpoint = DefaultEndpoints.Ollama)
+        string ollamaEndpoint = DefaultEndpoints.Ollama,
+        string? onnxModelBasePath = null)
     {
-        return new IAgentProviderFactory[]
+        var providers = new List<IAgentProviderFactory>
         {
             new OllamaAgentProvider(ollamaEndpoint),
             new MockAgentProvider()
         };
+#if ENABLE_ONNX_PROVIDERS
+        if (!string.IsNullOrEmpty(onnxModelBasePath))
+        {
+            providers.Add(new OnnxGenAiAgentProvider(onnxModelBasePath));
+            providers.Add(new OnnxToolAgentProvider(onnxModelBasePath));
+        }
+#endif
+        return providers;
     }
 
     /// <summary>
     /// Creates a MeTTaAgentRuntime with the default set of providers.
     /// </summary>
-    /// <param name="engine">The MeTTa engine.</param>
-    /// <param name="ollamaEndpoint">Optional Ollama endpoint override.</param>
+    /// <param name="engine">The MeTTa engine.</parameter>
+    /// <param name="ollamaEndpoint">Optional Ollama endpoint override.</parameter>
+    /// <param name="onnxModelBasePath">Optional base path for ONNX model directories.</parameter>
     /// <returns>A configured MeTTaAgentRuntime.</returns>
     public static MeTTaAgentRuntime CreateDefaultRuntime(
         IMeTTaEngine engine,
-        string ollamaEndpoint = DefaultEndpoints.Ollama)
+        string ollamaEndpoint = DefaultEndpoints.Ollama,
+        string? onnxModelBasePath = null)
     {
-        return new MeTTaAgentRuntime(engine, CreateDefaultProviders(ollamaEndpoint));
+        return new MeTTaAgentRuntime(engine, CreateDefaultProviders(ollamaEndpoint, onnxModelBasePath));
     }
 }
