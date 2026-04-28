@@ -4,6 +4,7 @@
 // ==========================================================
 
 using Ouroboros.Core.Ethics;
+using Ouroboros.Agent.Cognition.Planning;
 
 namespace Ouroboros.Agent.MetaAI;
 
