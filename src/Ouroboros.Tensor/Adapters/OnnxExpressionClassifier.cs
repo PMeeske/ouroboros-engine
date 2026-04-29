@@ -339,6 +339,24 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         }
     }
 
+    /// <summary>
+    /// Probes whether the DirectML execution provider is actually functional
+    /// by attempting to append it to a disposable SessionOptions instance.
+    /// </summary>
+    private static bool IsDirectMlAvailable()
+    {
+        try
+        {
+            using var probe = new SessionOptions();
+            probe.AppendExecutionProvider_DML(0);
+            return true;
+        }
+        catch (Exception ex) when (ex is EntryPointNotFoundException or DllNotFoundException or BadImageFormatException)
+        {
+            return false;
+        }
+    }
+
     private static SessionOptions CreateSessionOptions(ILogger? logger)
     {
         var opts = new SessionOptions
@@ -347,7 +365,7 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
             ExecutionMode = ExecutionMode.ORT_SEQUENTIAL,
         };
 
-        if (OrtEnv.Instance().GetAvailableProviders().Contains("DmlExecutionProvider"))
+        if (IsDirectMlAvailable())
         {
             try
             {

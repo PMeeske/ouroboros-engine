@@ -404,6 +404,21 @@ public sealed class SFaceOnnxEmbedder : IFaceEmbedder, IAsyncDisposable
         return null;
     }
 
+    /// <summary>Probes whether the DirectML execution provider is actually functional.</summary>
+    private static bool IsDirectMlAvailable()
+    {
+        try
+        {
+            using var probe = new SessionOptions();
+            probe.AppendExecutionProvider_DML(0);
+            return true;
+        }
+        catch (Exception ex) when (ex is EntryPointNotFoundException or DllNotFoundException or BadImageFormatException)
+        {
+            return false;
+        }
+    }
+
     private static SessionOptions CreateSessionOptions(ILogger? logger)
     {
         var opts = new SessionOptions
@@ -412,7 +427,7 @@ public sealed class SFaceOnnxEmbedder : IFaceEmbedder, IAsyncDisposable
             ExecutionMode = ExecutionMode.ORT_SEQUENTIAL,
         };
 
-        if (OrtEnv.Instance().GetAvailableProviders().Contains("DmlExecutionProvider"))
+        if (IsDirectMlAvailable())
         {
             try
             {
