@@ -25,6 +25,8 @@
     <Compile Remove="EthicsEnforcedGitHubMcpClientTests.cs" />
     <Compile Remove="GitHubMcpClientTests.cs" />
     <Compile Remove="GitHubSelfModificationWorkflowTests.cs" />
+    <!-- Excluded: OnnxGenAiChatModel.cs excluded from source project -->
+    <Compile Remove="OnnxGenAiChatModelTests.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,6 +43,7 @@
     <PackageReference Include="FluentAssertions" Version="8.8.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.5" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.5.23" />
   </ItemGroup>
 
 </Project>

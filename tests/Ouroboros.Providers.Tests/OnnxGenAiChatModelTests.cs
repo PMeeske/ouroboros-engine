@@ -8,6 +8,7 @@ namespace Ouroboros.Providers.Tests;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
 using Ouroboros.Providers;
+using Xunit;
 
 /// <summary>
 /// Integration and unit tests for <see cref="OnnxGenAiChatModel"/>.
