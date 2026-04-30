@@ -1,7 +1,3 @@
-using FluentAssertions;
-using Moq;
-using Ouroboros.Agent;
-
 namespace Ouroboros.Tests;
 
 [Trait("Category", "Unit")]

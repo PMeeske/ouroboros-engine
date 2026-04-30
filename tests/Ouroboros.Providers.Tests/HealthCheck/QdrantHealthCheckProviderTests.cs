@@ -24,8 +24,6 @@ public sealed class QdrantHealthCheckProviderTests : IDisposable
         _provider?.Dispose();
     }
 
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithValidEndpoint_SetsComponentName()
     {
@@ -56,10 +54,6 @@ public sealed class QdrantHealthCheckProviderTests : IDisposable
         // Assert
         _provider.Should().NotBeNull();
     }
-
-    #endregion
-
-    #region CheckHealthAsync Tests
 
     [Fact]
     public async Task CheckHealthAsync_WithUnreachableEndpoint_ReturnsUnhealthy()
@@ -125,10 +119,6 @@ public sealed class QdrantHealthCheckProviderTests : IDisposable
         result.Details["endpoint"].Should().Be(endpoint);
     }
 
-    #endregion
-
-    #region Dispose Tests
-
     [Fact]
     public void Dispose_CanBeCalledMultipleTimes()
     {
@@ -140,6 +130,4 @@ public sealed class QdrantHealthCheckProviderTests : IDisposable
         var action = () => _provider.Dispose();
         action.Should().NotThrow();
     }
-
-    #endregion
 }

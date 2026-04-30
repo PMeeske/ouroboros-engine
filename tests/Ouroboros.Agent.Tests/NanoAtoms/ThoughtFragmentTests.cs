@@ -2,9 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
 using Ouroboros.Agent.NanoAtoms;
-using Ouroboros.Providers;
 
 namespace Ouroboros.Tests.NanoAtoms;
 

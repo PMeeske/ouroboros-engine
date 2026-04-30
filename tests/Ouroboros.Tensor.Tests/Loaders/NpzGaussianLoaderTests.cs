@@ -159,9 +159,9 @@ public class NpzGaussianLoaderTests
         string headerInner = $"{{'descr': '<f4', 'fortran_order': {fortranStr}, 'shape': {shapeStr}, }}";
         return BuildNpy(headerInner, body.Length * 4, writer =>
         {
+            Span<byte> buf = stackalloc byte[4];
             foreach (float v in body)
             {
-                Span<byte> buf = stackalloc byte[4];
                 BinaryPrimitives.WriteSingleLittleEndian(buf, v);
                 writer.Write(buf);
             }
@@ -176,9 +176,9 @@ public class NpzGaussianLoaderTests
         string headerInner = $"{{'descr': '<i8', 'fortran_order': False, 'shape': {shapeStr}, }}";
         return BuildNpy(headerInner, body.Length * 8, writer =>
         {
+            Span<byte> buf = stackalloc byte[8];
             foreach (long v in body)
             {
-                Span<byte> buf = stackalloc byte[8];
                 BinaryPrimitives.WriteInt64LittleEndian(buf, v);
                 writer.Write(buf);
             }

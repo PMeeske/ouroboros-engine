@@ -5,7 +5,6 @@
 namespace Ouroboros.Pipeline.WorldModel;
 
 using System.Collections.Immutable;
-using Ouroboros.Core.Monads;
 
 /// <summary>
 /// An immutable directed graph modeling cause-effect relationships for predictive planning.

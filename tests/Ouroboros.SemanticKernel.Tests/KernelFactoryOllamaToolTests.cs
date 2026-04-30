@@ -1,6 +1,5 @@
 using Microsoft.SemanticKernel;
 using Ouroboros.Providers;
-using Ouroboros.Tools;
 
 namespace Ouroboros.SemanticKernel.Tests;
 

@@ -2,12 +2,8 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using Ouroboros.Abstractions;
-
 namespace Ouroboros.Agent.WorldModel;
 
-using Microsoft.Extensions.Logging;
-using Ouroboros.Core.Monads;
 using Ouroboros.Domain.Embodied;
 
 public sealed partial class WorldModel

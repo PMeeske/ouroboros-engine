@@ -1,6 +1,3 @@
-using FluentAssertions;
-using Xunit;
-
 namespace Ouroboros.McpServer.Tests;
 
 [Trait("Category", "Unit")]

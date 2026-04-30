@@ -4,7 +4,6 @@
 
 using System.ComponentModel;
 using Microsoft.SemanticKernel;
-using Ouroboros.Tools;
 
 namespace Ouroboros.SemanticKernel;
 

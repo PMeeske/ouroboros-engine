@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using Ouroboros.Domain.Vectors;
 using Microsoft.Extensions.VectorData;
 
 namespace Ouroboros.SemanticKernel.VectorData;

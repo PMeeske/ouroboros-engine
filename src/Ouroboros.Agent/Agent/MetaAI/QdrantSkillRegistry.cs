@@ -8,9 +8,6 @@
 // and semantic search capabilities
 // ==========================================================
 
-using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using Ouroboros.Core.Configuration;
 using Qdrant.Client;

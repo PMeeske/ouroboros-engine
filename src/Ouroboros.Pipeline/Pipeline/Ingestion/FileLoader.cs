@@ -2,8 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using Ouroboros.Domain.Vectors;
-
 namespace Ouroboros.Pipeline.Ingestion;
 
 /// <summary>

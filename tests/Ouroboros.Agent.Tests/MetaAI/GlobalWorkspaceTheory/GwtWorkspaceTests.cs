@@ -1,16 +1,12 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-using FluentAssertions;
 using Ouroboros.Agent.MetaAI.GlobalWorkspaceTheory;
-using Xunit;
 
 namespace Ouroboros.Tests.MetaAI.GlobalWorkspaceTheory;
 
 [Trait("Category", "Unit")]
 public sealed class GwtWorkspaceTests
 {
-    #region Construction
-
     [Fact]
     public void Constructor_DefaultCapacity_IsFive()
     {
@@ -43,10 +39,6 @@ public sealed class GwtWorkspaceTests
 
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
-
-    #endregion
-
-    #region CompeteAndReplace
 
     [Fact]
     public void CompeteAndReplace_EmptyCandidates_NoChange()
@@ -170,10 +162,6 @@ public sealed class GwtWorkspaceTests
             .Should().BeEquivalentTo(new[] { "c10", "c9", "c8" }, options => options.WithStrictOrdering());
     }
 
-    #endregion
-
-    #region RemoveChunk / Clear
-
     [Fact]
     public void RemoveChunk_Existing_ReturnsTrue()
     {
@@ -211,10 +199,6 @@ public sealed class GwtWorkspaceTests
 
         workspace.Chunks.Should().BeEmpty();
     }
-
-    #endregion
-
-    #region GetSnapshot
 
     [Fact]
     public void GetSnapshot_EmptyWorkspace_HasCorrectProperties()
@@ -263,10 +247,6 @@ public sealed class GwtWorkspaceTests
         snapshot.Chunks.Should().HaveCount(1);
     }
 
-    #endregion
-
-    #region WorkspaceChunk / WorkspaceSnapshot Records
-
     [Fact]
     public void WorkspaceChunk_RecordEquality_SameValues_AreEqual()
     {
@@ -291,6 +271,4 @@ public sealed class GwtWorkspaceTests
         snapshot.FreeSlots.Should().Be(4);
         snapshot.IsFull.Should().BeFalse();
     }
-
-    #endregion
 }

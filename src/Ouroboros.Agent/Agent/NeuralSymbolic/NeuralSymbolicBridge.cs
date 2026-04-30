@@ -6,7 +6,6 @@
 namespace Ouroboros.Agent.NeuralSymbolic;
 
 using System.Diagnostics;
-using System.Text.RegularExpressions;
 using Ouroboros.Agent.MetaAI;
 
 /// <summary>

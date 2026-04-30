@@ -13,7 +13,6 @@ namespace Ouroboros.Pipeline.Metacognition;
 
 using System;
 using System.Collections.Immutable;
-using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Represents a snapshot of the agent's internal cognitive state at a specific moment.

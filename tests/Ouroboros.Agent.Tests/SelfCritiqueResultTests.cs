@@ -2,11 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
-using Ouroboros.Agent;
-using Ouroboros.Domain.Vectors;
-using Ouroboros.Pipeline.Branches;
-
 namespace Ouroboros.Tests;
 
 /// <summary>

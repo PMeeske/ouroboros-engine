@@ -1,5 +1,4 @@
-﻿using Ouroboros.Domain.Vectors;
-using R3;
+﻿using R3;
 
 namespace Ouroboros.Pipeline.Reasoning;
 

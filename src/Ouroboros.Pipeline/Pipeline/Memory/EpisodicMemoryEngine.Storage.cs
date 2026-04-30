@@ -10,9 +10,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Ouroboros.Pipeline.Json;
-using Ouroboros.Domain;
 using Ouroboros.Domain.States;
-using Ouroboros.Pipeline.Verification;
 using Qdrant.Client.Grpc;
 
 public sealed partial class EpisodicMemoryEngine

@@ -18,8 +18,6 @@ using Xunit;
 [Trait("Category", "Unit")]
 public class LlmCostTrackerTests
 {
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithModelOnly_Succeeds()
     {
@@ -39,10 +37,6 @@ public class LlmCostTrackerTests
         // Assert
         tracker.Should().NotBeNull();
     }
-
-    #endregion
-
-    #region GetProvider Tests
 
     [Theory]
     [InlineData("claude-opus-4-5", "Anthropic")]
@@ -78,10 +72,6 @@ public class LlmCostTrackerTests
         provider2.Should().Be("OpenAI");
         provider1.Should().Be(provider2);
     }
-
-    #endregion
-
-    #region GetPricing Tests
 
     [Fact]
     public void GetPricing_WithOpenAIModel_ReturnsCorrectPricing()
@@ -159,10 +149,6 @@ public class LlmCostTrackerTests
         pricing1.OutputCostPer1M.Should().Be(pricing2.OutputCostPer1M);
     }
 
-    #endregion
-
-    #region CalculateCost Tests
-
     [Fact]
     public void CalculateCost_WithZeroTokens_ReturnsZero()
     {
@@ -225,10 +211,6 @@ public class LlmCostTrackerTests
         cost.Should().Be(0m);
     }
 
-    #endregion
-
-    #region Tracking Tests
-
     [Fact]
     public void StartRequest_InitializesTimer()
     {
@@ -237,7 +219,7 @@ public class LlmCostTrackerTests
 
         // Act
         tracker.StartRequest();
-        Thread.Sleep(50); // Small delay
+        Task.Delay(50).Wait(); // Small delay
         var metrics = tracker.EndRequest(100, 200);
 
         // Assert
@@ -299,10 +281,6 @@ public class LlmCostTrackerTests
         session.TotalTokens.Should().Be(1000);
     }
 
-    #endregion
-
-    #region SessionMetrics Tests
-
     [Fact]
     public void GetSessionMetrics_WithNoRequests_ReturnsZeroMetrics()
     {
@@ -347,11 +325,11 @@ public class LlmCostTrackerTests
 
         // Act
         tracker.StartRequest();
-        Thread.Sleep(50);
+        Task.Delay(50).Wait();
         tracker.EndRequest(100, 200);
 
         tracker.StartRequest();
-        Thread.Sleep(50);
+        Task.Delay(50).Wait();
         tracker.EndRequest(100, 200);
 
         var metrics = tracker.GetSessionMetrics();
@@ -360,10 +338,6 @@ public class LlmCostTrackerTests
         metrics.AverageLatency.Should().BeGreaterThan(TimeSpan.Zero);
         metrics.TotalRequests.Should().Be(2);
     }
-
-    #endregion
-
-    #region Reset Tests
 
     [Fact]
     public void Reset_ClearsAllMetrics()
@@ -402,10 +376,6 @@ public class LlmCostTrackerTests
         metrics.TotalOutputTokens.Should().Be(200);
     }
 
-    #endregion
-
-    #region FormatSessionSummary Tests
-
     [Fact]
     public void FormatSessionSummary_ReturnsFormattedString()
     {
@@ -440,10 +410,6 @@ public class LlmCostTrackerTests
         summary.Should().Contain("$0.0000");
     }
 
-    #endregion
-
-    #region GetCostAwarenessPrompt Tests
-
     [Fact]
     public void GetCostAwarenessPrompt_WithPaidModel_IncludesCostInfo()
     {
@@ -469,10 +435,6 @@ public class LlmCostTrackerTests
         prompt.Should().Contain("local/free model");
         prompt.Should().Contain("no API costs");
     }
-
-    #endregion
-
-    #region GetCostString Tests
 
     [Fact]
     public void GetCostString_WithZeroCost_ShowsTokensOnly()
@@ -503,10 +465,6 @@ public class LlmCostTrackerTests
         costString.Should().Contain("3,000 tokens");
         costString.Should().Contain("$");
     }
-
-    #endregion
-
-    #region RequestMetrics Tests
 
     [Fact]
     public void RequestMetrics_CalculatesTotalTokens()
@@ -546,7 +504,7 @@ public class LlmCostTrackerTests
         var str = metrics.ToString();
 
         // Assert
-        str.Should().Contain("100→200 tokens");
+        str.Should().Contain("100â†’200 tokens");
         str.Should().Contain("$0.0100");
         str.Should().Contain("1.00s");
     }
@@ -559,13 +517,9 @@ public class LlmCostTrackerTests
         var str = metrics.ToString();
 
         // Assert
-        str.Should().Contain("100→200 tokens");
+        str.Should().Contain("100â†’200 tokens");
         str.Should().NotContain("$");
     }
-
-    #endregion
-
-    #region SessionMetrics Tests
 
     [Fact]
     public void SessionMetrics_CalculatesTotalTokens()
@@ -627,10 +581,6 @@ public class LlmCostTrackerTests
         costString.Should().NotContain("$");
     }
 
-    #endregion
-
-    #region Thread Safety Tests
-
     [Fact]
     public void ConcurrentEndRequest_TracksCorrectly()
     {
@@ -664,10 +614,6 @@ public class LlmCostTrackerTests
         metrics.TotalInputTokens.Should().Be(10000); // 100 * 100
         metrics.TotalOutputTokens.Should().Be(20000); // 100 * 200
     }
-
-    #endregion
-
-    #region Edge Cases
 
     [Fact]
     public void Constructor_WithEmptyModel_DoesNotThrow()
@@ -715,6 +661,4 @@ public class LlmCostTrackerTests
         // Assert
         metrics.Should().NotBeNull();
     }
-
-    #endregion
 }

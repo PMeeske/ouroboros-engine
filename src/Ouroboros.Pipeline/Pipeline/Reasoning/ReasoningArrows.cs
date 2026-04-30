@@ -1,7 +1,4 @@
-﻿using Ouroboros.Domain.Vectors;
-using R3;
-
-namespace Ouroboros.Pipeline.Reasoning;
+﻿namespace Ouroboros.Pipeline.Reasoning;
 
 /// <summary>
 /// Provides arrow functions for reasoning operations in the pipeline.

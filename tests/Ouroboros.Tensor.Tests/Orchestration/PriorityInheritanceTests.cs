@@ -36,7 +36,7 @@ public sealed class PriorityInheritanceTests : IDisposable
             observedOrder.Enqueue("Normal-Acquired");
             normalAcquired.TrySetResult();
             await gate.Task.WaitAsync(ct).ConfigureAwait(false);
-            await resource.ReleaseAsync("Normal").ConfigureAwait(false);
+            await resource.ReleaseAsync("Normal", ct).ConfigureAwait(false);
             observedOrder.Enqueue("Normal-Released");
             return 0;
         });
@@ -49,7 +49,7 @@ public sealed class PriorityInheritanceTests : IDisposable
         {
             await resource.AcquireAsync("Realtime", ct).ConfigureAwait(false);
             observedOrder.Enqueue("Realtime-Acquired");
-            await resource.ReleaseAsync("Realtime").ConfigureAwait(false);
+            await resource.ReleaseAsync("Realtime", ct).ConfigureAwait(false);
             observedOrder.Enqueue("Realtime-Released");
             return 0;
         });
@@ -58,7 +58,7 @@ public sealed class PriorityInheritanceTests : IDisposable
         {
             await resource.AcquireAsync("Background", ct).ConfigureAwait(false);
             observedOrder.Enqueue("Background-Acquired");
-            await resource.ReleaseAsync("Background").ConfigureAwait(false);
+            await resource.ReleaseAsync("Background", ct).ConfigureAwait(false);
             observedOrder.Enqueue("Background-Released");
             return 0;
         });

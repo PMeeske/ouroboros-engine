@@ -1,8 +1,5 @@
-using FluentAssertions;
 using Microsoft.Extensions.AI;
-using Moq;
 using Ouroboros.Providers.Meai;
-using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
 
 namespace Ouroboros.Tests.Meai;
 

@@ -2,9 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Collections.Concurrent;
 using Ouroboros.Core.Hyperon;
-using Ouroboros.Tools;
 using Ouroboros.Tools.MeTTa;
 using Ouroboros.Tools.MeTTa.Smcp;
 

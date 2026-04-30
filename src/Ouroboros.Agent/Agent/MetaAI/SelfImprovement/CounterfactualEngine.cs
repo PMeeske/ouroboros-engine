@@ -6,8 +6,6 @@
 // and contrastive explanation generation.
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI.SelfImprovement;
 
 /// <summary>

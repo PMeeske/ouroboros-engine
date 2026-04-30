@@ -44,7 +44,7 @@ public class ToolSelectorTests
             JsonSchema = jsonSchema;
         }
 
-        public Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct)
+        public Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
             => Task.FromResult(Result<string, string>.Success($"Executed {Name} with input: {input}"));
     }
 

@@ -2,10 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Diagnostics;
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.Extensions.Logging;
 
 namespace Ouroboros.Providers.Tapo;

@@ -36,14 +36,14 @@ public sealed class DxgiVramLayoutProviderTests
         IConfiguration config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                [DxgiVramLayoutProvider.OverrideConfigKey] = VramLayoutPresets.RX9060XT_16GB_Id,
+                [DxgiVramLayoutProvider.OverrideConfigKey] = VramLayoutPresets.RX9060XT16GBId,
             })
             .Build();
 
         IVramLayout layout = provider.Resolve(config);
 
-        layout.Id.Should().Be(VramLayoutPresets.RX9060XT_16GB_Id);
-        layout.AdapterDescription.Should().Be($"override:{VramLayoutPresets.RX9060XT_16GB_Id}");
+        layout.Id.Should().Be(VramLayoutPresets.RX9060XT16GBId);
+        layout.AdapterDescription.Should().Be($"override:{VramLayoutPresets.RX9060XT16GBId}");
         // Override returns in-code preset (no LUID rehydration from the fake adapter).
         layout.AdapterLuid.Should().Be(0UL);
     }
@@ -62,7 +62,7 @@ public sealed class DxgiVramLayoutProviderTests
 
         IVramLayout layout = provider.Resolve(EmptyConfig());
 
-        layout.Id.Should().Be(VramLayoutPresets.RX9060XT_16GB_Id);
+        layout.Id.Should().Be(VramLayoutPresets.RX9060XT16GBId);
         layout.AdapterDescription.Should().Contain("RX 9060 XT");
     }
 
@@ -80,7 +80,7 @@ public sealed class DxgiVramLayoutProviderTests
 
         IVramLayout layout = provider.Resolve(EmptyConfig());
 
-        layout.Id.Should().Be(VramLayoutPresets.RX9060XT_16GB_Id);
+        layout.Id.Should().Be(VramLayoutPresets.RX9060XT16GBId);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class DxgiVramLayoutProviderTests
 
         IVramLayout layout = provider.Resolve(EmptyConfig());
 
-        layout.Id.Should().Be(VramLayoutPresets.Generic_24GB_Plus_Id);
+        layout.Id.Should().Be(VramLayoutPresets.Generic24GBPlusId);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public sealed class DxgiVramLayoutProviderTests
 
         IVramLayout layout = provider.Resolve(EmptyConfig());
 
-        layout.Id.Should().Be(VramLayoutPresets.Generic_8GB_Id);
+        layout.Id.Should().Be(VramLayoutPresets.Generic8GBId);
         layout.AdapterDescription.Should().Be("fallback:no-adapter");
     }
 
@@ -128,7 +128,7 @@ public sealed class DxgiVramLayoutProviderTests
         IVramLayout layout = provider.Resolve(EmptyConfig());
 
         // Only adapter was software — falls through to the no-adapter default.
-        layout.Id.Should().Be(VramLayoutPresets.Generic_8GB_Id);
+        layout.Id.Should().Be(VramLayoutPresets.Generic8GBId);
         layout.AdapterDescription.Should().Be("fallback:no-adapter");
     }
 
@@ -142,7 +142,7 @@ public sealed class DxgiVramLayoutProviderTests
 
         IVramLayout layout = provider.Resolve(EmptyConfig());
 
-        layout.Id.Should().Be(VramLayoutPresets.Generic_24GB_Plus_Id);
+        layout.Id.Should().Be(VramLayoutPresets.Generic24GBPlusId);
         layout.AdapterLuid.Should().Be(0xCAFEUL);
     }
 
@@ -188,7 +188,7 @@ public sealed class DxgiVramLayoutProviderTests
 
         IVramLayout layout = provider.Resolve(config);
 
-        layout.Id.Should().Be(VramLayoutPresets.Generic_24GB_Plus_Id);
+        layout.Id.Should().Be(VramLayoutPresets.Generic24GBPlusId);
     }
 
     private static IConfiguration EmptyConfig() => new ConfigurationBuilder().Build();

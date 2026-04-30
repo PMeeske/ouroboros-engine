@@ -1,5 +1,3 @@
-using Ouroboros.Domain.Vectors;
-
 namespace Ouroboros.Pipeline.Branches;
 
 /// <summary>

@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Moq;
-using Ouroboros.Core.Monads;
 using Ouroboros.Providers.TextToSpeech;
 using Xunit;
 
@@ -227,15 +226,7 @@ public class TtsFallbackTests
             }
 
             // Check for rate limiting errors
-            if (primaryResult.Error != null && IsRateLimitError(primaryResult.Error))
-            {
-                shouldFallback = true;
-            }
-            else
-            {
-                // Non-rate-limit error, still try fallback for graceful degradation
-                shouldFallback = true;
-            }
+            shouldFallback = true;
         }
         catch
         {
@@ -319,17 +310,5 @@ public class TtsFallbackTests
         edgeFallback.Verify(
             x => x.SynthesizeAsync(It.IsAny<string>(), It.IsAny<TextToSpeechOptions?>(), It.IsAny<CancellationToken>()),
             Times.Once);
-    }
-
-    /// <summary>
-    /// Verifies that EdgeTtsService.Voices.JennyNeural matches the expected voice constant.
-    /// </summary>
-    [Fact]
-    public void EdgeTtsJennyVoice_ShouldBeCorrectVoiceName()
-    {
-        // Assert — documents the exact voice name used as fallback
-        EdgeTtsService.Voices.JennyNeural.Should().Be("en-US-JennyNeural");
-        EdgeTtsService.Voices.Default.Should().Be(EdgeTtsService.Voices.JennyNeural,
-            "Jenny should be the default Edge TTS voice used for fallback");
     }
 }

@@ -27,8 +27,6 @@ public class ReplayEngineReplayTests
             .ReturnsAsync(new float[] { 0.1f, 0.2f, 0.3f });
     }
 
-    #region Basic Replay Tests
-
     [Fact]
     public async Task ReplayAsync_WithEmptyBranch_CreatesReplayBranch()
     {
@@ -166,10 +164,6 @@ public class ReplayEngineReplayTests
         result.Events.OfType<ReasoningStep>().Should().HaveCount(1);
     }
 
-    #endregion
-
-    #region Tool Re-execution Tests
-
     [Fact]
     public async Task ReplayAsync_WithToolExecutions_ReExecutesTools()
     {
@@ -199,10 +193,6 @@ public class ReplayEngineReplayTests
         // The replayed step will have tool calls from the mock LLM (none in our mock, but structure is there)
         replayedStep.Should().NotBeNull();
     }
-
-    #endregion
-
-    #region State Type Tests
 
     [Fact]
     public async Task ReplayAsync_WithDraftState_CreatesDraftState()
@@ -297,10 +287,6 @@ public class ReplayEngineReplayTests
         step.State.Should().BeOfType<Draft>(); // Should default to Draft
     }
 
-    #endregion
-
-    #region Vector Store Tests
-
     [Fact]
     public async Task ReplayAsync_CopiesVectorsToReplayBranch()
     {
@@ -360,10 +346,6 @@ public class ReplayEngineReplayTests
         ((Draft)originalStep.State).DraftText.Should().Be("Original draft");
     }
 
-    #endregion
-
-    #region Parameter Tests
-
     [Fact]
     public async Task ReplayAsync_WithCustomK_RetrievesCorrectAmountOfDocuments()
     {
@@ -414,10 +396,6 @@ public class ReplayEngineReplayTests
         // The new topic should be used in the replay
     }
 
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task ReplayAsync_WithNonReasoningEvents_SkipsThem()
     {
@@ -459,6 +437,4 @@ public class ReplayEngineReplayTests
         result.Should().NotBeNull();
         result.Events.OfType<ReasoningStep>().Should().HaveCount(1);
     }
-
-    #endregion
 }

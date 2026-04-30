@@ -1,17 +1,12 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-using FluentAssertions;
-using Moq;
 using Ouroboros.Agent.MetaAI.GlobalWorkspaceTheory;
-using Xunit;
 
 namespace Ouroboros.Tests.MetaAI.GlobalWorkspaceTheory;
 
 [Trait("Category", "Unit")]
 public sealed class CognitiveTickEngineTests
 {
-    #region Lifecycle
-
     [Fact]
     public void Constructor_SetsProperties()
     {
@@ -115,10 +110,6 @@ public sealed class CognitiveTickEngineTests
 
         engine.IsRunning.Should().BeFalse();
     }
-
-    #endregion
-
-    #region TickOnceAsync
 
     [Fact]
     public async Task TickOnceAsync_ProducesCandidates_AndBroadcasts()
@@ -248,10 +239,6 @@ public sealed class CognitiveTickEngineTests
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
-    #endregion
-
-    #region TickEvent
-
     [Fact]
     public void TickEvent_FromReportAndSnapshot_MapsCorrectly()
     {
@@ -275,10 +262,6 @@ public sealed class CognitiveTickEngineTests
         tick.Entropy.Should().Be(0.5);
         tick.WorkspaceChunks.Should().BeEmpty();
     }
-
-    #endregion
-
-    #region Helpers
 
     private static CognitiveTickEngine CreateEngine()
     {
@@ -322,6 +305,4 @@ public sealed class CognitiveTickEngineTests
                        .ToList());
         }
     }
-
-    #endregion
 }

@@ -14,8 +14,6 @@ using Xunit;
 [Trait("Category", "Unit")]
 public class DeterministicEmbeddingModelTests
 {
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithDefaultDimension_CreatesModel()
     {
@@ -57,10 +55,6 @@ public class DeterministicEmbeddingModelTests
         // Assert
         result.Length.Should().Be(DeterministicEmbeddingModel.DefaultDimension);
     }
-
-    #endregion
-
-    #region CreateEmbeddingsAsync - Basic Tests
 
     [Fact]
     public async Task CreateEmbeddingsAsync_WithValidInput_ReturnsVector()
@@ -117,10 +111,6 @@ public class DeterministicEmbeddingModelTests
         result.Should().NotBeNull();
         result.Length.Should().Be(DeterministicEmbeddingModel.DefaultDimension);
     }
-
-    #endregion
-
-    #region Determinism Tests
 
     [Fact]
     public async Task CreateEmbeddingsAsync_SameInput_ReturnsSameVector()
@@ -188,10 +178,6 @@ public class DeterministicEmbeddingModelTests
         result1.Should().Equal(result2);
     }
 
-    #endregion
-
-    #region Normalization Tests
-
     [Fact]
     public async Task CreateEmbeddingsAsync_ReturnsNormalizedVector()
     {
@@ -221,10 +207,6 @@ public class DeterministicEmbeddingModelTests
             magnitude.Should().BeApproximately(1.0f, 0.0001f, $"Input: '{input}'");
         }
     }
-
-    #endregion
-
-    #region Long Text Compression Tests
 
     [Fact]
     public async Task CreateEmbeddingsAsync_WithLongText_ReturnsVector()
@@ -305,10 +287,6 @@ public class DeterministicEmbeddingModelTests
         result1.Should().NotEqual(result2);
     }
 
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task CreateEmbeddingsAsync_WithWhitespace_ReturnsVector()
     {
@@ -379,10 +357,6 @@ public class DeterministicEmbeddingModelTests
         result.Length.Should().Be(DeterministicEmbeddingModel.DefaultDimension);
     }
 
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task CreateEmbeddingsAsync_WithCancellationToken_Succeeds()
     {
@@ -413,10 +387,6 @@ public class DeterministicEmbeddingModelTests
         // Assert
         result.Should().NotBeNull();
     }
-
-    #endregion
-
-    #region Vector Properties Tests
 
     [Fact]
     public async Task CreateEmbeddingsAsync_VectorValues_AreInValidRange()
@@ -457,10 +427,6 @@ public class DeterministicEmbeddingModelTests
         result.Should().NotContain(float.PositiveInfinity);
         result.Should().NotContain(float.NegativeInfinity);
     }
-
-    #endregion
-
-    #region Different Dimensions Tests
 
     [Fact]
     public async Task CreateEmbeddingsAsync_WithDimension128_ReturnsCorrectSize()
@@ -510,10 +476,6 @@ public class DeterministicEmbeddingModelTests
         mag512.Should().BeApproximately(1.0f, 0.0001f);
     }
 
-    #endregion
-
-    #region Hash-Based Behavior Tests
-
     [Fact]
     public async Task CreateEmbeddingsAsync_SimilarInputs_ProduceDifferentVectors()
     {
@@ -544,10 +506,6 @@ public class DeterministicEmbeddingModelTests
         var differences = result1.Zip(result2, (a, b) => Math.Abs(a - b)).Count(d => d > 0.01f);
         differences.Should().BeGreaterThan(result1.Length / 2); // Most values should differ
     }
-
-    #endregion
-
-    #region Semantic Fingerprint Tests (Long Text Compression)
 
     [Fact]
     public async Task CreateEmbeddingsAsync_LongTextWithSameContent_IsDeterministic()
@@ -581,16 +539,10 @@ public class DeterministicEmbeddingModelTests
         result1.Should().NotEqual(result2);
     }
 
-    #endregion
-
-    #region Const DefaultDimension Tests
-
     [Fact]
     public void DefaultDimension_MatchesNomicEmbedTextSize()
     {
         // Assert - nomic-embed-text uses 768 dimensions
         DeterministicEmbeddingModel.DefaultDimension.Should().Be(768);
     }
-
-    #endregion
 }

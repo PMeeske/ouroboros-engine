@@ -2,11 +2,8 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
 using Ouroboros.Agent.MetaAI.Interpretability;
 using Ouroboros.Agent.MetaAI.SelfModel;
-using Ouroboros.Core.Ethics;
-using Xunit;
 using AgentCapability = Ouroboros.Agent.MetaAI.AgentCapability;
 
 namespace Ouroboros.Agent.Tests.MetaAI.Interpretability;

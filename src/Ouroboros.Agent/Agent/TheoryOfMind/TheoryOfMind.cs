@@ -3,8 +3,6 @@
 // </copyright>
 
 
-using System.Collections.Concurrent;
-using System.Text.Json;
 using Ouroboros.Domain.Embodied;
 using Ouroboros.Pipeline.Prompts;
 using Unit = Ouroboros.Abstractions.Unit;
@@ -387,8 +385,6 @@ public sealed class TheoryOfMind : ITheoryOfMind
         bool WasAccurate,
         string PredictionType);
 
-    #region Explicit ITheoryOfMind implementation (Abstractions.Domain types)
-
     // The ITheoryOfMind interface is bound to Ouroboros.Abstractions.Domain placeholder types,
     // while this class operates on the richer Ouroboros.Agent.TheoryOfMind types.
     // These explicit implementations adapt the placeholder types and delegate to the typed overloads.
@@ -468,6 +464,4 @@ public sealed class TheoryOfMind : ITheoryOfMind
         AgentModel? model = GetAgentModel(agentId);
         return model != null ? new Ouroboros.Abstractions.Domain.AgentModel() : null;
     }
-
-    #endregion
 }

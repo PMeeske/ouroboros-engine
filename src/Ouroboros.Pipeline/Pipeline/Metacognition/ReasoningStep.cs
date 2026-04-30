@@ -5,7 +5,6 @@
 namespace Ouroboros.Pipeline.Metacognition;
 
 using System.Collections.Immutable;
-using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Represents a single step in a reasoning process.

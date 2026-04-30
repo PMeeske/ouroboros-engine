@@ -1,10 +1,6 @@
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using Moq;
-using Ouroboros.Abstractions.Monads;
-using Ouroboros.Tools;
-using Xunit;
 
 namespace Ouroboros.McpServer.Tests;
 
@@ -328,11 +324,9 @@ public class OuroborosMcpServerTests
     public async Task RunAsync_MultipleMessages_WritesMultipleResponses()
     {
         var server = new OuroborosMcpServer(new ToolRegistry());
-        var messages = string.Join("\n", new[]
-        {
+        var messages = string.Join("\n",
             """{"jsonrpc":"2.0","id":1,"method":"ping"}""",
-            """{"jsonrpc":"2.0","id":2,"method":"ping"}""",
-        }) + "\n";
+            """{"jsonrpc":"2.0","id":2,"method":"ping"}""") + "\n";
         var input = new MemoryStream(Encoding.UTF8.GetBytes(messages));
         var output = new MemoryStream();
 

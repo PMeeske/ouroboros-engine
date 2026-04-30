@@ -3,9 +3,6 @@
 // McAdams Life Story Model for agent autobiographical identity
 // ==========================================================
 
-using System.Collections.Concurrent;
-using System.Text;
-
 namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>

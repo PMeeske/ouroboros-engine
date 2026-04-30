@@ -78,7 +78,7 @@ public class WeightedRoutingTests
         await network.RouteMessageAsync(message);
 
         // Wait for async processing - use shorter delay since we expect no delivery
-        Thread.Sleep(100);
+        Task.Delay(100).Wait();
 
         // Assert
         target.ReceivedMessages.Should().BeEmpty();
@@ -300,7 +300,7 @@ public class WeightedRoutingTests
         await network.RouteMessageAsync(message);
 
         // Wait for async processing - use shorter delay since we expect no delivery
-        Thread.Sleep(100);
+        Task.Delay(100).Wait();
 
         // Assert
         target.ReceivedMessages.Should().BeEmpty();

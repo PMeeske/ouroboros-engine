@@ -1,6 +1,3 @@
-using FluentAssertions;
-using Moq;
-using Ouroboros.Providers;
 using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
 
 namespace Ouroboros.Tests.Providers;

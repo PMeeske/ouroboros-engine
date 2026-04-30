@@ -15,7 +15,6 @@ using FluentAssertions;
 using Ouroboros.Agent.ConsolidatedMind;
 using Ouroboros.Agent.MetaAI;
 using Ouroboros.Agent.NeuralSymbolic;
-using Ouroboros.Providers;
 using Ouroboros.Tools.MeTTa;
 using Xunit;
 

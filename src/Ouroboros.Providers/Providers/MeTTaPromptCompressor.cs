@@ -3,8 +3,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
-using System.Text;
-using System.Text.RegularExpressions;
 using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Providers;

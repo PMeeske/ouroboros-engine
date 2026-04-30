@@ -1,6 +1,4 @@
-using Ouroboros.Agent.MetaAI;
 using Ouroboros.Core.Ethics;
-using Ouroboros.Domain.Events;
 using IEventStore = Ouroboros.Domain.Persistence.IEventStore;
 
 namespace Ouroboros.Agent.Cognition.Planning;

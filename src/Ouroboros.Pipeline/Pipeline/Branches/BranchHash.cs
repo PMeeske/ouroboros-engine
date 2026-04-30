@@ -3,7 +3,6 @@
 // </copyright>
 
 using System.Security.Cryptography;
-using System.Text;
 
 namespace Ouroboros.Pipeline.Branches;
 

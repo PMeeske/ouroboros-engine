@@ -1,6 +1,4 @@
-﻿using System.Net.Http;
-using System.Text;
-using Anthropic;
+﻿using Anthropic;
 using Anthropic.Exceptions;
 using Anthropic.Models.Messages;
 using R3;

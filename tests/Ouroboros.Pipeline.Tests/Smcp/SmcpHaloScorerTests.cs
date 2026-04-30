@@ -4,7 +4,6 @@
 
 using Ouroboros.Core.Hyperon;
 using Ouroboros.Pipeline.Smcp;
-using Ouroboros.Tools;
 using Ouroboros.Tools.MeTTa.Smcp;
 
 namespace Ouroboros.Tests.Pipeline.Smcp;

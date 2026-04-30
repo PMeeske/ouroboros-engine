@@ -3,7 +3,6 @@
 // </copyright>
 
 using Microsoft.SemanticKernel;
-using Ouroboros.Tools;
 
 namespace Ouroboros.SemanticKernel.Tests;
 

@@ -1,17 +1,12 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-using FluentAssertions;
-using Moq;
 using Ouroboros.Agent.MetaAI.GlobalWorkspaceTheory;
-using Xunit;
 
 namespace Ouroboros.Tests.MetaAI.GlobalWorkspaceTheory;
 
 [Trait("Category", "Unit")]
 public sealed class CompetitionEngineTests
 {
-    #region SalienceScorer
-
     [Fact]
     public void SalienceScorer_StandardWeights_CalculatesCorrectly()
     {
@@ -88,10 +83,6 @@ public sealed class CompetitionEngineTests
 
         act.Should().Throw<ArgumentNullException>();
     }
-
-    #endregion
-
-    #region CompetitionEngine.Compete
 
     [Fact]
     public void Compete_EmptyCandidates_ReturnsEmpty()
@@ -178,10 +169,6 @@ public sealed class CompetitionEngineTests
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
-    #endregion
-
-    #region CompetitionEngine.CompeteAsync
-
     [Fact]
     public async Task CompeteAsync_WithMockedProducers_GathersAndSelects()
     {
@@ -256,10 +243,6 @@ public sealed class CompetitionEngineTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
-    #endregion
-
-    #region Candidate Record
-
     [Fact]
     public void Candidate_RecordEquality_SameValues_AreEqual()
     {
@@ -285,6 +268,4 @@ public sealed class CompetitionEngineTests
 
         c.Id.Should().NotBe(Guid.Empty);
     }
-
-    #endregion
 }

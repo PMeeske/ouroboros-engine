@@ -1,11 +1,7 @@
 ﻿// Copyright (c) 2025 Ouroboros contributors. Licensed under the MIT License.
 
-using FluentAssertions;
-using Moq;
 using Ouroboros.Agent.MetaLearning;
-using Ouroboros.Domain;
 using Ouroboros.Domain.MetaLearning;
-using Xunit;
 
 namespace Ouroboros.Tests.MetaLearning;
 

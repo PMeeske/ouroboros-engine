@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
 using Ouroboros.Agent.MetaAI.Affect;
 
 namespace Ouroboros.Tests.MetaAI.Affect;

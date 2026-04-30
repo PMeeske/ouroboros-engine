@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Ouroboros.Providers.Resilience;

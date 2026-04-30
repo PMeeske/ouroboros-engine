@@ -3,8 +3,6 @@
 // </copyright>
 
 
-using FluentAssertions;
-using Ouroboros.Abstractions;
 using Ouroboros.Agent.MetaAI.WorldModel;
 using Action = Ouroboros.Agent.MetaAI.WorldModel.Action;
 

@@ -7,9 +7,6 @@
 // detection per conversation partner.
 // ==========================================================
 
-using System.Collections.Concurrent;
-using Ouroboros.Agent.MetaAI.Social;
-
 namespace Ouroboros.Agent.MetaAI.Social;
 
 /// <summary>

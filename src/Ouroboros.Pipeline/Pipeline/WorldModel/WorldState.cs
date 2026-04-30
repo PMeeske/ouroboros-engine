@@ -5,7 +5,6 @@
 namespace Ouroboros.Pipeline.WorldModel;
 
 using System.Collections.Immutable;
-using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Represents the current state of the world as understood by the AI system.

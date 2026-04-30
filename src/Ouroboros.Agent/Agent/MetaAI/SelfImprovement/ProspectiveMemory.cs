@@ -4,8 +4,6 @@
 // future-oriented remembering
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI.SelfImprovement;
 
 /// <summary>

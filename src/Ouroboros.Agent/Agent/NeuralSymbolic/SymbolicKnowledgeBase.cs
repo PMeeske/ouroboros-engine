@@ -155,8 +155,6 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
             .ToList();
     }
 
-    #region Explicit ISymbolicKnowledgeBase implementation (Abstractions.Domain types)
-
     // The ISymbolicKnowledgeBase interface is bound to Ouroboros.Abstractions.Domain.SymbolicRule,
     // while this class operates on the richer Ouroboros.Agent.NeuralSymbolic.SymbolicRule record.
     // These explicit implementations satisfy the interface contract.
@@ -174,6 +172,4 @@ public sealed class SymbolicKnowledgeBase : ISymbolicKnowledgeBase
         CancellationToken ct) =>
         Task.FromResult(Result<List<Ouroboros.Abstractions.Domain.SymbolicRule>, string>.Failure(
             "Use the overload returning Ouroboros.Agent.NeuralSymbolic.SymbolicRule."));
-
-    #endregion
 }

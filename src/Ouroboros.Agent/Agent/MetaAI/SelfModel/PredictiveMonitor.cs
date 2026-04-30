@@ -3,8 +3,6 @@
 // Phase 2: Predictive self-monitoring with forecasts vs outcomes
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>

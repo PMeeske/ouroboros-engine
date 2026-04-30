@@ -5,7 +5,6 @@
 namespace Ouroboros.Pipeline.WorldModel;
 
 using System.Collections.Immutable;
-using Ouroboros.Core.Monads;
 
 public sealed partial class CausalGraph
 {

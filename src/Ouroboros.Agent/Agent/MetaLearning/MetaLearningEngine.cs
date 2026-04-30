@@ -3,7 +3,6 @@
 // </copyright>
 
 using Ouroboros.Core.Randomness;
-using Ouroboros.Domain;
 using Ouroboros.Domain.MetaLearning;
 using Ouroboros.Providers.Random;
 

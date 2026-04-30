@@ -1,6 +1,4 @@
-﻿using Ouroboros.Domain.Vectors;
-
-namespace Ouroboros.Pipeline.Replay;
+﻿namespace Ouroboros.Pipeline.Replay;
 
 /// <summary>
 /// Engine for replaying pipeline execution with fresh context and tool re-execution.

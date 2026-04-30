@@ -37,6 +37,13 @@
     <PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI.Cuda" Version="0.13.1" />
     <PackageReference Include="Whisper.net" Version="1.9.0" />
     <PackageReference Include="Whisper.net.Runtime" Version="1.9.0" />
+    <PackageReference Update="Microsoft.Build.Utilities.Core" Version="18.4.0" />
+    <PackageReference Update="System.Security.Cryptography.Xml" Version="10.0.7" />
+    <PackageReference Update="SonarAnalyzer.CSharp" Version="10.25.0.139117">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Update="Microsoft.Build.Tasks.Core" Version="18.4.0" />
   </ItemGroup>
 
   <!-- Model DTOs excluded: interfaces diverged from implementations. Re-enable when aligned. -->

@@ -3,8 +3,6 @@
 // Intrinsic motivation and autonomous exploration
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>

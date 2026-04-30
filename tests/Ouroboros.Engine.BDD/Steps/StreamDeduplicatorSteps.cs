@@ -263,6 +263,7 @@ public class StreamDeduplicatorSteps
         }
     }
 
+    #pragma warning disable S2190 // async IAsyncEnumerable with yield return is not recursion
     private static async IAsyncEnumerable<float[]> CreateAsyncEnumerableWithCancellation(CancellationTokenSource cts, int cancelAfter)
     {
         int count = 0;
@@ -278,4 +279,5 @@ public class StreamDeduplicatorSteps
             yield return new float[] { 1.0f, 0.0f, 0.0f };
         }
     }
+    #pragma warning restore S2190
 }

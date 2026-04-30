@@ -7,8 +7,6 @@
 
 using Ouroboros.Abstractions;
 using Ouroboros.Abstractions.Core;
-using Ouroboros.Agent.MetaAI;
-using Ouroboros.Agent.MetaAI.Evolution;
 
 namespace Ouroboros.Tests.Evolution;
 

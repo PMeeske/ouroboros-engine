@@ -3,8 +3,6 @@
 // Implements plan-execute-verify loop with continual learning
 // ==========================================================
 
-using System.Collections.Concurrent;
-using System.Diagnostics;
 using Ouroboros.Core.Ethics;
 
 namespace Ouroboros.Agent.MetaAI;

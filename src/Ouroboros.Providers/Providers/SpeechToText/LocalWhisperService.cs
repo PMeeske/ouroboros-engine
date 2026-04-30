@@ -2,10 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Diagnostics;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
 namespace Ouroboros.Providers.SpeechToText;
 
 /// <summary>

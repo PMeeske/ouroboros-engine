@@ -1,6 +1,5 @@
 using Ouroboros.Abstractions;
 using Ouroboros.Pipeline.MeTTa;
-using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Tests.Pipeline.MeTTa;
 

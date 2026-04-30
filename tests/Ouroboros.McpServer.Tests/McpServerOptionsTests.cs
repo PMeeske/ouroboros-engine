@@ -1,6 +1,3 @@
-using FluentAssertions;
-using Xunit;
-
 namespace Ouroboros.McpServer.Tests;
 
 [Trait("Category", "Unit")]
@@ -67,6 +64,6 @@ public class McpServerOptionsTests
     {
         var options = new McpServerOptions { ToolFilter = ["tool1", "tool2"] };
 
-        options.ToolFilter.Should().BeEquivalentTo(new[] { "tool1", "tool2" });
+        options.ToolFilter.Should().BeEquivalentTo("tool1", "tool2");
     }
 }

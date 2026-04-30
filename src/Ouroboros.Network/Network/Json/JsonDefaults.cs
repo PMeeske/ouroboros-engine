@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CoreJson = Ouroboros.Core.Json.JsonDefaults;
 
 namespace Ouroboros.Network.Json;

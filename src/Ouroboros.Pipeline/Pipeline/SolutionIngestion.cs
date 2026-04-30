@@ -1,5 +1,4 @@
 ﻿using System.Xml.Linq;
-using Ouroboros.Domain.Vectors;
 using Ouroboros.Domain.TextSplitters;
 
 // TrackedVectorStore

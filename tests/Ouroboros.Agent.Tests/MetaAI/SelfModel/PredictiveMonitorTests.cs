@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using Ouroboros.Abstractions;
 using Ouroboros.Agent.MetaAI.SelfModel;
 
 namespace Ouroboros.Agent.Tests.MetaAI.SelfModel;

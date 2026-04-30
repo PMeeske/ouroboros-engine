@@ -1,11 +1,8 @@
 // Copyright (c) Ouroboros. All rights reserved.
 
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 

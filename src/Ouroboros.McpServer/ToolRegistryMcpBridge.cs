@@ -5,7 +5,6 @@
 
 using System.Text.Json;
 using Ouroboros.Abstractions.Monads;
-using Ouroboros.Tools;
 
 namespace Ouroboros.McpServer;
 

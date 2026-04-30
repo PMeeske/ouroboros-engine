@@ -1,6 +1,4 @@
-﻿using Ouroboros.Domain.Vectors;
-
-namespace Ouroboros.Pipeline.Branches;
+﻿namespace Ouroboros.Pipeline.Branches;
 
 /// <summary>
 /// Serializable snapshot of a pipeline branch for persistence and replay.

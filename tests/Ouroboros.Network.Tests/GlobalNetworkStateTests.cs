@@ -2,10 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Collections.Immutable;
-using FluentAssertions;
-using Xunit;
-
 namespace Ouroboros.Tests.Network;
 
 [Trait("Category", "Unit")]

@@ -8,7 +8,6 @@
 
 using Ouroboros.Abstractions;
 using Ouroboros.Abstractions.Core;
-using Ouroboros.Agent.MetaAI;
 using Ouroboros.Core.Hyperon;
 using Plan = Ouroboros.Agent.MetaAI.Plan;
 using PlanStep = Ouroboros.Agent.PlanStep;

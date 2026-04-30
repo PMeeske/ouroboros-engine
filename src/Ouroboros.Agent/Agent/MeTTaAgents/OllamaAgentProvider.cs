@@ -4,7 +4,6 @@
 // </copyright>
 
 using OllamaSharp;
-using Ouroboros.Providers;
 using Ouroboros.Providers.Configuration;
 
 namespace Ouroboros.Agent.MeTTaAgents;

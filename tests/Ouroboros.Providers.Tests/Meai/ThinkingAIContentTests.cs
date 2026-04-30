@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Ouroboros.Providers.Meai;
 
 namespace Ouroboros.Tests.Meai;

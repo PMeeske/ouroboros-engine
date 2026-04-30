@@ -7,7 +7,6 @@ using Ouroboros.Abstractions;
 namespace Ouroboros.Pipeline.Metacognition;
 
 using System.Collections.Immutable;
-using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Represents a score for a single performance dimension with confidence and evidence.

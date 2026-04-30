@@ -125,7 +125,7 @@ public sealed class GpuSchedulerV2Tests : IDisposable
             if (i > 1 && arr[i] == arr[i - 1])
             {
                 // Same tenant twice in a row is only allowed if every other tenant is exhausted.
-                var othersHaveWork = remaining.Where(kv => kv.Key != arr[i] && kv.Value > 0).Any();
+                var othersHaveWork = remaining.Any(kv => kv.Key != arr[i] && kv.Value > 0);
                 othersHaveWork.Should().BeFalse(
                     $"tenant {arr[i]} appeared twice in a row at index {i} while others still had work");
             }

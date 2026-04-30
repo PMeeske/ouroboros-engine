@@ -3,10 +3,7 @@
 // Permission-based safe execution
 // ==========================================================
 
-using System.Collections.Concurrent;
-using Ouroboros.Abstractions;
 using Ouroboros.Core.LawsOfForm;
-using Ouroboros.Tools.MeTTa;
 
 namespace Ouroboros.Agent.MetaAI;
 

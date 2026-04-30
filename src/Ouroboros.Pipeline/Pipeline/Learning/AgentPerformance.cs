@@ -5,7 +5,6 @@
 namespace Ouroboros.Pipeline.Learning;
 
 using System.Collections.Immutable;
-using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Tracks agent performance metrics over time.

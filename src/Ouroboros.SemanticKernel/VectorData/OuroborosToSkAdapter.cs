@@ -3,7 +3,6 @@
 // </copyright>
 
 using Microsoft.Extensions.VectorData;
-using Ouroboros.Domain.Vectors;
 using SkVectorStore = Microsoft.Extensions.VectorData.VectorStore;
 
 namespace Ouroboros.SemanticKernel.VectorData;

@@ -1,5 +1,4 @@
 using Polly;
-using Polly.CircuitBreaker;
 
 namespace Ouroboros.Tests;
 

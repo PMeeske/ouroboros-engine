@@ -5,7 +5,6 @@
 namespace Ouroboros.Pipeline.Learning;
 
 using System.Collections.Immutable;
-using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Represents a single experience for replay-based learning.

@@ -2,8 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Runtime.CompilerServices;
-using Ouroboros.Domain.Vectors;
 using Microsoft.Extensions.VectorData;
 using SkVectorStore = Microsoft.Extensions.VectorData.VectorStore;
 

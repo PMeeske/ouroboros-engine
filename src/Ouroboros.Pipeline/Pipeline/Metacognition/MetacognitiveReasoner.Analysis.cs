@@ -6,8 +6,6 @@ namespace Ouroboros.Pipeline.Metacognition;
 /// </summary>
 public sealed partial class MetacognitiveReasoner
 {
-    #region Private Helper Methods
-
     private static bool HasCircularDependencies(ReasoningTrace trace)
     {
         // Check for any step that eventually depends on itself
@@ -257,6 +255,4 @@ public sealed partial class MetacognitiveReasoner
 
         return dominant.Name;
     }
-
-    #endregion
 }

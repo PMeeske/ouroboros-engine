@@ -1,6 +1,4 @@
-﻿using Ouroboros.Domain.Vectors;
-
-namespace Ouroboros.Pipeline.Branches;
+﻿namespace Ouroboros.Pipeline.Branches;
 
 /// <summary>
 /// Provides operations for working with pipeline branches.

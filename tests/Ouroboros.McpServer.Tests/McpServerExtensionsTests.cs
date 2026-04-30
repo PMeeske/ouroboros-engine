@@ -1,7 +1,4 @@
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Ouroboros.Tools;
-using Xunit;
 
 namespace Ouroboros.McpServer.Tests;
 

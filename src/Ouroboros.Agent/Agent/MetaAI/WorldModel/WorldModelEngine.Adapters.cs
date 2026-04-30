@@ -4,9 +4,6 @@
 
 namespace Ouroboros.Agent.MetaAI.WorldModel;
 
-using System.Collections.Concurrent;
-using Core.Monads;
-
 /// <summary>
 /// Partial class containing planning helpers, type adapters, and explicit interface implementations.
 /// </summary>
@@ -125,8 +122,6 @@ public sealed partial class WorldModelEngine
         return Math.Sqrt(sum);
     }
 
-    #region Explicit IWorldModelEngine implementation (Abstractions types)
-
     // The IWorldModelEngine interface is bound to Abstractions-level types
     // (LearnedWorldModel, WorldTransition, WorldState, AgentAction, ActionPlan),
     // while this class operates on the richer local types (WorldModel, Transition, State, Action, Plan).
@@ -216,10 +211,6 @@ public sealed partial class WorldModelEngine
             error => Result<List<WorldTransition>, string>.Failure(error));
     }
 
-    #endregion
-
-    #region Type Adapters
-
     private static State ToLocalState(WorldState ws) =>
         new(ws.Features,
             ws.Features.TryGetValue("embedding", out var emb) && emb is float[] floats
@@ -260,6 +251,4 @@ public sealed partial class WorldModelEngine
             p.ExpectedReward,
             p.Confidence,
             lookaheadDepth);
-
-    #endregion
 }

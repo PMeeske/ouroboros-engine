@@ -18,7 +18,6 @@ using Ouroboros.Tools.MeTTa;
 using Ouroboros.Providers.Meai;
 using Ouroboros.Providers.SpeechToText;
 using Ouroboros.Providers.TextToSpeech;
-using Ouroboros.Tools.MeTTa;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;

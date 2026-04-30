@@ -4,8 +4,6 @@
 // Now with Laws of Form integration for distinction-gated reasoning
 // ==========================================================
 
-using System.Collections.Concurrent;
-using System.Diagnostics;
 using Ouroboros.Core.Hyperon;
 using Ouroboros.Core.LawsOfForm;
 using Unit = Ouroboros.Abstractions.Unit;

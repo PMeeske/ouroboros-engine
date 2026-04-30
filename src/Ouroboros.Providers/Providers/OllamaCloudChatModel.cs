@@ -1,5 +1,4 @@
-﻿using System.Text;
-using OllamaSharp;
+﻿using OllamaSharp;
 using OllamaSharp.Models;
 using Polly;
 using Polly.CircuitBreaker;

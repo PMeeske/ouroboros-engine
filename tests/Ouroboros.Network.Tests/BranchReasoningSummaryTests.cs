@@ -1,5 +1,3 @@
-using System.Collections.Immutable;
-
 namespace Ouroboros.Tests;
 
 [Trait("Category", "Unit")]

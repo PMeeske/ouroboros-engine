@@ -3,7 +3,6 @@
 // </copyright>
 
 using System.Security.Cryptography;
-using System.Text;
 using Ouroboros.Network.Json;
 
 namespace Ouroboros.Network;

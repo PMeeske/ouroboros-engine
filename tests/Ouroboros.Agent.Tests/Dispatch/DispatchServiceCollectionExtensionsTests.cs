@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Ouroboros.Agent.Dispatch;
 

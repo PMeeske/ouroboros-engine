@@ -3,8 +3,6 @@
 // Wegner (2002) Apparent Mental Causation for agent self-attribution
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>

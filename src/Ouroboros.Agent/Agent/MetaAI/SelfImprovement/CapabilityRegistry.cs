@@ -3,8 +3,6 @@
 // Agent self-model with capability tracking and assessment
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>

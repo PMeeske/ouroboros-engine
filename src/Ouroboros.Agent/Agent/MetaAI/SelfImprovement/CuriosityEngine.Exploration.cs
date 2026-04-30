@@ -3,8 +3,6 @@
 // Opportunity identification, similarity calculation, and parsing
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
