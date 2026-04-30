@@ -1,4 +1,4 @@
-﻿using Ouroboros.Abstractions;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.Metacognition;
 
@@ -184,7 +184,7 @@ public sealed class RealtimeCognitiveMonitor : ICognitiveMonitor, IDisposable
 
         return _thresholds.TryGetValue(metric, out var threshold)
             ? Option<double>.Some(threshold)
-            : Option<double>.None();
+            : Option<double>.None;
     }
 
     /// <summary>

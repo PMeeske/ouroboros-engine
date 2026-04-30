@@ -1,4 +1,4 @@
-﻿using Ouroboros.Abstractions;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.Learning;
 
@@ -34,10 +34,10 @@ public static class AdaptiveAgentArrow
                 var result = agent.Adapt();
                 return Task.FromResult(result.IsSuccess
                     ? Option<AdaptationEvent>.Some(result.Value)
-                    : Option<AdaptationEvent>.None());
+                    : Option<AdaptationEvent>.None);
             }
 
-            return Task.FromResult(Option<AdaptationEvent>.None());
+            return Task.FromResult(Option<AdaptationEvent>.None);
         };
     }
 
@@ -155,10 +155,10 @@ public static class AdaptiveAgentArrow
                 var result = agent.Adapt();
                 return Task.FromResult(result.IsSuccess
                     ? Option<AdaptationEvent>.Some(result.Value)
-                    : Option<AdaptationEvent>.None());
+                    : Option<AdaptationEvent>.None);
             }
 
-            return Task.FromResult(Option<AdaptationEvent>.None());
+            return Task.FromResult(Option<AdaptationEvent>.None);
         };
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Pipeline.MultiAgent;
+namespace Ouroboros.Pipeline.MultiAgent;
 
 /// <summary>
 /// Manages a voting session for multi-agent consensus decisions.
@@ -137,7 +137,7 @@ public sealed class VotingSession
             return Option<ConsensusResult>.Some(result);
         }
 
-        return Option<ConsensusResult>.None();
+        return Option<ConsensusResult>.None;
     }
 
     /// <summary>

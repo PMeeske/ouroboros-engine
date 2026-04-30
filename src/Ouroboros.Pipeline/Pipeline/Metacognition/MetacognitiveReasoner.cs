@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Pipeline.Metacognition;
+namespace Ouroboros.Pipeline.Metacognition;
 
 /// <summary>
 /// Thread-safe implementation of reflective reasoning with bias detection and style analysis.
@@ -271,7 +271,7 @@ public sealed partial class MetacognitiveReasoner : IReflectiveReasoner
                 return Option<ReasoningTrace>.Some(trace);
             }
 
-            return Option<ReasoningTrace>.None();
+            return Option<ReasoningTrace>.None;
         }
     }
 

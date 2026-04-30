@@ -121,15 +121,15 @@ public sealed partial class QdrantDagStore
             var point = results.FirstOrDefault();
             if (point == null)
             {
-                return Option<MonadNode>.None();
+                return Option<MonadNode>.None;
             }
 
             var node = DeserializeNode(point.Payload);
-            return node != null ? Option<MonadNode>.Some(node) : Option<MonadNode>.None();
+            return node != null ? Option<MonadNode>.Some(node) : Option<MonadNode>.None;
         }
         catch (Grpc.Core.RpcException)
         {
-            return Option<MonadNode>.None();
+            return Option<MonadNode>.None;
         }
     }
 

@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Pipeline.MultiAgent;
+namespace Ouroboros.Pipeline.MultiAgent;
 
 /// <summary>
 /// Represents a team of agents that can be coordinated to work on tasks.
@@ -63,7 +63,7 @@ public sealed class AgentTeam
             return Option<AgentState>.Some(state);
         }
 
-        return Option<AgentState>.None();
+        return Option<AgentState>.None;
     }
 
     /// <summary>

@@ -1,4 +1,4 @@
-﻿using Ouroboros.Pipeline.Planning;
+using Ouroboros.Pipeline.Planning;
 
 namespace Ouroboros.Pipeline.MultiAgent;
 
@@ -61,8 +61,8 @@ public sealed record AgentTask(
             CreatedAt: DateTime.UtcNow,
             StartedAt: null,
             CompletedAt: null,
-            Result: Option<string>.None(),
-            Error: Option<string>.None());
+            Result: Option<string>.None,
+            Error: Option<string>.None);
     }
 
     /// <summary>

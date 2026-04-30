@@ -105,7 +105,7 @@ public sealed record Goal(
     /// <returns>Option containing this goal.</returns>
     public Option<Goal> ToOption() =>
         string.IsNullOrWhiteSpace(Description)
-            ? Option<Goal>.None()
+            ? Option<Goal>.None
             : Option<Goal>.Some(this);
 
     /// <summary>

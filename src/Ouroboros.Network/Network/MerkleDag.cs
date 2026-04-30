@@ -145,7 +145,7 @@ public sealed class MerkleDag
     {
         return _nodes.TryGetValue(nodeId, out var node)
             ? Option<MonadNode>.Some(node)
-            : Option<MonadNode>.None();
+            : Option<MonadNode>.None;
     }
 
     /// <summary>
@@ -157,7 +157,7 @@ public sealed class MerkleDag
     {
         return _edges.TryGetValue(edgeId, out var edge)
             ? Option<TransitionEdge>.Some(edge)
-            : Option<TransitionEdge>.None();
+            : Option<TransitionEdge>.None;
     }
 
     /// <summary>

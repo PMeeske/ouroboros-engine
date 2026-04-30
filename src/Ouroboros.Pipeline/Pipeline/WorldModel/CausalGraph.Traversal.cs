@@ -82,7 +82,7 @@ public sealed partial class CausalGraph
         if (!_nodes.TryGetValue(fromId, out CausalNode? fromNode) ||
             !_nodes.TryGetValue(toId, out CausalNode? _))
         {
-            return Option<CausalPath>.None();
+            return Option<CausalPath>.None;
         }
 
         if (fromId == toId)
@@ -129,7 +129,7 @@ public sealed partial class CausalGraph
             }
         }
 
-        return Option<CausalPath>.None();
+        return Option<CausalPath>.None;
     }
 
     /// <summary>

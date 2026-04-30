@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Pipeline.MultiAgent;
+namespace Ouroboros.Pipeline.MultiAgent;
 
 /// <summary>
 /// Represents the current state of an agent, including status and task statistics.
@@ -49,7 +49,7 @@ public sealed record AgentState(
         return new AgentState(
             identity,
             AgentStatus.Idle,
-            Option<Guid>.None(),
+            Option<Guid>.None,
             CompletedTasks: 0,
             FailedTasks: 0,
             DateTime.UtcNow);
@@ -93,7 +93,7 @@ public sealed record AgentState(
         return this with
         {
             Status = AgentStatus.Idle,
-            CurrentTaskId = Option<Guid>.None(),
+            CurrentTaskId = Option<Guid>.None,
             CompletedTasks = CompletedTasks + 1,
             LastActivityAt = DateTime.UtcNow
         };
@@ -108,7 +108,7 @@ public sealed record AgentState(
         return this with
         {
             Status = AgentStatus.Error,
-            CurrentTaskId = Option<Guid>.None(),
+            CurrentTaskId = Option<Guid>.None,
             FailedTasks = FailedTasks + 1,
             LastActivityAt = DateTime.UtcNow
         };

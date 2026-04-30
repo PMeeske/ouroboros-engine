@@ -1,4 +1,4 @@
-﻿// <copyright file="GoalExtensions.cs" company="Ouroboros">
+// <copyright file="GoalExtensions.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -177,7 +177,7 @@ public static class GoalExtensions
 
         if (!predicate(goal))
         {
-            return Option<Goal>.None();
+            return Option<Goal>.None;
         }
 
         Goal[] filteredSubGoals = goal.SubGoals

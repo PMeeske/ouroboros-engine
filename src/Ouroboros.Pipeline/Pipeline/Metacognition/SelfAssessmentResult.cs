@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Pipeline.Metacognition;
+namespace Ouroboros.Pipeline.Metacognition;
 
 /// <summary>
 /// Represents a complete self-assessment result across all performance dimensions.
@@ -101,7 +101,7 @@ public sealed record SelfAssessmentResult(
     public Option<DimensionScore> GetDimensionScore(PerformanceDimension dimension)
         => DimensionScores.TryGetValue(dimension, out var score)
             ? Option<DimensionScore>.Some(score)
-            : Option<DimensionScore>.None();
+            : Option<DimensionScore>.None;
 
     /// <summary>
     /// Creates a copy with an updated dimension score.

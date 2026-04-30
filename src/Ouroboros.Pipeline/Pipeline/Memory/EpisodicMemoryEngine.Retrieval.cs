@@ -1,4 +1,4 @@
-﻿// <copyright file="EpisodicMemoryEngine.Retrieval.cs" company="Ouroboros">
+// <copyright file="EpisodicMemoryEngine.Retrieval.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -185,7 +185,7 @@ public sealed partial class EpisodicMemoryEngine
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogWarning(ex, "Failed to deserialize episode from point");
-            return Option<Episode>.None();
+            return Option<Episode>.None;
         }
     }
 

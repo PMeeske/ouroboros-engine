@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Pipeline.WorldModel;
+namespace Ouroboros.Pipeline.WorldModel;
 
 /// <summary>
 /// Represents an observation in the world state with associated metadata.
@@ -46,6 +46,6 @@ public sealed record Observation(
     {
         return Value is T typedValue
             ? Option<T>.Some(typedValue)
-            : Option<T>.None();
+            : Option<T>.None;
     }
 }

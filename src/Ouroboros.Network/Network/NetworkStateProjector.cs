@@ -110,7 +110,7 @@ public sealed class NetworkStateProjector
     public Option<GlobalNetworkState> GetSnapshot(long epoch)
     {
         var snapshot = _snapshots.FirstOrDefault(s => s.Epoch == epoch);
-        return snapshot is not null ? Option<GlobalNetworkState>.Some(snapshot) : Option<GlobalNetworkState>.None();
+        return snapshot is not null ? Option<GlobalNetworkState>.Some(snapshot) : Option<GlobalNetworkState>.None;
     }
 
     /// <summary>
@@ -120,7 +120,7 @@ public sealed class NetworkStateProjector
     public Option<GlobalNetworkState> GetLatestSnapshot()
     {
         var snapshot = _snapshots.LastOrDefault();
-        return snapshot is not null ? Option<GlobalNetworkState>.Some(snapshot) : Option<GlobalNetworkState>.None();
+        return snapshot is not null ? Option<GlobalNetworkState>.Some(snapshot) : Option<GlobalNetworkState>.None;
     }
 
     /// <summary>
