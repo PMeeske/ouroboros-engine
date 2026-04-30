@@ -125,8 +125,7 @@ public sealed partial class SelfEvaluator : ISelfEvaluator
                 _config.InsightGenerationBatchSize,
                 0.0);
 
-            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
-            List<Experience> experiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
+            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
 
             // Pattern detection: success/failure patterns
             List<Experience> successfulExperiences = experiences.Where(e => e.Verification.Verified).ToList();

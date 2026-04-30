@@ -131,7 +131,7 @@ public sealed class AdaptiveMetaLearner : IMetaLearner
     {
         return _history.TryGetValue(strategyId, out var history)
             ? Option<IReadOnlyList<StrategyPerformance>>.Some(history.AsReadOnly())
-            : Option<IReadOnlyList<StrategyPerformance>>.None();
+            : Option<IReadOnlyList<StrategyPerformance>>.None;
     }
 
     private void RecordPerformance(LearningStrategy strategy, LearningMetrics metrics)

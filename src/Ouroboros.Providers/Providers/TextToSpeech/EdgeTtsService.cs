@@ -19,7 +19,9 @@ namespace Ouroboros.Providers.TextToSpeech;
 [Obsolete("Use OpenClawTtsService via OpenClaw gateway. Kept as fallback.")]
 public sealed class EdgeTtsService : ITextToSpeechService, IDisposable
 {
+#pragma warning disable S6418 // Public Edge TTS client token (not a secret)
     private const string TrustedClientToken = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
+#pragma warning restore S6418
     private const string WssUrl = "wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1";
     private const string ChromiumVersion = "143.0.3650.75";
     private const string ChromiumMajorVersion = "143";
