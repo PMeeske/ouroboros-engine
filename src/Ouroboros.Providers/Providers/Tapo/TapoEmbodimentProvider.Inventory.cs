@@ -1,4 +1,4 @@
-﻿// <copyright file="TapoEmbodimentProvider.Inventory.cs" company="Ouroboros">
+// <copyright file="TapoEmbodimentProvider.Inventory.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -66,8 +66,8 @@ public sealed partial class TapoEmbodimentProvider
                     {
                         ["deviceType"] = "RTSP Camera PTZ",
                         ["ipAddress"] = rtspClient.CameraIp,
-                        ["panRange"] = "360°",
-                        ["tiltRange"] = "114°",
+                        ["panRange"] = "360Â°",
+                        ["tiltRange"] = "114Â°",
                     });
 
                 _logger?.LogInformation(

@@ -223,10 +223,10 @@ public class LearnPhaseEvolutionIntegrationTests
         orchestrator.Atom.Experiences.Should().HaveCount(6);
         // After multiple cycles, capabilities should have been updated
         // (Either count increased or confidences adjusted)
-        bool capabilitiesChanged = 
+        bool capabilitiesChanged =
             orchestrator.Atom.Capabilities.Count != initialCapabilitiesCount ||
             orchestrator.Atom.Capabilities.Any(c => c.ConfidenceLevel > 0.0);
-        
+
         capabilitiesChanged.Should().BeTrue("Capabilities should evolve after multiple cycles");
     }
 

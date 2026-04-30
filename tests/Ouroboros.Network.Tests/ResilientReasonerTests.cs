@@ -70,7 +70,7 @@ public class ResilientReasonerTests
         result1.IsSuccess.Should().BeTrue("First request should fall back to symbolic");
         result2.IsSuccess.Should().BeTrue("Second request should fall back to symbolic");
         result3.IsSuccess.Should().BeTrue("Third request should use symbolic-only");
-        
+
         // Verify that the third request used symbolic-only mode
         bridge.LastUsedMode.Should().Be(NsReasoningMode.SymbolicOnly);
     }
@@ -79,9 +79,9 @@ public class ResilientReasonerTests
     public async Task ReasonAsync_CircuitOpenThenRecovered_RestoresNormalOperation()
     {
         // Arrange
-        var config = new CircuitBreakerConfig 
-        { 
-            FailureThreshold = 2, 
+        var config = new CircuitBreakerConfig
+        {
+            FailureThreshold = 2,
             OpenDuration = TimeSpan.FromMilliseconds(100)
         };
         var bridge = new MockNeuralSymbolicBridge(shouldSucceed: false, symbolicWorks: true);
@@ -90,7 +90,7 @@ public class ResilientReasonerTests
         // Act - Open the circuit
         await reasoner.ReasonAsync("Query 1", CoreReasoningMode.NeuralFirst);
         await reasoner.ReasonAsync("Query 2", CoreReasoningMode.NeuralFirst);
-        
+
         var healthBeforeRecovery = reasoner.GetHealth();
         healthBeforeRecovery.CircuitState.Should().Be("Open");
 
@@ -99,7 +99,7 @@ public class ResilientReasonerTests
 
         // Make the bridge succeed now
         bridge.SetShouldSucceed(true);
-        
+
         // Make a successful request in half-open state
         var recoveryResult = await reasoner.ReasonAsync("Recovery query", CoreReasoningMode.NeuralFirst);
 
@@ -115,9 +115,9 @@ public class ResilientReasonerTests
     public async Task ReasonAsync_HalfOpenFailure_ReopensCircuit()
     {
         // Arrange
-        var config = new CircuitBreakerConfig 
-        { 
-            FailureThreshold = 2, 
+        var config = new CircuitBreakerConfig
+        {
+            FailureThreshold = 2,
             OpenDuration = TimeSpan.FromMilliseconds(100)
         };
         var bridge = new MockNeuralSymbolicBridge(shouldSucceed: false, symbolicWorks: true);
@@ -258,7 +258,7 @@ public class ResilientReasonerTests
         ((int)CoreReasoningMode.Parallel).Should().Be((int)NsReasoningMode.Parallel);
         ((int)CoreReasoningMode.SymbolicOnly).Should().Be((int)NsReasoningMode.SymbolicOnly);
         ((int)CoreReasoningMode.NeuralOnly).Should().Be((int)NsReasoningMode.NeuralOnly);
-        
+
         // Verify they have the same number of values
         Enum.GetValues(typeof(CoreReasoningMode)).Length
             .Should().Be(Enum.GetValues(typeof(NsReasoningMode)).Length,
@@ -272,7 +272,7 @@ public class ResilientReasonerTests
     {
         private bool _shouldSucceed;
         private readonly bool _symbolicWorks;
-        
+
         public NsReasoningMode LastUsedMode { get; private set; }
 
         public MockNeuralSymbolicBridge(bool shouldSucceed, bool symbolicWorks = true)
@@ -282,7 +282,7 @@ public class ResilientReasonerTests
         }
 
         public void SetShouldSucceed(bool shouldSucceed) => _shouldSucceed = shouldSucceed;
-        
+
         public void ResetCallTracking() => LastUsedMode = default;
 
         public Task<Result<List<SymbolicRule>, string>> ExtractRulesFromSkillAsync(

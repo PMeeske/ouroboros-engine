@@ -33,7 +33,7 @@ public class SymbolicFallbackTests
         // Arrange
         var mind = new ConsolidatedMind(new MindConfig(FallbackOnError: true));
         var mockEngine = new MockMeTTaEngine();
-        
+
         // Act
         mind.WithSymbolicFallback(mockEngine);
 
@@ -52,7 +52,7 @@ public class SymbolicFallbackTests
     {
         // Arrange
         var mind = new ConsolidatedMind(new MindConfig(FallbackOnError: true));
-        
+
         // Register failing specialists for deterministic routing
         // TaskAnalyzer will likely route "What is 2+2?" to Mathematical role
         mind.RegisterSpecialist(new SpecializedModel(
@@ -150,7 +150,7 @@ public class SymbolicFallbackTests
     {
         // Arrange
         var mind = new ConsolidatedMind(new MindConfig(FallbackOnError: true));
-        
+
         // Register a failing primary specialist
         mind.RegisterSpecialist(new SpecializedModel(
             SpecializedRole.QuickResponse,
@@ -177,7 +177,7 @@ public class SymbolicFallbackTests
     {
         // Arrange
         var mind = new ConsolidatedMind(new MindConfig(FallbackOnError: true));
-        
+
         // Register only a failing specialist (no symbolic fallback)
         mind.RegisterSpecialist(new SpecializedModel(
             SpecializedRole.QuickResponse,
@@ -216,7 +216,7 @@ public class SymbolicFallbackTests
     {
         // Arrange
         var mind = new ConsolidatedMind(new MindConfig(FallbackOnError: true));
-        
+
         // Register a failing primary - use Analyst to avoid circular fallback
         mind.RegisterSpecialist(new SpecializedModel(
             SpecializedRole.Analyst,

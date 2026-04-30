@@ -1,4 +1,4 @@
-﻿// <copyright file="TapoEmbodimentProvider.Sensors.cs" company="Ouroboros">
+// <copyright file="TapoEmbodimentProvider.Sensors.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 

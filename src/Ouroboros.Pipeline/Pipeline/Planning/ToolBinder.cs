@@ -95,7 +95,7 @@ public sealed class ToolBinder
                 }
 
                 Result<string, string> result = await tool.InvokeAsync(current).ConfigureAwait(false);
-                
+
                 if (result.IsFailure)
                 {
                     throw new InvalidOperationException($"Tool {toolName} failed: {result.Error}");
@@ -126,7 +126,7 @@ public sealed class ToolBinder
                 }
 
                 Result<string, string> result = await tool.InvokeAsync(current).ConfigureAwait(false);
-                
+
                 if (result.IsFailure)
                 {
                     return Result<string, string>.Failure($"Tool {toolName} failed: {result.Error}");
@@ -175,7 +175,7 @@ public sealed class ToolBinder
 
                 ITool? tool = this._registry.Get(toolName);
                 Result<string, string> result = await tool!.InvokeAsync(current).ConfigureAwait(false);
-                
+
                 if (result.IsFailure)
                 {
                     throw new InvalidOperationException($"Tool {toolName} failed: {result.Error}");

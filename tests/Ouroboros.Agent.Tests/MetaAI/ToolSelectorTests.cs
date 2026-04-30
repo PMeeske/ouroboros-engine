@@ -96,8 +96,8 @@ public class ToolSelectorTests
     public async Task SelectToolAsync_LLMSelectsTool_ReturnsToolSelection()
     {
         // Arrange
-        var tools = new List<ITool> 
-        { 
+        var tools = new List<ITool>
+        {
             new MockTool("DatabaseQueryTool", "Queries the database", @"{""query"": ""string""}")
         };
         var llm = new MockChatCompletionModel((_, __) => Task.FromResult(

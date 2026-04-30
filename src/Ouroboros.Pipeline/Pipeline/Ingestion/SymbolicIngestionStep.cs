@@ -75,7 +75,7 @@ public sealed class SymbolicIngestionStep
             {
                 string fact = triple.ToMeTTaFact();
                 var addResult = await this._engine.AddFactAsync(fact, ct).ConfigureAwait(false);
-                
+
                 if (addResult.IsFailure)
                 {
                     // Continue processing - individual fact failures shouldn't fail entire ingestion
@@ -92,7 +92,7 @@ public sealed class SymbolicIngestionStep
                 Text = content,
                 Embedding = await this._embedModel.CreateEmbeddingsAsync(content, ct).ConfigureAwait(false),
             };
-            
+
             await branch.Store.AddAsync(new[] { vector }, ct).ConfigureAwait(false);
             vectorIds.Add(documentId);
 

@@ -11,7 +11,7 @@ internal class SimpleMathToolForThinking : ITool
     public string Description => "Performs basic math operations";
     public string? JsonSchema => null;
 
-    public Task<Ouroboros.Abstractions.Monads.Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
+    public Task<Ouroboros.Abstractions.Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
     {
         try
         {
@@ -23,11 +23,11 @@ internal class SimpleMathToolForThinking : ITool
                 "1+1" => "2",
                 _ => "unknown"
             };
-            return Task.FromResult(Ouroboros.Abstractions.Monads.Result<string, string>.Success(result));
+            return Task.FromResult(Ouroboros.Abstractions.Result<string, string>.Success(result));
         }
         catch (Exception ex)
         {
-            return Task.FromResult(Ouroboros.Abstractions.Monads.Result<string, string>.Failure(ex.Message));
+            return Task.FromResult(Ouroboros.Abstractions.Result<string, string>.Failure(ex.Message));
         }
     }
 }

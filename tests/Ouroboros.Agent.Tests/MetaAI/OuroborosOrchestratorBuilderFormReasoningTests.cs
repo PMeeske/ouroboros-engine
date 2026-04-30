@@ -175,7 +175,7 @@ public class OuroborosOrchestratorBuilderFormReasoningTests
             .GetValue(orchestrator) as ToolRegistry;
 
         tools.Should().NotBeNull();
-        tools!.All.Should().NotContain(t => t.Name.StartsWith("lof_"), 
+        tools!.All.Should().NotContain(t => t.Name.StartsWith("lof_"),
             "LoF tools should NOT be registered without WithFormReasoning()");
     }
 

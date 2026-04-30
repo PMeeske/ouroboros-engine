@@ -72,7 +72,7 @@ public static class DagMeTTaExtensions
             fact.Append($"\n(: (Event \"{evt.Id}\") ReasoningEvent)");
             fact.Append($"\n(HasReasoningKind (Event \"{evt.Id}\") {reasoning.StepKind})");
             fact.Append($"\n(EventAtIndex (Event \"{evt.Id}\") {index})");
-            
+
             // Encode tool usage if present
             if (reasoning.ToolCalls != null && reasoning.ToolCalls.Count > 0)
             {

@@ -1,4 +1,4 @@
-﻿// <copyright file="TapoEmbodimentProvider.Actions.cs" company="Ouroboros">
+// <copyright file="TapoEmbodimentProvider.Actions.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -202,13 +202,13 @@ public sealed partial class TapoEmbodimentProvider
         return await _tapoClient!.Plugs.TurnOffAsync(deviceId, ct).ConfigureAwait(false);
     }
 
-    private Task<Result<Unit>> ExecuteSetColorAsync(
+    private async Task<Result<Unit>> ExecuteSetColorAsync(
         string deviceId, byte r, byte g, byte b, CancellationToken ct)
     {
-        return _tapoClient!.ColorLightBulbs.SetColorAsync(
+        return await _tapoClient!.ColorLightBulbs.SetColorAsync(
             deviceId,
             new Color { Red = r, Green = g, Blue = b },
-            ct);
+            ct).ConfigureAwait(false);
     }
 
     private async Task<Result<SynthesizedSpeech>> SynthesizeSpeechAsync(

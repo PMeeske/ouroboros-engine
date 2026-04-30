@@ -146,7 +146,7 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
         try
         {
             ArgumentNullException.ThrowIfNull(skill);
-            
+
             if (!_skillsCache.ContainsKey(skill.Id))
                 return Result<Unit, string>.Failure($"Skill '{skill.Id}' not found");
 
@@ -191,7 +191,7 @@ public sealed partial class QdrantSkillRegistry : ISkillRegistry, IAsyncDisposab
             };
 
             _skillsCache[skillId] = updated;
-            
+
             if (_config.AutoSave)
             {
                 await SaveSkillToQdrantAsync(updated, ct).ConfigureAwait(false);

@@ -104,7 +104,7 @@ public sealed partial class MeTTaAgentRuntime : IAsyncDisposable
             return Result<SpawnedAgent, string>.Failure(modelResult.Error);
 
         var agent = new SpawnedAgent(def, modelResult.Value, DateTime.UtcNow);
-        
+
         // Use TryAdd to atomically check and add, preventing race conditions
         if (!_agents.TryAdd(def.AgentId, agent))
             return Result<SpawnedAgent, string>.Failure(

@@ -121,7 +121,7 @@ public sealed partial class PersistentSkillRegistry : ISkillRegistry, IAsyncDisp
         try
         {
             ArgumentNullException.ThrowIfNull(skill);
-            
+
             if (!_skills.ContainsKey(skill.Id))
                 return Result<Unit, string>.Failure($"Skill '{skill.Id}' not found");
 
@@ -174,7 +174,7 @@ public sealed partial class PersistentSkillRegistry : ISkillRegistry, IAsyncDisp
 
             _skills[skillId] = updated;
             _isDirty = true;
-            
+
             if (_config.AutoSave)
             {
                 await SaveSkillsAsync(ct).ConfigureAwait(false);

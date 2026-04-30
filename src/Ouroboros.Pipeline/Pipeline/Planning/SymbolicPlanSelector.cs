@@ -53,7 +53,7 @@ public sealed class SymbolicPlanSelector
         {
             // Score each plan based on symbolic constraints
             Result<PlanCandidate, string> scoreResult = await ScorePlanAsync(plan, context, ct).ConfigureAwait(false);
-            
+
             if (scoreResult.IsSuccess)
             {
                 scoredCandidates.Add(scoreResult.Value);
@@ -95,7 +95,7 @@ public sealed class SymbolicPlanSelector
             string query = $"!(Allowed {atom} {contextAtom})";
 
             Result<string, string> result = await this._engine.ExecuteQueryAsync(query, ct).ConfigureAwait(false);
-            
+
             bool isAllowed = result.Match(
                 success => ParseBooleanResult(success),
                 error => false);
@@ -116,7 +116,7 @@ public sealed class SymbolicPlanSelector
         // Query symbolic properties for additional scoring
         string complexityQuery = $"!(PlanComplexity {plan.Actions.Count})";
         Result<string, string> complexityResult = await this._engine.ExecuteQueryAsync(complexityQuery, ct).ConfigureAwait(false);
-        
+
         complexityResult.Match(
             success =>
             {

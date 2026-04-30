@@ -170,7 +170,7 @@ Natural language explanation:";
                     {
                         answer = neuralFirst.Value.answer;
                         steps.AddRange(neuralFirst.Value.steps);
-                        
+
                         // Try to verify symbolically
                         var verification = await TrySymbolicReasoning(query, ct).ConfigureAwait(false);
                         symbolicSucceeded = verification.IsSuccess;
@@ -185,13 +185,13 @@ Natural language explanation:";
                     var symbolicTask = TrySymbolicReasoning(query, ct);
                     var neuralTask = TryNeuralReasoning(query, ct);
                     await Task.WhenAll(symbolicTask, neuralTask).ConfigureAwait(false);
-                    
+
                     var symbolicParallel = await symbolicTask.ConfigureAwait(false);
                     var neuralParallel = await neuralTask.ConfigureAwait(false);
-                    
+
                     symbolicSucceeded = symbolicParallel.IsSuccess;
                     neuralSucceeded = neuralParallel.IsSuccess;
-                    
+
                     if (symbolicSucceeded && neuralSucceeded)
                     {
                         // Combine results

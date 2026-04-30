@@ -32,7 +32,7 @@ public class FullCycleWithEvolutionTests
         public Task<string> GenerateTextAsync(string prompt, CancellationToken ct = default)
         {
             _callCount++;
-            
+
             // Return different responses based on what phase is calling
             if (prompt.Contains("Plan") || prompt.Contains("plan"))
             {
@@ -306,7 +306,7 @@ public class FullCycleWithEvolutionTests
         result1.Should().NotBeNull();
         result2.Should().NotBeNull();
         result3.Should().NotBeNull();
-        
+
         orchestrator.Atom.Experiences.Should().HaveCount(3);
         orchestrator.Atom.Experiences.Select(e => e.Goal).Should().Contain("Analyze data");
         orchestrator.Atom.Experiences.Select(e => e.Goal).Should().Contain("Generate report");

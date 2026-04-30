@@ -17,7 +17,7 @@ using Ouroboros.Tools.MeTTa;
 /// - The LLM generates a plan (neural)
 /// - MeTTa verifies the plan against symbolic rules (symbolic)
 /// - Only valid plans proceed to execution
-/// 
+///
 /// Guard rails are deterministic - they evaluate to True/False 100% reliably.
 /// </remarks>
 public sealed class MeTTaVerificationStep
