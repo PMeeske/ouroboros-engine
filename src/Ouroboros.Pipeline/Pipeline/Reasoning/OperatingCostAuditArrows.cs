@@ -3,8 +3,6 @@
 // </copyright>
 
 
-using Ouroboros.Domain.Vectors;
-
 namespace Ouroboros.Pipeline.Reasoning;
 
 using Ouroboros.Domain.States;

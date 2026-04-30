@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Microsoft.Extensions.AI;
+﻿using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OllamaSharp.Models;
 using Ouroboros.Abstractions.Core;

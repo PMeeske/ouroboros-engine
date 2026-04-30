@@ -114,8 +114,7 @@ public sealed class SkillComposer : ISkillComposer
                 MaxResults: 100,
                 MinSimilarity: 0.0);
 
-            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
-            List<Experience> experiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
+            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
 
             // Analyze which skills are used together
             Dictionary<string, int> skillCombinations = new Dictionary<string, int>();

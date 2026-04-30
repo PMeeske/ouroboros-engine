@@ -25,8 +25,6 @@ public sealed class InMemoryAdapterStorageTests
         _storage = new InMemoryAdapterStorage(NullLogger<InMemoryAdapterStorage>.Instance);
     }
 
-    #region Helper Methods
-
     private static AdapterMetadata CreateTestMetadata(
         AdapterId? id = null,
         string taskName = "test-task",
@@ -41,10 +39,6 @@ public sealed class InMemoryAdapterStorageTests
             $"/blobs/{adapterId}.bin")
             .WithTraining(exampleCount, performanceScore);
     }
-
-    #endregion
-
-    #region StoreMetadataAsync Tests
 
     [Fact]
     public async Task StoreMetadataAsync_WithValidMetadata_ReturnsSuccess()
@@ -108,10 +102,6 @@ public sealed class InMemoryAdapterStorageTests
         _storage.Count.Should().Be(3);
     }
 
-    #endregion
-
-    #region GetMetadataAsync Tests
-
     [Fact]
     public async Task GetMetadataAsync_WithExistingId_ReturnsMetadata()
     {
@@ -171,10 +161,6 @@ public sealed class InMemoryAdapterStorageTests
         result.Value.TrainingExampleCount.Should().Be(500);
         result.Value.PerformanceScore.Should().Be(0.95);
     }
-
-    #endregion
-
-    #region GetAdaptersByTaskAsync Tests
 
     [Fact]
     public async Task GetAdaptersByTaskAsync_WithMatchingTask_ReturnsAdapters()
@@ -240,10 +226,6 @@ public sealed class InMemoryAdapterStorageTests
         result.Error.Should().Contain("empty");
     }
 
-    #endregion
-
-    #region UpdateMetadataAsync Tests
-
     [Fact]
     public async Task UpdateMetadataAsync_WithExistingAdapter_UpdatesSuccessfully()
     {
@@ -288,10 +270,6 @@ public sealed class InMemoryAdapterStorageTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Contain("null");
     }
-
-    #endregion
-
-    #region DeleteMetadataAsync Tests
 
     [Fact]
     public async Task DeleteMetadataAsync_WithExistingAdapter_DeletesSuccessfully()
@@ -338,10 +316,6 @@ public sealed class InMemoryAdapterStorageTests
         result.IsFailure.Should().BeTrue();
     }
 
-    #endregion
-
-    #region Count and Clear Tests
-
     [Fact]
     public void Count_InitiallyZero()
     {
@@ -374,10 +348,6 @@ public sealed class InMemoryAdapterStorageTests
         // Assert
         _storage.Count.Should().Be(0);
     }
-
-    #endregion
-
-    #region Concurrency Tests
 
     [Fact]
     public async Task ConcurrentStores_AllSucceed()
@@ -415,10 +385,6 @@ public sealed class InMemoryAdapterStorageTests
         await action.Should().NotThrowAsync();
     }
 
-    #endregion
-
-    #region Full Lifecycle Tests
-
     [Fact]
     public async Task FullLifecycle_CRUD_WorksCorrectly()
     {
@@ -450,6 +416,4 @@ public sealed class InMemoryAdapterStorageTests
         var finalResult = await _storage.GetMetadataAsync(adapterId);
         finalResult.IsFailure.Should().BeTrue();
     }
-
-    #endregion
 }

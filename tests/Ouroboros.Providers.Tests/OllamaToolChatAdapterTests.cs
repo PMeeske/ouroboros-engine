@@ -1,8 +1,4 @@
-using FluentAssertions;
-using Moq;
-using Ouroboros.Providers;
 using Ouroboros.Providers.Resilience;
-using Ouroboros.Tools;
 
 namespace Ouroboros.Tests;
 

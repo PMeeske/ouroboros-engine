@@ -1,5 +1,4 @@
 ﻿using System.IO.Compression;
-using System.Text;
 using System.Xml.Linq;
 
 namespace Ouroboros.Pipeline.Ingestion.Zip;

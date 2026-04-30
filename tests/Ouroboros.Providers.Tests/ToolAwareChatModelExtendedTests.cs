@@ -6,7 +6,6 @@
 namespace Ouroboros.Tests.Providers;
 
 using FluentAssertions;
-using Ouroboros.Core.Monads;
 using Ouroboros.Providers;
 using Ouroboros.Tests.Mocks;
 using Ouroboros.Tools;
@@ -18,8 +17,6 @@ using Xunit;
 [Trait("Category", "Unit")]
 public class ToolAwareChatModelExtendedTests
 {
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithValidDependencies_Succeeds()
     {
@@ -62,10 +59,6 @@ public class ToolAwareChatModelExtendedTests
         // Assert - It creates, but will fail when tools are referenced
         toolAwareModel.Should().NotBeNull();
     }
-
-    #endregion
-
-    #region GenerateWithToolsAsync Tests
 
     [Fact]
     public async Task GenerateWithToolsAsync_NoToolCalls_ReturnsOriginalText()
@@ -188,10 +181,6 @@ public class ToolAwareChatModelExtendedTests
         tools[0].Output.Should().Be("Echo: hello world");
     }
 
-    #endregion
-
-    #region GenerateWithToolsResultAsync Tests
-
     [Fact]
     public async Task GenerateWithToolsResultAsync_OnSuccess_ReturnsSuccessResult()
     {
@@ -226,10 +215,6 @@ public class ToolAwareChatModelExtendedTests
         result.Error.Should().Contain("failed");
     }
 
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task GenerateWithToolsAsync_WithCancellationToken_PropagatesToken()
     {
@@ -262,10 +247,6 @@ public class ToolAwareChatModelExtendedTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Contain("failed");
     }
-
-    #endregion
-
-    #region Tool Pattern Matching Tests
 
     [Fact]
     public async Task GenerateWithToolsAsync_WithNestedBrackets_HandlesCorrectly()
@@ -319,10 +300,6 @@ public class ToolAwareChatModelExtendedTests
         text.Should().Contain("[TOOL-RESULT:math] 4");
     }
 
-    #endregion
-
-    #region Tool with Schema Tests
-
     [Fact]
     public async Task GenerateWithToolsAsync_WithToolHavingSchema_Works()
     {
@@ -340,10 +317,6 @@ public class ToolAwareChatModelExtendedTests
         tools.Should().HaveCount(1);
         tools[0].Arguments.Should().Contain("value");
     }
-
-    #endregion
-
-    #region Fail-Safe Tool Tests
 
     [Fact]
     public async Task GenerateWithToolsAsync_WithFailingTool_ContinuesWithOtherTools()
@@ -364,10 +337,6 @@ public class ToolAwareChatModelExtendedTests
         tools.Should().HaveCount(2);
         tools[1].Output.Should().Be("10");
     }
-
-    #endregion
-
-    #region Edge Cases
 
     [Fact]
     public async Task GenerateWithToolsAsync_WithEmptyResponse_ReturnsEmpty()
@@ -416,6 +385,4 @@ public class ToolAwareChatModelExtendedTests
         text.Should().Be("[TOOL:math 2+2 some text");
         tools.Should().BeEmpty();
     }
-
-    #endregion
 }

@@ -5,7 +5,6 @@
 namespace Ouroboros.Pipeline.Metacognition;
 
 using System.Collections.Immutable;
-using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Represents an event in cognitive processing.

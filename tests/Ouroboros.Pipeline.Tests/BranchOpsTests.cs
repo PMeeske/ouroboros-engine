@@ -17,8 +17,6 @@ public class BranchOpsTests
             .ReturnsAsync(new float[] { 0.1f, 0.2f, 0.3f });
     }
 
-    #region MergeByRelevance Tests
-
     [Fact]
     public async Task MergeByRelevance_WithNoConflicts_CombinesAllVectors()
     {
@@ -297,6 +295,4 @@ public class BranchOpsTests
         // Assert
         result.Should().NotBeNull();
     }
-
-    #endregion
 }

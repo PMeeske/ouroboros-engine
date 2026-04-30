@@ -7,9 +7,7 @@ namespace Ouroboros.Agent.Resilience;
 
 using Microsoft.Extensions.Logging;
 using Ouroboros.Agent.NeuralSymbolic;
-using Ouroboros.Core.Monads;
 using Ouroboros.Core.Resilience;
-using Ouroboros.Providers;
 using Polly;
 using Polly.CircuitBreaker;
 

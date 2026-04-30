@@ -4,7 +4,6 @@
 // </copyright>
 
 using System.Text.Json;
-using Ouroboros.Tools;
 
 namespace Ouroboros.McpServer;
 

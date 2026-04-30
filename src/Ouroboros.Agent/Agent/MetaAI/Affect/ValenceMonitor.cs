@@ -4,7 +4,6 @@
 // Uses Fourier transform for stress pattern detection
 // ==========================================================
 
-using System.Collections.Concurrent;
 using System.Numerics;
 
 namespace Ouroboros.Agent.MetaAI.Affect;

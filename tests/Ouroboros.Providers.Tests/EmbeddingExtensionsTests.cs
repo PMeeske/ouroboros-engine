@@ -17,8 +17,6 @@ using Xunit;
 [Trait("Category", "Unit")]
 public class EmbeddingExtensionsTests
 {
-    #region Null Validation Tests
-
     [Fact]
     public async Task CreateEmbeddingsAsync_WithNullModel_ThrowsArgumentNullException()
     {
@@ -42,10 +40,6 @@ public class EmbeddingExtensionsTests
         await Assert.ThrowsAsync<ArgumentNullException>(async () =>
             await model.CreateEmbeddingsAsync(inputs!));
     }
-
-    #endregion
-
-    #region Empty Collection Tests
 
     [Fact]
     public async Task CreateEmbeddingsAsync_WithEmptyCollection_ReturnsEmptyArray()
@@ -77,10 +71,6 @@ public class EmbeddingExtensionsTests
         results.Should().BeEmpty();
     }
 
-    #endregion
-
-    #region Single Item Tests
-
     [Fact]
     public async Task CreateEmbeddingsAsync_WithSingleItem_ReturnsOneEmbedding()
     {
@@ -95,10 +85,6 @@ public class EmbeddingExtensionsTests
         results.Should().HaveCount(1);
         results[0].Length.Should().Be(384);
     }
-
-    #endregion
-
-    #region Multiple Items Tests
 
     [Fact]
     public async Task CreateEmbeddingsAsync_WithMultipleItems_ReturnsAllEmbeddings()
@@ -132,10 +118,6 @@ public class EmbeddingExtensionsTests
         results[1].Should().NotEqual(results[2]);
         results[0].Should().NotEqual(results[2]);
     }
-
-    #endregion
-
-    #region Null Items Handling Tests
 
     [Fact]
     public async Task CreateEmbeddingsAsync_WithNullItems_FiltersNullItems()
@@ -183,10 +165,6 @@ public class EmbeddingExtensionsTests
         results.Should().OnlyContain(embedding => embedding.Length == 384);
     }
 
-    #endregion
-
-    #region Error Handling Tests
-
     [Fact]
     public async Task CreateEmbeddingsAsync_WhenModelThrows_ContinuesProcessing()
     {
@@ -225,10 +203,6 @@ public class EmbeddingExtensionsTests
         results.Should().OnlyContain(embedding => embedding.Length == 0);
     }
 
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task CreateEmbeddingsAsync_WithCancellationToken_CatchesCancellation()
     {
@@ -262,10 +236,6 @@ public class EmbeddingExtensionsTests
         // Assert
         results.Should().HaveCount(2);
     }
-
-    #endregion
-
-    #region Different Input Types Tests
 
     [Fact]
     public async Task CreateEmbeddingsAsync_WithArray_Succeeds()
@@ -322,10 +292,6 @@ public class EmbeddingExtensionsTests
         // Assert
         results.Should().HaveCount(3);
     }
-
-    #endregion
-
-    #region Edge Cases
 
     [Fact]
     public async Task CreateEmbeddingsAsync_WithEmptyStrings_ProcessesAll()
@@ -399,10 +365,6 @@ public class EmbeddingExtensionsTests
         results.Should().HaveCount(3);
     }
 
-    #endregion
-
-    #region Large Batch Tests
-
     [Fact]
     public async Task CreateEmbeddingsAsync_WithLargeBatch_ProcessesAll()
     {
@@ -440,10 +402,6 @@ public class EmbeddingExtensionsTests
         emptyCount.Should().Be(5); // 10, 20, 30, 40, 50
     }
 
-    #endregion
-
-    #region Return Type Tests
-
     [Fact]
     public async Task CreateEmbeddingsAsync_ReturnsReadOnlyList()
     {
@@ -472,10 +430,6 @@ public class EmbeddingExtensionsTests
         results.Should().NotBeNull();
     }
 
-    #endregion
-
-    #region Performance Tests
-
     [Fact]
     public async Task CreateEmbeddingsAsync_ProcessesSequentially()
     {
@@ -490,10 +444,6 @@ public class EmbeddingExtensionsTests
         // Assert
         callOrder.Should().Equal(1, 2, 3, 4, 5);
     }
-
-    #endregion
-
-    #region Helper Classes
 
     /// <summary>
     /// Mock embedding model that can throw exceptions on demand.
@@ -546,6 +496,4 @@ public class EmbeddingExtensionsTests
             return Task.FromResult(new float[] { 1.0f, 2.0f });
         }
     }
-
-    #endregion
 }

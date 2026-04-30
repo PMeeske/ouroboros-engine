@@ -2,11 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
 using Ouroboros.Agent.MetaAI.WorldModel;
-using Ouroboros.Tensor.Abstractions;
-using Ouroboros.Tensor.Backends;
-using Xunit;
 using Action = Ouroboros.Agent.MetaAI.WorldModel.Action;
 
 namespace Ouroboros.Agent.Tests.MetaAI.WorldModel;
@@ -201,8 +197,6 @@ public class MlpStatePredictorGpuTests
         MathF.Sqrt(newNormSquared).Should().BeApproximately(1.0f, 1e-5f, "Normalized vector should have unit length");
     }
 
-    #region Helper Methods
-
     private static State CreateTestState(int embeddingSize, int seed = 0)
     {
         var random = new Random(seed);
@@ -258,6 +252,4 @@ public class MlpStatePredictorGpuTests
         }
         return flat;
     }
-
-    #endregion
 }

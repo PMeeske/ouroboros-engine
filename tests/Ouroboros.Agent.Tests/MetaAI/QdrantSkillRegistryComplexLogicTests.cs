@@ -1,10 +1,7 @@
 #pragma warning disable CA2000 // Test file - ownership is managed by test lifecycle
 // Copyright (c) 2025 Ouroboros contributors. Licensed under the MIT License.
 
-using FluentAssertions;
-using Ouroboros.Agent.MetaAI;
 using Qdrant.Client;
-using Xunit;
 
 namespace Ouroboros.Tests.MetaAI;
 

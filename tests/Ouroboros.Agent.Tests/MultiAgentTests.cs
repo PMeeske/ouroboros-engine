@@ -1,4 +1,4 @@
-﻿// <copyright file="MultiAgentTests.cs" company="Ouroboros">
+// <copyright file="MultiAgentTests.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -9,7 +9,6 @@ namespace Ouroboros.Tests.MultiAgent;
 
 using System;
 using FluentAssertions;
-using Ouroboros.Core.Monads;
 using Ouroboros.Pipeline.MultiAgent;
 using Ouroboros.Pipeline.Planning;
 using Xunit;
@@ -20,8 +19,6 @@ using Xunit;
 [Trait("Category", "Unit")]
 public class MultiAgentTests
 {
-    #region AgentCapability Tests
-
     /// <summary>
     /// Tests that AgentCapability.Create correctly sets all properties.
     /// </summary>
@@ -87,10 +84,6 @@ public class MultiAgentTests
         // Assert
         capability.Proficiency.Should().Be(proficiency);
     }
-
-    #endregion
-
-    #region AgentIdentity Tests
 
     /// <summary>
     /// Tests that AgentIdentity.Create generates an ID and timestamp.
@@ -252,10 +245,6 @@ public class MultiAgentTests
         result.Should().NotContain(c => c.Name == "design");
     }
 
-    #endregion
-
-    #region AgentState Tests
-
     /// <summary>
     /// Tests that AgentState.ForAgent creates an idle state.
     /// </summary>
@@ -357,7 +346,7 @@ public class MultiAgentTests
         AgentState state = new AgentState(
             identity,
             AgentStatus.Idle,
-            Option<Guid>.None(),
+            Option<Guid>.None,
             completed,
             failed,
             DateTime.UtcNow);
@@ -368,10 +357,6 @@ public class MultiAgentTests
         // Assert
         successRate.Should().BeApproximately(expected, 0.0001);
     }
-
-    #endregion
-
-    #region AgentMessage Tests
 
     /// <summary>
     /// Tests that CreateRequest sets properties correctly.
@@ -493,10 +478,6 @@ public class MultiAgentTests
         message.Payload.Should().Be(payload);
         message.CorrelationId.Should().BeNull();
     }
-
-    #endregion
-
-    #region InMemoryMessageBus Tests
 
     /// <summary>
     /// Tests that PublishAsync delivers messages to subscribers.
@@ -748,10 +729,6 @@ public class MultiAgentTests
         publishAct.Should().Throw<ObjectDisposedException>();
     }
 
-    #endregion
-
-    #region AgentTeam Tests
-
     /// <summary>
     /// Tests that Empty team has no agents.
     /// </summary>
@@ -904,10 +881,6 @@ public class MultiAgentTests
         coders.Should().HaveCount(2);
         analysts.Should().HaveCount(1);
     }
-
-    #endregion
-
-    #region ConsensusProtocol Tests
 
     /// <summary>
     /// Tests that AgentVote.Create validates confidence range.
@@ -1085,10 +1058,6 @@ public class MultiAgentTests
         participationRate.Should().BeApproximately(expected, 0.001);
     }
 
-    #endregion
-
-    #region VotingSession Tests
-
     /// <summary>
     /// Tests that CastVote records the vote.
     /// </summary>
@@ -1191,10 +1160,6 @@ public class MultiAgentTests
             .WithMessage("*InvalidOption*not a valid option*");
     }
 
-    #endregion
-
-    #region DelegationCriteria Tests
-
     /// <summary>
     /// Tests that FromGoal sets default values.
     /// </summary>
@@ -1254,10 +1219,6 @@ public class MultiAgentTests
         // Assert
         updated.MinProficiency.Should().Be(minProficiency);
     }
-
-    #endregion
-
-    #region DelegationStrategy Tests
 
     /// <summary>
     /// Tests that CapabilityBasedStrategy selects the most proficient agent.
@@ -1527,10 +1488,6 @@ public class MultiAgentTests
         result.MatchScore.Should().Be(0.0);
     }
 
-    #endregion
-
-    #region AgentTask Tests
-
     /// <summary>
     /// Tests that AgentTask.Create sets pending status.
     /// </summary>
@@ -1618,10 +1575,6 @@ public class MultiAgentTests
         failedTask.CompletedAt.Should().NotBeNull();
     }
 
-    #endregion
-
-    #region CoordinationResult Tests
-
     /// <summary>
     /// Tests that CoordinationResult.Success calculates metrics correctly.
     /// </summary>
@@ -1656,10 +1609,6 @@ public class MultiAgentTests
         result.SuccessRate.Should().BeApproximately(0.6667, 0.001);
         result.TotalDuration.Should().Be(duration);
     }
-
-    #endregion
-
-    #region AgentCoordinator Tests
 
     /// <summary>
     /// Tests that ExecuteAsync completes with a single goal.
@@ -1783,10 +1732,6 @@ public class MultiAgentTests
         // Assert
         result.IsSuccess.Should().BeTrue();
     }
-
-    #endregion
-
-    #region Integration Tests
 
     /// <summary>
     /// Tests that a multi-agent collaboration workflow completes successfully.
@@ -1914,6 +1859,4 @@ public class MultiAgentTests
         dbResult.HasMatch.Should().BeTrue();
         dbResult.SelectedAgentId.Should().Be(dbAdmin.Id);
     }
-
-    #endregion
 }

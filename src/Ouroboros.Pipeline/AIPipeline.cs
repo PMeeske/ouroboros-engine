@@ -13,13 +13,7 @@
 #pragma warning disable CA2007 // ConfigureAwait (remediation integration)
 #pragma warning disable CA1031 // Catch specific exceptions (remediation integration)
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

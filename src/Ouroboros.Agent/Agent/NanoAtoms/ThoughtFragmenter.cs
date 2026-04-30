@@ -3,9 +3,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
-using Ouroboros.Core.Monads;
-using Ouroboros.Providers;
-
 namespace Ouroboros.Agent.NanoAtoms;
 
 /// <summary>

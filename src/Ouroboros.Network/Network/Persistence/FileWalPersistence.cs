@@ -208,8 +208,6 @@ public sealed class FileWalPersistence : IGraphPersistence
         }
     }
 
-    #region Explicit IGraphPersistence implementation (Abstractions.Network types)
-
     // The IGraphPersistence interface is bound to Ouroboros.Abstractions.Network types,
     // while this class operates on the richer Ouroboros.Network types.
     // These explicit implementations satisfy the interface contract.
@@ -268,6 +266,4 @@ public sealed class FileWalPersistence : IGraphPersistence
                 sequenceNumber++);
         }
     }
-
-    #endregion
 }

@@ -2,8 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
-
 namespace Ouroboros.Tests.MetaAI;
 
 [Trait("Category", "Unit")]

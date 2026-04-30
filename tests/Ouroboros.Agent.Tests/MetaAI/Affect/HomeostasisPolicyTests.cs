@@ -37,8 +37,6 @@ public class HomeostasisPolicyTests
             new Dictionary<string, object>());
     }
 
-    #region Default Rules Tests
-
     [Fact]
     public void Constructor_InitializesDefaultRules()
     {
@@ -78,10 +76,6 @@ public class HomeostasisPolicyTests
         // Assert
         rules.Should().BeInDescendingOrder(r => r.Priority);
     }
-
-    #endregion
-
-    #region AddRule / UpdateRule Tests
 
     [Fact]
     public void AddRule_ValidParameters_CreatesNewRule()
@@ -151,10 +145,6 @@ public class HomeostasisPolicyTests
         all.IsActive.Should().BeFalse();
         _policy.GetRules(activeOnly: true).Should().NotContain(r => r.Id == rule.Id);
     }
-
-    #endregion
-
-    #region EvaluatePolicies Tests
 
     [Fact]
     public void EvaluatePolicies_NormalState_ReturnsNoViolations()
@@ -228,10 +218,6 @@ public class HomeostasisPolicyTests
         act.Should().Throw<ArgumentNullException>();
     }
 
-    #endregion
-
-    #region ApplyCorrectionAsync Tests
-
     [Fact]
     public async Task ApplyCorrectionAsync_LogAction_ReturnsSuccess()
     {
@@ -295,10 +281,6 @@ public class HomeostasisPolicyTests
         mockMonitor.Verify(m => m.Reset(), Times.Once);
     }
 
-    #endregion
-
-    #region History and Health Summary Tests
-
     [Fact]
     public void GetHealthSummary_AfterViolation_ReflectsViolationCount()
     {
@@ -352,6 +334,4 @@ public class HomeostasisPolicyTests
         // Assert - handler is registered without throwing
         handlerCalled.Should().BeFalse();
     }
-
-    #endregion
 }

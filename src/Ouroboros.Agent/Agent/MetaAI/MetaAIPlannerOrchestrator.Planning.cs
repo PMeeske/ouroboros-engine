@@ -1,6 +1,3 @@
-
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using Ouroboros.Core.Ethics;
 using Ouroboros.Pipeline.Prompts;
 
@@ -23,8 +20,7 @@ public sealed partial class MetaAIPlannerOrchestrator
         {
                         // Check if we have relevant past experiences
             MemoryQuery query = MemoryQueryExtensions.ForGoal(goal, context, maxResults: 5, minSimilarity: 0.7);
-            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
-            List<Experience> pastExperiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
+            List<Experience> pastExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
 
             // Find matching skills
             List<Skill> matchingSkills = await _skills.FindMatchingSkillsAsync(goal, context, ct).ConfigureAwait(false);

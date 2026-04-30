@@ -3,9 +3,7 @@
 // Importance scoring, consolidation, forgetting, vector store, and disk I/O
 // ==========================================================
 
-using System.Text.Json;
 using Ouroboros.Agent.Json;
-using Ouroboros.Domain.Vectors;
 
 namespace Ouroboros.Agent.MetaAI;
 

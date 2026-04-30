@@ -3,8 +3,6 @@
 // </copyright>
 
 using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
 using Ouroboros.Providers.Json;
 
 namespace Ouroboros.Providers.Firecrawl;

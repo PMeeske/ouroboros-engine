@@ -3,12 +3,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 // </copyright>
 
-using System.Diagnostics;
-using System.Text;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
-using Ouroboros.Tools;
 
 namespace Ouroboros.Providers.Mcp;
 

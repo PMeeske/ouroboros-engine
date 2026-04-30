@@ -16,8 +16,6 @@ using Xunit;
 [Trait("Category", "Database")]
 public sealed class DistinctionWeightsTests
 {
-    #region Helper Methods
-
     private static DistinctionWeights CreateTestWeights(
         DistinctionId? id = null,
         double fitness = 0.5,
@@ -35,10 +33,6 @@ public sealed class DistinctionWeightsTests
             CreatedAt: DateTime.UtcNow,
             LastUpdatedAt: null);
     }
-
-    #endregion
-
-    #region Constructor / Record Tests
 
     [Fact]
     public void Constructor_WithValidParameters_CreatesRecord()
@@ -105,10 +99,6 @@ public sealed class DistinctionWeightsTests
         // Assert
         weights.LearnedAtStage.Should().Be(stage);
     }
-
-    #endregion
-
-    #region UpdateFitness Tests
 
     [Fact]
     public void UpdateFitness_WithCorrectPrediction_IncreasesFitness()
@@ -233,10 +223,6 @@ public sealed class DistinctionWeightsTests
         updatedIncorrect.Fitness.Should().BeInRange(0.0, 1.0);
     }
 
-    #endregion
-
-    #region ShouldDissolve Tests
-
     [Theory]
     [InlineData(0.1, 0.3, true)]   // Below threshold
     [InlineData(0.29, 0.3, true)]  // Just below threshold
@@ -286,10 +272,6 @@ public sealed class DistinctionWeightsTests
         weights.Fitness.Should().BeLessThan(0.3);
     }
 
-    #endregion
-
-    #region Immutability Tests
-
     [Fact]
     public void UpdateFitness_ReturnsNewInstance_DoesNotModifyOriginal()
     {
@@ -320,6 +302,4 @@ public sealed class DistinctionWeightsTests
         modified.Fitness.Should().Be(0.9);
         modified.Id.Should().Be(original.Id);
     }
-
-    #endregion
 }

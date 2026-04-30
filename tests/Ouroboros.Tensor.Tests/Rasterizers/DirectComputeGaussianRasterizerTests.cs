@@ -36,7 +36,7 @@ public class DirectComputeGaussianRasterizerTests
     [Trait("Category", "Unit")]
     public async Task PixelDiff_AgainstCpuBaseline_WithinToleranceOnRealFixture()
     {
-        string fixturePath = ResolveFixture();
+        string? fixturePath = ResolveFixture();
         if (fixturePath is null)
         {
             Assert.True(true, "fixture not found — skipped");
@@ -81,7 +81,7 @@ public class DirectComputeGaussianRasterizerTests
             return;
         }
 
-        string fixturePath = ResolveFixture();
+        string? fixturePath = ResolveFixture();
         if (fixturePath is null)
         {
             Assert.True(true, "fixture not found — skipped");

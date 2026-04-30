@@ -1,6 +1,3 @@
-using Ouroboros.Domain.Vectors;
-using Ouroboros.Domain.Vectors;
-
 namespace Ouroboros.Tests;
 
 [Trait("Category", "Unit")]

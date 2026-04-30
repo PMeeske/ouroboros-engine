@@ -3,7 +3,6 @@
 // Plan 4: Structured tick logger for downstream analysis
 // ==========================================================
 
-using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 
 namespace Ouroboros.Agent.MetaAI.GlobalWorkspaceTheory;

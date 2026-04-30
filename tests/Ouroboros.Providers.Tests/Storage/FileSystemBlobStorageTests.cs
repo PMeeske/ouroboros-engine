@@ -45,8 +45,6 @@ public sealed class FileSystemBlobStorageTests : IDisposable
         }
     }
 
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithValidDirectory_CreatesDirectory()
     {
@@ -64,10 +62,6 @@ public sealed class FileSystemBlobStorageTests : IDisposable
         var action = () => new FileSystemBlobStorage(invalidDir!, null);
         action.Should().Throw<ArgumentException>();
     }
-
-    #endregion
-
-    #region StoreWeightsAsync Tests
 
     [Fact]
     public async Task StoreWeightsAsync_WithValidWeights_ReturnsSuccessWithPath()
@@ -166,10 +160,6 @@ public sealed class FileSystemBlobStorageTests : IDisposable
         result.Error.Should().Contain("cancelled");
     }
 
-    #endregion
-
-    #region GetWeightsAsync Tests
-
     [Fact]
     public async Task GetWeightsAsync_WithExistingPath_ReturnsWeights()
     {
@@ -231,10 +221,6 @@ public sealed class FileSystemBlobStorageTests : IDisposable
         result.Value.Should().Equal(originalWeights);
     }
 
-    #endregion
-
-    #region DeleteWeightsAsync Tests
-
     [Fact]
     public async Task DeleteWeightsAsync_WithExistingFile_DeletesSuccessfully()
     {
@@ -278,10 +264,6 @@ public sealed class FileSystemBlobStorageTests : IDisposable
         result.IsFailure.Should().BeTrue();
     }
 
-    #endregion
-
-    #region GetWeightsSizeAsync Tests
-
     [Fact]
     public async Task GetWeightsSizeAsync_WithExistingFile_ReturnsCorrectSize()
     {
@@ -324,10 +306,6 @@ public sealed class FileSystemBlobStorageTests : IDisposable
         // Assert
         result.IsFailure.Should().BeTrue();
     }
-
-    #endregion
-
-    #region Integration Tests
 
     [Fact]
     public async Task FullLifecycle_StoreGetDeleteSize_WorksCorrectly()
@@ -381,6 +359,4 @@ public sealed class FileSystemBlobStorageTests : IDisposable
         get1.Value.Should().BeEquivalentTo(weights1);
         get2.Value.Should().BeEquivalentTo(weights2);
     }
-
-    #endregion
 }

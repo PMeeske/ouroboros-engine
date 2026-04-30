@@ -1,5 +1,4 @@
-﻿using Ouroboros.Domain.Vectors;
-using Ouroboros.Domain.TextSplitters;
+﻿using Ouroboros.Domain.TextSplitters;
 
 namespace Ouroboros.Pipeline.Ingestion;
 

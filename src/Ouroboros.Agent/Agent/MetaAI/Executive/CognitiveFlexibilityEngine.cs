@@ -3,8 +3,6 @@
 // Strategy shifting and SCAMPER-based alternative generation
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI.Executive;
 
 /// <summary>

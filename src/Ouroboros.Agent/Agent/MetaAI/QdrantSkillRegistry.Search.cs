@@ -3,8 +3,6 @@
 // </copyright>
 
 
-using System.Diagnostics;
-
 namespace Ouroboros.Agent.MetaAI;
 
 public sealed partial class QdrantSkillRegistry

@@ -1,12 +1,6 @@
 #pragma warning disable CA2000 // HttpResponseMessage ownership follows HttpClient; AnthropicClient is test-owned with HttpClient disposal.
 
-using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
 using Anthropic;
-using FluentAssertions;
-using Xunit;
 
 namespace Ouroboros.Tests;
 

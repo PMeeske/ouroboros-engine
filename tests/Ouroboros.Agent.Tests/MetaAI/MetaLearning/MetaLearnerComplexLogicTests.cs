@@ -1,10 +1,6 @@
 // Copyright (c) 2025 Ouroboros contributors. Licensed under the MIT License.
 
-using FluentAssertions;
-using Moq;
-using Ouroboros.Agent.MetaAI;
 using Ouroboros.Agent.MetaAI.MetaLearning;
-using Xunit;
 using IChatCompletionModel = Ouroboros.Abstractions.Core.IChatCompletionModel;
 
 namespace Ouroboros.Tests.MetaAI.MetaLearning;

@@ -7,8 +7,6 @@ namespace Ouroboros.Tests.Pipeline;
 [Trait("Category", "Unit")]
 public class BranchSnapshotTests
 {
-    #region Capture Tests
-
     [Fact]
     public async Task Capture_WithEmptyBranch_CreatesEmptySnapshot()
     {
@@ -173,10 +171,6 @@ public class BranchSnapshotTests
         snapshot.Vectors[0].Metadata.Should().NotBeNull();
         snapshot.Vectors[0].Metadata.Should().BeEmpty();
     }
-
-    #endregion
-
-    #region Restore Tests
 
     [Fact]
     public async Task Restore_WithEmptySnapshot_RestoresEmptyBranch()
@@ -360,10 +354,6 @@ public class BranchSnapshotTests
         vector.Metadata.Should().BeEmpty();
     }
 
-    #endregion
-
-    #region Round-Trip Tests
-
     [Fact]
     public async Task CaptureAndRestore_PreservesAllData()
     {
@@ -463,6 +453,4 @@ public class BranchSnapshotTests
         restoredBranch.Store.GetAll().Should().HaveCount(100);
         restoredBranch.Events.Should().HaveCount(50);
     }
-
-    #endregion
 }

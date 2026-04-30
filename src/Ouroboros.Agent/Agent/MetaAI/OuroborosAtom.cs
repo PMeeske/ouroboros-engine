@@ -8,8 +8,6 @@
 // Mirrors the MeTTa Ouroboros.metta schema in C#
 // ==========================================================
 
-using System.Text;
-
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>

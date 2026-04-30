@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
 using Ouroboros.Agent.TemporalReasoning;
 using TRTemporalConstraint = Ouroboros.Agent.TemporalReasoning.TemporalConstraint;
 using TRTemporalRelation = Ouroboros.Agent.TemporalReasoning.TemporalRelation;

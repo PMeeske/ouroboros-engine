@@ -2,11 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using Polly;
-using Polly.CircuitBreaker;
-using Polly.Retry;
-using R3;
-
 namespace Ouroboros.Providers.TextToSpeech;
 
 /// <summary>

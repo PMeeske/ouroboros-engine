@@ -17,8 +17,6 @@ public class IngestionArrowsTests
             .ReturnsAsync(new float[] { 0.1f, 0.2f, 0.3f });
     }
 
-    #region IngestArrow Tests
-
     [Fact]
     public async Task IngestArrow_WithValidData_AddsIngestEvent()
     {
@@ -141,6 +139,4 @@ public class IngestionArrowsTests
         var ingestEvent = result.Events.OfType<IngestBatch>().First();
         ingestEvent.Ids.Should().NotBeEmpty();
     }
-
-    #endregion
 }

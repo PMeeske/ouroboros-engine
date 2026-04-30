@@ -2,8 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Diagnostics;
-
 namespace Ouroboros.Providers.TextToSpeech;
 
 /// <summary>

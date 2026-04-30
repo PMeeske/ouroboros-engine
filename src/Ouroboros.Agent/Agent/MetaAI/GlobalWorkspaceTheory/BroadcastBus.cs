@@ -3,8 +3,6 @@
 // Plan 3: BroadcastBus (pub/sub over workspace contents)
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI.GlobalWorkspaceTheory;
 
 /// <summary>

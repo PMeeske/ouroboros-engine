@@ -3,7 +3,6 @@
 // </copyright>
 
 using System.Net.Http.Json;
-using Ouroboros.Abstractions.Monads;
 
 namespace Ouroboros.Providers.HuggingFace;
 /// <summary>

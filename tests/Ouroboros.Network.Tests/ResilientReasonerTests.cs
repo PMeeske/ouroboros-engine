@@ -8,7 +8,6 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Ouroboros.Agent.NeuralSymbolic;
 using Ouroboros.Agent.Resilience;
-using Ouroboros.Core.Monads;
 using Ouroboros.Core.Resilience;
 using Xunit;
 using NsReasoningMode = Ouroboros.Agent.NeuralSymbolic.ReasoningMode;

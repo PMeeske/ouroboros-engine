@@ -5,7 +5,6 @@
 using Microsoft.Extensions.AI;
 using Microsoft.SemanticKernel;
 using Ouroboros.Abstractions.Core;
-using Ouroboros.Tools;
 
 namespace Ouroboros.SemanticKernel.Tests;
 

@@ -7,7 +7,6 @@ using Ouroboros.Abstractions;
 namespace Ouroboros.Agent.WorldModel;
 
 using Microsoft.Extensions.Logging;
-using Ouroboros.Core.Monads;
 using Ouroboros.Domain.Embodied;
 
 /// <summary>
@@ -316,8 +315,6 @@ public sealed partial class WorldModel : IWorldModel
         }
     }
 
-    #region Explicit IWorldModel implementation (Abstractions.Domain types)
-
     // The IWorldModel interface is bound to Ouroboros.Abstractions.Domain placeholder types,
     // while this class operates on the richer Ouroboros.Domain.Embodied types.
     // These explicit implementations satisfy the interface contract.
@@ -359,6 +356,4 @@ public sealed partial class WorldModel : IWorldModel
         CancellationToken ct) =>
         Task.FromResult(Result<List<Ouroboros.Abstractions.Domain.PredictedState>, string>.Failure(
             "Use the overload accepting Ouroboros.Domain.Embodied types."));
-
-    #endregion
 }

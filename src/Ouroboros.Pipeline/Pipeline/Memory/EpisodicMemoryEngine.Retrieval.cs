@@ -2,16 +2,12 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using Ouroboros.Abstractions;
-
 namespace Ouroboros.Pipeline.Memory;
 
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using Ouroboros.Domain;
-using Ouroboros.Domain.States;
 using Ouroboros.Domain.Vectors;
 using Ouroboros.Pipeline.Verification;
 using Qdrant.Client.Grpc;

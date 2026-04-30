@@ -1,16 +1,12 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-using FluentAssertions;
 using Ouroboros.Agent.MetaAI.GlobalWorkspaceTheory;
-using Xunit;
 
 namespace Ouroboros.Tests.MetaAI.GlobalWorkspaceTheory;
 
 [Trait("Category", "Unit")]
 public sealed class BroadcastBusTests
 {
-    #region Registration
-
     [Fact]
     public void Register_NewReceiver_ReturnsTrue()
     {
@@ -78,10 +74,6 @@ public sealed class BroadcastBusTests
 
         act.Should().Throw<ArgumentNullException>();
     }
-
-    #endregion
-
-    #region Broadcast
 
     [Fact]
     public async Task BroadcastAsync_NoReceivers_CompletesSilently()
@@ -187,10 +179,6 @@ public sealed class BroadcastBusTests
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
-    #endregion
-
-    #region Test Helpers
-
     private sealed class TestReceiver : IBroadcastReceiver
     {
         public string ReceiverName { get; }
@@ -238,6 +226,4 @@ public sealed class BroadcastBusTests
         public Task OnBroadcastAsync(IReadOnlyList<WorkspaceChunk> chunks, CancellationToken ct = default)
             => throw new OperationCanceledException(ct);
     }
-
-    #endregion
 }

@@ -16,8 +16,6 @@ using Xunit;
 [Trait("Category", "Unit")]
 public class ReplayEngineTests
 {
-    #region Basic Branch Tests
-
     [Fact]
     public void EmptyBranch_HasNoEvents()
     {
@@ -76,10 +74,6 @@ public class ReplayEngineTests
         result.Events[1].Should().BeOfType<ReasoningStep>();
         result.Events[2].Should().BeOfType<IngestBatch>();
     }
-
-    #endregion
-
-    #region Reasoning State Tests
 
     [Fact]
     public void Draft_StoresText()
@@ -146,10 +140,6 @@ public class ReplayEngineTests
         revision.Kind.Should().Be("DocumentRevision");
     }
 
-    #endregion
-
-    #region ReasoningStep Tests
-
     [Fact]
     public void ReasoningStep_HasCorrectProperties()
     {
@@ -191,10 +181,6 @@ public class ReplayEngineTests
         step.ToolCalls.Should().BeNull();
     }
 
-    #endregion
-
-    #region IngestBatch Tests
-
     [Fact]
     public void IngestBatch_HasCorrectProperties()
     {
@@ -227,10 +213,6 @@ public class ReplayEngineTests
         batch.Ids.Should().BeEmpty();
     }
 
-    #endregion
-
-    #region ToolExecution Tests
-
     [Fact]
     public void ToolExecution_HasCorrectProperties()
     {
@@ -246,10 +228,6 @@ public class ReplayEngineTests
         execution.Output.Should().Be("4");
         execution.Timestamp.Should().Be(timestamp);
     }
-
-    #endregion
-
-    #region Branch Fork Tests
 
     [Fact]
     public void Fork_CreatesIndependentBranch()
@@ -310,10 +288,6 @@ public class ReplayEngineTests
         modified.Events.Should().HaveCount(2);
     }
 
-    #endregion
-
-    #region Immutability Tests
-
     [Fact]
     public void WithReasoning_ReturnsNewInstance()
     {
@@ -366,10 +340,6 @@ public class ReplayEngineTests
         newBranch.Source.Should().BeSameAs(source2);
     }
 
-    #endregion
-
-    #region Event Ordering Tests
-
     [Fact]
     public void Events_MaintainInsertionOrder()
     {
@@ -414,6 +384,4 @@ public class ReplayEngineTests
         ids.Should().OnlyHaveUniqueItems();
         ids.Should().NotContain(Guid.Empty);
     }
-
-    #endregion
 }

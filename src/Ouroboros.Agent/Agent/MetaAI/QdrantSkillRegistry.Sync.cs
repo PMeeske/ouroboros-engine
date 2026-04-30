@@ -3,9 +3,6 @@
 // </copyright>
 
 
-using System.Diagnostics;
-using System.Text.Json;
-using Ouroboros.Providers.Configuration;
 using Qdrant.Client.Grpc;
 
 namespace Ouroboros.Agent.MetaAI;

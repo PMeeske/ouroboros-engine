@@ -2,7 +2,6 @@ namespace Ouroboros.Pipeline.Hyperon;
 
 using System;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.Marshalling;
 
 /// <summary>
 /// P/Invoke bindings for the hyperonc C library (MeTTa symbolic reasoning engine).

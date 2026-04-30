@@ -2,8 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Pipeline.MultiAgent;
 
 /// <summary>

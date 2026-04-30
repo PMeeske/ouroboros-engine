@@ -122,6 +122,7 @@ public sealed class StreamingTensorAdapterTests
             yield return await Task.FromResult(v);
     }
 
+#pragma warning disable S2190 // False positive: async iterator with yield is not recursion
     private static async IAsyncEnumerable<float[]> CancellableSource(
         [EnumeratorCancellation] CancellationToken ct = default)
     {
@@ -131,4 +132,5 @@ public sealed class StreamingTensorAdapterTests
             yield return await Task.FromResult(new float[] { 1f, 2f });
         }
     }
+#pragma warning restore S2190
 }

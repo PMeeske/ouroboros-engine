@@ -1,16 +1,12 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-using FluentAssertions;
 using Ouroboros.Agent.MetaAI.GlobalWorkspaceTheory;
-using Xunit;
 
 namespace Ouroboros.Tests.MetaAI.GlobalWorkspaceTheory;
 
 [Trait("Category", "Unit")]
 public sealed class ConsciousAccessReportTests
 {
-    #region ConsciousAccessReport
-
     [Fact]
     public void Report_ToString_ContainsTickNumber()
     {
@@ -78,10 +74,6 @@ public sealed class ConsciousAccessReportTests
 
         text.Should().Contain("Evicted:  \"Background heartbeat\" (salience: 0.12)");
     }
-
-    #endregion
-
-    #region ConsciousAccessReportBuilder
 
     [Fact]
     public void Builder_BeginTick_SetsTickNumber()
@@ -198,10 +190,6 @@ public sealed class ConsciousAccessReportTests
         report.Admitted.Should().BeEmpty();
     }
 
-    #endregion
-
-    #region StructuredTickLogger
-
     [Fact]
     public async Task StructuredTickLogger_LogAsync_AddsToBuffer()
     {
@@ -255,6 +243,4 @@ public sealed class ConsciousAccessReportTests
 
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
-
-    #endregion
 }

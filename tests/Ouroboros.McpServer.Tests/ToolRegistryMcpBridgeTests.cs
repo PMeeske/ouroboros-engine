@@ -1,8 +1,4 @@
-using FluentAssertions;
 using Moq;
-using Ouroboros.Abstractions.Monads;
-using Ouroboros.Tools;
-using Xunit;
 
 namespace Ouroboros.McpServer.Tests;
 
@@ -150,7 +146,7 @@ public class ToolRegistryMcpBridgeTests
         var result = ToolRegistryMcpBridge.ToMcpTools(registry, ["alpha", "gamma"]);
 
         result.Should().HaveCount(2);
-        result.Select(t => t.Name).Should().BeEquivalentTo(new[] { "alpha", "gamma" });
+        result.Select(t => t.Name).Should().BeEquivalentTo("alpha", "gamma");
     }
 
     [Fact]

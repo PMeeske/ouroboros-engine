@@ -3,8 +3,6 @@
 // Phase 3: Affective Dynamics - Threat/opportunity appraisal
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI.Affect;
 
 /// <summary>

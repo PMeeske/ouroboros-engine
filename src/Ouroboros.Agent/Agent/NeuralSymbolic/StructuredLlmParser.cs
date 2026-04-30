@@ -3,8 +3,6 @@
 // JSON-first deserialization with string-parsing fallback
 // ==========================================================
 
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using Ouroboros.Abstractions.Errors;
 
 namespace Ouroboros.Agent.NeuralSymbolic;

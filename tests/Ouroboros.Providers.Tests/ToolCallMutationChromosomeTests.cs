@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Ouroboros.Providers.Resilience;
 
 namespace Ouroboros.Tests;

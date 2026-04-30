@@ -2,14 +2,10 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Diagnostics;
-using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using OllamaSharp;
 using OllamaSharp.Models;
 using Ouroboros.Core.EmbodiedInteraction;
-using Ouroboros.Core.Monads;
 using Ouroboros.Providers.Configuration;
 
 namespace Ouroboros.Providers;

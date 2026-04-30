@@ -1,16 +1,12 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
-using FluentAssertions;
 using Ouroboros.Agent.MetaAI.GlobalWorkspaceTheory;
-using Xunit;
 
 namespace Ouroboros.Tests.MetaAI.GlobalWorkspaceTheory;
 
 [Trait("Category", "Unit")]
 public sealed class EntropyDriveTests
 {
-    #region EntropyCalculator
-
     [Fact]
     public void EntropyCalculator_EmptyWorkspace_ReturnsZero()
     {
@@ -79,10 +75,6 @@ public sealed class EntropyDriveTests
 
         entropy.Should().Be(0.0);
     }
-
-    #endregion
-
-    #region IntrinsicDrive
 
     [Fact]
     public void EvaluateState_LowEntropy_ReturnsBored()
@@ -200,10 +192,6 @@ public sealed class EntropyDriveTests
         act.Should().Throw<ArgumentNullException>();
     }
 
-    #endregion
-
-    #region DriveInfluencer
-
     [Fact]
     public void Influence_EmptyCandidates_ReturnsEmpty()
     {
@@ -281,6 +269,4 @@ public sealed class EntropyDriveTests
 
         act.Should().Throw<ArgumentNullException>();
     }
-
-    #endregion
 }

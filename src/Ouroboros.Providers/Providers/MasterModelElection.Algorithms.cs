@@ -1,6 +1,4 @@
-﻿using R3;
-
-namespace Ouroboros.Providers;
+﻿namespace Ouroboros.Providers;
 
 /// <summary>
 /// Partial class containing election algorithms, performance tracking, and heuristic scoring.

@@ -2,9 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
-using Ouroboros.Agent.ConsolidatedMind;
-
 namespace Ouroboros.Tests.ConsolidatedMind;
 
 [Trait("Category", "Unit")]

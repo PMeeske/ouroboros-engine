@@ -15,8 +15,6 @@ using Xunit;
 [Trait("Category", "Unit")]
 public class ThinkingModeTests
 {
-    #region ThinkingResponse Tests
-
     [Fact]
     public void ThinkingResponse_FromRawText_ParsesThinkTags()
     {
@@ -139,10 +137,6 @@ public class ThinkingModeTests
         response.ContentTokens.Should().Be(50);
     }
 
-    #endregion
-
-    #region ChatRuntimeSettings Tests
-
     [Fact]
     public void ChatRuntimeSettings_DefaultThinkingMode_IsAuto()
     {
@@ -183,10 +177,6 @@ public class ThinkingModeTests
         settings.ThinkingBudgetTokens.Should().Be(1000);
     }
 
-    #endregion
-
-    #region Mock Thinking Chat Model Tests
-
     [Fact]
     public async Task MockThinkingChatModel_GenerateWithThinking_ReturnsThinkingResponse()
     {
@@ -215,10 +205,6 @@ public class ThinkingModeTests
         text.Should().Contain("Deep analysis");
         text.Should().Contain("Final answer");
     }
-
-    #endregion
-
-    #region ToolAwareChatModel Thinking Integration Tests
 
     [Fact]
     public void ToolAwareChatModel_SupportsThinking_ReturnsTrueForThinkingModel()
@@ -284,10 +270,4 @@ public class ThinkingModeTests
         tools.Should().BeEmpty("tools in thinking should not be executed");
         response.Thinking.Should().Contain("[TOOL:math 1+1]", "thinking should remain unchanged");
     }
-
-    #endregion
 }
-
-#region Mock Classes
-
-#endregion

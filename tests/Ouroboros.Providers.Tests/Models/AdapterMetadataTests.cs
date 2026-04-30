@@ -15,8 +15,6 @@ using Xunit;
 [Trait("Category", "Database")]
 public sealed class AdapterMetadataTests
 {
-    #region Create Factory Method Tests
-
     [Fact]
     public void Create_WithValidParameters_ReturnsMetadata()
     {
@@ -74,10 +72,6 @@ public sealed class AdapterMetadataTests
         lowRankMeta.Config.Rank.Should().Be(4);
         highRankMeta.Config.Rank.Should().Be(16);
     }
-
-    #endregion
-
-    #region WithTraining Method Tests
 
     [Fact]
     public void WithTraining_AddsExampleCount_Cumulatively()
@@ -146,7 +140,7 @@ public sealed class AdapterMetadataTests
         var originalTrainedAt = metadata.LastTrainedAt;
 
         // Act - wait a tiny bit to ensure time difference
-        Thread.Sleep(10);
+        Task.Delay(10).Wait();
         var trained = metadata.WithTraining(100);
 
         // Assert
@@ -215,10 +209,6 @@ public sealed class AdapterMetadataTests
         trained.PerformanceScore.Should().Be(score);
     }
 
-    #endregion
-
-    #region Record Immutability Tests
-
     [Fact]
     public void WithTraining_ReturnsNewInstance_DoesNotModifyOriginal()
     {
@@ -257,10 +247,6 @@ public sealed class AdapterMetadataTests
         modified.TaskName.Should().Be("modified-task");
     }
 
-    #endregion
-
-    #region Record Equality Tests
-
     [Fact]
     public void Equality_SameValues_AreEqual()
     {
@@ -295,10 +281,6 @@ public sealed class AdapterMetadataTests
         // Assert
         metadata1.Should().NotBe(metadata2);
     }
-
-    #endregion
-
-    #region Constructor Tests
 
     [Fact]
     public void Constructor_WithAllParameters_SetsAllProperties()
@@ -345,10 +327,6 @@ public sealed class AdapterMetadataTests
         metadata.PerformanceScore.Should().BeNull();
     }
 
-    #endregion
-
-    #region Multiple Training Sessions Tests
-
     [Fact]
     public void MultipleTrainingSessions_AccumulateExamplesAndUpdateScore()
     {
@@ -369,6 +347,4 @@ public sealed class AdapterMetadataTests
         metadata.TrainingExampleCount.Should().Be(250);
         metadata.PerformanceScore.Should().Be(0.85);
     }
-
-    #endregion
 }

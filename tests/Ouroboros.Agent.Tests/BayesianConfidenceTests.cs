@@ -8,8 +8,6 @@ namespace Ouroboros.Tests.Agent;
 [Trait("Category", "Unit")]
 public sealed class BayesianConfidenceTests
 {
-    #region Update Tests - Bayesian Properties
-
     [Fact]
     public void Update_SupportingEvidence_IncreasesConfidence()
     {
@@ -228,10 +226,6 @@ public sealed class BayesianConfidenceTests
             $"Expected diminishing returns: first change {change1:F4} > second change {change2:F4}");
     }
 
-    #endregion
-
-    #region BayesFactor Tests
-
     [Fact]
     public void BayesFactor_StrongSupport_ReturnsHighValue()
     {
@@ -287,10 +281,6 @@ public sealed class BayesianConfidenceTests
         // Assert
         Assert.True(double.IsPositiveInfinity(factor), "Expected positive infinity for zero denominator");
     }
-
-    #endregion
-
-    #region CategorizeEvidence Tests
 
     [Fact]
     public void CategorizeEvidence_BayesFactor1_Negligible()
@@ -453,10 +443,6 @@ public sealed class BayesianConfidenceTests
             BayesianConfidence.CategorizeEvidence(bayesFactor));
     }
 
-    #endregion
-
-    #region Integration-Style Tests
-
     [Fact]
     public void IntegrationTest_FiveSupportingExperiments_ConvergesHighly()
     {
@@ -562,6 +548,4 @@ public sealed class BayesianConfidenceTests
         Assert.True(confidence < 1.0, "Should never reach absolute certainty");
         Assert.True(confidence > 0.0, "Should never reach absolute zero");
     }
-
-    #endregion
 }

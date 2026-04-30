@@ -2,9 +2,6 @@
 // Epic Branch Orchestration - Manage sub-issues with agents and branches
 // ==========================================================
 
-using System.Collections.Concurrent;
-using Ouroboros.Domain.Vectors;
-
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>

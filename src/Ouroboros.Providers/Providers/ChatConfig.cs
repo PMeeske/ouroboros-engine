@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using Ouroboros.Providers.Configuration;
 
 namespace Ouroboros.Providers;
 

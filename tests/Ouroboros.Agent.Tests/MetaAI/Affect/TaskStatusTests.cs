@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
 using AffectTaskStatus = Ouroboros.Agent.MetaAI.Affect.TaskStatus;
 
 namespace Ouroboros.Tests.MetaAI.Affect;

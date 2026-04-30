@@ -1,4 +1,3 @@
-using FluentAssertions;
 using Microsoft.Extensions.AI;
 using Ouroboros.Providers.Meai;
 

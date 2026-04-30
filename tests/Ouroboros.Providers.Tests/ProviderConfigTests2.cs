@@ -1,6 +1,3 @@
-using FluentAssertions;
-using Ouroboros.Providers;
-
 namespace Ouroboros.Tests.Providers;
 
 [Trait("Category", "Unit")]

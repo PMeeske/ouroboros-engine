@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Collections.Concurrent;
 using System.Numerics.Tensors;
 using Ouroboros.Core.Hyperon;
 using Ouroboros.Tensor.Classification;

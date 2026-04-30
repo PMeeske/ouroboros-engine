@@ -3,7 +3,6 @@
 // Uses MeTTa to determine valid next nodes in execution
 // ==========================================================
 
-using System.Text.Json;
 using Ouroboros.Agent.Json;
 using Ouroboros.Agent.MetaAI;
 

@@ -15,8 +15,6 @@ using Xunit;
 [Trait("Category", "Unit")]
 public class HttpOpenAiCompatibleChatModelTests
 {
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithValidParameters_Succeeds()
     {
@@ -119,10 +117,6 @@ public class HttpOpenAiCompatibleChatModelTests
         model.Should().NotBeNull();
     }
 
-    #endregion
-
-    #region GenerateTextAsync - Fallback Tests
-
     [Fact]
     public async Task GenerateTextAsync_WhenServerUnreachable_ReturnsFallback()
     {
@@ -172,10 +166,6 @@ public class HttpOpenAiCompatibleChatModelTests
         // Assert
         result.Should().Contain("[remote-fallback:");
     }
-
-    #endregion
-
-    #region Fallback Message Format Tests
 
     [Fact]
     public async Task GenerateTextAsync_FallbackIncludesModelName()
@@ -227,10 +217,6 @@ public class HttpOpenAiCompatibleChatModelTests
         result2.Should().StartWith("[remote-fallback:model]");
     }
 
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task GenerateTextAsync_WithCancellationToken_PropagatesToken()
     {
@@ -265,10 +251,6 @@ public class HttpOpenAiCompatibleChatModelTests
         // Assert
         result.Should().NotBeNullOrEmpty();
     }
-
-    #endregion
-
-    #region Edge Cases
 
     [Fact]
     public async Task GenerateTextAsync_WithEmptyPrompt_ReturnsFallback()
@@ -371,10 +353,6 @@ public class HttpOpenAiCompatibleChatModelTests
         result.Should().Contain("[remote-fallback:");
     }
 
-    #endregion
-
-    #region Multiple Calls Tests
-
     [Fact]
     public async Task GenerateTextAsync_MultipleCalls_EachFallsBack()
     {
@@ -414,10 +392,6 @@ public class HttpOpenAiCompatibleChatModelTests
         results.Should().HaveCount(10);
         results.Should().OnlyContain(r => r.Contains("[remote-fallback:"));
     }
-
-    #endregion
-
-    #region Settings Tests
 
     [Fact]
     public async Task GenerateTextAsync_WithCustomTemperature_FallsBackGracefully()
@@ -473,10 +447,6 @@ public class HttpOpenAiCompatibleChatModelTests
         result.Should().Contain("[remote-fallback:");
     }
 
-    #endregion
-
-    #region Dispose Tests
-
     [Fact]
     public void Dispose_CanBeCalledMultipleTimes()
     {
@@ -508,10 +478,6 @@ public class HttpOpenAiCompatibleChatModelTests
         Assert.True(true);
     }
 
-    #endregion
-
-    #region Interface Implementation Tests
-
     [Fact]
     public void HttpOpenAiCompatibleChatModel_ImplementsIChatCompletionModel()
     {
@@ -542,10 +508,6 @@ public class HttpOpenAiCompatibleChatModelTests
         model.Dispose();
     }
 
-    #endregion
-
-    #region Retry Policy Tests (Implicit via Behavior)
-
     [Fact]
     public async Task GenerateTextAsync_WithRetryableError_EventuallyFallsBack()
     {
@@ -561,10 +523,6 @@ public class HttpOpenAiCompatibleChatModelTests
         // Assert - After retries, should fall back
         result.Should().Contain("[remote-fallback:");
     }
-
-    #endregion
-
-    #region Endpoint Format Tests
 
     [Fact]
     public void Constructor_WithTrailingSlash_Succeeds()
@@ -631,10 +589,6 @@ public class HttpOpenAiCompatibleChatModelTests
         model.Should().NotBeNull();
     }
 
-    #endregion
-
-    #region Deterministic Fallback Tests
-
     [Fact]
     public async Task GenerateTextAsync_SamePrompt_ReturnsConsistentFallback()
     {
@@ -669,6 +623,4 @@ public class HttpOpenAiCompatibleChatModelTests
         // Assert
         result1.Should().NotBe(result2);
     }
-
-    #endregion
 }

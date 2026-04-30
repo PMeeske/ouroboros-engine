@@ -4,7 +4,6 @@
 
 #pragma warning disable CA2000 // Test file - ownership is managed by test lifecycle
 
-using FluentAssertions;
 using Ouroboros.Agent.MeTTaAgents;
 
 namespace Ouroboros.Tests.MeTTaAgents;

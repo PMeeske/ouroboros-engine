@@ -1,5 +1,4 @@
 using Ouroboros.Core.Ethics;
-using Ouroboros.Domain.Events;
 
 namespace Ouroboros.Agent.Cognition.Planning;
 

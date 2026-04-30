@@ -14,8 +14,6 @@ using Xunit;
 [Trait("Category", "Unit")]
 public class ThinkingResponseTests
 {
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithAllParameters_InitializesCorrectly()
     {
@@ -50,10 +48,6 @@ public class ThinkingResponseTests
         response.ThinkingTokens.Should().BeNull();
         response.ContentTokens.Should().BeNull();
     }
-
-    #endregion
-
-    #region HasThinking Tests
 
     [Fact]
     public void HasThinking_WithNonEmptyThinking_ReturnsTrue()
@@ -96,10 +90,6 @@ public class ThinkingResponseTests
         // This is the actual behavior of the implementation
         response.HasThinking.Should().BeTrue();
     }
-
-    #endregion
-
-    #region ToFormattedString Tests
 
     [Fact]
     public void ToFormattedString_WithThinking_IncludesBothSections()
@@ -158,10 +148,6 @@ public class ThinkingResponseTests
         // Assert
         result.Should().Be("thinkingcontent");
     }
-
-    #endregion
-
-    #region FromRawText Tests - <think> Tags
 
     [Fact]
     public void FromRawText_WithThinkTags_ExtractsThinkingAndContent()
@@ -422,10 +408,6 @@ public class ThinkingResponseTests
         result.Content.Should().Be("Content first");
     }
 
-    #endregion
-
-    #region Record Equality Tests
-
     [Fact]
     public void Equality_WithSameValues_AreEqual()
     {
@@ -461,10 +443,6 @@ public class ThinkingResponseTests
         response1.Should().NotBe(response2);
     }
 
-    #endregion
-
-    #region With Expression Tests
-
     [Fact]
     public void WithExpression_ModifyingThinking_CreatesNewInstance()
     {
@@ -497,10 +475,6 @@ public class ThinkingResponseTests
         original.ThinkingTokens.Should().Be(10);
         original.ContentTokens.Should().Be(20);
     }
-
-    #endregion
-
-    #region Edge Cases
 
     [Fact]
     public void FromRawText_WithVeryLongThinking_HandlesCorrectly()
@@ -545,6 +519,4 @@ public class ThinkingResponseTests
         result.Thinking.Should().Be("Part <nested> content");
         result.Content.Should().Be("After");
     }
-
-    #endregion
 }

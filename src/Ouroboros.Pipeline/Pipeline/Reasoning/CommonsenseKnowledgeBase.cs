@@ -5,7 +5,6 @@
 
 namespace Ouroboros.Pipeline.Reasoning;
 
-using Ouroboros.Core.Hyperon;
 using Ouroboros.Tools.MeTTa;
 
 /// <summary>

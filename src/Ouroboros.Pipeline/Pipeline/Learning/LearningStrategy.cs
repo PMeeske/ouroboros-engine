@@ -7,7 +7,6 @@ using Ouroboros.Abstractions;
 namespace Ouroboros.Pipeline.Learning;
 
 using System.Collections.Immutable;
-using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Represents a learning strategy configuration for meta-learning optimization.

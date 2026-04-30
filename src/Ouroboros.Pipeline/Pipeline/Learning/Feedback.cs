@@ -7,7 +7,6 @@ using Ouroboros.Abstractions;
 namespace Ouroboros.Pipeline.Learning;
 
 using System.Collections.Immutable;
-using Ouroboros.Core.Monads;
 
 /// <summary>
 /// Represents immutable feedback data for online learning.

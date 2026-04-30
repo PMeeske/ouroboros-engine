@@ -1,6 +1,4 @@
-﻿using Ouroboros.Domain.Vectors;
-
-namespace Ouroboros.Pipeline.Ingestion;
+﻿namespace Ouroboros.Pipeline.Ingestion;
 
 /// <summary>
 /// Directory-aware document loader that enumerates all files under a directory (optionally recursively)

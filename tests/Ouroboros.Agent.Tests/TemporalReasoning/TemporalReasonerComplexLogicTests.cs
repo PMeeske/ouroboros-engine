@@ -1,11 +1,8 @@
 // Copyright (c) 2025 Ouroboros contributors. Licensed under the MIT License.
 
-using FluentAssertions;
 using Microsoft.Extensions.AI;
-using Moq;
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Agent.TemporalReasoning;
-using Xunit;
 using TRTemporalConstraint = Ouroboros.Agent.TemporalReasoning.TemporalConstraint;
 using TRTemporalRelation = Ouroboros.Agent.TemporalReasoning.TemporalRelation;
 

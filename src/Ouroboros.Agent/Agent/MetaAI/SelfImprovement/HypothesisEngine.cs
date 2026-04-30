@@ -3,8 +3,6 @@
 // Scientific reasoning, hypothesis generation and testing
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
@@ -58,8 +56,7 @@ public sealed partial class HypothesisEngine : IHypothesisEngine
                 maxResults: 10,
                 minSimilarity: 0.6);
 
-            var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
-            List<Experience> experiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
+            List<Experience> experiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
 
             // Build hypothesis generation prompt
             string prompt = BuildHypothesisPrompt(observation, experiences, context);
@@ -217,7 +214,7 @@ CRITERIA: [how to measure success]";
 
             // Bayesian update: estimate likelihoods based on experiment results
             double likelihoodIfTrue = supported ? 0.85 : 0.15;   // P(E|H)
-            double likelihoodIfFalse = supported ? 0.25 : 0.75;  // P(E|¬H)
+            double likelihoodIfFalse = supported ? 0.25 : 0.75;  // P(E|Â¬H)
 
             // Adjust likelihoods by execution quality (success rate)
             var totalSteps = execution.StepResults.Count;

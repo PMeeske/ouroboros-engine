@@ -3,8 +3,6 @@
 // Phase 2: Shared working memory with attention policies
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI.SelfModel;
 
 /// <summary>

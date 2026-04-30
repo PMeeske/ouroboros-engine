@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using FluentAssertions;
-using Ouroboros.Domain.States;
 using Ouroboros.Network;
 using Xunit;
 

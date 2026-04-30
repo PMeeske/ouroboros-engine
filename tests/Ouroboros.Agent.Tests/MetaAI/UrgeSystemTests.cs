@@ -21,7 +21,7 @@ public class UrgeSystemTests
         // Assert
         system.Urges.Should().HaveCount(5);
         system.Urges.Select(u => u.Name).Should().BeEquivalentTo(
-            new[] { "competence", "certainty", "affiliation", "curiosity", "integrity" });
+            "competence", "certainty", "affiliation", "curiosity", "integrity" );
     }
 
     [Fact]
@@ -31,13 +31,13 @@ public class UrgeSystemTests
         var system = new UrgeSystem();
         var initialIntensities = system.Urges.Select(u => u.Intensity).ToList();
 
-        // Act — tick 5 times
+        // Act â€” tick 5 times
         for (int i = 0; i < 5; i++)
         {
             system.Tick();
         }
 
-        // Assert — each urge intensity should increase by 5 × accumulationRate
+        // Assert â€” each urge intensity should increase by 5 Ã— accumulationRate
         for (int i = 0; i < system.Urges.Count; i++)
         {
             double expected = Math.Min(1.0, initialIntensities[i] + (5 * system.Urges[i].AccumulationRate));
@@ -62,7 +62,7 @@ public class UrgeSystemTests
         // Act
         system.Satisfy("curiosity");
 
-        // Assert — intensity reduced by satisfactionRate × amount
+        // Assert â€” intensity reduced by satisfactionRate Ã— amount
         double curiosity = system.Urges.First(u => u.Name == "curiosity").Intensity;
         double expectedReduction = system.Urges.First(u => u.Name == "curiosity").SatisfactionRate;
         curiosity.Should().BeApproximately(beforeSatisfy - expectedReduction, 0.001);
@@ -74,7 +74,7 @@ public class UrgeSystemTests
         // Arrange
         var system = new UrgeSystem();
 
-        // Act — satisfy multiple times to try to go below 0
+        // Act â€” satisfy multiple times to try to go below 0
         for (int i = 0; i < 20; i++)
         {
             system.Satisfy("affiliation");
@@ -94,7 +94,7 @@ public class UrgeSystemTests
         // Act
         system.Satisfy("nonexistent");
 
-        // Assert — intensities unchanged
+        // Assert â€” intensities unchanged
         for (int i = 0; i < system.Urges.Count; i++)
         {
             system.Urges[i].Intensity.Should().Be(before[i]);
@@ -104,15 +104,15 @@ public class UrgeSystemTests
     [Fact]
     public void GetDominantUrge_ReturnsHighestUrgency()
     {
-        // Arrange — curiosity starts highest (0.4 intensity × 0.8 priority)
+        // Arrange â€” curiosity starts highest (0.4 intensity Ã— 0.8 priority)
         var system = new UrgeSystem();
 
         // Act
         var dominant = system.GetDominantUrge();
 
-        // Assert — should be curiosity (highest intensity × priority product)
+        // Assert â€” should be curiosity (highest intensity Ã— priority product)
         dominant.Should().NotBeNull();
-        // The urgency formula: intensity × priority × (1 + stress × 0.3)
+        // The urgency formula: intensity Ã— priority Ã— (1 + stress Ã— 0.3)
         // With stress=0: competence=0.3*1.0=0.30, certainty=0.3*0.9=0.27,
         // affiliation=0.2*0.7=0.14, curiosity=0.4*0.8=0.32, integrity=0.2*0.95=0.19
         dominant.Name.Should().Be("curiosity");
@@ -121,13 +121,13 @@ public class UrgeSystemTests
     [Fact]
     public void GetDominantUrge_WithStress_AmplifiesUrgency()
     {
-        // Arrange — use high stress
+        // Arrange â€” use high stress
         var system = new UrgeSystem(stress: 0.9);
 
         // Act
         var dominant = system.GetDominantUrge();
 
-        // Assert — stress amplifies all urgencies, but curiosity should still dominate
+        // Assert â€” stress amplifies all urgencies, but curiosity should still dominate
         dominant.Should().NotBeNull();
     }
 
@@ -137,13 +137,13 @@ public class UrgeSystemTests
         // Arrange
         var system = new UrgeSystem();
 
-        // Act — tick many times
+        // Act â€” tick many times
         for (int i = 0; i < 100; i++)
         {
             system.Tick();
         }
 
-        // Assert — all intensities should be clamped to 1.0
+        // Assert â€” all intensities should be clamped to 1.0
         foreach (var urge in system.Urges)
         {
             urge.Intensity.Should().BeLessThanOrEqualTo(1.0);

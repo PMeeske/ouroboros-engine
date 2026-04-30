@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using Moq;
 using Ouroboros.Pipeline.Grammar;
 
 namespace Ouroboros.Tests.Grammar;
@@ -255,7 +254,7 @@ public class AtomsToGrammarTests
         // Arrange
         _validatorMock.Setup(v => v.AtomsToGrammarAsync(
                 It.Is<string>(s => string.IsNullOrWhiteSpace(s)), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new ArgumentException("Value cannot be null or whitespace.", "mettaAtoms"));
+            .ThrowsAsync(new ArgumentException("Value cannot be null or whitespace."));
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(

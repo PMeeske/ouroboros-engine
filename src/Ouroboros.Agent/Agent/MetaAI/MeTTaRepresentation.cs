@@ -4,7 +4,6 @@
 // Now with Laws of Form integration for certainty tracking
 // ==========================================================
 
-using System.Text;
 using Ouroboros.Core.Hyperon;
 using Ouroboros.Core.LawsOfForm;
 using Unit = Ouroboros.Abstractions.Unit;

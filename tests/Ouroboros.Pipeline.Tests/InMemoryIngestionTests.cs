@@ -19,8 +19,6 @@ public class InMemoryIngestionTests
                 new float[] { text.Length * 0.1f, text.Length * 0.2f, text.Length * 0.3f });
     }
 
-    #region LoadToMemory Tests
-
     [Fact]
     public async Task LoadToMemory_WithValidDocument_CreatesVectors()
     {
@@ -248,10 +246,6 @@ public class InMemoryIngestionTests
         });
     }
 
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public async Task LoadToMemory_WithSpecialCharacters_HandlesCorrectly()
     {
@@ -273,6 +267,4 @@ public class InMemoryIngestionTests
         vectors.Should().NotBeEmpty();
         // Text content is from the mock loader, so it will be the standard test content
     }
-
-    #endregion
 }

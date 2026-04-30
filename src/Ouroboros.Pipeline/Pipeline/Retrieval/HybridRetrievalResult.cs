@@ -1,6 +1,4 @@
-﻿using Ouroboros.Domain.Vectors;
-
-namespace Ouroboros.Pipeline.Retrieval;
+﻿namespace Ouroboros.Pipeline.Retrieval;
 
 /// <summary>
 /// Result of a hybrid retrieval operation.

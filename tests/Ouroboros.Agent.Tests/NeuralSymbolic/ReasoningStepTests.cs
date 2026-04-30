@@ -2,8 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
-using Ouroboros.Agent.NeuralSymbolic;
 using ReasoningStep = Ouroboros.Agent.NeuralSymbolic.ReasoningStep;
 
 namespace Ouroboros.Tests.NeuralSymbolic;

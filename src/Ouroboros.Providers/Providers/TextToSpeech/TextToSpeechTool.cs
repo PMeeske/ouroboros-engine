@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Text.Json;
 using Ouroboros.Providers.TextToSpeech;
 
 namespace Ouroboros.Providers;

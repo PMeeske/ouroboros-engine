@@ -4,7 +4,6 @@
 // </copyright>
 
 using System.Threading.Channels;
-using Ouroboros.Core.Monads;
 
 namespace Ouroboros.Agent.NanoAtoms;
 

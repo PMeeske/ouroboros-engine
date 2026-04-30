@@ -150,8 +150,7 @@ public sealed class ExperienceReplay : IExperienceReplay
             MaxResults: config.MaxExperiences,
             MinSimilarity: 0.0);
 
-        var experiencesResult = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
-        List<Experience> allExperiences = experiencesResult.IsSuccess ? experiencesResult.Value.ToList() : new List<Experience>();
+        List<Experience> allExperiences = await _memory.RetrieveRelevantExperiencesAsync(query, ct).ConfigureAwait(false);
 
         // Filter by quality
         List<Experience> qualityFiltered = allExperiences

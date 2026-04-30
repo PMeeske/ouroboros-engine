@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using Whisper.net;
 using Whisper.net.Ggml;
 
 namespace Ouroboros.Providers.SpeechToText;

@@ -2,16 +2,12 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Diagnostics;
-using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using OllamaSharp;
 using OllamaSharp.Models.Chat;
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Providers.Resilience;
-using Ouroboros.Tools;
 using Polly;
 using Polly.Wrap;
 using ToolRegistry = Ouroboros.Tools.ToolRegistry;

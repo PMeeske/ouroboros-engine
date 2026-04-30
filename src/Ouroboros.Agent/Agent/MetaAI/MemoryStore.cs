@@ -3,9 +3,7 @@
 // Persistent long-term learning storage
 // ==========================================================
 
-using System.Collections.Concurrent;
 using Ouroboros.Abstractions;
-using Ouroboros.Domain.Vectors;
 
 namespace Ouroboros.Agent.MetaAI;
 

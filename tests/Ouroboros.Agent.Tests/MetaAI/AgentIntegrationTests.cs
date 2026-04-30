@@ -5,11 +5,9 @@
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Agent.MetaAI.Interpretability;
 using Ouroboros.Agent.MetaAI.SelfModel;
-using Ouroboros.Core.Ethics;
 using AgentCapability = Ouroboros.Agent.MetaAI.AgentCapability;
 using MemoryStatistics = Ouroboros.Agent.MetaAI.MemoryStatistics;
 using Plan = Ouroboros.Agent.MetaAI.Plan;
-using PlanStep = Ouroboros.Agent.PlanStep;
 using Skill = Ouroboros.Agent.MetaAI.Skill;
 
 namespace Ouroboros.Agent.Tests.MetaAI;
@@ -332,8 +330,7 @@ public class AgentIntegrationTests
             .Setup(m => m.RetrieveRelevantExperiencesAsync(
                 It.IsAny<MemoryQuery>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<IReadOnlyList<Experience>, string>.Success(
-                new List<Experience> { storedExperience }));
+            .ReturnsAsync(new List<Experience> { storedExperience });
 
         mockSkills
             .Setup(s => s.ExtractSkillAsync(
@@ -519,8 +516,7 @@ public class AgentIntegrationTests
             .Setup(m => m.RetrieveRelevantExperiencesAsync(
                 It.IsAny<MemoryQuery>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result<IReadOnlyList<Experience>, string>.Success(
-                new List<Experience>()));
+            .ReturnsAsync(new List<Experience>());
 
         var emptySkills = new Mock<ISkillRegistry>();
         var emptyLlm = new Mock<IChatCompletionModel>();

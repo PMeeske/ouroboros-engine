@@ -3,7 +3,6 @@
 // OpenTelemetry-compatible tracing for AI orchestration layer
 // ==========================================================
 
-using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
 namespace Ouroboros.Agent.MetaAI;

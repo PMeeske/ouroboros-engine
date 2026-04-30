@@ -16,8 +16,6 @@ using Xunit;
 [Trait("Category", "Unit")]
 public class MultiModelRouterTests
 {
-    #region Constructor Tests
-
     [Fact]
     public void Constructor_WithValidModels_Succeeds()
     {
@@ -55,10 +53,6 @@ public class MultiModelRouterTests
         Assert.Throws<NullReferenceException>(() =>
             new MultiModelRouter(null!, "default"));
     }
-
-    #endregion
-
-    #region Fallback Model Tests
 
     [Fact]
     public async Task GenerateTextAsync_WithEmptyPrompt_UsesFallbackModel()
@@ -151,10 +145,6 @@ public class MultiModelRouterTests
         result.Should().BeOneOf("model1 response", "model2 response");
     }
 
-    #endregion
-
-    #region Code Model Routing Tests
-
     [Fact]
     public async Task GenerateTextAsync_WithCodeKeyword_UsesCoderModel()
     {
@@ -244,10 +234,6 @@ public class MultiModelRouterTests
         result.Should().Be("default response");
     }
 
-    #endregion
-
-    #region Summarize Model Routing Tests
-
     [Fact]
     public async Task GenerateTextAsync_WithLongPrompt_UsesSummarizeModel()
     {
@@ -323,10 +309,6 @@ public class MultiModelRouterTests
         result.Should().Be("default response");
     }
 
-    #endregion
-
-    #region Reason Model Routing Tests
-
     [Fact]
     public async Task GenerateTextAsync_WithReasonKeyword_UsesReasonModel()
     {
@@ -379,10 +361,6 @@ public class MultiModelRouterTests
         // Assert
         result.Should().Be("default response");
     }
-
-    #endregion
-
-    #region Priority Tests
 
     [Fact]
     public async Task GenerateTextAsync_CodeBeforeSummarize_RoutesToCoder()
@@ -443,10 +421,6 @@ public class MultiModelRouterTests
         result.Should().Be("code response"); // Code checked first
     }
 
-    #endregion
-
-    #region Cancellation Tests
-
     [Fact]
     public async Task GenerateTextAsync_WithCancellationToken_PropagatesToken()
     {
@@ -463,10 +437,6 @@ public class MultiModelRouterTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
             await router.GenerateTextAsync("test", cts.Token));
     }
-
-    #endregion
-
-    #region Multiple Models Tests
 
     [Fact]
     public async Task GenerateTextAsync_WithAllSpecializedModels_RoutesCorrectly()
@@ -487,10 +457,6 @@ public class MultiModelRouterTests
         (await router.GenerateTextAsync(new string('x', 700))).Should().Be("summarizer");
         (await router.GenerateTextAsync("reason carefully")).Should().Be("reasoner");
     }
-
-    #endregion
-
-    #region Edge Cases
 
     [Fact]
     public async Task GenerateTextAsync_WithSingleModel_AlwaysUsesThatModel()
@@ -546,10 +512,6 @@ public class MultiModelRouterTests
         result.Should().Be("code response"); // Still matches "code" keyword
     }
 
-    #endregion
-
-    #region Async Behavior Tests
-
     [Fact]
     public async Task GenerateTextAsync_CallsModelAsync()
     {
@@ -587,10 +549,6 @@ public class MultiModelRouterTests
         // Assert
         coderModel.LastPrompt.Should().Be("write code for me");
     }
-
-    #endregion
-
-    #region Model Selection Logic Tests
 
     [Fact]
     public async Task SelectModel_ChecksCodeFirst()
@@ -651,6 +609,4 @@ public class MultiModelRouterTests
         // Assert
         result.Should().Be("reasoner");
     }
-
-    #endregion
 }

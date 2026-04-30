@@ -2,9 +2,7 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
 using Ouroboros.Abstractions.Errors;
-using Ouroboros.Agent.NeuralSymbolic;
 
 namespace Ouroboros.Tests.NeuralSymbolic;
 

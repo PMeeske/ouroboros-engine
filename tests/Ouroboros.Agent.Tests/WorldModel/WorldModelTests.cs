@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
 using Ouroboros.Domain.Embodied;
 using AgentWorldModel = Ouroboros.Agent.WorldModel.WorldModel;
 

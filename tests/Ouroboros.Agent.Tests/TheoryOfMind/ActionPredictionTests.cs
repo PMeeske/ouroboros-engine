@@ -2,7 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using FluentAssertions;
 using Ouroboros.Agent.TheoryOfMind;
 using Ouroboros.Domain.Embodied;
 using Vector3 = Ouroboros.Domain.Embodied.Vector3;

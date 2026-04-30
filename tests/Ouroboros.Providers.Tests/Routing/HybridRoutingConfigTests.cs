@@ -1,5 +1,3 @@
-using Ouroboros.Providers.Routing;
-
 namespace Ouroboros.Tests.Routing;
 
 [Trait("Category", "Unit")]

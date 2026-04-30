@@ -3,9 +3,7 @@
 // </copyright>
 
 using System.Numerics.Tensors;
-using FluentAssertions;
 using Ouroboros.Agent.MetaAI.WorldModel;
-using Xunit;
 using Action = Ouroboros.Agent.MetaAI.WorldModel.Action;
 
 namespace Ouroboros.Agent.Tests.MetaAI.WorldModel;
@@ -257,8 +255,6 @@ public class GnnStatePredictorGpuTests
         vector[0].Should().Be(expected);
     }
 
-    #region Helper Methods
-
     private static State CreateTestState(int embeddingSize, int seed = 0)
     {
         var random = new Random(seed);
@@ -452,6 +448,4 @@ public class GnnStatePredictorGpuTests
             }
         }
     }
-
-    #endregion
 }

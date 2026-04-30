@@ -2,8 +2,6 @@
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Web;
 
 namespace Ouroboros.Providers.DuckDuckGo;

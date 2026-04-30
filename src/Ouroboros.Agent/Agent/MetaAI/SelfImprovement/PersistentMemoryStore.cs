@@ -3,11 +3,7 @@
 // Enhanced memory with persistence, consolidation, and forgetting
 // ==========================================================
 
-using System.Collections.Concurrent;
-using System.Text.Json;
 using Ouroboros.Abstractions;
-using Ouroboros.Agent.Json;
-using Ouroboros.Domain.Vectors;
 
 namespace Ouroboros.Agent.MetaAI;
 

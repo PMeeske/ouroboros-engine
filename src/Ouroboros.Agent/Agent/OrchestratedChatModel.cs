@@ -4,8 +4,6 @@
 // intelligent model and tool selection
 // ==========================================================
 
-using System.Diagnostics;
-
 namespace Ouroboros.Agent;
 
 /// <summary>

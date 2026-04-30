@@ -16,8 +16,6 @@ using Xunit;
 [Trait("Category", "Unit")]
 public class OllamaPresetsTests
 {
-    #region DeepSeekCoder33B Tests
-
     [Fact]
     public void DeepSeekCoder33B_ReturnsValidSettings()
     {
@@ -80,10 +78,6 @@ public class OllamaPresetsTests
         }
     }
 
-    #endregion
-
-    #region Llama3General Tests
-
     [Fact]
     public void Llama3General_ReturnsValidSettings()
     {
@@ -121,10 +115,6 @@ public class OllamaPresetsTests
         settings.NumGpu.Should().BeLessThanOrEqualTo(1);
     }
 
-    #endregion
-
-    #region Llama3Summarize Tests
-
     [Fact]
     public void Llama3Summarize_ReturnsValidSettings()
     {
@@ -155,10 +145,6 @@ public class OllamaPresetsTests
         general.RepeatPenalty.Should().NotBeNull();
         summarize.RepeatPenalty!.Value.Should().BeGreaterThan(general.RepeatPenalty!.Value);
     }
-
-    #endregion
-
-    #region DeepSeekR1 Tests
 
     [Fact]
     public void DeepSeekR1_14B_Reason_ReturnsValidSettings()
@@ -219,10 +205,6 @@ public class OllamaPresetsTests
         settings.NumCtx.Should().BeOneOf(8192, 12288, 16384);
     }
 
-    #endregion
-
-    #region Mistral7B Tests
-
     [Fact]
     public void Mistral7BGeneral_ReturnsValidSettings()
     {
@@ -257,10 +239,6 @@ public class OllamaPresetsTests
         settings.NumGpu.Should().BeLessThanOrEqualTo(1);
     }
 
-    #endregion
-
-    #region Qwen2.5 Tests
-
     [Fact]
     public void Qwen25_7B_General_ReturnsValidSettings()
     {
@@ -285,10 +263,6 @@ public class OllamaPresetsTests
         settings.NumCtx.Should().BeOneOf(3072, 4096);
     }
 
-    #endregion
-
-    #region Phi3Mini Tests
-
     [Fact]
     public void Phi3MiniGeneral_ReturnsValidSettings()
     {
@@ -303,10 +277,6 @@ public class OllamaPresetsTests
         settings.RepeatPenalty.Should().Be(1.1f);
         settings.NumCtx.Should().Be(4096); // Fixed context
     }
-
-    #endregion
-
-    #region TinyLlamaFast Tests
 
     [Fact]
     public void TinyLlamaFast_ReturnsValidSettings()
@@ -354,10 +324,6 @@ public class OllamaPresetsTests
         var minCtx = allPresets.Min(p => p.NumCtx);
         settings.NumCtx.Should().BeLessThanOrEqualTo(minCtx.GetValueOrDefault());
     }
-
-    #endregion
-
-    #region Comparative Tests
 
     [Fact]
     public void AllPresets_HavePositiveTemperature()
@@ -522,10 +488,6 @@ public class OllamaPresetsTests
         first.TopK.Should().Be(second.TopK);
     }
 
-    #endregion
-
-    #region Edge Cases
-
     [Fact]
     public void AllPresets_DoNotThrow()
     {
@@ -598,6 +560,4 @@ public class OllamaPresetsTests
             preset.UseMlock.Should().BeFalse();
         }
     }
-
-    #endregion
 }

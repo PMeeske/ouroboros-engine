@@ -3,8 +3,6 @@
 // Plan 2: GwtWorkspace (genuine GWT workspace)
 // ==========================================================
 
-using System.Collections.Concurrent;
-
 namespace Ouroboros.Agent.MetaAI.GlobalWorkspaceTheory;
 
 /// <summary>

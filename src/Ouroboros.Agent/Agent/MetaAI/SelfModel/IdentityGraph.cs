@@ -3,8 +3,6 @@
 // Phase 2: Agent identity with capabilities, resources, commitments, performance
 // ==========================================================
 
-using System.Collections.Concurrent;
-using System.Text.Json;
 using Ouroboros.Agent.Json;
 
 namespace Ouroboros.Agent.MetaAI.SelfModel;

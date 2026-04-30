@@ -3,7 +3,6 @@
 // </copyright>
 
 using Ouroboros.Agent.NanoAtoms;
-using Ouroboros.Providers;
 
 namespace Ouroboros.Agent.Tests.NanoAtoms;
 
