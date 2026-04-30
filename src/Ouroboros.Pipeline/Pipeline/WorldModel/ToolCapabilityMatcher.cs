@@ -175,7 +175,7 @@ public sealed class ToolCapabilityMatcher
             return Option<ToolMatch>.Some(result.Value[0]);
         }
 
-        return Option<ToolMatch>.None();
+        return Option<ToolMatch>.None;
     }
 
     /// <summary>
@@ -195,7 +195,7 @@ public sealed class ToolCapabilityMatcher
             return Option<ToolMatch>.Some(result.Value[0]);
         }
 
-        return Option<ToolMatch>.None();
+        return Option<ToolMatch>.None;
     }
 
     private static IReadOnlyList<string> ExtractKeywords(string text)

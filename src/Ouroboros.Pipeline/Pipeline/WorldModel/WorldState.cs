@@ -209,7 +209,7 @@ public sealed record WorldState(
 
         return Observations.TryGetValue(key, out Observation? observation)
             ? Option<Observation>.Some(observation)
-            : Option<Observation>.None();
+            : Option<Observation>.None;
     }
 
     /// <summary>
@@ -249,7 +249,7 @@ public sealed record WorldState(
         Capability? capability = Capabilities.FirstOrDefault(c => c.Name == capabilityName);
         return capability is not null
             ? Option<Capability>.Some(capability)
-            : Option<Capability>.None();
+            : Option<Capability>.None;
     }
 
     /// <summary>
@@ -276,7 +276,7 @@ public sealed record WorldState(
         Constraint? constraint = Constraints.FirstOrDefault(c => c.Name == constraintName);
         return constraint is not null
             ? Option<Constraint>.Some(constraint)
-            : Option<Constraint>.None();
+            : Option<Constraint>.None;
     }
 
     /// <summary>
@@ -306,7 +306,7 @@ public sealed record WorldState(
     {
         return Observations.Count > 0
             ? Option<double>.Some(Observations.Values.Average(o => o.Confidence))
-            : Option<double>.None();
+            : Option<double>.None;
     }
 
     /// <summary>
@@ -319,7 +319,7 @@ public sealed record WorldState(
         bool hasContent = Observations.Count > 0 || Capabilities.Count > 0 || Constraints.Count > 0;
         return hasContent
             ? Option<WorldState>.Some(this)
-            : Option<WorldState>.None();
+            : Option<WorldState>.None;
     }
 
     /// <summary>

@@ -186,7 +186,7 @@ public sealed partial class NetworkStateTracker
         {
             return _branchReifiers.TryGetValue(branchName, out var reifier)
                 ? Option<PipelineBranchReifier>.Some(reifier)
-                : Option<PipelineBranchReifier>.None();
+                : Option<PipelineBranchReifier>.None;
         }
     }
 

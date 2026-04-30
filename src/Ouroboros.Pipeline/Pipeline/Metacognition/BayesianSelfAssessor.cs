@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.Metacognition;
@@ -110,12 +110,12 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
     {
         if (string.IsNullOrWhiteSpace(capability))
         {
-            return Option<CapabilityBelief>.None();
+            return Option<CapabilityBelief>.None;
         }
 
         return _capabilityBeliefs.TryGetValue(capability, out var belief)
             ? Option<CapabilityBelief>.Some(belief)
-            : Option<CapabilityBelief>.None();
+            : Option<CapabilityBelief>.None;
     }
 
     /// <inheritdoc/>
@@ -181,7 +181,7 @@ public sealed class BayesianSelfAssessor : ISelfAssessor
             var meanBias = totalBias / sampleList.Count;
 
             // Adjust calibration factor based on bias
-            // Overconfident → reduce factor, Underconfident → increase factor
+            // Overconfident ? reduce factor, Underconfident ? increase factor
             var adjustment = 1.0 - (meanBias * 0.5); // Gradual adjustment
             _confidenceCalibrationFactor = Math.Clamp(
                 _confidenceCalibrationFactor * adjustment,

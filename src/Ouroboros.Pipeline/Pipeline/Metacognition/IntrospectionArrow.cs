@@ -1,4 +1,4 @@
-﻿using Ouroboros.Abstractions;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.Metacognition;
 
@@ -128,7 +128,7 @@ public static class IntrospectionArrow
             var history = historyResult.Value;
             if (history.Count < 2)
             {
-                return Task.FromResult(Result<Option<StateComparison>, string>.Success(Option<StateComparison>.None()));
+                return Task.FromResult(Result<Option<StateComparison>, string>.Success(Option<StateComparison>.None));
             }
 
             var before = history[^2];

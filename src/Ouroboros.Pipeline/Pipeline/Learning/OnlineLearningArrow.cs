@@ -1,4 +1,4 @@
-﻿using Ouroboros.Abstractions;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.Learning;
 
@@ -108,7 +108,7 @@ public static class OnlineLearningArrow
         return feedback => Task.FromResult(
             predicate(feedback)
                 ? Option<Feedback>.Some(feedback)
-                : Option<Feedback>.None());
+                : Option<Feedback>.None);
     }
 
     /// <summary>

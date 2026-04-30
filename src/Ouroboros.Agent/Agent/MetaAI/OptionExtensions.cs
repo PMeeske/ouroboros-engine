@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Agent.MetaAI;
+namespace Ouroboros.Agent.MetaAI;
 
 /// <summary>
 /// Extension methods for Option type.
@@ -11,6 +11,6 @@ internal static class OptionExtensions
     public static Option<T> ToOption<T>(this T? value)
         where T : class
     {
-        return value != null ? Option<T>.Some(value) : Option<T>.None();
+        return value != null ? Option<T>.Some(value) : Option<T>.None;
     }
 }

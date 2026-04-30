@@ -51,7 +51,7 @@ public static class PipelineBranchExtensions
         var lastReasoning = branch.Events.OfType<ReasoningStep>().LastOrDefault();
         if (lastReasoning == null)
         {
-            return Option<MonadNode>.None();
+            return Option<MonadNode>.None;
         }
 
         return Option<MonadNode>.Some(MonadNode.FromReasoningState(lastReasoning.State));

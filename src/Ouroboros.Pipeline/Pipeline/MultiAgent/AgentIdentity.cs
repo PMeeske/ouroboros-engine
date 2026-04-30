@@ -82,7 +82,7 @@ public sealed record AgentIdentity(
         AgentCapability? capability = Capabilities.Find(c => c.Name.Equals(name, StringComparison.Ordinal));
         return capability is not null
             ? Option<AgentCapability>.Some(capability)
-            : Option<AgentCapability>.None();
+            : Option<AgentCapability>.None;
     }
 
     /// <summary>

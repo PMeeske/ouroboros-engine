@@ -213,7 +213,7 @@ public sealed partial class CausalGraph
     {
         return _nodes.TryGetValue(id, out CausalNode? node)
             ? Option<CausalNode>.Some(node)
-            : Option<CausalNode>.None();
+            : Option<CausalNode>.None;
     }
 
     /// <summary>
@@ -230,7 +230,7 @@ public sealed partial class CausalGraph
 
         return node is not null
             ? Option<CausalNode>.Some(node)
-            : Option<CausalNode>.None();
+            : Option<CausalNode>.None;
     }
 
     /// <summary>

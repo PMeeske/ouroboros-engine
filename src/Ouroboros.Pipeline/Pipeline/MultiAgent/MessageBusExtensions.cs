@@ -1,4 +1,4 @@
-﻿using Ouroboros.Abstractions;
+using Ouroboros.Abstractions;
 
 namespace Ouroboros.Pipeline.MultiAgent;
 
@@ -90,7 +90,7 @@ public static class MessageBusExtensions
         {
             Option<T> typedPayload = message.Payload is T payload
                 ? Option<T>.Some(payload)
-                : Option<T>.None();
+                : Option<T>.None;
 
             await handler(message, typedPayload).ConfigureAwait(false);
         });

@@ -53,7 +53,7 @@ public sealed class InMemoryOrchestrationCache : IOrchestrationCache, IDisposabl
         if (string.IsNullOrEmpty(promptHash))
         {
             Interlocked.Increment(ref _misses);
-            return Task.FromResult(Option<OrchestratorDecision>.None());
+            return Task.FromResult(Option<OrchestratorDecision>.None);
         }
 
         if (_cache.TryGetValue(promptHash, out var entry))
@@ -72,7 +72,7 @@ public sealed class InMemoryOrchestrationCache : IOrchestrationCache, IDisposabl
         }
 
         Interlocked.Increment(ref _misses);
-        return Task.FromResult(Option<OrchestratorDecision>.None());
+        return Task.FromResult(Option<OrchestratorDecision>.None);
     }
 
     /// <inheritdoc/>

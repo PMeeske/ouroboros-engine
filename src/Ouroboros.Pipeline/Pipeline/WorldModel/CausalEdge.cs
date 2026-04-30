@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Pipeline.WorldModel;
+namespace Ouroboros.Pipeline.WorldModel;
 
 /// <summary>
 /// Represents a directed edge in the causal graph indicating a cause-effect relationship.
@@ -23,7 +23,7 @@ public sealed record CausalEdge(
     public static CausalEdge Create(Guid sourceId, Guid targetId, double strength)
     {
         double clampedStrength = Math.Clamp(strength, 0.0, 1.0);
-        return new CausalEdge(sourceId, targetId, clampedStrength, Option<string>.None());
+        return new CausalEdge(sourceId, targetId, clampedStrength, Option<string>.None);
     }
 
     /// <summary>
@@ -50,6 +50,6 @@ public sealed record CausalEdge(
     /// <returns>A deterministic causal edge.</returns>
     public static CausalEdge Deterministic(Guid sourceId, Guid targetId)
     {
-        return new CausalEdge(sourceId, targetId, 1.0, Option<string>.None());
+        return new CausalEdge(sourceId, targetId, 1.0, Option<string>.None);
     }
 }

@@ -119,7 +119,7 @@ public sealed class OrchestrationExperiment : IOrchestrationExperiment
     {
         return _experimentResults.TryGetValue(experimentId, out var result)
             ? Option<ExperimentResult>.Some(result)
-            : Option<ExperimentResult>.None();
+            : Option<ExperimentResult>.None;
     }
 
     /// <summary>

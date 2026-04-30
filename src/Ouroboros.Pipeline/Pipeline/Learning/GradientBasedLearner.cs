@@ -1,4 +1,4 @@
-﻿namespace Ouroboros.Pipeline.Learning;
+namespace Ouroboros.Pipeline.Learning;
 
 /// <summary>
 /// Thread-safe gradient-based online learner implementing stochastic gradient descent
@@ -193,7 +193,7 @@ public sealed class GradientBasedLearner : IOnlineLearner
     {
         return _parameters.TryGetValue(parameterName, out var value)
             ? Option<double>.Some(value)
-            : Option<double>.None();
+            : Option<double>.None;
     }
 
     /// <inheritdoc />
@@ -298,7 +298,7 @@ public sealed class GradientBasedLearner : IOnlineLearner
 
         // Decay confidence based on age (half-life of 1 hour)
         var age = DateTime.UtcNow - feedback.Timestamp;
-        var timeFactor = Math.Exp(-age.TotalHours * 0.693); // ln(2) ≈ 0.693
+        var timeFactor = Math.Exp(-age.TotalHours * 0.693); // ln(2) � 0.693
 
         return baseConfidence * timeFactor;
     }
