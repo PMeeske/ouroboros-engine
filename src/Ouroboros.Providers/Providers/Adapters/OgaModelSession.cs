@@ -5,12 +5,13 @@
 
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.ML.OnnxRuntimeGenAI;
+using OgaAdapters = Microsoft.ML.OnnxRuntimeGenAI.Adapters;
+using OgaModel = Microsoft.ML.OnnxRuntimeGenAI.Model;
 
 namespace Ouroboros.Providers.Adapters;
 
 /// <summary>
-/// Owns a single ORT-GenAI <see cref="Model"/> and its companion <see cref="Adapters"/>
+/// Owns a single ORT-GenAI <c>Model</c> and its companion <c>Adapters</c>
 /// collection, and exposes a small register / unload / set-active surface for
 /// <see cref="OgaAdapterRegistry"/> to call. The underlying <c>Model</c> is loaded
 /// lazily on first use so that DI registration with a configured-but-not-yet-present
@@ -18,7 +19,7 @@ namespace Ouroboros.Providers.Adapters;
 /// </summary>
 /// <remarks>
 /// Phase A.4 scope: this type tracks the <em>desired-active</em> adapter name. Actual
-/// activation happens at <see cref="Generator"/> construction time (the generator
+/// activation happens at ORT-GenAI <c>Generator</c> construction time (the generator
 /// is owned by the inference driver, not by this session) via
 /// <c>generator.SetActiveAdapter(session.Adapters, session.Active)</c>. Generator
 /// wiring is intentionally out of scope for this plan.
@@ -30,8 +31,8 @@ public sealed class OgaModelSession : IDisposable
     private readonly object _gate = new();
     private readonly HashSet<string> _registered = new(StringComparer.Ordinal);
 
-    private Model? _model;
-    private Adapters? _adapters;
+    private OgaModel? _model;
+    private OgaAdapters? _adapters;
     private Option<string> _active = Option<string>.None;
     private bool _disposed;
 
@@ -48,7 +49,7 @@ public sealed class OgaModelSession : IDisposable
     }
 
     /// <summary>
-    /// Gets the desired-active adapter name (consumed at <see cref="Generator"/> construction).
+    /// Gets the desired-active adapter name (consumed at ORT-GenAI <c>Generator</c> construction).
     /// </summary>
     public Option<string> Active
     {
@@ -63,7 +64,7 @@ public sealed class OgaModelSession : IDisposable
 
     /// <summary>
     /// Registers a LoRA adapter by name + on-disk path. Lazily loads the underlying
-    /// <see cref="Model"/> on first call. Idempotent: re-registering the same name
+    /// ORT-GenAI <c>Model</c> on first call. Idempotent: re-registering the same name
     /// is a no-op success.
     /// </summary>
     /// <param name="name">Stable, unique adapter identifier.</param>
@@ -174,7 +175,7 @@ public sealed class OgaModelSession : IDisposable
     /// <summary>
     /// Sets the desired-active adapter name. The adapter must already be registered
     /// via <see cref="RegisterAdapter"/>. Activation is consumed at the next
-    /// <see cref="Generator"/> construction.
+    /// ORT-GenAI <c>Generator</c> construction.
     /// </summary>
     /// <param name="name">Name of an already-registered adapter to mark active.</param>
     /// <returns><see cref="Result{TValue,TError}.Success"/> on update; <see cref="Result{TValue,TError}.Failure"/> when the adapter is not registered or the session is disposed.</returns>
@@ -222,7 +223,7 @@ public sealed class OgaModelSession : IDisposable
     }
 
     /// <summary>
-    /// Disposes the underlying <see cref="Adapters"/> then <see cref="Model"/> in
+    /// Disposes the underlying <c>Adapters</c> then <c>Model</c> in
     /// deterministic order. Idempotent and safe to call multiple times.
     /// </summary>
     public void Dispose()
@@ -255,7 +256,7 @@ public sealed class OgaModelSession : IDisposable
     }
 
     /// <summary>
-    /// Lazy-loads the underlying <see cref="Model"/> and <see cref="Adapters"/> on
+    /// Lazy-loads the underlying ORT-GenAI <c>Model</c> and <c>Adapters</c> on
     /// first use. Caller MUST already hold <c>_gate</c>.
     /// </summary>
     /// <returns><see cref="Result{TValue,TError}.Success"/> when the model is ready; <see cref="Result{TValue,TError}.Failure"/> with a clean error string on native load failure.</returns>
@@ -274,8 +275,8 @@ public sealed class OgaModelSession : IDisposable
 #pragma warning disable CA1031 // Native ORT-GenAI loads can throw FileNotFoundException, DllNotFoundException, etc.; convert to Result.
         try
         {
-            _model = new Model(_modelPath);
-            _adapters = new Adapters(_model);
+            _model = new OgaModel(_modelPath);
+            _adapters = new OgaAdapters(_model);
         }
         catch (Exception ex)
         {
