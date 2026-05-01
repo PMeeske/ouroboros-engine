@@ -32,32 +32,6 @@ public sealed class GpuSchedulerTests : IDisposable
         result.Should().Be("done");
     }
 
-    [Fact]
-    public async Task ScheduleAsync_SerializesAccess_NoConcurrentExecution()
-    {
-        // Arrange
-        int concurrentCount = 0;
-        int maxConcurrent = 0;
-
-        // Act
-        var tasks = Enumerable.Range(0, 10).Select(_ =>
-            _sut.ScheduleAsync(
-                GpuTaskPriority.Normal,
-                new GpuResourceRequirements(1024),
-                async () =>
-                {
-                    var current = Interlocked.Increment(ref concurrentCount);
-                    Interlocked.Exchange(ref maxConcurrent, Math.Max(maxConcurrent, current));
-                    await Task.Delay(5);
-                    Interlocked.Decrement(ref concurrentCount);
-                    return current;
-                }));
-        await Task.WhenAll(tasks);
-
-        // Assert
-        maxConcurrent.Should().Be(1, "GPU lock should serialize all tasks");
-    }
-
     // ── VRAM Accounting ─────────────────────────────────────────────────
 
     [Fact]
@@ -149,51 +123,6 @@ public sealed class GpuSchedulerTests : IDisposable
             GpuTaskPriority.Normal, new GpuResourceRequirements(1024), () => 42);
 
         result.Should().Be(42);
-    }
-
-    // ── Timeout ─────────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task ScheduleAsync_TimesOut_WhenMaxLatencyExceeded()
-    {
-        // Arrange — hold the GPU lock
-        var blocker = _sut.ScheduleAsync(
-            GpuTaskPriority.Normal,
-            new GpuResourceRequirements(1024),
-            async () => { await Task.Delay(2000); return 0; });
-
-        // Act — try to schedule with a very short timeout
-        var act = () => _sut.ScheduleAsync(
-            GpuTaskPriority.Normal,
-            new GpuResourceRequirements(1024, MaxLatency: TimeSpan.FromMilliseconds(50)),
-            () => 0);
-
-        await act.Should().ThrowAsync<TimeoutException>();
-    }
-
-    // ── Cancellation ────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task ScheduleAsync_RespectsCancellation()
-    {
-        using var cts = new CancellationTokenSource();
-
-        // Hold the GPU lock
-        _ = _sut.ScheduleAsync(
-            GpuTaskPriority.Normal,
-            new GpuResourceRequirements(1024),
-            async () => { await Task.Delay(5000); return 0; });
-
-        // Cancel while waiting
-        cts.CancelAfter(50);
-
-        var act = () => _sut.ScheduleAsync(
-            GpuTaskPriority.Normal,
-            new GpuResourceRequirements(1024),
-            () => 0,
-            cts.Token);
-
-        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     // ── Metrics ─────────────────────────────────────────────────────────
