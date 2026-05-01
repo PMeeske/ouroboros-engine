@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Ouroboros.MeTTa.Tests</RootNamespace>
+    <AssemblyName>Ouroboros.MeTTa.Tests</AssemblyName>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;SA0001;CA2000</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Remove="Ouroboros.Pipeline.Branches" />
+    <Using Remove="Ouroboros.Pipeline.Reasoning" />
+    <Using Remove="Ouroboros.Tests.Infrastructure" />
+    <Using Remove="Ouroboros.Tests.Infrastructure.Utilities" />
+    <Using Remove="Ouroboros.Tests.Infrastructure.Fixtures" />
+    <Using Remove="Ouroboros.Tests.Mocks" />
+    <Using Remove="Ouroboros.Core.Synthesis.Program" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Ouroboros.MeTTa\Ouroboros.MeTTa.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Core\Ouroboros.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="8.0.0" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" PrivateAssets="all">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="8.8.0" />
+  </ItemGroup>
+
+</Project>
