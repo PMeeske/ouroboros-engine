@@ -13,24 +13,24 @@ namespace Ouroboros.Providers.Tapo;
 public sealed partial class TapoEmbodimentProvider
 {
     /// <inheritdoc/>
-    public async Task<Result<ActionOutcome>> ExecuteActionAsync(
+    public async Task<CanonicalResult<ActionOutcome>> ExecuteActionAsync(
         string actuatorId,
         ActuatorAction action,
         CancellationToken ct = default)
     {
         if (_disposed)
         {
-            return Result<ActionOutcome>.Failure("Provider is disposed");
+            return CanonicalResult<ActionOutcome>.Failure("Provider is disposed");
         }
 
         if (!_isConnected)
         {
-            return Result<ActionOutcome>.Failure("Not connected");
+            return CanonicalResult<ActionOutcome>.Failure("Not connected");
         }
 
         if (!_actuators.ContainsKey(actuatorId))
         {
-            return Result<ActionOutcome>.Failure($"Actuator '{actuatorId}' not found");
+            return CanonicalResult<ActionOutcome>.Failure($"Actuator '{actuatorId}' not found");
         }
 
         var startTime = DateTime.UtcNow;
@@ -64,7 +64,7 @@ public sealed partial class TapoEmbodimentProvider
                     }
                     else
                     {
-                        return Result<ActionOutcome>.Failure("Color parameters required");
+                        return CanonicalResult<ActionOutcome>.Failure("Color parameters required");
                     }
 
                     break;
@@ -76,7 +76,7 @@ public sealed partial class TapoEmbodimentProvider
                         var speechResult = await SynthesizeSpeechAsync(text?.ToString() ?? string.Empty, emotion, ct).ConfigureAwait(false);
 
                         var duration = DateTime.UtcNow - startTime;
-                        return Result<ActionOutcome>.Success(new ActionOutcome(
+                        return CanonicalResult<ActionOutcome>.Success(new ActionOutcome(
                             actuatorId,
                             action.ActionType,
                             speechResult.IsSuccess,
@@ -86,7 +86,7 @@ public sealed partial class TapoEmbodimentProvider
                     }
                     else
                     {
-                        return Result<ActionOutcome>.Failure("TTS model not available or text not provided");
+                        return CanonicalResult<ActionOutcome>.Failure("TTS model not available or text not provided");
                     }
 
                 case "pan_left":
@@ -104,7 +104,7 @@ public sealed partial class TapoEmbodimentProvider
                     var ptzElapsed = DateTime.UtcNow - startTime;
                     if (ptzResult.IsSuccess)
                     {
-                        return Result<ActionOutcome>.Success(new ActionOutcome(
+                        return CanonicalResult<ActionOutcome>.Success(new ActionOutcome(
                             actuatorId,
                             action.ActionType,
                             ptzResult.Value.Success,
@@ -113,7 +113,7 @@ public sealed partial class TapoEmbodimentProvider
                             ptzResult.Value.Success ? null : ptzResult.Value.Message));
                     }
 
-                    return Result<ActionOutcome>.Success(new ActionOutcome(
+                    return CanonicalResult<ActionOutcome>.Success(new ActionOutcome(
                         actuatorId,
                         action.ActionType,
                         false,
@@ -122,7 +122,7 @@ public sealed partial class TapoEmbodimentProvider
                 }
 
                 default:
-                    return Result<ActionOutcome>.Failure($"Unsupported action type: {action.ActionType}");
+                    return CanonicalResult<ActionOutcome>.Failure($"Unsupported action type: {action.ActionType}");
             }
 
             var elapsed = DateTime.UtcNow - startTime;
@@ -135,14 +135,14 @@ public sealed partial class TapoEmbodimentProvider
                     actuatorId,
                     elapsed.TotalMilliseconds);
 
-                return Result<ActionOutcome>.Success(new ActionOutcome(
+                return CanonicalResult<ActionOutcome>.Success(new ActionOutcome(
                     actuatorId,
                     action.ActionType,
                     true,
                     elapsed));
             }
 
-            return Result<ActionOutcome>.Success(new ActionOutcome(
+            return CanonicalResult<ActionOutcome>.Success(new ActionOutcome(
                 actuatorId,
                 action.ActionType,
                 false,
@@ -159,7 +159,7 @@ public sealed partial class TapoEmbodimentProvider
             _logger?.LogError(ex, "Failed to execute action {Action} on actuator {Actuator}",
                 action.ActionType, actuatorId);
 
-            return Result<ActionOutcome>.Success(new ActionOutcome(
+            return CanonicalResult<ActionOutcome>.Success(new ActionOutcome(
                 actuatorId,
                 action.ActionType,
                 false,

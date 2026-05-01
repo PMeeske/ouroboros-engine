@@ -175,16 +175,16 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
     public Observable<EmbodimentProviderEvent> Events => _events;
 
     /// <inheritdoc/>
-    public async Task<Result<EmbodimentCapabilities>> ConnectAsync(CancellationToken ct = default)
+    public async Task<CanonicalResult<EmbodimentCapabilities>> ConnectAsync(CancellationToken ct = default)
     {
         if (_disposed)
         {
-            return Result<EmbodimentCapabilities>.Failure("Provider is disposed");
+            return CanonicalResult<EmbodimentCapabilities>.Failure("Provider is disposed");
         }
 
         if (_isConnected)
         {
-            return Result<EmbodimentCapabilities>.Success(_capabilities);
+            return CanonicalResult<EmbodimentCapabilities>.Success(_capabilities);
         }
 
         try
@@ -215,7 +215,7 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
 
             if (_rtspClientFactory == null && _tapoClient == null)
             {
-                return Result<EmbodimentCapabilities>.Failure("No Tapo client configured");
+                return CanonicalResult<EmbodimentCapabilities>.Failure("No Tapo client configured");
             }
 
             _isConnected = true;
@@ -227,7 +227,7 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
                 "Connected to Tapo provider with capabilities: {Capabilities}",
                 _capabilities);
 
-            return Result<EmbodimentCapabilities>.Success(_capabilities);
+            return CanonicalResult<EmbodimentCapabilities>.Success(_capabilities);
         }
         catch (OperationCanceledException)
         {
@@ -236,16 +236,16 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Failed to connect to Tapo provider");
-            return Result<EmbodimentCapabilities>.Failure($"Connection failed: {ex.Message}");
+            return CanonicalResult<EmbodimentCapabilities>.Failure($"Connection failed: {ex.Message}");
         }
     }
 
     /// <inheritdoc/>
-    public async Task<Result<OuroborosUnit>> DisconnectAsync(CancellationToken ct = default)
+    public async Task<CanonicalResult<OuroborosUnit>> DisconnectAsync(CancellationToken ct = default)
     {
         if (!_isConnected)
         {
-            return Result<OuroborosUnit>.Success(OuroborosUnit.Value);
+            return CanonicalResult<OuroborosUnit>.Success(OuroborosUnit.Value);
         }
 
         try
@@ -258,7 +258,7 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
             RaiseEvent(EmbodimentProviderEventType.Disconnected);
 
             await Task.CompletedTask.ConfigureAwait(false);
-            return Result<OuroborosUnit>.Success(OuroborosUnit.Value);
+            return CanonicalResult<OuroborosUnit>.Success(OuroborosUnit.Value);
         }
         catch (OperationCanceledException)
         {
@@ -267,7 +267,7 @@ public sealed partial class TapoEmbodimentProvider : IEmbodimentProvider
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogError(ex, "Error disconnecting from Tapo provider");
-            return Result<OuroborosUnit>.Failure($"Disconnect failed: {ex.Message}");
+            return CanonicalResult<OuroborosUnit>.Failure($"Disconnect failed: {ex.Message}");
         }
     }
 
