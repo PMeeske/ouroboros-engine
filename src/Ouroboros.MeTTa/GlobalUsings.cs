@@ -1,0 +1,11 @@
+global using System;
+global using System.Collections.Generic;
+global using System.Collections.Immutable;
+global using System.IO;
+global using System.Linq;
+global using System.Reflection;
+global using System.Threading;
+global using System.Threading.Tasks;
+global using Ouroboros.Abstractions;
+global using Ouroboros.Abstractions.Monads;
+global using Ouroboros.Core.Hyperon;
