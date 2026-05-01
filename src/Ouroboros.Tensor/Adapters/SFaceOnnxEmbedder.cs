@@ -44,6 +44,7 @@ public sealed class SFaceOnnxEmbedder : IFaceEmbedder, IAsyncDisposable
     private readonly GpuScheduler _scheduler;
     private readonly StubFaceEmbedder _fallback;
     private readonly ILogger<SFaceOnnxEmbedder>? _logger;
+    private readonly ISharedOrtDmlSessionFactory? _sessionFactory;
 
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private IVramReservation? _reservation;
@@ -60,11 +61,16 @@ public sealed class SFaceOnnxEmbedder : IFaceEmbedder, IAsyncDisposable
     /// <param name="budget">Perception VRAM admission gate.</param>
     /// <param name="scheduler">Shared GPU scheduler (used by future ONNX dispatch).</param>
     /// <param name="logger">Optional logger.</param>
+    /// <param name="sessionFactory">
+    /// Phase 196.3-02: when supplied, ORT sessions bind to the same shared D3D12 device
+    /// as the rasterizer. When null or unavailable, falls back to the legacy local DML EP.
+    /// </param>
     public SFaceOnnxEmbedder(
         string modelPath,
         IPerceptionVramBudget budget,
         GpuScheduler scheduler,
-        ILogger<SFaceOnnxEmbedder>? logger = null)
+        ILogger<SFaceOnnxEmbedder>? logger = null,
+        ISharedOrtDmlSessionFactory? sessionFactory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelPath);
         ArgumentNullException.ThrowIfNull(budget);
@@ -74,6 +80,7 @@ public sealed class SFaceOnnxEmbedder : IFaceEmbedder, IAsyncDisposable
         _scheduler = scheduler;
         _fallback = new StubFaceEmbedder(null);
         _logger = logger;
+        _sessionFactory = sessionFactory;
     }
 
     /// <inheritdoc/>
@@ -236,7 +243,7 @@ public sealed class SFaceOnnxEmbedder : IFaceEmbedder, IAsyncDisposable
 
             _reservation = reservation.Value;
 
-            SessionOptions opts = CreateSessionOptions(_logger);
+            SessionOptions opts = CreateSessionOptionsViaFactoryOrLocal();
             try
             {
                 _session = new InferenceSession(_modelPath, opts);
@@ -419,7 +426,32 @@ public sealed class SFaceOnnxEmbedder : IFaceEmbedder, IAsyncDisposable
         }
     }
 
-    private static SessionOptions CreateSessionOptions(ILogger? logger)
+    /// <summary>
+    /// Phase 196.3-02: prefer the shared-device factory; fall back to local DML EP only
+    /// when the factory is absent or the shared device is unavailable on this host.
+    /// </summary>
+    private SessionOptions CreateSessionOptionsViaFactoryOrLocal()
+    {
+        if (_sessionFactory is not null)
+        {
+            try
+            {
+                SessionOptions shared = _sessionFactory.CreateSessionOptions();
+                _logger?.LogInformation("[SFaceOnnx] DML EP via shared D3D12 device factory");
+                return shared;
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger?.LogWarning(
+                    "[SFaceOnnx] Shared DML factory unavailable ({Reason}); falling back to local EP",
+                    ex.Message);
+            }
+        }
+
+        return CreateSessionOptionsLocal(_logger);
+    }
+
+    private static SessionOptions CreateSessionOptionsLocal(ILogger? logger)
     {
         var opts = new SessionOptions
         {
@@ -433,7 +465,7 @@ public sealed class SFaceOnnxEmbedder : IFaceEmbedder, IAsyncDisposable
             {
                 opts.AppendExecutionProvider_DML(0);
                 opts.AddSessionConfigEntry("session.disable_mem_pattern", "1");
-                logger?.LogInformation("[SFaceOnnx] DirectML EP enabled");
+                logger?.LogInformation("[SFaceOnnx] DirectML EP enabled (legacy local path)");
             }
 #pragma warning disable CA1031
             catch (Exception ex)

@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ouroboros.Tensor.Abstractions;
 using Ouroboros.Tensor.Adapters;
 using Ouroboros.Tensor.Orchestration;
 
@@ -43,10 +44,11 @@ public static class PoseGazeExtensions
                     var budget = sp.GetRequiredService<IPerceptionVramBudget>();
                     var scheduler = sp.GetRequiredService<GpuScheduler>();
                     var logger = sp.GetService<ILogger<MoveNetOnnxPoseEstimator>>();
+                    var sessionFactory = sp.GetService<ISharedOrtDmlSessionFactory>();
                     factoryLogger?.LogInformation(
                         "IPoseEstimator → MoveNetOnnxPoseEstimator (model={ModelPath})",
                         modelPath);
-                    return new MoveNetOnnxPoseEstimator(modelPath, budget, scheduler, logger);
+                    return new MoveNetOnnxPoseEstimator(modelPath, budget, scheduler, logger, sessionFactory);
                 }
 #pragma warning disable CA1031
                 catch (Exception ex)
@@ -101,10 +103,11 @@ public static class PoseGazeExtensions
                     var budget = sp.GetRequiredService<IPerceptionVramBudget>();
                     var scheduler = sp.GetRequiredService<GpuScheduler>();
                     var logger = sp.GetService<ILogger<MobileGazeOnnxEstimator>>();
+                    var sessionFactory = sp.GetService<ISharedOrtDmlSessionFactory>();
                     factoryLogger?.LogInformation(
                         "IGazeEstimator → MobileGazeOnnxEstimator (model={ModelPath})",
                         modelPath);
-                    return new MobileGazeOnnxEstimator(modelPath, budget, scheduler, logger);
+                    return new MobileGazeOnnxEstimator(modelPath, budget, scheduler, logger, sessionFactory);
                 }
 #pragma warning disable CA1031
                 catch (Exception ex)

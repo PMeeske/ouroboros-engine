@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ouroboros.Tensor.Abstractions;
 using Ouroboros.Tensor.Adapters;
 using Ouroboros.Tensor.Orchestration;
 
@@ -48,10 +49,11 @@ public static class FaceEmbeddingExtensions
                     var budget = sp.GetRequiredService<IPerceptionVramBudget>();
                     var scheduler = sp.GetRequiredService<GpuScheduler>();
                     var logger = sp.GetService<ILogger<SFaceOnnxEmbedder>>();
+                    var sessionFactory = sp.GetService<ISharedOrtDmlSessionFactory>();
                     factoryLogger?.LogInformation(
                         "IFaceEmbedder → SFaceOnnxEmbedder (model={ModelPath})",
                         modelPath);
-                    return new SFaceOnnxEmbedder(modelPath, budget, scheduler, logger);
+                    return new SFaceOnnxEmbedder(modelPath, budget, scheduler, logger, sessionFactory);
                 }
 #pragma warning disable CA1031
                 catch (Exception ex)

@@ -47,6 +47,7 @@ public sealed class YuNetOnnxFaceDetector : IFaceDetector, IAsyncDisposable
     private readonly IPerceptionVramBudget _budget;
     private readonly GpuScheduler _scheduler;
     private readonly ILogger<YuNetOnnxFaceDetector>? _logger;
+    private readonly ISharedOrtDmlSessionFactory? _sessionFactory;
 
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private IVramReservation? _reservation;
@@ -64,11 +65,18 @@ public sealed class YuNetOnnxFaceDetector : IFaceDetector, IAsyncDisposable
     /// <param name="budget">Perception-tier VRAM admission gate.</param>
     /// <param name="scheduler">Shared GPU scheduler for ONNX inference dispatch.</param>
     /// <param name="logger">Optional logger.</param>
+    /// <param name="sessionFactory">
+    /// Phase 196.3-02: when supplied, ORT sessions are constructed with
+    /// <see cref="ISharedOrtDmlSessionFactory.CreateSessionOptions"/> so they bind to
+    /// the same <c>ID3D12Device</c> as the rasterizer. When null or unavailable,
+    /// falls back to the legacy local DML EP path.
+    /// </param>
     public YuNetOnnxFaceDetector(
         string modelPath,
         IPerceptionVramBudget budget,
         GpuScheduler scheduler,
-        ILogger<YuNetOnnxFaceDetector>? logger = null)
+        ILogger<YuNetOnnxFaceDetector>? logger = null,
+        ISharedOrtDmlSessionFactory? sessionFactory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelPath);
         ArgumentNullException.ThrowIfNull(budget);
@@ -77,6 +85,7 @@ public sealed class YuNetOnnxFaceDetector : IFaceDetector, IAsyncDisposable
         _budget = budget;
         _scheduler = scheduler;
         _logger = logger;
+        _sessionFactory = sessionFactory;
     }
 
     /// <inheritdoc/>
@@ -233,7 +242,7 @@ public sealed class YuNetOnnxFaceDetector : IFaceDetector, IAsyncDisposable
 
             _reservation = reservation.Value;
 
-            SessionOptions opts = CreateSessionOptions(_logger);
+            SessionOptions opts = CreateSessionOptionsViaFactoryOrLocal();
             try
             {
                 _session = new InferenceSession(_modelPath, opts);
@@ -506,7 +515,32 @@ public sealed class YuNetOnnxFaceDetector : IFaceDetector, IAsyncDisposable
         }
     }
 
-    private static SessionOptions CreateSessionOptions(ILogger? logger)
+    /// <summary>
+    /// Phase 196.3-02: prefer the shared-device factory; fall back to local DML EP setup
+    /// only when the factory is absent or the shared device is unavailable on this host.
+    /// </summary>
+    private SessionOptions CreateSessionOptionsViaFactoryOrLocal()
+    {
+        if (_sessionFactory is not null)
+        {
+            try
+            {
+                SessionOptions shared = _sessionFactory.CreateSessionOptions();
+                _logger?.LogInformation("[YuNetOnnx] DML EP via shared D3D12 device factory");
+                return shared;
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger?.LogWarning(
+                    "[YuNetOnnx] Shared DML factory unavailable ({Reason}); falling back to local EP",
+                    ex.Message);
+            }
+        }
+
+        return CreateSessionOptionsLocal(_logger);
+    }
+
+    private static SessionOptions CreateSessionOptionsLocal(ILogger? logger)
     {
         var opts = new SessionOptions
         {
@@ -520,7 +554,7 @@ public sealed class YuNetOnnxFaceDetector : IFaceDetector, IAsyncDisposable
             {
                 opts.AppendExecutionProvider_DML(0);
                 opts.AddSessionConfigEntry("session.disable_mem_pattern", "1");
-                logger?.LogInformation("[YuNetOnnx] DirectML EP enabled");
+                logger?.LogInformation("[YuNetOnnx] DirectML EP enabled (legacy local path)");
             }
 #pragma warning disable CA1031 // DirectML availability is opaque.
             catch (Exception ex)

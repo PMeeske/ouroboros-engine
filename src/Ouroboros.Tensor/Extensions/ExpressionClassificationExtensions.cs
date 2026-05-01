@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ouroboros.Tensor.Abstractions;
 using Ouroboros.Tensor.Adapters;
 using Ouroboros.Tensor.Orchestration;
 
@@ -52,7 +53,8 @@ public static class ExpressionClassificationExtensions
         {
             var scheduler = sp.GetRequiredService<GpuScheduler>();
             var logger = sp.GetService<ILogger<OnnxExpressionClassifier>>();
-            return new OnnxExpressionClassifier(modelPath, scheduler, logger);
+            var sessionFactory = sp.GetService<ISharedOrtDmlSessionFactory>();
+            return new OnnxExpressionClassifier(modelPath, scheduler, logger, sessionFactory);
         });
 
         return services;
@@ -88,10 +90,11 @@ public static class ExpressionClassificationExtensions
                 {
                     var scheduler = sp.GetRequiredService<GpuScheduler>();
                     var classifierLogger = sp.GetService<ILogger<OnnxExpressionClassifier>>();
+                    var sessionFactory = sp.GetService<ISharedOrtDmlSessionFactory>();
                     logger?.LogInformation(
                         "IExpressionClassifier → OnnxExpressionClassifier (model={ModelPath})",
                         modelPath);
-                    return new OnnxExpressionClassifier(modelPath, scheduler, classifierLogger);
+                    return new OnnxExpressionClassifier(modelPath, scheduler, classifierLogger, sessionFactory);
                 }
 #pragma warning disable CA1031 // ONNX session creation failure must fall back to stub
                 catch (Exception ex)
