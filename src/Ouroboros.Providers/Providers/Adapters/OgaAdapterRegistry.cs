@@ -10,13 +10,13 @@ namespace Ouroboros.Providers.Adapters;
 /// <summary>
 /// Disk-scanning <see cref="IAdapterRegistry"/> implementation. Scans a configured
 /// adapter root directory for <c>*.adapter.json</c> manifest files, deserializes
-/// them, and indexes by name.
+/// them, and indexes by name. Activate/Deactivate delegate to a bound
+/// <see cref="OgaModelSession"/> when present.
 /// </summary>
 /// <remarks>
-/// Phase A scaffold: <see cref="Activate"/> and <see cref="Deactivate"/> return
-/// <see cref="Result{TValue,TError}.Failure"/> with a Phase A.4 hint string. The
-/// lower-level OGA <c>Model.RegisterAdapter</c> + <c>Generator.SetActiveAdapter</c>
-/// plumbing is intentionally deferred to Phase A.4.
+/// When constructed without a session, <see cref="Activate"/> returns a Failure
+/// indicating no model session is bound — useful for staged DI wiring where the
+/// model path is supplied later.
 /// </remarks>
 public sealed class OgaAdapterRegistry : IAdapterRegistry
 {
@@ -28,23 +28,45 @@ public sealed class OgaAdapterRegistry : IAdapterRegistry
 
     private readonly string _adapterRoot;
     private readonly ILogger<OgaAdapterRegistry> _logger;
+    private readonly OgaModelSession? _session;
     private readonly object _sync = new();
 
     private ImmutableDictionary<string, AdapterManifest> _byName = ImmutableDictionary<string, AdapterManifest>.Empty;
     private Option<string> _active = Option<string>.None;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OgaAdapterRegistry"/> class.
+    /// Initializes a new instance of the <see cref="OgaAdapterRegistry"/> class
+    /// without a bound model session. <see cref="Activate"/> will return a
+    /// "no session bound" Failure until a session is supplied via the three-arg
+    /// constructor overload.
     /// </summary>
     /// <param name="adapterRootPath">Absolute path to the directory containing <c>*.adapter.json</c> manifests.</param>
     /// <param name="logger">Logger instance.</param>
     public OgaAdapterRegistry(string adapterRootPath, ILogger<OgaAdapterRegistry> logger)
+        : this(adapterRootPath, logger, session: null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OgaAdapterRegistry"/> class with an
+    /// optional <see cref="OgaModelSession"/> binding. When <paramref name="session"/> is
+    /// <c>null</c>, <see cref="Activate"/> returns a Failure indicating no model session
+    /// is bound — useful for staged DI wiring and tests.
+    /// </summary>
+    /// <param name="adapterRootPath">Absolute path to the directory containing <c>*.adapter.json</c> manifests.</param>
+    /// <param name="logger">Logger instance.</param>
+    /// <param name="session">Optional model session that owns the underlying ORT-GenAI Model + Adapters pair.</param>
+    public OgaAdapterRegistry(
+        string adapterRootPath,
+        ILogger<OgaAdapterRegistry> logger,
+        OgaModelSession? session)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(adapterRootPath);
         ArgumentNullException.ThrowIfNull(logger);
 
         _adapterRoot = adapterRootPath;
         _logger = logger;
+        _session = session;
     }
 
     /// <inheritdoc/>
@@ -157,15 +179,84 @@ public sealed class OgaAdapterRegistry : IAdapterRegistry
     public Result<Unit, string> Activate(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        return Result<Unit, string>.Failure(
-            "OGA adapter activation is not yet wired (Phase A.4 will register adapters via Model.RegisterAdapter and switch via Generator.SetActiveAdapter).");
+
+        AdapterManifest? manifest;
+        lock (_sync)
+        {
+            if (!_byName.TryGetValue(name, out manifest!))
+            {
+                return Result<Unit, string>.Failure($"adapter not registered: '{name}'");
+            }
+        }
+
+        OgaModelSession? session = _session;
+        if (session is null)
+        {
+            return Result<Unit, string>.Failure(
+                "OgaModelSession is not bound to this registry; cannot activate adapters. Pass a modelPath to AddOgaAdapterRegistry or supply a session via the constructor overload.");
+        }
+
+        Result<Unit, string> register = session.RegisterAdapter(manifest.Name, manifest.AdapterPath);
+        if (register.IsFailure)
+        {
+            return register;
+        }
+
+        Result<Unit, string> setActive = session.SetActive(name);
+        if (setActive.IsFailure)
+        {
+            return setActive;
+        }
+
+        lock (_sync)
+        {
+            _active = Option<string>.Some(name);
+        }
+
+        _logger.LogInformation("Activated LoRA adapter '{Name}' from '{Path}'", manifest.Name, manifest.AdapterPath);
+        return Result<Unit, string>.Success(Unit.Value);
     }
 
     /// <inheritdoc/>
     public Result<Unit, string> Deactivate()
     {
-        return Result<Unit, string>.Failure(
-            "OGA adapter activation is not yet wired (Phase A.4 will register adapters via Model.RegisterAdapter and switch via Generator.SetActiveAdapter).");
+        Option<string> previous;
+        lock (_sync)
+        {
+            previous = _active;
+        }
+
+        if (!previous.HasValue)
+        {
+            return Result<Unit, string>.Success(Unit.Value);
+        }
+
+        OgaModelSession? session = _session;
+        if (session is null)
+        {
+            // Defensive: if the session vanished (e.g. mid-test), still clear local state.
+            lock (_sync)
+            {
+                _active = Option<string>.None;
+            }
+
+            _logger.LogWarning("Deactivate called with no session bound; cleared local active marker only.");
+            return Result<Unit, string>.Success(Unit.Value);
+        }
+
+        Result<Unit, string> clear = session.ClearActive();
+        if (clear.IsFailure)
+        {
+            return clear;
+        }
+
+        lock (_sync)
+        {
+            _active = Option<string>.None;
+        }
+
+        _logger.LogInformation("Deactivated LoRA adapter '{Name}' (kept loaded for fast re-activation).", previous.Value);
+        return Result<Unit, string>.Success(Unit.Value);
     }
 
     private AdapterManifest? TryProject(AdapterManifestDto dto, string manifestFile)
