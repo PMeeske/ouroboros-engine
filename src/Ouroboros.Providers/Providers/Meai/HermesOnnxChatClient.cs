@@ -19,6 +19,7 @@ namespace Ouroboros.Providers.Meai;
 /// </remarks>
 public sealed class HermesOnnxChatClient : IChatClient
 {
+    private readonly HermesOnnxChatModel _model;
     private readonly CompletionModelChatClientAdapter _inner;
     private static readonly ChatClientMetadata MetadataValue = new(nameof(HermesOnnxChatClient));
 
@@ -26,10 +27,11 @@ public sealed class HermesOnnxChatClient : IChatClient
     /// Initializes a new instance of the <see cref="HermesOnnxChatClient"/> class.
     /// Initializes a new instance wrapping <paramref name="model"/>.
     /// </summary>
-    /// <param name="model">Configured Hermes ONNX chat model.</param>
+    /// <param name="model">Configured Hermes ONNX chat model. Owned by this client; disposed on <see cref="Dispose"/>.</param>
     public HermesOnnxChatClient(HermesOnnxChatModel model)
     {
         ArgumentNullException.ThrowIfNull(model);
+        _model = model;
         _inner = new CompletionModelChatClientAdapter(model);
     }
 
@@ -62,5 +64,9 @@ public sealed class HermesOnnxChatClient : IChatClient
     }
 
     /// <inheritdoc/>
-    public void Dispose() => _inner.Dispose();
+    public void Dispose()
+    {
+        _inner.Dispose();
+        _model.Dispose();
+    }
 }
