@@ -241,6 +241,62 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers a keyed MEAI <see cref="IChatClient"/> for the Hermes ONNX local model
+    /// (Phase 263, requirement LLM-03). The model directory defaults to
+    /// <c>checkpoints/onnx-hermes/hermes-4.3-36b-onnx-int4/</c> when neither
+    /// <c>HermesOnnx:ModelPath</c> nor <c>HERMES_ONNX_MODEL_PATH</c> is set.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">Optional configuration; <c>HermesOnnx:ModelPath</c>,
+    /// <c>HermesOnnx:MaxLength</c>, <c>HermesOnnx:Temperature</c>, etc. are bound.</param>
+    /// <param name="serviceKey">DI key (default <c>hermes-onnx</c>) for keyed
+    /// <see cref="IChatClient"/> resolution.</param>
+    /// <returns><paramref name="services"/> for chaining.</returns>
+    /// <remarks>
+    /// Graceful degradation: returns <paramref name="services"/> unmodified when the model
+    /// directory does not exist. CLI <c>--mode hermes-onnx</c> then fails loudly at swap time
+    /// rather than crashing process startup. Registration is lazy — the actual ORT-GenAI
+    /// Model is constructed on first <see cref="IChatClient"/> resolve.
+    /// </remarks>
+    public static IServiceCollection AddHermesOnnxKeyedMeaiChatClient(
+        this IServiceCollection services,
+        IConfiguration? configuration = null,
+        string serviceKey = "hermes-onnx")
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        string modelPath = configuration?["HermesOnnx:ModelPath"]
+            ?? Environment.GetEnvironmentVariable("HERMES_ONNX_MODEL_PATH")
+            ?? Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                "..",
+                "..",
+                "..",
+                "..",
+                "..",
+                "checkpoints",
+                "onnx-hermes",
+                "hermes-4.3-36b-onnx-int4"));
+
+        if (!Directory.Exists(modelPath))
+        {
+            return services; // graceful degradation; --mode hermes-onnx will fail loudly later
+        }
+
+        services.TryAddKeyedSingleton<IChatClient>(serviceKey, (sp, _) =>
+        {
+            HermesOnnx.HermesOnnxChatModelOptions opts =
+                configuration?.GetSection("HermesOnnx").Get<HermesOnnx.HermesOnnxChatModelOptions>()
+                ?? new HermesOnnx.HermesOnnxChatModelOptions();
+            ILogger<HermesOnnx.HermesOnnxChatModel>? logger = sp.GetService<ILogger<HermesOnnx.HermesOnnxChatModel>>();
+            HermesOnnx.HermesOnnxChatModel inner = new(modelPath, opts, logger);
+            return new Meai.HermesOnnxChatClient(inner);
+        });
+
+        return services;
+    }
+
+    /// <summary>
     /// Resolves the appropriate <see cref="RequestOptions"/> preset and KeepAlive duration
     /// for a given Ollama model name. Returns <c>(null, null)</c> when no preset is recognized.
     /// </summary>
