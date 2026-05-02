@@ -68,8 +68,23 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
         // Idempotent CUDA -> DML provider retarget (Path A, RESEARCH.md Section 7).
         GenaiConfigRetargeter.EnsureDirectMlProvider(modelPath, logger);
 
-        _model = new Model(modelPath);
-        _tokenizer = new Tokenizer(_model);
+        // Construct Model first; if Tokenizer ctor throws (e.g., unsupported tokenizer
+        // class — see todo 2026-05-02-hermes-onnx-tokenizer-class-not-supported.md),
+        // dispose Model so the OGA "Generators::Model leaked" warning doesn't fire.
+        Model? model = null;
+        try
+        {
+            model = new Model(modelPath);
+            Tokenizer tok = new(model);
+            _model = model;
+            _tokenizer = tok;
+            model = null; // ownership transferred — skip cleanup below
+        }
+        finally
+        {
+            model?.Dispose();
+        }
+
         logger?.LogInformation("[HermesOnnx] Model loaded from {Path}", modelPath);
     }
 
