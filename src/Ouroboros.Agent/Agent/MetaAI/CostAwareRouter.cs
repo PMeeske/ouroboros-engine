@@ -46,7 +46,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
 
             // Estimate initial confidence (simplified)
             double estimatedConfidence = EstimateInitialConfidence(task);
-            
+
             // Get uncertainty-based routing decision
             RoutingDecision decision = await _uncertaintyRouter.RouteDecisionAsync(
                 contextStr,
@@ -62,7 +62,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
 
             // Determine route from decision
             string routeName = DetermineRouteFromDecision(decision);
-            
+
             // Get cost info for the route
             CostInfo costInfo = GetCostInfoForRoute(routeName);
 
@@ -269,7 +269,7 @@ public sealed class CostAwareRouter : ICostAwareRouter
         // Simple heuristic: longer, more detailed tasks have higher confidence
         // More sophisticated implementations would use ML models
         double baseConfidence = 0.7;
-        
+
         // Adjust for task length
         int wordCount = task.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
         if (wordCount < 5)

@@ -46,7 +46,7 @@ public sealed class DivideAndConquerOrchestrator
         {
             // Process chunks in parallel with configured degree of parallelism
             ConcurrentBag<ChunkResult> results = new ConcurrentBag<ChunkResult>();
-            
+
             ParallelOptions parallelOptions = new ParallelOptions
             {
                 MaxDegreeOfParallelism = _config.MaxParallelism,
@@ -104,10 +104,10 @@ public sealed class DivideAndConquerOrchestrator
             return new List<string>();
 
         List<string> chunks = new List<string>();
-        
+
         // Split by paragraphs first to maintain semantic boundaries
         string[] paragraphs = text.Split(new[] { "\n\n", "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
-        
+
         StringBuilder currentChunk = new StringBuilder();
         int currentSize = 0;
 
@@ -170,10 +170,10 @@ public sealed class DivideAndConquerOrchestrator
         {
             // Construct prompt for the chunk
             string prompt = $"{task}\n\nContent:\n{chunk}";
-            
+
             // Execute with model
             string output = await _model.GenerateTextAsync(prompt, ct).ConfigureAwait(false);
-            
+
             sw.Stop();
 
             // Record metrics
@@ -214,12 +214,12 @@ public sealed class DivideAndConquerOrchestrator
             return results[0].Output;
 
         StringBuilder merged = new StringBuilder();
-        
+
         // Simple concatenation with separator
         for (int i = 0; i < results.Count; i++)
         {
             merged.Append(results[i].Output);
-            
+
             if (i < results.Count - 1)
             {
                 merged.Append(_config.MergeSeparator);

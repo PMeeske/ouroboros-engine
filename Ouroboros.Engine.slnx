@@ -3,6 +3,7 @@
   <Folder Name="/src/">
     <Project Path="src/Ouroboros.Agent/Ouroboros.Agent.csproj" />
     <Project Path="src/Ouroboros.McpServer/Ouroboros.McpServer.csproj" />
+    <Project Path="src/Ouroboros.MeTTa/Ouroboros.MeTTa.csproj" />
     <Project Path="src/Ouroboros.Network/Ouroboros.Network.csproj" />
     <Project Path="src/Ouroboros.Pipeline/Ouroboros.Pipeline.csproj" />
     <Project Path="src/Ouroboros.Providers/Ouroboros.Providers.csproj" />
@@ -14,6 +15,7 @@
     <Project Path="tests/Ouroboros.Agent.Tests/Ouroboros.Agent.Tests.csproj" />
     <Project Path="tests/Ouroboros.Engine.BDD/Ouroboros.Engine.BDD.csproj" />
     <Project Path="tests/Ouroboros.McpServer.Tests/Ouroboros.McpServer.Tests.csproj" />
+    <Project Path="tests/Ouroboros.MeTTa.Tests/Ouroboros.MeTTa.Tests.csproj" />
     <Project Path="tests/Ouroboros.Network.Tests/Ouroboros.Network.Tests.csproj" />
     <Project Path="tests/Ouroboros.Pipeline.Tests/Ouroboros.Pipeline.Tests.csproj" />
     <Project Path="tests/Ouroboros.Providers.Tests/Ouroboros.Providers.Tests.csproj" />

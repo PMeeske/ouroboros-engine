@@ -63,7 +63,7 @@ public interface INeuralSymbolicBridge
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// Consistency report with conflicts and suggestions.
-    /// Note: LogicalConflict.Rule1 and Rule2 may be null when conflicts are detected 
+    /// Note: LogicalConflict.Rule1 and Rule2 may be null when conflicts are detected
     /// through LLM analysis but specific conflicting rules cannot be identified.
     /// </returns>
     Task<Result<ConsistencyReport, string>> CheckConsistencyAsync(

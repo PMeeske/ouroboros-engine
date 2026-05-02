@@ -295,8 +295,8 @@ public class StrategyGeneInfluenceTests
         // Calculate expected threshold using the same formula as production code
         double calculatedThreshold = BaseQualityThreshold + (0.5 * QualityThresholdRange);
         ((double)verifyPhase.Metadata["quality_threshold"]).Should().BeApproximately(
-            calculatedThreshold, 
-            0.01, 
+            calculatedThreshold,
+            0.01,
             $"{BaseQualityThreshold} + (0.5 * {QualityThresholdRange}) = {calculatedThreshold}");
     }
 
@@ -396,7 +396,7 @@ public class StrategyGeneInfluenceTests
         // Arrange
         var promptCapture = new PromptCapturingChatModel(@"{""verified"": true, ""quality_score"": 0.6, ""reasoning"": ""ok""}");
         var atom = OuroborosAtom.CreateDefault();
-        
+
         // Set all four strategy genes
         atom.AddCapability(new OuroborosCapability("Strategy_PlanningDepth", "Deep", 0.8));
         atom.AddCapability(new OuroborosCapability("Strategy_DecompositionGranularity", "Fine", 0.9));
@@ -427,8 +427,8 @@ public class StrategyGeneInfluenceTests
         // Calculate expected threshold: BaseQualityThreshold + (0.4 * QualityThresholdRange)
         double expectedThreshold = BaseQualityThreshold + (0.4 * QualityThresholdRange);
         ((double)verifyPhase.Metadata["quality_threshold"]).Should().BeApproximately(
-            expectedThreshold, 
-            0.01, 
+            expectedThreshold,
+            0.01,
             $"VerificationStrictness=0.4 should set threshold to {BaseQualityThreshold} + (0.4 * {QualityThresholdRange}) = {expectedThreshold}");
     }
 }

@@ -1,4 +1,4 @@
-﻿// <copyright file="OllamaVisionModel.cs" company="Ouroboros">
+// <copyright file="OllamaVisionModel.cs" company="Ouroboros">
 // Copyright (c) Ouroboros. All rights reserved.
 // </copyright>
 
@@ -18,7 +18,7 @@ namespace Ouroboros.Providers;
 public sealed class OllamaVisionModel : IVisionModel
 {
     /// <summary>
-    /// Default vision model — Qwen3-VL 235B cloud for strongest visual understanding.
+    /// Default vision model â€” Qwen3-VL 235B cloud for strongest visual understanding.
     /// </summary>
     public const string DefaultModel = "devstral-small-2:24b-cloud";
 

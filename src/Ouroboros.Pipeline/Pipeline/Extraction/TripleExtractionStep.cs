@@ -15,7 +15,7 @@ public sealed class TripleExtractionStep
     private static readonly string ExtractionPrompt = """
         Extract semantic triples from the following document content.
         Output each triple on a new line in the format: (Relation Subject Object)
-        
+
         Valid relations are:
         - Author: who wrote/created the document
         - Status: the document's state (Outdated, Current, Draft, Reviewed, Archived)
@@ -23,11 +23,11 @@ public sealed class TripleExtractionStep
         - Contains: entities mentioned in the document
         - References: other documents referenced
         - DependsOn: dependencies
-        
+
         Document ID: {document_id}
         Document Content:
         {content}
-        
+
         Extract triples:
         """;
 

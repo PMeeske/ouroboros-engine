@@ -46,8 +46,8 @@ public sealed class NextNodeTool : ITool
             ""constraints"": {
                 ""type"": ""array"",
                 ""description"": ""Optional MeTTa constraint rules to apply"",
-                ""items"": { 
-                    ""type"": ""string"" 
+                ""items"": {
+                    ""type"": ""string""
                 }
             }
         },

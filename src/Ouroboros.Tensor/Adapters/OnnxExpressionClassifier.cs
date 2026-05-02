@@ -4,6 +4,7 @@
 
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
+using Ouroboros.Tensor.Abstractions;
 using Ouroboros.Tensor.Orchestration;
 
 namespace Ouroboros.Tensor.Adapters;
@@ -30,6 +31,7 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
     private readonly string _modelPath;
     private readonly GpuScheduler _scheduler;
     private readonly ILogger<OnnxExpressionClassifier>? _logger;
+    private readonly ISharedOrtDmlSessionFactory? _sessionFactory;
     private readonly long _estimatedVramBytes;
 
     private readonly SemaphoreSlim _initLock = new(1, 1);
@@ -49,12 +51,17 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
     /// <param name="modelPath">Absolute path to the FER+ ONNX model file.</param>
     /// <param name="scheduler">GPU scheduler used to mediate every inference dispatch.</param>
     /// <param name="logger">Optional logger for startup + diagnostic output.</param>
+    /// <param name="sessionFactory">
+    /// Phase 196.3-02: when supplied, ORT sessions bind to the same shared D3D12 device
+    /// as the rasterizer. When null or unavailable, falls back to legacy local DML EP.
+    /// </param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="modelPath"/> is null/empty/whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="scheduler"/> is null.</exception>
     public OnnxExpressionClassifier(
         string modelPath,
         GpuScheduler scheduler,
-        ILogger<OnnxExpressionClassifier>? logger = null)
+        ILogger<OnnxExpressionClassifier>? logger = null,
+        ISharedOrtDmlSessionFactory? sessionFactory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelPath);
         ArgumentNullException.ThrowIfNull(scheduler);
@@ -62,6 +69,7 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         _modelPath = modelPath;
         _scheduler = scheduler;
         _logger = logger;
+        _sessionFactory = sessionFactory;
         long fileSize = File.Exists(modelPath) ? new FileInfo(modelPath).Length : 0L;
         _estimatedVramBytes = fileSize + WorkingSetBytes;
     }
@@ -194,7 +202,7 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
                 return;
             }
 
-            SessionOptions opts = CreateSessionOptions(_logger);
+            SessionOptions opts = CreateSessionOptionsViaFactoryOrLocal();
             try
             {
                 _session = new InferenceSession(_modelPath, opts);
@@ -357,7 +365,32 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
         }
     }
 
-    private static SessionOptions CreateSessionOptions(ILogger? logger)
+    /// <summary>
+    /// Phase 196.3-02: prefer the shared-device factory; fall back to local DML EP
+    /// only when the factory is absent or the shared device is unavailable.
+    /// </summary>
+    private SessionOptions CreateSessionOptionsViaFactoryOrLocal()
+    {
+        if (_sessionFactory is not null)
+        {
+            try
+            {
+                SessionOptions shared = _sessionFactory.CreateSessionOptions();
+                _logger?.LogInformation("[FER+] DML EP via shared D3D12 device factory");
+                return shared;
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger?.LogWarning(
+                    "[FER+] Shared DML factory unavailable ({Reason}); falling back to local EP",
+                    ex.Message);
+            }
+        }
+
+        return CreateSessionOptionsLocal(_logger);
+    }
+
+    private static SessionOptions CreateSessionOptionsLocal(ILogger? logger)
     {
         var opts = new SessionOptions
         {
@@ -371,7 +404,7 @@ public sealed class OnnxExpressionClassifier : IExpressionClassifier, IAsyncDisp
             {
                 opts.AppendExecutionProvider_DML(0);
                 opts.AddSessionConfigEntry("session.disable_mem_pattern", "1");
-                logger?.LogInformation("[FER+] DirectML EP enabled");
+                logger?.LogInformation("[FER+] DirectML EP enabled (legacy local path)");
             }
 #pragma warning disable CA1031
             catch (Exception ex)

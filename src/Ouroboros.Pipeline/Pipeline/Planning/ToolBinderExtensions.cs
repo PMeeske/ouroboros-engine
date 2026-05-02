@@ -49,7 +49,7 @@ public static class ToolBinderExtensions
         MeTTaType endType,
         CancellationToken ct = default)
     {
-        Result<Step<string, string>, string> bindResult = 
+        Result<Step<string, string>, string> bindResult =
             await planner.PlanAndBindAsync(binder, startType, endType, ct).ConfigureAwait(false);
 
         if (bindResult.IsFailure)

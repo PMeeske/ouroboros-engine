@@ -300,7 +300,7 @@ public sealed class SkillRegistry : ISkillRegistry
         {
             // Extract tags from goal
             var tags = ExtractTagsFromGoal(goal);
-            
+
             var result = await FindSkillsAsync(null, tags, ct).ConfigureAwait(false);
             if (!result.IsSuccess)
                 return new List<Skill>();

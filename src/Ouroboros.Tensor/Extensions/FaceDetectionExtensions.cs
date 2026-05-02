@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Ouroboros.Tensor.Abstractions;
 using Ouroboros.Tensor.Adapters;
 using Ouroboros.Tensor.Orchestration;
 
@@ -58,10 +59,11 @@ public static class FaceDetectionExtensions
                     var budget = sp.GetRequiredService<IPerceptionVramBudget>();
                     var scheduler = sp.GetRequiredService<GpuScheduler>();
                     var detectorLogger = sp.GetService<ILogger<YuNetOnnxFaceDetector>>();
+                    var sessionFactory = sp.GetService<ISharedOrtDmlSessionFactory>();
                     factoryLogger?.LogInformation(
                         "IFaceDetector → YuNetOnnxFaceDetector (model={ModelPath})",
                         modelPath);
-                    return new YuNetOnnxFaceDetector(modelPath, budget, scheduler, detectorLogger);
+                    return new YuNetOnnxFaceDetector(modelPath, budget, scheduler, detectorLogger, sessionFactory);
                 }
 #pragma warning disable CA1031 // ONNX init failure must fall back to stub.
                 catch (Exception ex)

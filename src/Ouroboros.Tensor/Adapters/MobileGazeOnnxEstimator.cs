@@ -45,6 +45,7 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
     private readonly GpuScheduler _scheduler;
     private readonly StubGazeEstimator _fallback;
     private readonly ILogger<MobileGazeOnnxEstimator>? _logger;
+    private readonly ISharedOrtDmlSessionFactory? _sessionFactory;
 
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private IVramReservation? _reservation;
@@ -62,11 +63,16 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
     /// <param name="budget">Perception VRAM admission gate.</param>
     /// <param name="scheduler">Shared GPU scheduler.</param>
     /// <param name="logger">Optional logger.</param>
+    /// <param name="sessionFactory">
+    /// Phase 196.3-02: when supplied, ORT sessions bind to the same shared D3D12 device
+    /// as the rasterizer. When null or unavailable, falls back to legacy local DML EP.
+    /// </param>
     public MobileGazeOnnxEstimator(
         string modelPath,
         IPerceptionVramBudget budget,
         GpuScheduler scheduler,
-        ILogger<MobileGazeOnnxEstimator>? logger = null)
+        ILogger<MobileGazeOnnxEstimator>? logger = null,
+        ISharedOrtDmlSessionFactory? sessionFactory = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelPath);
         ArgumentNullException.ThrowIfNull(budget);
@@ -76,6 +82,7 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
         _scheduler = scheduler;
         _fallback = new StubGazeEstimator(null);
         _logger = logger;
+        _sessionFactory = sessionFactory;
     }
 
     /// <inheritdoc/>
@@ -235,7 +242,7 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
 
             _reservation = reservation.Value;
 
-            SessionOptions opts = CreateSessionOptions(_logger);
+            SessionOptions opts = CreateSessionOptionsViaFactoryOrLocal();
             try
             {
                 _session = new InferenceSession(_modelPath, opts);
@@ -438,7 +445,32 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
         }
     }
 
-    private static SessionOptions CreateSessionOptions(ILogger? logger)
+    /// <summary>
+    /// Phase 196.3-02: prefer the shared-device factory; fall back to local DML EP only
+    /// when the factory is absent or the shared device is unavailable.
+    /// </summary>
+    private SessionOptions CreateSessionOptionsViaFactoryOrLocal()
+    {
+        if (_sessionFactory is not null)
+        {
+            try
+            {
+                SessionOptions shared = _sessionFactory.CreateSessionOptions();
+                _logger?.LogInformation("[MobileGazeOnnx] DML EP via shared D3D12 device factory");
+                return shared;
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger?.LogWarning(
+                    "[MobileGazeOnnx] Shared DML factory unavailable ({Reason}); falling back to local EP",
+                    ex.Message);
+            }
+        }
+
+        return CreateSessionOptionsLocal(_logger);
+    }
+
+    private static SessionOptions CreateSessionOptionsLocal(ILogger? logger)
     {
         var opts = new SessionOptions
         {
@@ -452,7 +484,7 @@ public sealed class MobileGazeOnnxEstimator : IGazeEstimator, IAsyncDisposable
             {
                 opts.AppendExecutionProvider_DML(0);
                 opts.AddSessionConfigEntry("session.disable_mem_pattern", "1");
-                logger?.LogInformation("[MobileGazeOnnx] DirectML EP enabled");
+                logger?.LogInformation("[MobileGazeOnnx] DirectML EP enabled (legacy local path)");
             }
 #pragma warning disable CA1031
             catch (Exception ex)

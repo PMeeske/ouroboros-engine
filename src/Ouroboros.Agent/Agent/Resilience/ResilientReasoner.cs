@@ -23,7 +23,7 @@ public sealed class ResilientReasoner : IReasoner
     private readonly CircuitBreakerConfig _config;
     private readonly ILogger<ResilientReasoner>? _logger;
     private readonly object _statsLock = new();
-    
+
     private int _consecutiveLlmFailures;
     private DateTimeOffset? _lastLlmSuccess;
 
@@ -45,7 +45,7 @@ public sealed class ResilientReasoner : IReasoner
         _llm = llm;
         _config = config ?? new CircuitBreakerConfig();
         _logger = logger;
-        
+
         // Create Polly circuit breaker policy
         _circuitBreakerPolicy = Policy
             .HandleResult<Result<ReasoningResult, string>>(r => r.IsFailure)
@@ -92,7 +92,7 @@ public sealed class ResilientReasoner : IReasoner
 
         // Determine the actual mode to use based on circuit breaker state
         var effectiveMode = DetermineEffectiveMode(preferredMode);
-        
+
         if (effectiveMode != preferredMode)
         {
             _logger?.LogWarning(
@@ -106,7 +106,7 @@ public sealed class ResilientReasoner : IReasoner
         try
         {
             var result = await ExecuteWithCircuitBreaker(query, effectiveMode, ct).ConfigureAwait(false);
-            
+
             if (result.IsSuccess)
             {
                 // Check if neural reasoning was actually used based on the result
@@ -120,19 +120,19 @@ public sealed class ResilientReasoner : IReasoner
             {
                 // Result failed - handle based on what actually happened
                 // For modes that attempted neural reasoning, record failure
-                if (effectiveMode == Core.Resilience.ReasoningMode.NeuralOnly || 
+                if (effectiveMode == Core.Resilience.ReasoningMode.NeuralOnly ||
                     effectiveMode == Core.Resilience.ReasoningMode.NeuralFirst ||
                     effectiveMode == Core.Resilience.ReasoningMode.Parallel)
                 {
                     RecordNeuralFailure();
                 }
-                
+
                 // If neural failed and we haven't tried symbolic yet, fall back
-                if (effectiveMode != Core.Resilience.ReasoningMode.SymbolicOnly && 
+                if (effectiveMode != Core.Resilience.ReasoningMode.SymbolicOnly &&
                     (effectiveMode == Core.Resilience.ReasoningMode.NeuralOnly || effectiveMode == Core.Resilience.ReasoningMode.NeuralFirst))
                 {
                     _logger?.LogWarning("Neural reasoning failed with error: {Error}, falling back to symbolic-only mode", result.Error);
-                    
+
                     var fallbackResult = await ReasonWithMode(query, Core.Resilience.ReasoningMode.SymbolicOnly, ct).ConfigureAwait(false);
                     if (fallbackResult.IsSuccess)
                     {
@@ -143,7 +143,7 @@ public sealed class ResilientReasoner : IReasoner
                         return Result<string, string>.Failure($"Both neural and symbolic reasoning failed. Neural error: {result.Error}, Symbolic error: {fallbackResult.Error}");
                     }
                 }
-                
+
                 return Result<string, string>.Failure(result.Error);
             }
         }
@@ -151,7 +151,7 @@ public sealed class ResilientReasoner : IReasoner
         {
             // Circuit is open - fall back to symbolic only
             _logger?.LogWarning("Circuit is open, using symbolic-only mode");
-            
+
             try
             {
                 var fallbackResult = await ReasonWithMode(query, Core.Resilience.ReasoningMode.SymbolicOnly, ct).ConfigureAwait(false);
@@ -169,19 +169,19 @@ public sealed class ResilientReasoner : IReasoner
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Exception thrown - record failure for neural modes
-            if (effectiveMode == Core.Resilience.ReasoningMode.NeuralOnly || 
+            if (effectiveMode == Core.Resilience.ReasoningMode.NeuralOnly ||
                 effectiveMode == Core.Resilience.ReasoningMode.NeuralFirst ||
                 effectiveMode == Core.Resilience.ReasoningMode.Parallel)
             {
                 RecordNeuralFailure();
             }
-            
+
             // If neural failed and we haven't tried symbolic yet, fall back
-            if (effectiveMode != Core.Resilience.ReasoningMode.SymbolicOnly && 
+            if (effectiveMode != Core.Resilience.ReasoningMode.SymbolicOnly &&
                 (effectiveMode == Core.Resilience.ReasoningMode.NeuralOnly || effectiveMode == Core.Resilience.ReasoningMode.NeuralFirst))
             {
                 _logger?.LogWarning(ex, "Neural reasoning threw exception, falling back to symbolic-only mode");
-                
+
                 try
                 {
                     var fallbackResult = await ReasonWithMode(query, Core.Resilience.ReasoningMode.SymbolicOnly, ct).ConfigureAwait(false);
@@ -195,7 +195,7 @@ public sealed class ResilientReasoner : IReasoner
                     return Result<string, string>.Failure($"Both neural and symbolic reasoning failed. Neural error: {ex.Message}, Symbolic error: {fallbackEx.Message}");
                 }
             }
-            
+
             return Result<string, string>.Failure($"Reasoning failed: {ex.Message}");
         }
     }
@@ -253,7 +253,7 @@ public sealed class ResilientReasoner : IReasoner
         return await _circuitBreakerPolicy.ExecuteAsync(async () =>
         {
             var result = await ReasonWithMode(query, mode, ct).ConfigureAwait(false);
-            
+
             // Add timeout for half-open state
             if (GetCircuitState() == "HalfOpen" && UsesNeuralReasoning(mode))
             {
@@ -261,7 +261,7 @@ public sealed class ResilientReasoner : IReasoner
                 cts.CancelAfter(_config.HalfOpenTimeout);
                 return await ReasonWithMode(query, mode, cts.Token).ConfigureAwait(false);
             }
-            
+
             return result;
         }).ConfigureAwait(false);
     }
@@ -275,7 +275,7 @@ public sealed class ResilientReasoner : IReasoner
         // having identical integer values. See documentation in IReasoner.cs for sync requirements.
         // A unit test in ResilientReasonerTests verifies enum alignment.
         var bridgeMode = (NeuralSymbolic.ReasoningMode)(int)mode;
-        
+
         return await _bridge.HybridReasonAsync(query, bridgeMode, ct).ConfigureAwait(false);
     }
 
@@ -305,7 +305,7 @@ public sealed class ResilientReasoner : IReasoner
             _consecutiveLlmFailures = 0;
             _lastLlmSuccess = DateTimeOffset.UtcNow;
         }
-        
+
         _logger?.LogInformation(
             "Neural reasoning succeeded. Circuit state: {State}",
             GetCircuitState());
@@ -319,7 +319,7 @@ public sealed class ResilientReasoner : IReasoner
             _consecutiveLlmFailures++;
             failures = _consecutiveLlmFailures;
         }
-        
+
         _logger?.LogWarning(
             "Neural reasoning failed. Consecutive failures: {Failures}, Circuit state: {State}",
             failures,

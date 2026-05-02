@@ -86,7 +86,7 @@ public static class GlobalProjectionService
     public static IReadOnlyList<EpochSnapshot> GetEpochs(PipelineBranch trackingBranch)
     {
         ArgumentNullException.ThrowIfNull(trackingBranch);
-        
+
         return trackingBranch.Events
             .OfType<EpochCreatedEvent>()
             .Select(e => e.Epoch)
@@ -103,7 +103,7 @@ public static class GlobalProjectionService
     public static Result<EpochSnapshot> GetEpoch(PipelineBranch trackingBranch, long epochNumber)
     {
         ArgumentNullException.ThrowIfNull(trackingBranch);
-        
+
         var epoch = trackingBranch.Events
             .OfType<EpochCreatedEvent>()
             .Select(e => e.Epoch)
@@ -122,7 +122,7 @@ public static class GlobalProjectionService
     public static Result<EpochSnapshot> GetLatestEpoch(PipelineBranch trackingBranch)
     {
         ArgumentNullException.ThrowIfNull(trackingBranch);
-        
+
         var latest = trackingBranch.Events
             .OfType<EpochCreatedEvent>()
             .Select(e => e.Epoch)
@@ -142,7 +142,7 @@ public static class GlobalProjectionService
     public static Result<ProjectionMetrics> GetMetrics(PipelineBranch trackingBranch)
     {
         ArgumentNullException.ThrowIfNull(trackingBranch);
-        
+
         try
         {
             var epochs = GetEpochs(trackingBranch);
@@ -180,7 +180,7 @@ public static class GlobalProjectionService
         DateTime end)
     {
         ArgumentNullException.ThrowIfNull(trackingBranch);
-        
+
         return trackingBranch.Events
             .OfType<EpochCreatedEvent>()
             .Select(e => e.Epoch)
