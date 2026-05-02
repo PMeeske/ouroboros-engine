@@ -14,9 +14,13 @@ namespace Ouroboros.Providers.HermesOnnx;
 /// <param name="Temperature">Sampling temperature.</param>
 /// <param name="TopP">Nucleus sampling cumulative probability.</param>
 /// <param name="TopK">Top-K candidate cutoff.</param>
+/// <param name="ExecutionProvider">Target execution provider for the retargeter:
+/// <c>dml</c> (default; uses DirectML on Windows) or <c>cpu</c> (slow but works on
+/// graphs that fail under DML — see <c>docs/hermes-onnx-mode.md</c> "DML EP residual").</param>
 public sealed record HermesOnnxChatModelOptions(
     string? ModelPath = null,
     int MaxLength = 4096,
     float Temperature = 0.6f,
     float TopP = 0.95f,
-    int TopK = 20);
+    int TopK = 20,
+    string ExecutionProvider = "dml");

@@ -3,8 +3,10 @@
 // </copyright>
 
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntimeGenAI;
+using Microsoft.ML.Tokenizers;
 using Ouroboros.Abstractions.Core;
 
 namespace Ouroboros.Providers.HermesOnnx;
@@ -16,29 +18,26 @@ namespace Ouroboros.Providers.HermesOnnx;
 /// </summary>
 /// <remarks>
 /// <para>
+/// <b>Path C tokenizer:</b> ORT-GenAI's bundled <c>Tokenizer</c> uses an std::regex
+/// backend that doesn't support <c>\p{L}</c>/<c>\p{N}</c> Unicode property classes
+/// — incompatible with this Hermes export's HF tokenizer.json. We bypass it
+/// entirely by parsing tokenizer.json into separate vocab/merges streams and
+/// loading via <see cref="BpeTokenizer"/> from <c>Microsoft.ML.Tokenizers</c>
+/// (.NET's regex supports <c>\p{}</c> natively).
+/// </para>
+/// <para>
 /// Constructor invokes <see cref="GenaiConfigRetargeter.EnsureDirectMlProvider(string, ILogger?)"/>
 /// once to rewrite the shipped CUDA provider config to DirectML before
 /// <c>new Model()</c>. Generation is serialized via <see cref="SemaphoreSlim"/>
 /// (ORT-GenAI <c>Generator</c> is not thread-safe). Cancellation is checked between
 /// tokens (ORT-GenAI 0.13.x <c>GenerateNextToken</c> is synchronous + uninterruptible).
 /// </para>
-/// <para>
-/// <b>Future LUID pinning (Plan 263-01 deviation, see SUMMARY.md):</b> The plan
-/// specified an <c>ISharedOrtDmlSessionFactory</c> constructor parameter reserved for
-/// future Path B (Section 7) device-id binding. That dependency would cause a
-/// circular reference (<c>Ouroboros.Tensor</c> already references
-/// <c>Ouroboros.Providers</c>), so the parameter was dropped for Plan 263-01.
-/// ORT-GenAI 0.13.x reads provider config from <c>genai_config.json</c> only —
-/// the retargeter writes <c>{ "name": "DML", "options": [] }</c> without explicit
-/// deviceId, letting ORT-GenAI pick the default DXGI adapter. A follow-up phase
-/// can wire LUID pinning by either lifting the abstraction to Foundation or
-/// performing the wiring at the App layer.
-/// </para>
 /// </remarks>
 public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
 {
     private readonly Model _model;
-    private readonly Tokenizer _tokenizer;
+    private readonly BpeTokenizer _tokenizer;
+    private readonly int _eosTokenId;
     private readonly HermesOnnxChatModelOptions _options;
     private readonly SemaphoreSlim _genSemaphore = new(1, 1);
     private bool _disposed;
@@ -46,10 +45,6 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="HermesOnnxChatModel"/> class.
     /// </summary>
-    /// <param name="modelPath">Absolute path to the model directory containing
-    /// <c>model.onnx</c>, <c>model.onnx.data</c>, <c>tokenizer.json</c>, <c>genai_config.json</c>.</param>
-    /// <param name="options">Sampling and runtime options.</param>
-    /// <param name="logger">Optional logger for retarget + load telemetry.</param>
     public HermesOnnxChatModel(
         string modelPath,
         HermesOnnxChatModelOptions options,
@@ -65,12 +60,21 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
 
         _options = options;
 
-        // Idempotent CUDA -> DML provider retarget (Path A, RESEARCH.md Section 7).
-        GenaiConfigRetargeter.EnsureDirectMlProvider(modelPath, logger);
+        // Idempotent CUDA -> {DML|CPU} provider retarget. CPU EP is the documented
+        // fallback when the DML kernel rejects the graph (DmlFusedNode E_INVALIDARG
+        // on builder-incompatible exports — see docs/hermes-onnx-rebuild.md).
+        GenaiConfigRetargeter.EnsureProvider(modelPath, options.ExecutionProvider, logger);
 
+        // Build tokenizer FIRST (cheap, all managed). If it throws, no native Model
+        // is allocated — no Generators::Model leak. If Model ctor then throws, the
+        // tokenizer has no native handle to leak (BpeTokenizer is pure managed).
+        (_tokenizer, _eosTokenId) = LoadBpeTokenizerFromHuggingFaceJson(modelPath);
         _model = new Model(modelPath);
-        _tokenizer = new Tokenizer(_model);
-        logger?.LogInformation("[HermesOnnx] Model loaded from {Path}", modelPath);
+
+        logger?.LogInformation(
+            "[HermesOnnx PathC] Model + ML.Tokenizers BpeTokenizer loaded (eos_id={EosId}, path={Path})",
+            _eosTokenId,
+            modelPath);
     }
 
     /// <inheritdoc/>
@@ -84,31 +88,40 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
         await _genSemaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            using Sequences inputTokens = _tokenizer.Encode(templated);
-            using GeneratorParams generatorParams = new(_model);
-            generatorParams.SetSearchOption("max_length", _options.MaxLength);
-            generatorParams.SetSearchOption("temperature", _options.Temperature);
-            generatorParams.SetSearchOption("top_p", _options.TopP);
-            generatorParams.SetSearchOption("top_k", _options.TopK);
+            IReadOnlyList<int> inputIds = _tokenizer.EncodeToIds(templated);
+            int[] inputIdsArr = inputIds is int[] a ? a : inputIds.ToArray();
 
-            using Generator generator = new(_model, generatorParams);
-            generator.AppendTokens(inputTokens[0]);
-            using TokenizerStream stream = _tokenizer.CreateStream();
+            using GeneratorParams gp = new(_model);
+            gp.SetSearchOption("max_length", _options.MaxLength);
+            gp.SetSearchOption("temperature", _options.Temperature);
+            gp.SetSearchOption("top_p", _options.TopP);
+            gp.SetSearchOption("top_k", _options.TopK);
 
-            StringBuilder output = new();
-            while (!generator.IsDone())
+            using Generator g = new(_model, gp);
+            g.AppendTokens(inputIdsArr);
+
+            int promptLength = inputIdsArr.Length;
+            List<int> outputIds = new(capacity: 256);
+            while (!g.IsDone())
             {
                 ct.ThrowIfCancellationRequested();
-                // ORT-GenAI 0.13.x: GenerateNextToken is synchronous + uninterruptible.
-                // CT check happens BETWEEN tokens, not during. (RESEARCH.md Pitfall 7)
-                generator.GenerateNextToken();
+                g.GenerateNextToken();
+                ReadOnlySpan<int> seq = g.GetSequence(0);
+                if (seq.Length <= promptLength)
+                {
+                    continue;
+                }
 
-                ReadOnlySpan<int> seq = generator.GetSequence(0);
-                int lastToken = seq[^1];
-                output.Append(stream.Decode(lastToken));
+                int latest = seq[^1];
+                if (latest == _eosTokenId)
+                {
+                    break;
+                }
+
+                outputIds.Add(latest);
             }
 
-            return output.ToString();
+            return _tokenizer.Decode(outputIds);
         }
         finally
         {
@@ -126,6 +139,92 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Parses HuggingFace <c>tokenizer.json</c> (vocab + merges combined in one file)
+    /// into separate vocab/merges streams + special-token map, then constructs a
+    /// <see cref="BpeTokenizer"/>. Bypasses ORT-GenAI's std::regex backend entirely —
+    /// .NET's regex supports <c>\p{L}</c>/<c>\p{N}</c> natively.
+    /// </summary>
+    private static (BpeTokenizer Tokenizer, int EosTokenId) LoadBpeTokenizerFromHuggingFaceJson(string modelPath)
+    {
+        string tokenizerJsonPath = Path.Combine(modelPath, "tokenizer.json");
+        if (!File.Exists(tokenizerJsonPath))
+        {
+            throw new FileNotFoundException(
+                $"tokenizer.json not found at {tokenizerJsonPath}");
+        }
+
+        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(tokenizerJsonPath));
+        JsonElement root = doc.RootElement;
+        JsonElement modelEl = root.GetProperty("model");
+
+        // Vocabulary: HF tokenizer.json's model.vocab is { "token": id, ... }.
+        JsonElement vocabEl = modelEl.GetProperty("vocab");
+        Dictionary<string, int> vocab = new(StringComparer.Ordinal);
+        foreach (JsonProperty p in vocabEl.EnumerateObject())
+        {
+            vocab[p.Name] = p.Value.GetInt32();
+        }
+
+        // Merges: HF tokenizer.json's model.merges is EITHER an array of strings
+        // ("a b") OR an array of two-element arrays (["a", "b"]). Both shapes appear
+        // in the wild; recent HF tokenizers (>=0.13) write the array form. Normalize
+        // both to "a b" for ML.Tokenizers BpeOptions.Merges.
+        JsonElement mergesEl = modelEl.GetProperty("merges");
+        List<string> merges = new(capacity: mergesEl.GetArrayLength());
+        foreach (JsonElement pair in mergesEl.EnumerateArray())
+        {
+            if (pair.ValueKind == JsonValueKind.String)
+            {
+                merges.Add(pair.GetString()!);
+            }
+            else if (pair.ValueKind == JsonValueKind.Array && pair.GetArrayLength() == 2)
+            {
+                string a = pair[0].GetString() ?? string.Empty;
+                string b = pair[1].GetString() ?? string.Empty;
+                merges.Add($"{a} {b}");
+            }
+        }
+
+        // Special tokens from added_tokens block (incl. <seed:bos>, <|eot_id|>, etc.).
+        Dictionary<string, int> specialTokens = new(StringComparer.Ordinal);
+        if (root.TryGetProperty("added_tokens", out JsonElement addedEl)
+            && addedEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement t in addedEl.EnumerateArray())
+            {
+                if (t.TryGetProperty("content", out JsonElement contentEl)
+                    && t.TryGetProperty("id", out JsonElement idEl)
+                    && contentEl.ValueKind == JsonValueKind.String
+                    && idEl.ValueKind == JsonValueKind.Number)
+                {
+                    string? name = contentEl.GetString();
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        specialTokens[name] = idEl.GetInt32();
+                    }
+                }
+            }
+        }
+
+        BpeOptions bpeOptions = new(vocab)
+        {
+            Merges = merges,
+            SpecialTokens = specialTokens,
+            ByteLevel = true,  // Llama-3-family byte-level BPE
+        };
+
+        BpeTokenizer tokenizer = BpeTokenizer.Create(bpeOptions);
+
+        // Hermes 4 / Llama-3 family eos. Fall back to "<|endoftext|>" or 2 if missing.
+        int eosId =
+            specialTokens.TryGetValue("<|eot_id|>", out int eot) ? eot
+            : specialTokens.TryGetValue("<|endoftext|>", out int eod) ? eod
+            : 2;
+
+        return (tokenizer, eosId);
+    }
+
     /// <inheritdoc/>
     public void Dispose()
     {
@@ -135,7 +234,6 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
         }
 
         _disposed = true;
-        _tokenizer.Dispose();
         _model.Dispose();
         _genSemaphore.Dispose();
     }

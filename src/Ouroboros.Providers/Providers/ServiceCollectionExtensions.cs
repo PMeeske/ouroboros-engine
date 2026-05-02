@@ -267,16 +267,7 @@ public static class ServiceCollectionExtensions
 
         string modelPath = configuration?["HermesOnnx:ModelPath"]
             ?? Environment.GetEnvironmentVariable("HERMES_ONNX_MODEL_PATH")
-            ?? Path.GetFullPath(Path.Combine(
-                AppContext.BaseDirectory,
-                "..",
-                "..",
-                "..",
-                "..",
-                "..",
-                "checkpoints",
-                "onnx-hermes",
-                "hermes-4.3-36b-onnx-int4"));
+            ?? ResolveDefaultHermesOnnxModelPath();
 
         if (!Directory.Exists(modelPath))
         {
@@ -294,6 +285,32 @@ public static class ServiceCollectionExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Resolves the default Hermes ONNX model directory by walking up from
+    /// <see cref="AppContext.BaseDirectory"/> looking for a sibling
+    /// <c>checkpoints/onnx-hermes/hermes-4.3-36b-onnx-int4/</c>. Replaces a
+    /// brittle <c>..×5</c> calculation that landed inside <c>ouroboros-app/</c>
+    /// instead of the meta-repo root. Returns the unfound canonical relative
+    /// path (so the existence check fails cleanly) when the marker isn't found.
+    /// </summary>
+    private static string ResolveDefaultHermesOnnxModelPath()
+    {
+        string relative = Path.Combine("checkpoints", "onnx-hermes", "hermes-4.3-36b-onnx-int4");
+        DirectoryInfo? dir = new(AppContext.BaseDirectory);
+        for (int i = 0; i < 8 && dir is not null; i++)
+        {
+            string candidate = Path.Combine(dir.FullName, relative);
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            dir = dir.Parent;
+        }
+
+        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, relative));
     }
 
     /// <summary>
