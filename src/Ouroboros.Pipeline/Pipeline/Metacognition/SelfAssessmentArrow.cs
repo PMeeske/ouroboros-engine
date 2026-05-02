@@ -39,20 +39,8 @@ public static class SelfAssessmentArrow
     /// </summary>
     /// <param name="assessor">The self-assessor to use.</param>
     /// <returns>A Kleisli arrow from capability name to optional CapabilityBelief.</returns>
-    /// <remarks>
-    /// ISelfAssessor.GetCapabilityBelief returns Ouroboros.Abstractions.Monads.Option&lt;T&gt;
-    /// while KleisliOption is parameterised by Ouroboros.Monads.Option&lt;T&gt; (Core layer).
-    /// The two are distinct value types — convert explicitly at the boundary.
-    /// </remarks>
     public static KleisliOption<string, CapabilityBelief> GetBeliefArrow(ISelfAssessor assessor)
-        => capability =>
-        {
-            Ouroboros.Abstractions.Monads.Option<CapabilityBelief> abs = assessor.GetCapabilityBelief(capability);
-            Ouroboros.Monads.Option<CapabilityBelief> core = abs.HasValue
-                ? Ouroboros.Monads.Option<CapabilityBelief>.Some(abs.GetValueOrDefault(default!))
-                : Ouroboros.Monads.Option<CapabilityBelief>.None;
-            return Task.FromResult(core);
-        };
+        => capability => Task.FromResult(assessor.GetCapabilityBelief(capability));
 
     /// <summary>
     /// Creates a Kleisli arrow that calibrates confidence with sample data.
