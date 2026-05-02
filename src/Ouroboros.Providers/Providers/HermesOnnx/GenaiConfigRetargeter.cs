@@ -61,20 +61,32 @@ internal static class GenaiConfigRetargeter
                 continue;
             }
 
-            // Legacy form: { "cuda": { ... } }
+            // Legacy/sibling form (matches CUDA shape — {provider_name: {options...}}):
+            // ORT-GenAI's provider_options parser expects this shape, NOT { "name": "DML", ... }.
+            // Live verification 2026-05-02: ORT-GenAI returned
+            //   "Unknown value 'name' at line 10 index 26"
+            // when given { "name": "DML", "options": [] }. Mirror the cuda layout instead.
             if (entry.ContainsKey("cuda"))
             {
-                providerOptions[i] = new JsonObject { ["name"] = "DML", ["options"] = new JsonArray() };
+                providerOptions[i] = new JsonObject { ["dml"] = new JsonObject() };
                 changed = true;
                 continue;
             }
 
-            // New form: { "name": "cuda", "options": [...] }
-            string? name = entry["name"]?.GetValue<string>();
-            if (name is not null && string.Equals(name, "cuda", StringComparison.OrdinalIgnoreCase))
+            // Already in dml form? Idempotent — leave it.
+            if (entry.ContainsKey("dml"))
             {
-                entry["name"] = "DML";
-                entry["options"] = new JsonArray();
+                continue;
+            }
+
+            // Defensive: if some prior buggy version of this retargeter wrote
+            // { "name": "DML", "options": [] }, normalize it back to { "dml": {} }
+            // so the model can actually load.
+            string? name = entry["name"]?.GetValue<string>();
+            if (name is not null && (string.Equals(name, "DML", StringComparison.OrdinalIgnoreCase)
+                                  || string.Equals(name, "cuda", StringComparison.OrdinalIgnoreCase)))
+            {
+                providerOptions[i] = new JsonObject { ["dml"] = new JsonObject() };
                 changed = true;
             }
         }
