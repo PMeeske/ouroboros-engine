@@ -3,6 +3,7 @@
 // </copyright>
 
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntimeGenAI;
 using Ouroboros.Abstractions.Core;
@@ -68,9 +69,16 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
         // Idempotent CUDA -> DML provider retarget (Path A, RESEARCH.md Section 7).
         GenaiConfigRetargeter.EnsureDirectMlProvider(modelPath, logger);
 
-        // Construct Model first; if Tokenizer ctor throws (e.g., unsupported tokenizer
-        // class — see todo 2026-05-02-hermes-onnx-tokenizer-class-not-supported.md),
-        // dispose Model so the OGA "Generators::Model leaked" warning doesn't fire.
+        // Refuse known-incompatible tokenizer classes BEFORE invoking new Tokenizer(model).
+        // ORT-GenAI's Tokenizer ctor allocates a native handle, then validates and throws
+        // on unsupported classes — leaving a half-initialized object whose finalizer
+        // crashes the process with 0xC0000005 in OgaDestroyTokenizer. Pre-checking
+        // managed-side keeps the failure clean: no native handle ever allocated.
+        EnsureTokenizerClassSupported(modelPath);
+
+        // Construct Model first; if Tokenizer ctor throws (e.g., regex/vocab compat —
+        // see todo 2026-05-02-hermes-onnx-tokenizer-class-not-supported.md), dispose
+        // Model so the OGA "Generators::Model leaked" warning doesn't fire.
         Model? model = null;
         try
         {
@@ -153,5 +161,40 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
         _tokenizer.Dispose();
         _model.Dispose();
         _genSemaphore.Dispose();
+    }
+
+    /// <summary>
+    /// Reads tokenizer_config.json and refuses known-incompatible tokenizer classes
+    /// before invoking ORT-GenAI's Tokenizer ctor. Prevents the 0xC0000005 finalizer
+    /// crash that follows a Tokenizer ctor throw — the OGA wrapper allocates a native
+    /// handle inside its ctor, doesn't clean it up on validation failure, and the
+    /// half-initialized Tokenizer's finalizer eventually AVs in OgaDestroyTokenizer.
+    /// </summary>
+    private static void EnsureTokenizerClassSupported(string modelPath)
+    {
+        string configPath = Path.Combine(modelPath, "tokenizer_config.json");
+        if (!File.Exists(configPath))
+        {
+            return; // nothing to check; let OGA decide
+        }
+
+        string json = File.ReadAllText(configPath);
+        using JsonDocument doc = JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("tokenizer_class", out JsonElement classElem)
+            || classElem.ValueKind != JsonValueKind.String)
+        {
+            return;
+        }
+
+        string tokenizerClass = classElem.GetString() ?? string.Empty;
+        if (string.Equals(tokenizerClass, "TokenizersBackend", StringComparison.Ordinal))
+        {
+            throw new NotSupportedException(
+                $"Hermes ONNX tokenizer_class='{tokenizerClass}' is not supported by ORT-GenAI's bundled "
+                + "Tokenizer (HF tokenizers-library serialization with \\p{L}/\\p{N} regex syntax that "
+                + "ORT-GenAI's std::regex backend cannot compile). Path C adapter via "
+                + "Microsoft.ML.Tokenizers is required to use this model. See "
+                + ".planning/todos/pending/2026-05-02-hermes-onnx-tokenizer-class-not-supported.md.");
+        }
     }
 }
