@@ -63,8 +63,11 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
         // Idempotent CUDA -> DML provider retarget.
         GenaiConfigRetargeter.EnsureDirectMlProvider(modelPath, logger);
 
-        _model = new Model(modelPath);
+        // Build tokenizer FIRST (cheap, all managed). If it throws, no native Model
+        // is allocated — no Generators::Model leak. If Model ctor then throws, the
+        // tokenizer has no native handle to leak (BpeTokenizer is pure managed).
         (_tokenizer, _eosTokenId) = LoadBpeTokenizerFromHuggingFaceJson(modelPath);
+        _model = new Model(modelPath);
 
         logger?.LogInformation(
             "[HermesOnnx PathC] Model + ML.Tokenizers BpeTokenizer loaded (eos_id={EosId}, path={Path})",
@@ -153,41 +156,33 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
         JsonElement root = doc.RootElement;
         JsonElement modelEl = root.GetProperty("model");
 
-        // Build vocab.json stream — { "token": id, ... } shape ML.Tokenizers expects.
+        // Vocabulary: HF tokenizer.json's model.vocab is { "token": id, ... }.
         JsonElement vocabEl = modelEl.GetProperty("vocab");
-        MemoryStream vocabStream = new();
-        using (Utf8JsonWriter w = new(vocabStream, new JsonWriterOptions { Indented = false }))
+        Dictionary<string, int> vocab = new(StringComparer.Ordinal);
+        foreach (JsonProperty p in vocabEl.EnumerateObject())
         {
-            w.WriteStartObject();
-            foreach (JsonProperty p in vocabEl.EnumerateObject())
-            {
-                w.WriteNumber(p.Name, p.Value.GetInt32());
-            }
-
-            w.WriteEndObject();
+            vocab[p.Name] = p.Value.GetInt32();
         }
 
-        vocabStream.Position = 0;
-
-        // Build merges.txt stream — "#version: 0.2\n{a} {b}\n..." shape.
+        // Merges: HF tokenizer.json's model.merges is EITHER an array of strings
+        // ("a b") OR an array of two-element arrays (["a", "b"]). Both shapes appear
+        // in the wild; recent HF tokenizers (>=0.13) write the array form. Normalize
+        // both to "a b" for ML.Tokenizers BpeOptions.Merges.
         JsonElement mergesEl = modelEl.GetProperty("merges");
-        MemoryStream mergesStream = new();
-        StreamWriter mw = new(mergesStream, new UTF8Encoding(false), leaveOpen: true);
-        try
+        List<string> merges = new(capacity: mergesEl.GetArrayLength());
+        foreach (JsonElement pair in mergesEl.EnumerateArray())
         {
-            mw.WriteLine("#version: 0.2");
-            foreach (JsonElement pair in mergesEl.EnumerateArray())
+            if (pair.ValueKind == JsonValueKind.String)
             {
-                mw.WriteLine(pair.GetString());
+                merges.Add(pair.GetString()!);
+            }
+            else if (pair.ValueKind == JsonValueKind.Array && pair.GetArrayLength() == 2)
+            {
+                string a = pair[0].GetString() ?? string.Empty;
+                string b = pair[1].GetString() ?? string.Empty;
+                merges.Add($"{a} {b}");
             }
         }
-        finally
-        {
-            mw.Flush();
-            mw.Dispose();
-        }
-
-        mergesStream.Position = 0;
 
         // Special tokens from added_tokens block (incl. <seed:bos>, <|eot_id|>, etc.).
         Dictionary<string, int> specialTokens = new(StringComparer.Ordinal);
@@ -210,12 +205,14 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
             }
         }
 
-        BpeTokenizer tokenizer = BpeTokenizer.Create(
-            vocabStream,
-            mergesStream,
-            preTokenizer: null,
-            normalizer: null,
-            specialTokens: specialTokens);
+        BpeOptions bpeOptions = new(vocab)
+        {
+            Merges = merges,
+            SpecialTokens = specialTokens,
+            ByteLevel = true,  // Llama-3-family byte-level BPE
+        };
+
+        BpeTokenizer tokenizer = BpeTokenizer.Create(bpeOptions);
 
         // Hermes 4 / Llama-3 family eos. Fall back to "<|endoftext|>" or 2 if missing.
         int eosId =
