@@ -267,16 +267,7 @@ public static class ServiceCollectionExtensions
 
         string modelPath = configuration?["HermesOnnx:ModelPath"]
             ?? Environment.GetEnvironmentVariable("HERMES_ONNX_MODEL_PATH")
-            ?? Path.GetFullPath(Path.Combine(
-                AppContext.BaseDirectory,
-                "..",
-                "..",
-                "..",
-                "..",
-                "..",
-                "checkpoints",
-                "onnx-hermes",
-                "hermes-4.3-36b-onnx-int4"));
+            ?? ResolveDefaultHermesOnnxModelPath();
 
         if (!Directory.Exists(modelPath))
         {
@@ -614,5 +605,36 @@ public static class ServiceCollectionExtensions
         return services
             .AddWhisperSpeechToText(apiKey)
             .AddOpenAiTextToSpeech(apiKey);
+    }
+
+    /// <summary>
+    /// Resolves the default Hermes ONNX model path by walking up from <see cref="AppContext.BaseDirectory"/>
+    /// looking for the first parent directory that contains <c>checkpoints/onnx-hermes/hermes-4.3-36b-onnx-int4/</c>.
+    /// Searches up to 8 levels — covers <c>bin/Debug/net10.0-windows/</c>, <c>bin/Release/net10.0-windows/</c>,
+    /// and any reasonable nesting. The original Plan 263-01 implementation used a fixed <c>../../../../..</c>
+    /// (5 levels) which landed inside <c>ouroboros-app/</c> instead of the project root where the model lives.
+    /// </summary>
+    private static string ResolveDefaultHermesOnnxModelPath()
+    {
+        const string Relative = "checkpoints/onnx-hermes/hermes-4.3-36b-onnx-int4";
+        string dir = AppContext.BaseDirectory;
+        for (int i = 0; i < 8; i++)
+        {
+            string candidate = Path.GetFullPath(Path.Combine(dir, Relative));
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+            string? parent = Path.GetDirectoryName(dir.TrimEnd(Path.DirectorySeparatorChar));
+            if (string.IsNullOrEmpty(parent) || parent == dir)
+            {
+                break;
+            }
+            dir = parent;
+        }
+
+        // Not found — return a placeholder; the Directory.Exists check at the call site
+        // gracefully no-ops registration so /mode hermes-onnx fails loudly at swap time.
+        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", Relative));
     }
 }
