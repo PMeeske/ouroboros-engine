@@ -288,29 +288,45 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Resolves the default Hermes ONNX model directory by walking up from
-    /// <see cref="AppContext.BaseDirectory"/> looking for a sibling
-    /// <c>checkpoints/onnx-hermes/hermes-4.3-36b-onnx-int4/</c>. Replaces a
-    /// brittle <c>..×5</c> calculation that landed inside <c>ouroboros-app/</c>
-    /// instead of the meta-repo root. Returns the unfound canonical relative
-    /// path (so the existence check fails cleanly) when the marker isn't found.
+    /// Resolves the default <c>--mode hermes-onnx</c> model directory by walking up
+    /// from <see cref="AppContext.BaseDirectory"/> looking for a known DML-clean
+    /// checkpoint. Tries candidates in priority order:
+    /// <list type="number">
+    /// <item><c>checkpoints/onnx-llama3-8b-dml-int4/</c> — onnx-community pre-built
+    /// Llama-3.1 8B Instruct, INT4, DML-clean (built by the official
+    /// <c>onnxruntime_genai.models.builder</c> so DmlFusedNode_0_0 doesn't fire).</item>
+    /// <item><c>checkpoints/onnx-hermes/hermes-4.3-36b-onnx-int4/</c> — legacy local
+    /// Hermes 4.3 36B retrained checkpoint. CPU EP only on RX 9060 XT (DmlFusedNode
+    /// E_INVALIDARG); use <c>HermesOnnx:ExecutionProvider=cpu</c>.</item>
+    /// </list>
+    /// Operators can override via <c>HermesOnnx:ModelPath</c> or
+    /// <c>HERMES_ONNX_MODEL_PATH</c>. Returns the canonical first-candidate path
+    /// (so the existence check fails cleanly) when no marker is found.
     /// </summary>
     private static string ResolveDefaultHermesOnnxModelPath()
     {
-        string relative = Path.Combine("checkpoints", "onnx-hermes", "hermes-4.3-36b-onnx-int4");
+        string[] candidates =
+        [
+            Path.Combine("checkpoints", "onnx-llama3-8b-dml-int4"),
+            Path.Combine("checkpoints", "onnx-hermes", "hermes-4.3-36b-onnx-int4"),
+        ];
+
         DirectoryInfo? dir = new(AppContext.BaseDirectory);
         for (int i = 0; i < 8 && dir is not null; i++)
         {
-            string candidate = Path.Combine(dir.FullName, relative);
-            if (Directory.Exists(candidate))
+            foreach (string relative in candidates)
             {
-                return candidate;
+                string candidate = Path.Combine(dir.FullName, relative);
+                if (Directory.Exists(candidate))
+                {
+                    return candidate;
+                }
             }
 
             dir = dir.Parent;
         }
 
-        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, relative));
+        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, candidates[0]));
     }
 
     /// <summary>
