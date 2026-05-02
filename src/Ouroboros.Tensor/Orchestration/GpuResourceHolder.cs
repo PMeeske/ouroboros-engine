@@ -29,6 +29,93 @@ public sealed class GpuResourceHolder : IGpuResourceLock
     {
         _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         _resourceName = resourceName ?? throw new ArgumentNullException(nameof(resourceName));
+
+        // Phase 261 GPU-01 item 3: register with the scheduler so that
+        // UnregisterTenant can sweep this holder if the tenant holding the
+        // resource (or a tenant waiting on it) disappears mid-flight.
+        _scheduler.RegisterResourceHolder(this);
+    }
+
+    /// <summary>
+    /// Force-releases the resource if <paramref name="tenantName"/> currently holds
+    /// it, and cancels any pending acquisitions queued under that tenant. Called by
+    /// <see cref="GpuSchedulerV2"/> when a tenant unregisters so an in-flight resource
+    /// claim cannot leak (Phase 261 GPU-01 item 3).
+    /// </summary>
+    /// <param name="tenantName">Tenant being unregistered.</param>
+    /// <returns><see langword="true"/> when the holder released the lock or cancelled a waiter.</returns>
+    internal bool ReleaseIfHeldBy(string tenantName)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(tenantName);
+
+        bool actedOnHolder = false;
+        bool actedOnWaiter = false;
+
+        lock (_lock)
+        {
+            if (_holder == tenantName)
+            {
+                _scheduler.RestoreTenantPriority(tenantName);
+
+                // Pick highest-priority waiter, mirroring ReleaseAsync semantics.
+                Waiter? next = null;
+                GpuPriorityClass highestPriority = GpuPriorityClass.Idle;
+                int nextIndex = -1;
+
+                for (int i = 0; i < _waiters.Count; i++)
+                {
+                    var w = _waiters[i];
+                    if (w.Tcs.Task.IsCompleted)
+                    {
+                        continue;
+                    }
+
+                    var profile = _scheduler.GetTenantProfile(w.TenantName);
+                    if (profile is null)
+                    {
+                        continue;
+                    }
+
+                    if (profile.EffectivePriority > highestPriority || next is null)
+                    {
+                        highestPriority = profile.EffectivePriority;
+                        next = w;
+                        nextIndex = i;
+                    }
+                }
+
+                if (next is not null && nextIndex >= 0)
+                {
+                    _waiters.RemoveAt(nextIndex);
+                    next.CtReg.Dispose();
+                    _holder = next.TenantName;
+                    next.Tcs.TrySetResult(null);
+                }
+                else
+                {
+                    _holder = null;
+                }
+
+                actedOnHolder = true;
+            }
+
+            // Cancel any waiters belonging to the unregistering tenant.
+            for (int i = _waiters.Count - 1; i >= 0; i--)
+            {
+                var w = _waiters[i];
+                if (w.TenantName != tenantName)
+                {
+                    continue;
+                }
+
+                _waiters.RemoveAt(i);
+                w.CtReg.Dispose();
+                w.Tcs.TrySetCanceled();
+                actedOnWaiter = true;
+            }
+        }
+
+        return actedOnHolder || actedOnWaiter;
     }
 
     /// <inheritdoc/>

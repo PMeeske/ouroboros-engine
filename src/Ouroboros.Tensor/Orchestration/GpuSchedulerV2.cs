@@ -77,7 +77,15 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
 
     private readonly EvictionCoordinator _evictionCoordinator = new();
     private readonly DispatchWatchdog? _watchdog;
+    private readonly ILogger? _logger;
     private readonly ConcurrentDictionary<string, GpuPriorityClass> _originalBasePriorities = new(StringComparer.Ordinal);
+
+    // Phase 261 GPU-01 item 3: weak refs to every named GpuResourceHolder so
+    // UnregisterCore can sweep them for the unregistering tenant. Weak refs
+    // avoid keeping holders alive past their natural lifetime — the scheduler
+    // does not own them.
+    private readonly object _holderRegistryLock = new();
+    private readonly List<WeakReference<GpuResourceHolder>> _resourceHolders = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GpuSchedulerV2"/> class.
@@ -96,6 +104,7 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
         _latencyHistogram = _meter.CreateHistogram<double>("gpu.task.latency_ms");
 
         var tp = timeProvider ?? TimeProvider.System;
+        _logger = logger;
         if (logger is not null)
         {
             _watchdog = new DispatchWatchdog(this, tp, logger);
@@ -620,6 +629,33 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
         }
     }
 
+    /// <summary>
+    /// Registers a <see cref="GpuResourceHolder"/> with the scheduler so that
+    /// <see cref="UnregisterCore"/> can sweep it when a tenant unregisters
+    /// (Phase 261 GPU-01 item 3 — prevents leaked holders / stranded waiters
+    /// when a tenant's lifetime ends mid-flight). Held by weak reference so
+    /// the registry never extends a holder's lifetime.
+    /// </summary>
+    /// <param name="holder">Holder to track.</param>
+    internal void RegisterResourceHolder(GpuResourceHolder holder)
+    {
+        ArgumentNullException.ThrowIfNull(holder);
+
+        lock (_holderRegistryLock)
+        {
+            // Compact dead refs opportunistically so the list does not grow unbounded.
+            for (int i = _resourceHolders.Count - 1; i >= 0; i--)
+            {
+                if (!_resourceHolders[i].TryGetTarget(out _))
+                {
+                    _resourceHolders.RemoveAt(i);
+                }
+            }
+
+            _resourceHolders.Add(new WeakReference<GpuResourceHolder>(holder));
+        }
+    }
+
     private void UnregisterCore(string tenantName)
     {
         if (!_tenants.TryRemove(tenantName, out var profile))
@@ -634,6 +670,31 @@ public sealed class GpuSchedulerV2 : IGpuScheduler
         }
 
         _evictionCoordinator.UnregisterPolicy(tenantName);
+
+        // Phase 261 GPU-01 item 3: sweep every live GpuResourceHolder and force-release
+        // anything still tied to this tenant. Without this, a tenant that disposes its
+        // registration while still holding a named lock leaves the holder permanently
+        // stuck — every future acquire blocks waiting for a tenant that can never call
+        // ReleaseAsync because it was already disposed.
+        lock (_holderRegistryLock)
+        {
+            for (int i = _resourceHolders.Count - 1; i >= 0; i--)
+            {
+                if (!_resourceHolders[i].TryGetTarget(out var holder))
+                {
+                    _resourceHolders.RemoveAt(i);
+                    continue;
+                }
+
+                if (holder.ReleaseIfHeldBy(tenantName))
+                {
+                    _logger?.LogWarning(
+                        "[GpuScheduler] Auto-released resource '{Resource}' on tenant unregister: {Tenant}",
+                        holder.ResourceName,
+                        tenantName);
+                }
+            }
+        }
     }
 
     private readonly record struct PendingWork(
