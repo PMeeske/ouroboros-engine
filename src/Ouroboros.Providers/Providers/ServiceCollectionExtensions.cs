@@ -380,6 +380,69 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers a keyed MEAI <see cref="IChatClient"/> for the
+    /// <c>NousResearch/Hermes-3-Llama-3.1-8B</c> INT4 ONNX checkpoint, DML-built
+    /// via the standard <c>onnxruntime_genai.models.builder</c> (Llama arch — no
+    /// patches needed). Sweet-spot daily driver: ~5 GB INT4 weights fit
+    /// comfortably in 16 GB VRAM with avatar / Kokoro / perception co-tenants
+    /// resident, gives Hermes-trained function-calling + persona behavior at
+    /// GPU-native speed (~50-80 t/s on RX 9060 XT DML).
+    /// </summary>
+    public static IServiceCollection AddHermes3KeyedMeaiChatClient(
+        this IServiceCollection services,
+        IConfiguration? configuration = null,
+        string serviceKey = "hermes-3")
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        string modelPath = configuration?["Hermes3:ModelPath"]
+            ?? Environment.GetEnvironmentVariable("HERMES3_MODEL_PATH")
+            ?? ResolveDefaultHermes3ModelPath();
+
+        if (!Directory.Exists(modelPath))
+        {
+            return services;
+        }
+
+        services.TryAddKeyedSingleton<IChatClient>(serviceKey, (sp, _) =>
+        {
+            HermesOnnx.HermesOnnxChatModelOptions baseOpts =
+                configuration?.GetSection("Hermes3").Get<HermesOnnx.HermesOnnxChatModelOptions>()
+                ?? new HermesOnnx.HermesOnnxChatModelOptions();
+            string ep = configuration?["Hermes3:ExecutionProvider"]
+                ?? baseOpts.ExecutionProvider;
+            HermesOnnx.HermesOnnxChatModelOptions opts = baseOpts with { ExecutionProvider = ep };
+            ILogger<HermesOnnx.HermesOnnxChatModel>? logger = sp.GetService<ILogger<HermesOnnx.HermesOnnxChatModel>>();
+            HermesOnnx.HermesOnnxChatModel inner = new(modelPath, opts, logger);
+            return new Meai.HermesOnnxChatClient(inner);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Resolves the Hermes-3-Llama-3.1-8B DML checkpoint by walking up from
+    /// <see cref="AppContext.BaseDirectory"/>.
+    /// </summary>
+    private static string ResolveDefaultHermes3ModelPath()
+    {
+        string relative = Path.Combine("checkpoints", "onnx-hermes", "hermes-3-llama-3.1-8b-onnx-int4-dml");
+        DirectoryInfo? dir = new(AppContext.BaseDirectory);
+        for (int i = 0; i < 8 && dir is not null; i++)
+        {
+            string candidate = Path.Combine(dir.FullName, relative);
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            dir = dir.Parent;
+        }
+
+        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, relative));
+    }
+
+    /// <summary>
     /// Resolves the default <c>--mode hermes-onnx</c> model directory by walking up
     /// from <see cref="AppContext.BaseDirectory"/> looking for a known DML-clean
     /// checkpoint. Tries candidates in priority order:
