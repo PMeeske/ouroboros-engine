@@ -37,7 +37,7 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
 {
     private readonly Model _model;
     private readonly BpeTokenizer _tokenizer;
-    private readonly int _eosTokenId;
+    private readonly HashSet<int> _eosTokenIds;
     private readonly HermesOnnxChatModelOptions _options;
     private readonly SemaphoreSlim _genSemaphore = new(1, 1);
     private bool _disposed;
@@ -68,12 +68,12 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
         // Build tokenizer FIRST (cheap, all managed). If it throws, no native Model
         // is allocated — no Generators::Model leak. If Model ctor then throws, the
         // tokenizer has no native handle to leak (BpeTokenizer is pure managed).
-        (_tokenizer, _eosTokenId) = LoadBpeTokenizerFromHuggingFaceJson(modelPath);
+        (_tokenizer, _eosTokenIds) = LoadBpeTokenizerFromHuggingFaceJson(modelPath);
         _model = new Model(modelPath);
 
         logger?.LogInformation(
-            "[HermesOnnx PathC] Model + ML.Tokenizers BpeTokenizer loaded (eos_id={EosId}, path={Path})",
-            _eosTokenId,
+            "[HermesOnnx PathC] Model + ML.Tokenizers BpeTokenizer loaded (eos_ids=[{EosIds}], path={Path})",
+            string.Join(",", _eosTokenIds),
             modelPath);
     }
 
@@ -113,7 +113,7 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
                 }
 
                 int latest = seq[^1];
-                if (latest == _eosTokenId)
+                if (_eosTokenIds.Contains(latest))
                 {
                     break;
                 }
@@ -121,7 +121,22 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
                 outputIds.Add(latest);
             }
 
-            return _tokenizer.Decode(outputIds);
+            string decoded = _tokenizer.Decode(outputIds);
+
+            // Llama-3.1-Instruct sometimes spells out chat-template tokens as
+            // literal text in its response ("<|eot_id|>", "<|end_header_id|>",
+            // etc.) instead of emitting them as the actual special tokens.
+            // Strip them before returning — they're a model behavior tic, not
+            // semantic content.
+            decoded = decoded
+                .Replace("<|eot_id|>", string.Empty, StringComparison.Ordinal)
+                .Replace("<|end_of_text|>", string.Empty, StringComparison.Ordinal)
+                .Replace("<|eom_id|>", string.Empty, StringComparison.Ordinal)
+                .Replace("<|start_header_id|>", string.Empty, StringComparison.Ordinal)
+                .Replace("<|end_header_id|>", string.Empty, StringComparison.Ordinal)
+                .Replace("<|begin_of_text|>", string.Empty, StringComparison.Ordinal);
+
+            return decoded.TrimEnd();
         }
         finally
         {
@@ -145,7 +160,7 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
     /// <see cref="BpeTokenizer"/>. Bypasses ORT-GenAI's std::regex backend entirely —
     /// .NET's regex supports <c>\p{L}</c>/<c>\p{N}</c> natively.
     /// </summary>
-    private static (BpeTokenizer Tokenizer, int EosTokenId) LoadBpeTokenizerFromHuggingFaceJson(string modelPath)
+    private static (BpeTokenizer Tokenizer, HashSet<int> EosTokenIds) LoadBpeTokenizerFromHuggingFaceJson(string modelPath)
     {
         string tokenizerJsonPath = Path.Combine(modelPath, "tokenizer.json");
         if (!File.Exists(tokenizerJsonPath))
@@ -216,13 +231,44 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
 
         BpeTokenizer tokenizer = BpeTokenizer.Create(bpeOptions);
 
-        // Hermes 4 / Llama-3 family eos. Fall back to "<|endoftext|>" or 2 if missing.
-        int eosId =
-            specialTokens.TryGetValue("<|eot_id|>", out int eot) ? eot
-            : specialTokens.TryGetValue("<|endoftext|>", out int eod) ? eod
-            : 2;
+        // EOS tokens — read genai_config.json's eos_token_id (int OR int array).
+        // Llama-3.1 declares three: <|end_of_text|>=128001, <|eom_id|>=128008,
+        // <|eot_id|>=128009. Stopping on only one leaks the others into output.
+        HashSet<int> eosIds = new();
+        string genaiConfigPath = Path.Combine(modelPath, "genai_config.json");
+        if (File.Exists(genaiConfigPath))
+        {
+            using JsonDocument cfgDoc = JsonDocument.Parse(File.ReadAllText(genaiConfigPath));
+            if (cfgDoc.RootElement.TryGetProperty("model", out JsonElement modelCfg)
+                && modelCfg.TryGetProperty("eos_token_id", out JsonElement eosEl))
+            {
+                if (eosEl.ValueKind == JsonValueKind.Number)
+                {
+                    eosIds.Add(eosEl.GetInt32());
+                }
+                else if (eosEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (JsonElement e in eosEl.EnumerateArray())
+                    {
+                        if (e.ValueKind == JsonValueKind.Number)
+                        {
+                            eosIds.Add(e.GetInt32());
+                        }
+                    }
+                }
+            }
+        }
 
-        return (tokenizer, eosId);
+        // Always include the canonical Llama-3 turn-end markers if known to the
+        // tokenizer — covers cases where genai_config.json is sparse (e.g. legacy
+        // Hermes 4.3 36B retrain ships with only <|eot_id|>).
+        if (specialTokens.TryGetValue("<|eot_id|>", out int eot)) { eosIds.Add(eot); }
+        if (specialTokens.TryGetValue("<|end_of_text|>", out int eot2)) { eosIds.Add(eot2); }
+        if (specialTokens.TryGetValue("<|eom_id|>", out int eom)) { eosIds.Add(eom); }
+        if (specialTokens.TryGetValue("<|endoftext|>", out int eod)) { eosIds.Add(eod); }
+        if (eosIds.Count == 0) { eosIds.Add(2); }  // last-resort GPT-style EOS
+
+        return (tokenizer, eosIds);
     }
 
     /// <inheritdoc/>
