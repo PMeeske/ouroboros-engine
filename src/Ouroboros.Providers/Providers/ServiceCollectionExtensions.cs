@@ -325,16 +325,16 @@ public static class ServiceCollectionExtensions
 
         services.TryAddKeyedSingleton<IChatClient>(serviceKey, (sp, _) =>
         {
-            // Bind from optional Hermes4: section, then force ExecutionProvider=cpu
-            // unless an explicit Hermes4:ExecutionProvider override is set (escape
-            // hatch for when the operator re-exports the model with a DML-clean
-            // graph and wants this mode on GPU).
+            // EP selection: 'dml' is now the default since the rebuild via the
+            // patched onnxruntime_genai builder produces a DirectML-clean graph
+            // (commit 252f65d / 232ce864). Operators can flip back to CPU EP
+            // for the legacy CUDA-built export by setting
+            // Hermes4:ExecutionProvider=cpu in IConfiguration.
             HermesOnnx.HermesOnnxChatModelOptions baseOpts =
                 configuration?.GetSection("Hermes4").Get<HermesOnnx.HermesOnnxChatModelOptions>()
                 ?? new HermesOnnx.HermesOnnxChatModelOptions();
             string ep = configuration?["Hermes4:ExecutionProvider"]
-                ?? (string.Equals(baseOpts.ExecutionProvider, "dml", StringComparison.OrdinalIgnoreCase)
-                    ? "cpu" : baseOpts.ExecutionProvider);
+                ?? baseOpts.ExecutionProvider;  // defaults to "dml" via record default
             HermesOnnx.HermesOnnxChatModelOptions opts = baseOpts with { ExecutionProvider = ep };
             ILogger<HermesOnnx.HermesOnnxChatModel>? logger = sp.GetService<ILogger<HermesOnnx.HermesOnnxChatModel>>();
             HermesOnnx.HermesOnnxChatModel inner = new(modelPath, opts, logger);
@@ -351,20 +351,32 @@ public static class ServiceCollectionExtensions
     /// </summary>
     private static string ResolveDefaultHermes4ModelPath()
     {
-        string relative = Path.Combine("checkpoints", "onnx-hermes", "hermes-4.3-36b-onnx-int4");
+        // DML-clean rebuild from the patched onnxruntime_genai builder takes
+        // priority over the legacy CUDA-built export which fails on DirectML.
+        // See ouroboros-app/patches/seed-oss-oga/ for the patch pack and
+        // docs/hermes-onnx-rebuild.md for the rebuild runbook.
+        string[] candidates =
+        [
+            Path.Combine("checkpoints", "onnx-hermes", "hermes-4.3-36b-onnx-int4-dml"),
+            Path.Combine("checkpoints", "onnx-hermes", "hermes-4.3-36b-onnx-int4"),
+        ];
+
         DirectoryInfo? dir = new(AppContext.BaseDirectory);
         for (int i = 0; i < 8 && dir is not null; i++)
         {
-            string candidate = Path.Combine(dir.FullName, relative);
-            if (Directory.Exists(candidate))
+            foreach (string relative in candidates)
             {
-                return candidate;
+                string candidate = Path.Combine(dir.FullName, relative);
+                if (Directory.Exists(candidate))
+                {
+                    return candidate;
+                }
             }
 
             dir = dir.Parent;
         }
 
-        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, relative));
+        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, candidates[0]));
     }
 
     /// <summary>
