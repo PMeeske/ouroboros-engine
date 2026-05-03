@@ -30,6 +30,8 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
     private readonly QdrantClient? _qdrant;
     private readonly string _cacheCollection;
     private readonly ILogger? _logger;
+    private readonly SemaphoreSlim _ensureCacheGate = new(1, 1);
+    private bool _cacheEnsured;
     private bool _disposed;
 
     /// <summary>Default output dimension matching mxbai-embed-large (1024).</summary>
@@ -362,6 +364,11 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
     [Obsolete]
     private async Task<float[]?> TryGetCachedAsync(ulong pointId, CancellationToken ct)
     {
+        // Lazy-create the cache collection on first use so we don't spam
+        // Qdrant with "Collection 'tensor_embedding_cache' doesn't exist!"
+        // server-side INFO logs once per Get/Upsert call.
+        await EnsureCacheCollectionAsync(ct).ConfigureAwait(false);
+
         try
         {
             IReadOnlyList<RetrievedPoint> points = await _qdrant!.RetrieveAsync(
@@ -393,6 +400,9 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
 
     private async Task CacheEmbeddingAsync(ulong pointId, string input, float[] embedding)
     {
+        // Lazy-create the cache collection on first use (idempotent + memoized).
+        await EnsureCacheCollectionAsync(CancellationToken.None).ConfigureAwait(false);
+
         try
         {
             await _qdrant!.UpsertAsync(
@@ -417,21 +427,30 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
     }
 
     /// <summary>
-    /// Ensures the Qdrant cache collection exists. Call once at startup.
+    /// Ensures the Qdrant cache collection exists. Idempotent + memoized via
+    /// <c>_cacheEnsured</c> behind <c>_ensureCacheGate</c>. Safe to call from
+    /// every cache hit/miss path — only the first one does any I/O. On failure
+    /// the flag is left false so the next call can retry.
     /// </summary>
-    /// <returns><placeholder>A <see cref="Task"/> representing the asynchronous operation.</placeholder></returns>
     public async Task EnsureCacheCollectionAsync(CancellationToken ct = default)
     {
-        if (_qdrant is null)
+        if (_qdrant is null || _cacheEnsured)
         {
             return;
         }
 
+        await _ensureCacheGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            if (_cacheEnsured)
+            {
+                return;
+            }
+
             var collections = await _qdrant.ListCollectionsAsync(ct).ConfigureAwait(false);
             if (collections.Any(c => c == _cacheCollection))
             {
+                _cacheEnsured = true;
                 return;
             }
 
@@ -444,12 +463,17 @@ public sealed class TensorEmbeddingModel : IEmbeddingModel, IDisposable
                 },
                 cancellationToken: ct).ConfigureAwait(false);
 
+            _cacheEnsured = true;
             _logger?.LogInformation(
                 "Created Qdrant embedding cache collection: {Collection}", _cacheCollection);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger?.LogWarning(ex, "Could not create Qdrant cache collection");
+        }
+        finally
+        {
+            _ensureCacheGate.Release();
         }
     }
 
