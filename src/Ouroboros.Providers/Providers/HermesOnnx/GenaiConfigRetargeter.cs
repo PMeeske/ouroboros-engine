@@ -53,6 +53,8 @@ internal static class GenaiConfigRetargeter
             return;
         }
 
+
+
         bool changed = ep switch
         {
             "cpu" => RetargetToCpu(providerOptions),
