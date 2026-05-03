@@ -43,6 +43,14 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
     private bool _disposed;
 
     /// <summary>
+    /// Matches any literal <c>&lt;|...|&gt;</c>-shaped pseudo-token the model may emit
+    /// as text instead of as a real special token. Anchored on the rare bracket
+    /// pair so normal punctuation is untouched.
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex SpecialTokenLiteralPattern =
+        new(@"<\|[^|<>]*\|>", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="HermesOnnxChatModel"/> class.
     /// </summary>
     public HermesOnnxChatModel(
@@ -125,16 +133,11 @@ public sealed class HermesOnnxChatModel : IChatCompletionModel, IDisposable
 
             // Llama-3.1-Instruct sometimes spells out chat-template tokens as
             // literal text in its response ("<|eot_id|>", "<|end_header_id|>",
-            // etc.) instead of emitting them as the actual special tokens.
-            // Strip them before returning — they're a model behavior tic, not
-            // semantic content.
-            decoded = decoded
-                .Replace("<|eot_id|>", string.Empty, StringComparison.Ordinal)
-                .Replace("<|end_of_text|>", string.Empty, StringComparison.Ordinal)
-                .Replace("<|eom_id|>", string.Empty, StringComparison.Ordinal)
-                .Replace("<|start_header_id|>", string.Empty, StringComparison.Ordinal)
-                .Replace("<|end_header_id|>", string.Empty, StringComparison.Ordinal)
-                .Replace("<|begin_of_text|>", string.Empty, StringComparison.Ordinal);
+            // etc.) instead of emitting them as the actual special tokens. It
+            // also occasionally invents fake ones ("<|implied_id|>"). Strip any
+            // <|...|> shaped string before returning — they're a model behavior
+            // tic, not semantic content.
+            decoded = SpecialTokenLiteralPattern.Replace(decoded, string.Empty);
 
             return decoded.TrimEnd();
         }
