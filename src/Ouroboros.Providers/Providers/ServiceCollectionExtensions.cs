@@ -288,6 +288,86 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers a keyed MEAI <see cref="IChatClient"/> for the locally retrained
+    /// Hermes 4.3 36B INT4 ONNX checkpoint, pinned to the CPU execution provider.
+    /// Distinct from <c>--mode hermes-onnx</c> (which targets the DML-clean
+    /// Llama-3.1-8B drop-in) — this is <c>--mode hermes-4</c>, the user's actual
+    /// retrained model. Slow (CPU INT4, ~40s prompt eval for 36B) but functional
+    /// while the DML-clean rebuild via <c>onnxruntime_genai.models.builder -e dml</c>
+    /// is pending (see <c>docs/hermes-onnx-rebuild.md</c>).
+    /// </summary>
+    /// <remarks>
+    /// Resolution priority for the model path:
+    /// <list type="number">
+    /// <item><c>Hermes4:ModelPath</c> in IConfiguration</item>
+    /// <item><c>HERMES4_MODEL_PATH</c> environment variable</item>
+    /// <item>Up-walks from <see cref="AppContext.BaseDirectory"/> looking for
+    ///       <c>checkpoints/onnx-hermes/hermes-4.3-36b-onnx-int4/</c></item>
+    /// </list>
+    /// Graceful: returns <paramref name="services"/> unmodified when the model
+    /// directory doesn't exist.
+    /// </remarks>
+    public static IServiceCollection AddHermes4KeyedMeaiChatClient(
+        this IServiceCollection services,
+        IConfiguration? configuration = null,
+        string serviceKey = "hermes-4")
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        string modelPath = configuration?["Hermes4:ModelPath"]
+            ?? Environment.GetEnvironmentVariable("HERMES4_MODEL_PATH")
+            ?? ResolveDefaultHermes4ModelPath();
+
+        if (!Directory.Exists(modelPath))
+        {
+            return services;
+        }
+
+        services.TryAddKeyedSingleton<IChatClient>(serviceKey, (sp, _) =>
+        {
+            // Bind from optional Hermes4: section, then force ExecutionProvider=cpu
+            // unless an explicit Hermes4:ExecutionProvider override is set (escape
+            // hatch for when the operator re-exports the model with a DML-clean
+            // graph and wants this mode on GPU).
+            HermesOnnx.HermesOnnxChatModelOptions baseOpts =
+                configuration?.GetSection("Hermes4").Get<HermesOnnx.HermesOnnxChatModelOptions>()
+                ?? new HermesOnnx.HermesOnnxChatModelOptions();
+            string ep = configuration?["Hermes4:ExecutionProvider"]
+                ?? (string.Equals(baseOpts.ExecutionProvider, "dml", StringComparison.OrdinalIgnoreCase)
+                    ? "cpu" : baseOpts.ExecutionProvider);
+            HermesOnnx.HermesOnnxChatModelOptions opts = baseOpts with { ExecutionProvider = ep };
+            ILogger<HermesOnnx.HermesOnnxChatModel>? logger = sp.GetService<ILogger<HermesOnnx.HermesOnnxChatModel>>();
+            HermesOnnx.HermesOnnxChatModel inner = new(modelPath, opts, logger);
+            return new Meai.HermesOnnxChatClient(inner);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Resolves the local Hermes 4.3 36B INT4 ONNX checkpoint by walking up from
+    /// <see cref="AppContext.BaseDirectory"/>. Returns the canonical relative
+    /// path when not found so the existence check at the call site fails cleanly.
+    /// </summary>
+    private static string ResolveDefaultHermes4ModelPath()
+    {
+        string relative = Path.Combine("checkpoints", "onnx-hermes", "hermes-4.3-36b-onnx-int4");
+        DirectoryInfo? dir = new(AppContext.BaseDirectory);
+        for (int i = 0; i < 8 && dir is not null; i++)
+        {
+            string candidate = Path.Combine(dir.FullName, relative);
+            if (Directory.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            dir = dir.Parent;
+        }
+
+        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, relative));
+    }
+
+    /// <summary>
     /// Resolves the default <c>--mode hermes-onnx</c> model directory by walking up
     /// from <see cref="AppContext.BaseDirectory"/> looking for a known DML-clean
     /// checkpoint. Tries candidates in priority order:
