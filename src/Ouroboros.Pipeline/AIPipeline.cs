@@ -255,8 +255,21 @@ public sealed class AIPipeline : IDisposable
         // ChatRoleClientAdapter — Hermes-3 in --mode hermes-3, Ollama otherwise).
         // Falls back to the raw IChatClient if the role registration hasn't run
         // (early host startup / standalone Pipeline use).
-        IChatClient innerClient = services.GetService<IChatRoleClient>()
-            ?? services.GetRequiredService<IChatClient>();
+        IChatClient? roleClient = services.GetService<IChatRoleClient>();
+        IChatClient innerClient;
+        if (roleClient is not null)
+        {
+            innerClient = roleClient;
+        }
+        else
+        {
+            var logger = loggerFactory.CreateLogger<AIPipeline>();
+            logger.LogWarning(
+                "IChatRoleClient not registered in DI — falling back to raw IChatClient. " +
+                "Role-typed routing (chat/tool/vision/acp/mcp) is inactive. " +
+                "Ensure AddEngineServices() or the CLI host wiring has run before CreateBuilder.");
+            innerClient = services.GetRequiredService<IChatClient>();
+        }
 
         // Start building the middleware pipeline
         var builder = new ChatClientBuilder(innerClient);
