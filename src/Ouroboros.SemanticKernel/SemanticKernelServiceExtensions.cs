@@ -5,9 +5,11 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Memory;
+using Ouroboros.Abstractions.Chat;
 using Ouroboros.Abstractions.Core;
 using Ouroboros.Core.Configuration;
 using SkQdrantVectorStore = Microsoft.SemanticKernel.Connectors.Qdrant.QdrantVectorStore;
@@ -85,18 +87,29 @@ public static class SemanticKernelServiceExtensions
                 plugins.Add(PluginFactory.CreateMemoryPlugin(memory));
             }
 
-            // Prefer IChatClient if already registered (e.g. via AddMeaiChatClient)
-            IChatClient? chatClient = sp.GetService<IChatClient>();
+            // Phase 266 (ROLE-01): prefer the role-typed IToolRoleClient over raw
+            // IChatClient. The role marker carries the same wire-level behavior (it
+            // wraps an IChatClient via RoleClientAdapterBase) but lets policy and
+            // budgets diverge per-role — see IToolRoleClient.cs for design intent.
+            // Falls back to raw IChatClient when the role marker isn't registered
+            // (test contexts that don't pull in the ApiHost engine extensions).
+            IToolRoleClient? toolRoleClient = sp.GetService<IToolRoleClient>();
+            IChatClient? chatClient = (IChatClient?)toolRoleClient ?? sp.GetService<IChatClient>();
             Ouroboros.Tools.ToolRegistry? tools = sp.GetService<Ouroboros.Tools.ToolRegistry>();
             IEnumerable<KernelPlugin>? additionalPlugins = plugins.Count > 0 ? plugins : null;
 
+            ILogger? log = sp.GetService<ILoggerFactory>()?.CreateLogger("Ouroboros.SemanticKernel.Kernel");
             if (chatClient is not null)
             {
+                log?.LogInformation(
+                    "[SK] Kernel built with chat surface: {Surface} (Phase 266 ROLE-01)",
+                    toolRoleClient is not null ? "IToolRoleClient" : "IChatClient");
                 return KernelFactory.CreateKernel(chatClient, tools, additionalPlugins);
             }
 
             // Fall back to IChatCompletionModel
             var model = sp.GetRequiredService<IChatCompletionModel>();
+            log?.LogInformation("[SK] Kernel built with chat surface: IChatCompletionModel (legacy)");
             return KernelFactory.CreateKernel(model, tools, additionalPlugins);
         });
 
