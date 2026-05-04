@@ -443,6 +443,87 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers a keyed <see cref="IChatClient"/> backed by Microsoft's
+    /// <c>microsoft/Phi-3.5-vision-instruct-onnx</c> (DirectML INT4) checkpoint at
+    /// <c>checkpoints/onnx-phi35v-dml-int4/</c>. Used as the <c>vision</c>
+    /// keyed client when <c>--mode</c> is non-Ollama, replacing the moondream
+    /// Ollama backbone for Iaret's avatar perception (mirror recognition,
+    /// frame review, expression classification, frame preference scoring).
+    /// </summary>
+    /// <remarks>
+    /// Pull with:
+    /// <c>hf download microsoft/Phi-3.5-vision-instruct-onnx --include "gpu/gpu-int4-rtn-block-32/*" --local-dir checkpoints/onnx-phi35v-dml-int4</c>.
+    /// ~2 GB INT4 weights — co-resident with Hermes-3's ~5 GB on the
+    /// <c>RX9060XT_16GB</c> VramLayout, room for avatar/Kokoro/perception
+    /// co-tenants under the GpuScheduler's HardHeap policy.
+    /// </remarks>
+    public static IServiceCollection AddPhi3VisionKeyedMeaiChatClient(
+        this IServiceCollection services,
+        IConfiguration? configuration = null,
+        string serviceKey = "vision")
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        string modelPath = configuration?["Phi3Vision:ModelPath"]
+            ?? Environment.GetEnvironmentVariable("PHI3V_MODEL_PATH")
+            ?? ResolveDefaultPhi3VisionModelPath();
+
+        if (!Directory.Exists(modelPath))
+        {
+            return services;
+        }
+
+        services.TryAddKeyedSingleton<IChatClient>(serviceKey, (sp, _) =>
+        {
+            Phi3Vision.Phi3VisionOnnxChatModelOptions baseOpts =
+                configuration?.GetSection("Phi3Vision").Get<Phi3Vision.Phi3VisionOnnxChatModelOptions>()
+                ?? new Phi3Vision.Phi3VisionOnnxChatModelOptions();
+            string ep = configuration?["Phi3Vision:ExecutionProvider"]
+                ?? baseOpts.ExecutionProvider;
+            Phi3Vision.Phi3VisionOnnxChatModelOptions opts = baseOpts with { ExecutionProvider = ep };
+            ILogger<Phi3Vision.Phi3VisionOnnxChatModel>? logger =
+                sp.GetService<ILogger<Phi3Vision.Phi3VisionOnnxChatModel>>();
+            Phi3Vision.Phi3VisionOnnxChatModel inner = new(modelPath, opts, logger);
+            return new Meai.Phi3VisionOnnxChatClient(inner);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Resolves the Phi-3.5-vision DML INT4 checkpoint by walking up from
+    /// <see cref="AppContext.BaseDirectory"/>. Microsoft's HF repo nests the
+    /// DML INT4 build under <c>gpu/gpu-int4-rtn-block-32/</c> after download;
+    /// we resolve to that nested folder so consumers don't have to flatten the
+    /// tree manually.
+    /// </summary>
+    private static string ResolveDefaultPhi3VisionModelPath()
+    {
+        string[] candidates =
+        [
+            Path.Combine("checkpoints", "onnx-phi35v-dml-int4", "gpu", "gpu-int4-rtn-block-32"),
+            Path.Combine("checkpoints", "onnx-phi35v-dml-int4"),
+        ];
+
+        DirectoryInfo? dir = new(AppContext.BaseDirectory);
+        for (int i = 0; i < 8 && dir is not null; i++)
+        {
+            foreach (string relative in candidates)
+            {
+                string candidate = Path.Combine(dir.FullName, relative);
+                if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "genai_config.json")))
+                {
+                    return candidate;
+                }
+            }
+
+            dir = dir.Parent;
+        }
+
+        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, candidates[0]));
+    }
+
+    /// <summary>
     /// Resolves the default <c>--mode hermes-onnx</c> model directory by walking up
     /// from <see cref="AppContext.BaseDirectory"/> looking for a known DML-clean
     /// checkpoint. Tries candidates in priority order:
