@@ -259,12 +259,14 @@ public sealed class MettaAgentWarmupSequence : IAgentWarmupSequence
             if (_routeStore is null)
             {
                 sw.Stop();
+                // Optional dep absent — skip is not a failure. Emit step as ok with a skip-reason
+                // so the aggregated report does not flip degraded=true on an intentional optional.
                 var skip = new AgentWarmupStepResult(
                     StepEmitRoutePrime,
-                    Ok: false,
+                    Ok: true,
                     Elapsed: sw.Elapsed,
-                    Error: "RouteCentroidStore not registered");
-                _logger.LogWarning(
+                    Error: "skipped: RouteCentroidStore not registered");
+                _logger.LogInformation(
                     "AgentWarmup: {Step} skipped — RouteCentroidStore not registered",
                     StepEmitRoutePrime);
                 LogStep(skip);
