@@ -17,6 +17,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Ouroboros.Abstractions.Chat;
 
 namespace Ouroboros.Pipeline;
 
@@ -93,16 +94,16 @@ public sealed record PipelineError(
 /// </summary>
 public sealed class AIPipeline : IDisposable
 {
-    private readonly IChatClient _chatClient;
+    private readonly IChatRoleClient _chatClient;
     private readonly ILogger<AIPipeline> _logger;
     private readonly TimeProvider _timeProvider;
     private bool _disposed;
 
     /// <summary>
-    /// Creates a new AI pipeline wrapping the given chat client.
+    /// Creates a new AI pipeline wrapping the given chat-role client.
     /// Use <see cref="CreateBuilder"/> for middleware-based construction.
     /// </summary>
-    public AIPipeline(IChatClient chatClient, ILogger<AIPipeline> logger, TimeProvider? timeProvider = null)
+    public AIPipeline(IChatRoleClient chatClient, ILogger<AIPipeline> logger, TimeProvider? timeProvider = null)
     {
         _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -250,8 +251,12 @@ public sealed class AIPipeline : IDisposable
     {
         var loggerFactory = services.GetRequiredService<ILoggerFactory>();
 
-        // The inner client is resolved from DI — could be Anthropic, OpenAI, Ollama, etc.
-        var innerClient = services.GetRequiredService<IChatClient>();
+        // Resolve the chat-role client (mode-promoted IChatClient wrapped in
+        // ChatRoleClientAdapter — Hermes-3 in --mode hermes-3, Ollama otherwise).
+        // Falls back to the raw IChatClient if the role registration hasn't run
+        // (early host startup / standalone Pipeline use).
+        IChatClient innerClient = services.GetService<IChatRoleClient>()
+            ?? services.GetRequiredService<IChatClient>();
 
         // Start building the middleware pipeline
         var builder = new ChatClientBuilder(innerClient);
@@ -316,11 +321,13 @@ public static class AIPipelineServiceExtensions
         {
             var logger = sp.GetRequiredService<ILogger<AIPipeline>>();
 
-            // Build the middleware-wrapped IChatClient
+            // Build the middleware-wrapped IChatClient and tag it with the
+            // chat role marker so AIPipeline's IChatRoleClient ctor accepts it.
             var builder = AIPipeline.CreateBuilder(sp);
-            var chatClient = builder.Build();
+            IChatClient chatClient = builder.Build();
+            var roleClient = new ChatRoleClientAdapter(chatClient);
 
-            return new AIPipeline(chatClient, logger);
+            return new AIPipeline(roleClient, logger);
         });
 
         return services;
