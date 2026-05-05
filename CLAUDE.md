@@ -20,12 +20,10 @@ ouroboros-engine/
 │   ├── Ouroboros.Pipeline/     # Functional pipeline composition, reasoning, ingestion, GraphRAG
 │   ├── Ouroboros.Providers/    # Multi-provider integrations (OpenAI, Anthropic, Azure, Ollama, etc.)
 │   ├── Ouroboros.Network/      # Distributed network state, Merkle-DAG reasoning history
-│   ├── Ouroboros.LangChain/    # LangChain integration bridge
 │   ├── Ouroboros.SemanticKernel/ # Semantic Kernel adapter
 │   └── Ouroboros.McpServer/    # Model Context Protocol server
 ├── tests/                      # Test projects (mirrors src/ structure)
 │   ├── Ouroboros.Agent.Tests/
-│   ├── Ouroboros.LangChain.Tests/
 │   ├── Ouroboros.Learning.Tests/
 │   ├── Ouroboros.McpServer.Tests/
 │   ├── Ouroboros.Memory.Tests/
@@ -255,7 +253,6 @@ Ouroboros-v2 (meta-repo)
 | Package | Version | Purpose |
 |---------|---------|---------|
 | Microsoft.Extensions.AI | 10.3.0 | Unified AI provider abstraction |
-| LangChain | 0.17.0 | LLM orchestration |
 | Anthropic.SDK | 5.10.0 | Claude API integration |
 | Microsoft.SemanticKernel | 1.72.0 | Semantic Kernel bridge |
 | Qdrant.Client | 1.17.0 | Vector database |
