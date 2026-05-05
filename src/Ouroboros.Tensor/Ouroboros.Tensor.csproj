@@ -23,7 +23,10 @@
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Abstractions\Ouroboros.Abstractions.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Core\Ouroboros.Core.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Domain\Ouroboros.Domain.csproj" />
-    <ProjectReference Include="..\Ouroboros.Providers\Ouroboros.Providers.csproj" />
+    <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Tools\Ouroboros.Tools.csproj" />
+    <!-- Phase 272: Providers reference removed (was vestigial — no Ouroboros.Providers types
+         used in Ouroboros.Tensor). Required so Providers can take a Tensor reference for
+         ISharedOrtDmlSessionFactory + IGpuScheduler in MxbaiOnnxEmbeddingModel. -->
   </ItemGroup>
 
   <ItemGroup>

@@ -18,6 +18,8 @@
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Core\Ouroboros.Core.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Domain\Ouroboros.Domain.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Tools\Ouroboros.Tools.csproj" />
+    <!-- Phase 272: ISharedOrtDmlSessionFactory + IGpuScheduler for MxbaiOnnxEmbeddingModel -->
+    <ProjectReference Include="..\Ouroboros.Tensor\Ouroboros.Tensor.csproj" />
   </ItemGroup>
 
   <ItemGroup>
