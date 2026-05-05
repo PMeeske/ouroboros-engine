@@ -24,7 +24,7 @@
 
   <ItemGroup>
     <PackageReference Include="Anthropic" Version="12.17.0" />
-    <PackageReference Include="Microsoft.Extensions.AI" Version="10.5.0" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.5.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
     <PackageReference Include="Qdrant.Client" Version="1.17.0" />
     <PackageReference Include="Azure.AI.Inference" Version="1.0.0-beta.5" />
