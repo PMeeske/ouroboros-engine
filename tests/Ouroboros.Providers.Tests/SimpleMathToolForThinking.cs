@@ -1,6 +1,8 @@
 #pragma warning disable CA1031 // Test file - catching general exceptions for test verification
 namespace Ouroboros.Tests.Providers;
 
+using Ouroboros.Abstractions.Monads;
+
 /// <summary>
 /// Simple math tool for testing thinking mode.
 /// Note: This is intentionally a minimal mock that only handles specific expressions.
@@ -11,7 +13,7 @@ internal class SimpleMathToolForThinking : ITool
     public string Description => "Performs basic math operations";
     public string? JsonSchema => null;
 
-    public Task<Ouroboros.Abstractions.Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
+    public Task<Result<string, string>> InvokeAsync(string input, CancellationToken ct = default)
     {
         try
         {
@@ -23,11 +25,11 @@ internal class SimpleMathToolForThinking : ITool
                 "1+1" => "2",
                 _ => "unknown"
             };
-            return Task.FromResult(Ouroboros.Abstractions.Result<string, string>.Success(result));
+            return Task.FromResult(Result<string, string>.Success(result));
         }
         catch (Exception ex)
         {
-            return Task.FromResult(Ouroboros.Abstractions.Result<string, string>.Failure(ex.Message));
+            return Task.FromResult(Result<string, string>.Failure(ex.Message));
         }
     }
 }
