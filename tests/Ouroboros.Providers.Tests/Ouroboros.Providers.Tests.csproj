@@ -13,6 +13,8 @@
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Abstractions\Ouroboros.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Ouroboros.Agent\Ouroboros.Agent.csproj" />
     <ProjectReference Include="..\..\src\Ouroboros.Providers\Ouroboros.Providers.csproj" />
+    <!-- Phase 272: needed for Mock<ISharedOrtDmlSessionFactory> + IGpuScheduler types in MxbaiOnnxEmbeddingModelTests -->
+    <ProjectReference Include="..\..\src\Ouroboros.Tensor\Ouroboros.Tensor.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Core\Ouroboros.Core.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Domain\Ouroboros.Domain.csproj" />
     <ProjectReference Include="$(OuroborosFoundation)\Ouroboros.Tools\Ouroboros.Tools.csproj" />
